@@ -24,6 +24,7 @@ Go 基准来自 `go.mod`。`gow` 是本仓维护副本，用 `make gow` 构建�
 - 修改 Repository、DTO 映射或关联更新前，先读 [Repository 合同](docs/development.md#repository-contracts)，核对当前 `api_repo.go`、`RoleRepo.Update` 与本地依赖实现。
 - 新接入或修改接口合同前，在 [接口集成登记](docs/interface-integration-register.md) 维护报文、鉴权条件和问题，复用已有编号。接口风格统一调整只按用户指定批次与格式实施；即时修复单独记录，整体登记由用户确认结项。
 - 新增、移动或删除测试、脚本、实验与过程材料前，先读 [仓库维护规范](docs/contributing/repository-hygiene.md) 的放置表及对应章节；临时材料留在忽略目录或仓库外。
+- 使用工程技能时，创建或读取任务/规格前先读 [任务跟踪配置](docs/agents/issue-tracker.md)；普通票据分诊前先读 [标签映射](docs/agents/triage-labels.md)；领域探索前先读 [领域文档配置](docs/agents/domain.md)。技能配置沿用本仓授权、生成、验证和交付边界。
 - 历史接管与恢复任务先查 [开发指南的已知范围](docs/development.md#9-已知范围与生产边界) 和 [历史索引](docs/history/README.md)。维护接管源码采用最小补丁和定向回归，保留来源与许可；已延期样本和已清理实验不因新任务自动恢复。
 
 ## 不可省略的实现合同

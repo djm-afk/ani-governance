@@ -66,3 +66,6 @@ __pycache__/
 # migration/patches/T09/_integration_staging 与锁定归档里，哈希已登记）。
 pkg/localdeps/go-wind-toolkit/protoc-gen-go-redact/testdata/integration/*.pb.go
 pkg/localdeps/go-wind-toolkit/protoc-gen-go-redact/protoc-gen-redact
+
+# 本地工程技能任务、规格和会话过程材料
+.scratch/
