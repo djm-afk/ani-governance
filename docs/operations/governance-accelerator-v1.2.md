@@ -6,7 +6,9 @@
 
 本批历史记录中，Acc 固定为已发布提交 `1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3`，Gov 当时依赖为 `v0.0.0-20260924030150-1d32dd9a9173`；当前依赖以本仓 [go.mod](../../go.mod)/[go.sum](../../go.sum)为准，不能用历史版本锁替换。该批 Gov 最低实现版本为 `bd9ad1a33bbe8ce28f4faeb19bfc9ee494ae8a84`；后续纯证据提交不改变该批能力。历史 `9f9712198488` API 模块测试只能证明当时版本。
 
-正式构建目前没有 GPU owner adapter、业务创建 BFF 或退款 owner map；两个正式 code `gpu.physical.count`、`gpu.shared_memory_mib` 均为 `NOT_ENABLED`。只读/管理 Accelerator BFF 可以独立运行。配置下游地址、添加套餐额度或打开某个环境变量不会注册 owner。新创建必须在 Resolve/占额之前失败关闭；旧操作仍保留，不能因 adapter 缺失清账或退款。`gpu.count` 保持原 LAB 语义。
+GOV-ACC-V12-01 当时的正式构建没有 GPU owner adapter、业务创建 BFF 或退款 owner map；该批两个正式 code `gpu.physical.count`、`gpu.shared_memory_mib` 均为 `NOT_ENABLED`，只读/管理 Accelerator BFF 可以独立运行。当时新创建必须在 Resolve/占额之前失败关闭；旧操作仍保留，不能因 adapter 缺失清账或退款，`gpu.count` 保持原 LAB 语义。配置下游地址、添加套餐额度或打开环境变量本身不会注册 owner。
+
+后续固定 Inference owner 的源码接线、BFF、退款映射和开放条件以 [当前 GPU owner 合同](../contracts/gpu-owner-integration-guide.md)及 [GOV-ACC-INF-V12-WIRING-01 登记](../interface-integration-register.md#gov-acc-inf-v12-wiring-01推理创建与删除接线2026-10-09) 为准；实际部署和真实 GPU 验收另行确认，本节历史批次结论不代替当前能力核对。
 
 生产监听不加载测试 owner、故障 HTTP 控制入口、消费证明私钥或 skipVerification。`SyncGpuUsage` 是内部恢复 worker，`ObserveRelease` 由可信 owner 直接调用；二者没有公网代理。当前 Acc 只支持 `ani-inference` 的合同标识，多 owner 需要另批身份、公钥、查询和 adapter 改造。
 
