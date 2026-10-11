@@ -1,299 +1,31 @@
-# Task Configuration Encryption
+# 加密与签名工具
 
-This package provides AES-256-GCM encryption/decryption for sensitive task configuration data stored in the database.
+本包提供 AES-256-GCM 字符串加密、显式 payload 包装、HMAC 签名和独立的 Access Key 密钥加密器。实际使用范围以调用方源码为准。
 
-## Features
+## 可选的全局加密器
 
-- **AES-256-GCM Encryption**: Industry-standard authenticated encryption
-- **Automatic Encryption/Decryption**: Transparent encryption via Ent hooks
-- **Backward Compatible**: Gracefully handles unencrypted legacy data
-- **Configurable**: Enable/disable via configuration
-- **Migration Tool**: Encrypt existing data with zero downtime
+服务入口 [main.go](../../app/admin/service/cmd/server/main.go) 从 `GOWIND_CRYPTO_KEY` 读取非空密钥并调用 `InitGlobalEncryptor`。未配置时，`EncryptIfNeeded` 返回明文，`DecryptIfNeeded` 原样返回输入；这时 SMTP 密码和 TOTP secret 没有获得本包的静态加密保护。
 
-## Security
+当前真实业务调用位于 [NotificationChannelRepo](../../app/admin/service/internal/data/notification_channel_repo.go) 的 SMTP 密码读写和 [UserMfaFactorRepo](../../app/admin/service/internal/data/user_mfa_factor_repo.go) 的 TOTP secret 读写。Task schema、Repository 和 Service 没有自动加解密的 Ent hook；`EncryptPayload` / `DecryptPayload` 是需显式调用的工具，不能由它们的存在推断任务已经加密。
 
-### Encryption Method
-- **Algorithm**: AES-256-GCM (Galois/Counter Mode)
-- **Key Derivation**: SHA-256 hash of the configured key
-- **Authentication**: Built-in message authentication via GCM
-- **Nonce**: Random 12-byte nonce for each encryption operation
+全局初始化使用 `sync.Once`，没有运行时换钥接口。密钥变更后的历史密文处理需单独设计；本包没有自动迁移或双密钥轮换流程。
 
-### Key Management
-⚠️ **IMPORTANT**: The encryption key should be:
-1. At least 32 characters long
-2. Stored as an environment variable in production
-3. Never committed to version control
-4. Rotated periodically
-5. Backed up securely
+## 格式与错误
 
-## Configuration
+[NewEncryptor](aes_gcm.go) 拒绝空字符串，对非空输入做 SHA-256 得到 AES-256 密钥；当前实现不检查输入是否达到 32 字节。密文为 `enc:` 加标准 Base64，编码内容依次为随机 12 字节 nonce、密文和 16 字节 GCM tag。
 
-### Environment Variable (Recommended)
-```bash
-export ENCRYPTION_KEY="your-secure-random-key-minimum-32-characters-long"
-```
+启用加密器后，`Decrypt` 对无 `enc:` 前缀的历史明文原样返回；Base64 损坏、密文截断或认证失败返回错误。SMTP/TOTP 调用方收到解密错误会终止对应操作。`IsEncrypted` 只检查前缀，不能证明密文有效。
 
-### Configuration File
-Add to `configs/ai.yaml`:
-```yaml
-encryption:
-  key: "${ENCRYPTION_KEY:change-this-in-production}"
-  enabled: true
-```
+[payload.go](payload.go) 仅在实际加密后设置 `_is_encrypted=true`。[SignData / VerifyData](hmac.go) 使用全局密钥计算 HMAC-SHA256；未初始化密钥时，签名返回错误，验证返回 false。签名有效期由调用方负责。
 
-## Usage
+## 独立的 Access Key 加密器
 
-### Automatic Encryption/Decryption
+[AccessKeyCipher](access_key.go) 不使用可选全局加密器。主服务装配 [wiring_ent.go](../../app/admin/service/cmd/server/wiring_ent.go) 必须加载 `ANI_ACCESS_KEY_ENCRYPTION_KEY_FILE`；文件内容为恰好 64 个十六进制字符，允许末尾一个换行。配置缺失、文件不可读或格式错误会使装配失败。
 
-The system automatically encrypts/decrypts task payloads:
+所有服务副本须加载同一密钥。解密要求 `enc:` 密文且明文符合 `sk-` 前缀；`DeriveSubkey` 按 label 派生用途隔离的子密钥，当前分页游标签名也使用它。更换主密钥会影响已保存的 SK 密文和派生用途，不能只重启服务就宣称轮换完成。
 
-```go
-// Creating a task - payload is automatically encrypted before saving
-task := &adminV1.CreateTaskRequest{
-    Data: &adminV1.Task{
-        TypeName: "email_processor",
-        TaskPayload: `{"username":"admin","password":"secret123"}`,
-    },
-}
-result, err := taskService.Create(ctx, task)
+## 验证与来源
 
-// Reading a task - payload is automatically decrypted
-task, err := taskService.Get(ctx, &adminV1.GetTaskRequest{Id: 1})
-// task.TaskPayload is decrypted and ready to use
-```
+现有用例位于 [aes_gcm_test.go](aes_gcm_test.go)、[encryptor_test.go](encryptor_test.go)、[payload_test.go](payload_test.go)、[payload_must_test.go](payload_must_test.go)、[hmac_test.go](hmac_test.go) 和 [access_key_test.go](access_key_test.go)。包测试入口为仓库根目录的 `go test ./pkg/crypto`；包用例不代替业务存储或部署验收。
 
-### Manual Encryption/Decryption
-
-```go
-import "go-wind-admin/pkg/crypto"
-
-// Initialize encryptor
-encryptor, err := crypto.NewEncryptor("your-secret-key")
-if err != nil {
-    return err
-}
-
-// Encrypt data
-encrypted, err := encryptor.Encrypt("sensitive data")
-// Result: "enc:base64-encoded-ciphertext"
-
-// Decrypt data
-decrypted, err := encryptor.Decrypt(encrypted)
-// Result: "sensitive data"
-
-// Check if data is encrypted
-if crypto.IsEncrypted(data) {
-    // Data is encrypted
-}
-```
-
-## Migration
-
-### Encrypt Existing Data
-
-To encrypt existing unencrypted task configurations:
-
-```bash
-# Dry run (preview changes without applying)
-cd app/admin/service/cmd/migrate-encrypt
-go run main.go --conf ../../configs --dry-run
-
-# Apply encryption
-go run main.go --conf ../../configs
-```
-
-The migration tool:
-- ✓ Checks each task's payload
-- ✓ Skips already encrypted data
-- ✓ Skips empty payloads
-- ✓ Reports progress and errors
-- ✓ Provides detailed summary
-
-### Zero-Downtime Migration
-
-The encryption system supports zero-downtime migration:
-
-1. **Phase 1**: Enable encryption and deploy
-   - New tasks are encrypted
-   - Old tasks work (backward compatible)
-
-2. **Phase 2**: Run migration tool
-   - Encrypts existing data
-   - Can be run during normal operation
-
-3. **Phase 3**: Verify
-   - All tasks are encrypted
-   - System fully operational
-
-## Encrypted Data Format
-
-Encrypted data uses this format:
-```
-enc:<base64-encoded-ciphertext>
-```
-
-Where ciphertext contains:
-```
-[12-byte nonce][encrypted data][16-byte auth tag]
-```
-
-The `enc:` prefix allows the system to:
-- Identify encrypted vs plaintext data
-- Support backward compatibility
-- Safely migrate existing data
-
-## Testing
-
-Run the test suite:
-```bash
-cd pkg/crypto
-go test -v
-```
-
-Run benchmarks:
-```bash
-go test -bench=. -benchmem
-```
-
-## Error Handling
-
-### Encryption Disabled
-If encryption is disabled, data is stored as plaintext:
-```yaml
-encryption:
-  enabled: false
-```
-
-### Missing Encryption Key
-If no key is configured, the system logs a warning and operates in plaintext mode.
-
-### Decryption Failures
-Decryption failures are logged but don't block operations - the system returns the encrypted data as-is for debugging.
-
-## Best Practices
-
-### Production Deployment
-
-1. **Generate a Strong Key**
-   ```bash
-   # Generate a random 32-byte key
-   openssl rand -base64 32
-   ```
-
-2. **Set Environment Variable**
-   ```bash
-   export ENCRYPTION_KEY="generated-key-from-step-1"
-   ```
-
-3. **Verify Configuration**
-   ```bash
-   # Check that encryption is enabled
-   grep -A2 "encryption:" configs/ai.yaml
-   ```
-
-4. **Deploy Application**
-   - New tasks will be automatically encrypted
-   - Old tasks remain readable
-
-5. **Migrate Existing Data**
-   ```bash
-   # Run migration tool
-   ./migrate-encrypt --conf configs
-   ```
-
-### Key Rotation
-
-To rotate encryption keys:
-
-1. Deploy new application version with old key
-2. Use migration tool to re-encrypt with new key
-3. Update configuration with new key
-4. Restart application
-
-### Monitoring
-
-Monitor these metrics:
-- Encryption/decryption error rates
-- Migration progress
-- Database query performance
-
-## Performance
-
-Typical performance on modern hardware:
-- Encryption: ~500,000 ops/sec
-- Decryption: ~500,000 ops/sec
-- Database overhead: <1ms per operation
-
-## Security Considerations
-
-### What is Encrypted
-- Task payload (task_payload field)
-- Any data containing credentials, passwords, API keys
-
-### What is NOT Encrypted
-- Task metadata (type, status, timestamps)
-- Task IDs and names
-- Audit logs
-
-### Threat Model
-Protects against:
-- ✓ Database dumps
-- ✓ SQL injection (payload exfiltration)
-- ✓ Backup compromise
-- ✓ Insider threats (DBA access)
-
-Does NOT protect against:
-- ✗ Application-level compromise
-- ✗ Key compromise
-- ✗ Memory dumps of running process
-- ✗ Side-channel attacks
-
-## Troubleshooting
-
-### "Invalid ciphertext" error
-- Encryption key may have changed
-- Data may be corrupted
-- Check application logs for details
-
-### Tasks not decrypting
-- Verify encryption is enabled in config
-- Check encryption key is set correctly
-- Ensure InitEncryption() is called on startup
-
-### Migration fails
-- Check database connectivity
-- Verify encryption key is correct
-- Review migration tool output for specific errors
-
-## Examples
-
-### Example 1: Email Task Configuration
-```json
-{
-  "host": "imap.gmail.com",
-  "port": 993,
-  "username": "user@example.com",
-  "password": "secret-password",
-  "tls": true
-}
-```
-
-When stored in database:
-```
-enc:SGVsbG8gV29ybGQhCg==...base64-encoded-encrypted-data
-```
-
-### Example 2: API Integration
-```json
-{
-  "api_url": "https://api.example.com",
-  "api_key": "sk-1234567890abcdef",
-  "api_secret": "super-secret-key"
-}
-```
-
-After encryption, credentials are protected in the database.
-
-## License
-
-This encryption implementation is part of the go-wind-admin project.
+本包属于 ANI Governance，保留技术模块名 `go-wind-admin`。项目来源、原许可和接管边界见 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)。

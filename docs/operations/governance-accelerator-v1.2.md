@@ -4,7 +4,7 @@
 
 ## 1. 版本与当前运行边界
 
-Acc 固定为已发布提交 `1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3`；Gov 的正式模块依赖为 `v0.0.0-20260924030150-1d32dd9a9173`，以本仓 [go.mod](../../go.mod)/[go.sum](../../go.sum)和最终版本锁为准。Gov 最低实现版本为 `bd9ad1a33bbe8ce28f4faeb19bfc9ee494ae8a84`；后续纯证据提交不改变这些能力。历史 `9f9712198488` API 模块测试只能证明当时版本。
+本批历史记录中，Acc 固定为已发布提交 `1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3`，Gov 当时依赖为 `v0.0.0-20260924030150-1d32dd9a9173`；当前依赖以本仓 [go.mod](../../go.mod)/[go.sum](../../go.sum)为准，不能用历史版本锁替换。该批 Gov 最低实现版本为 `bd9ad1a33bbe8ce28f4faeb19bfc9ee494ae8a84`；后续纯证据提交不改变该批能力。历史 `9f9712198488` API 模块测试只能证明当时版本。
 
 正式构建目前没有 GPU owner adapter、业务创建 BFF 或退款 owner map；两个正式 code `gpu.physical.count`、`gpu.shared_memory_mib` 均为 `NOT_ENABLED`。只读/管理 Accelerator BFF 可以独立运行。配置下游地址、添加套餐额度或打开某个环境变量不会注册 owner。新创建必须在 Resolve/占额之前失败关闭；旧操作仍保留，不能因 adapter 缺失清账或退款。`gpu.count` 保持原 LAB 语义。
 
@@ -73,7 +73,7 @@ runtime 必须是非表 owner、非 superuser、无 BYPASSRLS、无 schema/datab
 
 启动前按制品版本核对配置、数据库迁移、证书有效期和服务端 DNS。Gov→Acc 配置见 [accelerator.env.example](../../app/admin/service/configs/accelerator.env.example)：未配置地址时禁用下游；配置后 CA/cert/key/server name 必须完整。示例 DNS 是样例，必须匹配部署实际服务端证书；客户端叶证书只有精确 URI `spiffe://ani.internal/service/ani-governance`。
 
-20 个委托 RPC 还要求 Acc 配置的 actor/action/tenant/cluster grant；用户 JWT 权限不能代替它。Sync 使用 Gov 直接服务身份，不依赖用户当前 grant。owner→Gov 退款使用独立 DNS SAN→owner map，不能误套 Acc 唯一 URI 规则。正式退款 map 当前为空，不能通过 `ANI_QUOTA_ENABLED=true` 将不存在的 owner 开启；缺必要配置会启动失败。
+20 个委托 RPC 还要求 Acc 配置的 actor/action/tenant/cluster grant；用户 JWT 权限不能代替它。Sync 使用 Gov 直接服务身份，不依赖用户当前 grant。owner→Gov 退款使用独立 DNS SAN→owner map，不能误套 Acc 唯一 URI 规则。2026-10-09 后源码已编译接入固定 `ani-inference` owner，由 `ANI_QUOTA_INFERENCE_DNS_SAN` 配置其精确部署证书身份；listener 默认关闭，缺必要配置会启动失败。完整当前接线和配置以 [GPU owner 指南](../contracts/gpu-owner-integration-guide.md)为准；源码注册不证明目标部署或真实 GPU 验收已完成。
 
 建议的依赖与放流顺序：
 
@@ -81,7 +81,7 @@ runtime 必须是非表 owner、非 superuser、无 BYPASSRLS、无 schema/datab
 2. 启动受控 Acc 普通服务及其合法 provider 读来源；无硬件消费证明时保持 CLOSED/NOT_VERIFIED。不要向普通服务挂入 B 层测试密钥。
 3. 用冻结制品启动 Gov 普通服务；核对普通配置 `migrate=false`，证书/DNS/委托条件、管理只读和目录 NOT_ENABLED。没有正式 owner 时不开放业务创建入口。
 4. 当前 composition 在 Gov 进程内注册 dispatch worker；配置有效 Acc client 时注册独立 usage sync worker。两者由应用生命周期管理，不是两个可随意启停的公开管理 API。开始恢复前确认下游服务身份和历史数据兼容。
-5. 未来正式 owner 必须先通过接入门禁，再注册业务 action 和退款 map；只有受控装配完整、quota code 受支持及权限/套餐齐备后才开放新创建。B 层持久测试 owner 的启动不属于这一步。
+5. 当前固定 Inference owner 仍须核对实际装配、受支持的 quota code、权限/套餐和目标环境验收，再开放新创建。新增 owner 必须另行通过接入门禁并显式注册 action 和退款映射；B 层持久测试 owner 的启动不能代替正式接入。
 
 应用框架的 Server 列表不承诺严格串行 Start/Stop；不要依靠数组位置解决外部依赖。现有公网接口也没有生产 pause/unblock 管理 RPC。维护时先在既有入口/部署流程停止新受理，再优雅停止所有相关 Gov 副本，以停止领取及等待在途操作；记录 SIGTERM、退出码、仍未完成命令和租约。不能把撤掉套餐当成禁止可信退款或抹掉历史业务的措施。
 
@@ -157,7 +157,7 @@ sha256sum "$GOV_BACKUP_FILE" > "$GOV_BACKUP_FILE.sha256"
 
 当前 Gov `make verify-ci` 串行运行 `check`、`test-integration`、`check-generated`；它覆盖格式、配额 Ent 执行边界扫描、受影响测试与真实 PG/race、完整生成和固定漏洞/secret 审计。旧 `verify-gpu` 的运行记录见[数据层历史复跑说明](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/evidence/gov-acc-v12-01/data-layer.md)，只对应旧 SHA。普通 data suite 会清理它自己的测试账本，**只能使用其独立 data 库**；不能把 joint-B、owner 或恢复业务库 DSN 传给它。
 
-跨仓真实软件联调仍须另跑 `scripts/accelerator-acceptance/run-joint-contract.sh`、BFF和正式A边界脚本，使用明确不同 A/B DSN/CA/config。Acc 使用其固定版本的 `make verify`。所有结果落入[95项验收结果表](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/evidence/gov-acc-v12-01/acceptance-results.md)，记录精确版本、source manifest、命令/退出码、原始失败与复跑，不用 component PASS 代替整项。
+当前跨仓软件合同入口为 [GPU 软件合同实验](../../scripts/experiments/gpu-contract/README.md)；旧 `scripts/accelerator-acceptance/run-joint-contract.sh`、BFF 和正式 A 边界脚本只作为固定历史版本的来源阅读。复跑使用明确不同 A/B DSN/CA/config，Acc 使用其固定版本的 `make verify`。本批原结果保留在[95项验收结果表](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/evidence/gov-acc-v12-01/acceptance-results.md)；新结果记录自己的精确版本、source manifest、命令/退出码、原始失败与复跑，不用 component PASS 代替整项。
 
 历史暂停记录保留原样：
 

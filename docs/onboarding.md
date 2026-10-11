@@ -1,8 +1,8 @@
 # 管理员开通：立即激活与邮件邀请
 
-本次仅在 Governance 实现两种开通方式，复用现有用户、角色、租户、凭证和 SMTP。
+Governance 当前提供两种开通方式，复用现有用户、角色、租户、凭证和 SMTP。以下描述实现行为；目标环境的邮件与开通链路仍须单独验收。
 
-## 实现计划
+## 实现行为与验证范围
 
 1. `POST /admin/v1/users` 与 `POST /admin/v1/tenants:with-admin` 增加 `activationMode`：默认 `IMMEDIATE`，可选 `EMAIL_INVITATION`。
 2. 邀请使用现有凭证表 `activate_token_*` 字段：仅保存随机令牌 SHA-256，24 小时有效；账号为 PENDING，用户名凭证禁用，不设置默认密码。

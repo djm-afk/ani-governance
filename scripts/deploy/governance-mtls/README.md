@@ -1,18 +1,19 @@
-# Governance 入口网关的 mTLS 配置
+# Governance → Network 的 mTLS 部署参考
 
-Governance 兼任所有服务的外部入口网关：验证用户登录、租户、套餐和接口权限，
-再用自己的服务身份调用对应领域服务。现有 Network 客户端与业务代码全部复用。
-本目录统一维护 Governance 的客户端证书申请与部署挂载，目前已接入
-Governance → Network，不表示其他服务已经全部接入。
+Governance 为已接入的租户业务验证登录、租户、套餐和接口权限，
+再用自己的服务身份调用对应领域服务。本目录是现有 Network DNS 客户端身份的
+证书申请与部署挂载参考，接入步骤见 [业务服务接入指南](../../../docs/service-integration.md)。
+其他当前调用链的身份与证书要求以各自合同为准；GPU 链的 URI/DNS 差异见
+[GPU owner 接入指南](../../../docs/contracts/gpu-owner-integration-guide.md#4-身份与不可变字段)，
+不能把此 DNS 示例直接用于 Gov → Accelerator 或受管 Inference。
 
 > **Model 已于 2026-09-21 暂摘**：`ANI_MODEL_*` 环境变量与 `model-trust` 卷已从
-> `deployment-patch.yaml` 移除，`GET /api/v1/models` 下线。本文档与下方
-> "本次实际验证"保留 Model 时期的历史记录；重接 Model 时恢复对应环境变量、
-> 信任根 ConfigMap 与 [model-lab](../../model-lab/) 夹具。
+> `deployment-patch.yaml` 移除，`GET /api/v1/models` 下线。
+> 历史来源见 [固定版本 model-lab](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/scripts/model-lab/README.md)。
+> 旧夹具已退出 HEAD；重接 Model 需要按当前接口与身份合同重新装配和验收。
 
-保留一份 `certificate.yaml` 和一份 `deployment-patch.yaml`。以后接入更多服务，
-在同一份部署补丁中补充客户端配置；同一信任体系下复用证书和 CA 挂载，
-不按下游服务新增 patch。
+本目录保留 `certificate.yaml` 和 `deployment-patch.yaml`。新增调用前核对双方身份、
+信任根、方法授权和配置；证书与挂载是否可复用取决于双方合同，不能仅凭同一 CA 判断。
 
 ## 部署
 
@@ -21,6 +22,9 @@ Governance → Network，不表示其他服务已经全部接入。
 `Issuer/ani-internal-ca`。公共签发机构由基础设施部署（ani-installer）负责，
 本目录不安装 cert-manager、不生成或携带 CA 私钥。
 若平台提供 ClusterIssuer，修改 certificate.yaml 的 issuerRef 名称及 kind 即可。
+
+当前 [certificate.yaml](certificate.yaml) 声明 `Issuer/ani-internal-ca`、DNS SAN `ani-governance`、
+`client auth` 用途、有效期 `72h` 和提前 `24h` 续期；这是本目录的具体示例，实际部署需按目标信任体系核对。
 
 配置适配现有 Deployment/governance 和容器 governance；其他部署名需对应调整。
 下游服务地址（如 `ANI_NETWORK_ADDR`）按各服务的接入说明配置。
@@ -40,8 +44,8 @@ kubectl -n "$NS" rollout status deployment/governance --timeout=60s
 > 历史记录（Model 时期）使用的是 `governance-model-ca` ConfigMap 与
 > `gov-model-20260919-01` 命名空间；ConfigMap 名称与命名空间按目标下游调整。
 
-这两份声明应随 Governance 部署保留；重放旧 model-lab 部署脚本后必须重新应用此
-补丁，或将补丁合入实际部署清单，否则旧脚本会恢复旧证书路径。
+这两份声明应随 Network 接线的实际 Governance 部署保留；不要重放已退役的
+model-lab 脚本来准备当前部署。证书路径和客户端配置应合入当前受审查的部署清单。
 客户端在启动时读证书。cert-manager 更新 Secret 后，执行
 `kubectl -n "$NS" rollout restart deployment/governance` 并等待 rollout 完成，
 随后运行当前下游接口的鉴权与跨租户验证。自动重载与根 CA 轮换需另行验证。
@@ -65,11 +69,11 @@ kubectl -n "$NS" rollout status deployment/governance --timeout=60s
 
 ## 如何接入其他服务
 
-- Governance → 新服务：在 Governance 加该服务客户端及 HTTP 入口，登记现有权限和
-  套餐关系；配置目标地址、目标 CA 和服务端身份。同一信任体系下复用
-  `governance-client-tls`，无需每接一个服务再给 Governance 签一张证书。
+- Governance → 新服务：在 Governance 加该服务客户端及 HTTP 入口，登记权限和
+  套餐关系；按该链合同配置目标地址、CA、客户端证书和服务端身份。
+  本目录的 `governance-client-tls` 是 Network DNS 身份示例，不保证适用于其他当前链路。
 - 新服务自己的部署申请服务端证书，挂载自己的私钥和客户端信任 CA；接收端明确允许
-  `ani-governance` 调用哪些 RPC，从可信调用中获取租户并限定数据库查询。
+  已登记的 Governance 证书身份调用哪些 RPC，从可信调用中获取租户并限定数据库查询。
   不能只因证书由同一个 CA 签发就放行所有服务或所有方法。
 - Inference → Model 等内部调用仍直接调用目标服务，使用 Inference 自己的证书，
   不借用 Governance 的证书，也不因为 Governance 是外部入口就绕行它。

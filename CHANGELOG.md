@@ -15,4 +15,4 @@
 
 ## 更早的混合记录
 
-原 `CHANGELOG.md` 包含上游历史和部分 ANI 条目，已逐字保留于 [legacy-changelog.md](docs/history/legacy-changelog.md)。其旧版本、前端和失效路径不能作为当前能力清单。来源及定位见 [历史说明](docs/history/README.md)。
+原 `CHANGELOG.md` 包含上游历史和部分 ANI 条目，原文可从 [固定提交的 CHANGELOG.md](https://github.com/zhangzhe-ctrl/ani-governance/blob/9ba13ad933b66e8f675f7eb9519123abcdb12e8f/CHANGELOG.md) 读取。其旧版本、前端和失效路径不能作为当前能力清单。来源及定位见 [历史说明](docs/history/README.md)。

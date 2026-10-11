@@ -1,10 +1,12 @@
 # 功能对接与接口风格改动登记
 
-总体状态：**进行中，未结项**。最后更新：2026-10-10。
+总体状态：**进行中，未结项**。最后更新：2026-10-11。
 
 本文件覆盖所有后续对接功能。每次用户对接一个新功能时，AI 先排查真实调用链，将涉及的接口、请求和响应、鉴权条件、现有问题追加到对应功能组。先累计登记，等用户指定某个批次后，再统一修改该批接口的路径、字段和响应风格；不能因排查或登记就自动改接口风格。
 
 后续始终维护本文件，不按功能或对话另起登记文件。复用接口引用已有编号，避免重复登记；新功能使用自己的稳定编号。用户明确要求的即时功能修复可单独实施并记录，不必等待风格批次。尚未提供的旧项目格式标为“待指定”；只有用户确认全部改动完成后，整体登记才结项。
+
+本文件的功能索引和前端交接维护当前合同；带日期的实施与验收段落保留对应批次事实。后续增量与早期说明冲突时，同步当前入口，并保留历史结果的源码、环境和未验证边界。
 
 前端交接入口：[用户、租户及两类管理员页面接入说明](#frontend-management-handoff)。该章节可整段转发，包含第一批接口、请求示例、权限、响应和暂缓项；沿用本文已有接口编号。
 
@@ -16,12 +18,12 @@
 | 用户管理 | ACCOUNT-01～ACCOUNT-09；复用 ROLE-01/02、AUTH-01～AUTH-08 | 前端交接见专节；管理侧更新须携带目标租户和有效角色；部分接口暂缓 | 待指定 |
 | 租户管理 | TENANT-01～TENANT-09 | 已核对 HTTP、Service、Repository 和首次种子；本轮未做运行验收 | 待指定 |
 | 租户管理员管理 | 复用 TENANT-06、ACCOUNT-01～ACCOUNT-09、ROLE-01～ROLE-05、AUTH-01/12；AUTH-15～AUTH-18（自助 /me） | 复用用户和租户角色；用户明确不做主管理员移交 | 待指定 |
-| 套餐管理 | PLAN-01～PLAN-14；复用 TENANT-04/08 | 模块限制已有接线；数量配额只配置和统计 | 待指定 |
+| 套餐管理 | PLAN-01～PLAN-14；复用 TENANT-04/08 | 模块限制已接线；配额按 quota_code 核对配置、账本和执行点，GPU 占额见专项合同 | 待指定 |
 | 平台运营账号管理 | 复用 ACCOUNT-01～ACCOUNT-09、ROLE-01～ROLE-05、AUTH-02/12；AUTH-15～AUTH-18；SESSION-01～SESSION-04；PERM-01～PERM-06、PERMGROUP-01～PERMGROUP-05 | 支持多个平台账号；运营/只读角色模板待 API 接入后再加；自助会话与权限点/权限组接口本轮补登，缺口见 MGMT-08～MGMT-15 | 待指定 |
 | API Key / AK-SK | AK-01～AK-07；AK-IDEM-01（创建幂等，2026-10-10） | 签名、角色绑定、加密与可信审计已完成，真实 VPC 闭环 PASS；创建幂等已在 ani-system 真实环境实测（HTTP 20/20 PASS + 8 并发 ALL PASS） | AKSK-VPC-20260922 已完成本批；幂等属即时修复，未并入风格批次 |
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
-| Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 24 方法 JWT/AK、三条主链、清理和相关门禁 pass | 本轮源码及隔离闭环完成；真实环境 not_verified |
-| 通用配额与 GPU 本地模拟 | QUOTA-01～03、QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 本地模拟闭环已实现并通过指定验收；正式构建无 GPU 路由；真实 GPU 未接入 | QUOTA-GPU-LOCAL-01，本地验收完成（真实 GPU not_verified） |
+| Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
+| 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 正式 Accelerator 目录与 Inference 创建/删除 BFF、账本和受控 owner 装配已接入；旧本地模拟入口已退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
 | ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证，目标集群业务验收仍需独立证明 | CPU-P01，进行中 |
 
 ## 风格改动批次
@@ -58,9 +60,9 @@ NET-25 无 body/query，支持 JWT 和 ANI-HMAC-SHA256，要求当前租户、�
 
 ## 2026-10-09：租户 Network 补齐与响应合同
 
-本轮源码补齐 NET-12～NET-24 的 Subnet、SNAT 和 LB 入口，并把已有未放行的 10 个入口与新增 13 个入口加入精确机器身份策略。当前租户面为下表 24 个方法；**全部支持用户 JWT 或 ANI-HMAC-SHA256，并要求当前租户状态、对应角色/API 权限及套餐 `NETWORK` 模块**。源码接入与实际验收分别记录，不能用路由或 OpenAPI 存在代替业务完成。
+本轮源码补齐 NET-12～NET-24 的 Subnet、SNAT 和 LB 入口，并把已有未放行的 10 个入口与新增 13 个入口加入精确机器身份策略。该批租户面为下表 24 个方法；后续 NET-25 见 2026-10-10 增量。**全部支持用户 JWT 或 ANI-HMAC-SHA256，并要求当前租户状态、对应角色/API 权限及套餐 `NETWORK` 模块**。源码接入与实际验收分别记录，不能用路由或 OpenAPI 存在代替业务完成。
 
-### 当前路由、权限与响应
+### NET-01～NET-24 路由、权限与响应（2026-10-09 批次）
 
 NET-01～NET-11 沿用历史编号；NET-12～NET-24 为本轮新增。下表的单资源类型表示 HTTP 直接返回对象；内部 gRPC 响应仍保留原消息字段。
 
@@ -240,7 +242,7 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 | ISSUE-02 | 原首次种子遗漏 `sys:tenant_manager` → `POST /api/v1/auth/logout` | 已补首次种子；旧库显式执行 [登出授权补丁](../scripts/ops/sql/repair-tenant-logout.sql)，操作见 [部署流程](deployment.md)；仍保留租户状态、套餐与角色权限检查 | 实现完成；PostgreSQL 18 定向验证 PASS；用户环境尚未应用，HTTP 联调 not_verified |
 | ISSUE-03 | 认证路径为 `/api/v1/auth/*`，个人资料/初始化为 `/admin/v1/*`；字段也有 snake_case 与 camelCase 混用 | 累计记录差异，待用户指定批次与旧项目目标格式后统一调整 | 待指定 |
 | ISSUE-04 | 当前登出吊销用户全部后台会话，`jti` 仅审计用 | 用户指定保留全部登出还是改为当前会话 | 待指定 |
-| ISSUE-05 | kind 实际联调发现租户数据库已有套餐，但读取 DTO 丢失 `plan_id`，初始化菜单被误判为无套餐而清空 | 将现有 nullable 外键显式绑定为 Ent 字段；重新生成代码，租户详情与列表可返回套餐 ID；Atlas 确认与现有结构无差异，无需迁移 | 租户仓储、登录与租户服务回归 PASS；kind NodePort 平台/租户登录、非空菜单、权限、刷新、登出验收 PASS；详见 [运行记录](deployment-kind-20260921.md) |
+| ISSUE-05 | kind 实际联调发现租户数据库已有套餐，但读取 DTO 丢失 `plan_id`，初始化菜单被误判为无套餐而清空 | 将现有 nullable 外键显式绑定为 Ent 字段；重新生成代码，租户详情与列表可返回套餐 ID；Atlas 确认与现有结构无差异，无需迁移 | 租户仓储、登录与租户服务回归 PASS；kind NodePort 平台/租户登录、非空菜单、权限、刷新、登出验收 PASS；详见 [运行记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/deployment-kind-20260921.md) |
 
 这些条目是现状与待讨论项，不表示已批准新增需求。既有数据库的数据变更必须显式执行；服务启动不迁移、不播种、不同步 API。
 
@@ -248,7 +250,7 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 
 | 日期 | 改动 | 验证 | 对接验收 |
 | --- | --- | --- | --- |
-| 2026-09-21 | 按用户要求重新初始化 Ubuntu kind Governance；保留旧库，新库 Atlas + 显式初始化；修复租户套餐 ID 映射导致的空菜单；不调整前端 | 后端 NodePort 登录、菜单权限、刷新、平台/租户登出及失效检查 PASS；重启后 17 张初始化/业务表不变，详见 [运行记录](deployment-kind-20260921.md) | 本轮后端 NodePort 验收通过；前端、公网 HTTPS 与邮件未验收，整体接口风格登记仍未结项 |
+| 2026-09-21 | 按用户要求重新初始化 Ubuntu kind Governance；保留旧库，新库 Atlas + 显式初始化；修复租户套餐 ID 映射导致的空菜单；不调整前端 | 后端 NodePort 登录、菜单权限、刷新、平台/租户登出及失效检查 PASS；重启后 17 张初始化/业务表不变，详见 [运行记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/deployment-kind-20260921.md) | 本轮后端 NodePort 验收通过；前端、公网 HTTPS 与邮件未验收，整体接口风格登记仍未结项 |
 | 2026-09-21 | 按用户要求取消两个密码登录入口的 AES/Base64 解码；同步 Proto、生成代码/OpenAPI 与部署说明；原 bcrypt 哈希及其他密码接口协议保留 | Ubuntu / Go 1.26.7：25 个 `TestAuthSvcSqlite_` 用例、2 个密码管理回归用例、`TestPasswordLoginAuditDoesNotPersistPassword` 与服务编译 PASS；含正确原始密码通过、旧 AES 报文拒绝、审计不记录密码；生成使用现有 buf 模板，Go 插件版本 v1.36.12 | 用户环境 HTTPS 配置、部署及前端联调 not_verified；需前后端同步发布；整体登记未结项 |
 | 2026-09-21 | 按用户要求补齐租户管理员登出授权：新库种子新增关联，旧库提供独立 SQL 补丁；密码协议未改 | Ubuntu / Go 1.26.7 / PostgreSQL 18，`TestBootstrapPostgres` PASS：新库授权存在、模拟旧库缺项可修复、重复执行数据及 ID 不变、缺 API 前置条件时失败且不改数据 | 未执行用户环境补丁；租户 HTTP 登出联调 not_verified；整体登记未结项 |
 | 2026-09-21 | 按用户澄清扩展为全功能登记，新增功能索引与待分批规则；登录组保留原编号 | 文档链接与差异检查通过，无运行代码变更 | 风格批次尚未指定，整体登记未结项 |
@@ -373,7 +375,7 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 | PERM-01 | `GET /admin/v1/permissions` | 权限点分页；租户调用者仅见自身角色可达的权限点，平台调用者见全部 |
 | PERM-02 | `GET /admin/v1/permissions/{id}` | 权限点详情；租户调用者对越权权限点返回 403 |
 | PERM-03 | `POST /admin/v1/permissions` | `data`（code/name/groupId/status）；写后 `ResetPolicies` 失败会向上返回错误 |
-| PERM-04 | `PUT /admin/v1/permissions/{id}` | `data`、`updateMask`；**必须回传完整 `apiIds`/`menuIds`，省略即确定性清空绑定**（见 MGMT-09） |
+| PERM-04 | `PUT /admin/v1/permissions/{id}` | `data`、`updateMask`；当前关联更新存在丢失风险，完整数组也不能规避 mask 过滤，见 [已知实现缺陷](api-role-permission-ops.md#permission-update-mask-risk) 和 MGMT-09 |
 | PERM-05 | `DELETE /admin/v1/permissions/{id}` | 删除权限点；`sys:*` 受保护清单未在本路径强制（见 MGMT-10） |
 | PERM-06 | `POST /admin/v1/permissions/sync:perms` | 无请求体；先截断再重建非 `sys:*` 的权限组/权限点，破坏性同步，执行前需备份 |
 | PERMGROUP-01 | `GET /admin/v1/permission-groups` | 权限组分页 |
@@ -394,13 +396,13 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 | --- | --- | --- |
 | MGMT-01 | 源领域 Proto 有 `AssignTenantAdmin`，但 admin BFF 无该路由，TenantService 无对应方法；通用更新可写 `adminUserId`，却不会同步角色或校验完整移交条件 | 2026-09-21 用户明确产品不需要；作为不实现项关闭，不新增移交功能 |
 | MGMT-02 | 按用户授权补齐：状态实际写成非 NORMAL、或删除用户成功后，调用现有全客户端会话吊销；清理访问令牌、刷新令牌及在线会话；FieldMask 排除状态时不误踢；吊销失败明确报错，共用缓存清理不再覆盖前序错误。角色变更不在本轮修复范围 | 实现及定向回归 PASS；尚未部署，kind 验收 not_verified |
-| MGMT-03 | 用户数和 API 调用量有本地统计；STORAGE 配额类型保留，但文件管理移除后存储用量固定返回 0，尚未接入外部服务统计。未找到创建资源时的超限拦截；数据保留天数未找到自动清理消费方 | 用户要求扩展配额；建议另开任务确定各配额类型、统计口径、来源服务及超限处理，本轮只登记 |
+| MGMT-03 | 早期管理批次记录用户数 / API 调用量统计、STORAGE 用量固定 0 及保留天数缺少消费方。后续 GPU 已接入冻结计划与原子占额 / 退额账本，见 [GPU owner 合同](contracts/gpu-owner-integration-guide.md)，早期“未找到超限拦截”不代表当前所有资源路径 | 其他 quota_code 的计量来源和执行点按业务 owner 分别核对；历史统计批次不替代当前 GPU 合同或目标环境验收 |
 | MGMT-04 | 到期 READONLY 在请求时判断；BLOCK_LOGIN/FREEZE 由每小时扫描修改状态，依赖 Asynq 调度与执行；延长有效期不会自动把已冻结/过期状态改回 ON | 实现已存在；本轮到期运行验收 not_verified |
 | MGMT-05 | 用户密码路由注册为 `{user_id}`，嵌入 OpenAPI/首次种子登记为 `{userId}`；TenantAccessChecker 对路径模板做精确匹配，租户直调该接口可能在业务执行前被拒；密码更新/重置仍需 AES，登录已改原始密码 | 用户明确暂不修复，只登记；HTTP 复现 not_verified |
 | MGMT-06 | 用户名删除路由虽已注册，UserService.Delete 总是先按 `req.GetId()` 查目标，用户名路由未提供该 ID；平台管理应使用 ACCOUNT-05 | 源码缺口；别名 HTTP 验收 not_verified |
 | MGMT-07 | UserService.Update 无论 updateMask 是否涉及角色都校验非空 roleIds；创建普通用户的立即激活分支先提交用户，再创建密码凭证，后者失败不自动回滚已建用户 | 接入限制已确认；待指定修复，未修改 |
 | MGMT-08 | 在线会话 4 条路由中，自助两条 `my-sessions`、`my-sessions/revoke` 在首次种子里只授给 `sys:platform_admin`；`sys:tenant_manager` 没有任何 online-session 授权，菜单 `OnlineSessionManagement` 的 `authority` 也只有 `sys:platform_admin`。因此租户管理员（及一般自服务场景）无法查看/下线自己的会话 | 源码与种子已确认；租户管理员是否放行自助会话待用户指定，未修改 |
-| MGMT-09 | `PermissionService.Update` 的仓储实现无条件重设 `apiIds`/`menuIds`（`permission_repo.go:456-462`），其 `CleanNotExist*` 用 `NotIn(空)` 恒真删除；请求体省略这两字段会**确定性清空**该权限点已绑定的 API/菜单关联 | 已接线但此前未登记；本轮补登 `PERM-04` 并明确"PUT 必须回传完整数组"，未改代码 |
+| MGMT-09 | 仓储从 mask 移除关联字段后，通用更新原地过滤 DTO，再无条件替换 API / 菜单关联；HTTP PUT 的非 nil mask 经 Service 追加 updated_by，因此即使回传完整数组也会被清空，详见 [静态执行链](api-role-permission-ops.md#permission-update-mask-risk) | 2026-10-11 文档更正；此前“回传完整数组”建议无效。实现仍待修，未运行复现，不标已符合关联 mask 合同 |
 | MGMT-10 | `constants.ProtectedPermissionCodes`（`sys:*` 共 7 个）在 `PermissionService.Delete` 路径未被强制校验，删除保护只落在角色层（`ROLE-05`） | 受保护权限点可被直接删除，导致鉴权与菜单静默失效；是否补删除保护待指定 |
 | MGMT-11 | `PUT /admin/v1/me`（`UserProfileService.UpdateUser`，`user_profile_service.go:81-96`）直接调 `userRepo.Update`，跳过 `UserService.Update` 的角色类型/租户校验与"至少一个角色"约束；而 `user_repo.go` 在掩码含 `role_ids` 时会应用 `roleIds` | 源码观察（**未运行验证**）：本人可借自助接口改动自身角色集合，形成自助提权面；是否收紧待用户指定 |
 | MGMT-12 | `tenant.admin_user_id` 是自由指针（`TenantRepo.AssignTenantAdmin`），无外键/级联或一致性校验；`UserService.Delete` 删除主管理员用户后**不清空**该指针 | 租户记录留下悬空主管理员引用，`List`/`Get` 的 `adminUserName` 静默为空；与 MGMT-01（移交缺失）是不同问题 |
@@ -466,18 +468,20 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 
 ### 3. 列表、筛选与分页
 
-用户、租户、角色、套餐列表统一使用 `page`、`pageSize`、`query`，从第 1 页开始；`query` 是 **JSON 字符串**，通过 URL 参数编码发送。筛选中的字段采用数据库 snake_case；这与 JSON body 的 camelCase 是两层合同。
+`GET /admin/v1/users` 默认使用 `limit` + `cursor`，响应为 `{items,next_cursor,total}`；首次不传 cursor，后续原样回传上一页的 next_cursor。参数边界、签名绑定、稳定排序和旧页码兼容的唯一正文见 [分页规范](contracts/pagination.md)，历史验收见 [LIST-CURSOR-01](#list-cursor-01)。租户、角色、套餐等其余 admin 列表仍使用 `page`、`pageSize`，从第 1 页开始，不具备 users 的游标语义。
+
+各列表的 `query` 是 **JSON 字符串**，通过 URL 参数编码发送；筛选字段采用数据库 snake_case，与 JSON body 的 camelCase 分开。
 
 ```javascript
-// 示例 ID 均须替换为接口查到的值。此例查询租户 12 的全部用户。
+// 示例 ID 须替换为接口查到的值。此例由有权限的平台账号读取租户 12 用户的首页。
 const params = new URLSearchParams({
-  page: '1',
-  pageSize: '20',
+  limit: '20',
   query: JSON.stringify({ tenant_id: '12' }),
   orderBy: JSON.stringify(['-id']),
 });
 const url = `${BASE_URL}/admin/v1/users?${params.toString()}`;
 // 使用项目统一请求客户端，并附加 Bearer。
+// 下一页设置 cursor=response.next_cursor，保留相同 query/orderBy；末页停止。
 ```
 
 | 需求 | `query` 的对象内容（发送时 JSON.stringify） |
@@ -494,7 +498,7 @@ const url = `${BASE_URL}/admin/v1/users?${params.toString()}`;
 
 裸字段是精确条件，文本模糊搜索显式使用 `__contains`，ID 不做模糊匹配。单角色过滤用顶层 `role_id`；多角色用顶层 `"role_ids__in": ["34","35"]`。不要写成 `role_ids:[34,35]`，也不要把角色条件藏在 `$and/$or` 子树中。管理员列表由后端过滤后分页，不在前端拿一页普通用户再筛管理员。
 
-角色/套餐下拉可在范围受控时使用 `noPaging=true`，仍携带必要的 `query`；当前依赖默认上限为 10,000 行，不能当作无限全量导出。普通分页建议 `pageSize=20`，默认上限 100。当前租户登录只能读取本租户允许的数据，不能靠修改筛选参数切换身份。
+角色/套餐下拉可在范围受控时使用 `noPaging=true`，仍携带必要的 `query`；当前依赖默认上限为 10,000 行，不能当作无限全量导出。页码列表建议 `pageSize=20`，默认上限 100；users 的 limit 默认 20，范围 1～100，不与旧窗口参数混用。当前租户登录只能读取本租户允许的数据，不能靠修改筛选参数切换身份。
 
 ### 4. 用户管理：三个账号页面共用
 
@@ -502,7 +506,7 @@ const url = `${BASE_URL}/admin/v1/users?${params.toString()}`;
 
 | 编号 | 方法与路径 | 请求 / 响应 | 第一批接入说明 |
 | --- | --- | --- | --- |
-| ACCOUNT-01 | `GET /admin/v1/users` | 共用分页 → `{items,total}` | 列表、查重预检查、创建后定位 |
+| ACCOUNT-01 | `GET /admin/v1/users` | 默认 `limit/cursor` → `{items,next_cursor,total}`；显式页码兼容见 [LIST-CURSOR-01](#list-cursor-01) | 列表、查重预检查、创建后定位 |
 | ACCOUNT-02 | `GET /admin/v1/users/{id}` | 无 body → User | 查看及编辑前读取最新角色/状态 |
 | ACCOUNT-03 | `POST /admin/v1/users` | `{data,password,activationMode}` → `{}` | 新增普通用户、追加租户管理员、创建平台管理员共用 |
 | ACCOUNT-04 | `PUT /admin/v1/users/{id}` | `{data,updateMask}` → `{}` | 资料、角色、启用/禁用共用；不在资料更新中夹带 password |
@@ -845,7 +849,7 @@ Network 的 [GetVPC SQL](https://github.com/zhangzhe-ctrl/ani-network-service/bl
 
 ### API Key 风格对照与声明预览（历史方向，现已按执行文档实施）
 
-2026-09-22：用户明确将**共用认证层**纳入范围，参照 [ANI OpenAPI](../../ANI/repo/api/openapi/v1.yaml) 查看预览后确认方向，并要求编写含 Python 示例的执行文档。用户进一步明确**没有旧 Key、没有存量用户**。后续以 [执行文档](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/aksk-vpc-execution-plan.md) 的接口、签名规范、首次部署与验收步骤为准；本节保留原样式对照；实现和真实运行结果以上述当前交付及执行文档为准。
+2026-09-22：用户明确将**共用认证层**纳入范围，参照当时的 ANI OpenAPI（历史对照路径 `ANI/repo/api/openapi/v1.yaml`）查看预览后确认方向，并要求编写含 Python 示例的执行文档。用户进一步明确**没有旧 Key、没有存量用户**。后续以 [执行文档](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/aksk-vpc-execution-plan.md) 的接口、签名规范、首次部署与验收步骤为准；本节保留原样式对照；实现和真实运行结果以上述当前交付及执行文档为准。
 
 参照文件在 `servers.url` 中已有 `/api/v1`，Key 路由写作 `/auth/api-keys`，完整路径为 `/api/v1/auth/api-keys`。其 `ApiKeyAuth` 使用单个 `X-API-Key` 长期凭证；创建字段为 `name/scopes/user_id/rate_limit_rpm/expires_at`，创建响应为 `key_id/key_value/key_prefix`，列表为 `items/total`。**这是静态 API Key 声明，不是 AK/SK 请求签名协议。**
 
@@ -992,7 +996,7 @@ x-ani-authz:
 
 ## 功能组：审计归属地停止采集（IMAGE-SLIM-01）
 
-2026-09-23 镜像瘦身批次移除 GeoIP（GeoLite2）依赖，执行计划见 [镜像瘦身与二进制拆分执行计划](image-size-reduction-plan.md)。影响面是**既有审计写入的报文内容**，接口路由与鉴权条件不变。
+2026-09-23 镜像瘦身批次移除 GeoIP（GeoLite2）依赖，执行计划见 [镜像瘦身与二进制拆分执行计划](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/image-size-reduction-plan.md)。影响面是**既有审计写入的报文内容**，接口路由与鉴权条件不变。
 
 | 编号 | 涉及接口/报文 | 变更内容 | 鉴权、套餐关系、状态 |
 | --- | --- | --- | --- |
@@ -1009,7 +1013,7 @@ x-ani-authz:
 
 ## 功能组：鉴权引擎去掉 OPA（OPA-REMOVAL-01）
 
-2026-09-23 镜像瘦身后续：移除 OPA 鉴权引擎，执行计划见 [OPA 移除记录](opa-removal-plan.md)。接口路由与报文不变，**鉴权条件**收敛。
+2026-09-23 镜像瘦身后续：移除 OPA 鉴权引擎，执行计划见 [OPA 移除记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/opa-removal-plan.md)。接口路由与报文不变，**鉴权条件**收敛。
 
 | 编号 | 涉及条件 | 变更内容 | 状态 |
 | --- | --- | --- | --- |
@@ -1026,7 +1030,7 @@ x-ani-authz:
 
 ## 功能组：审计报文去掉 geo_location、权限策略枚举去掉 OPA（FIELD-CLEANUP-01）
 
-2026-09-23 字段清理批次，执行计划见 [字段清理计划](geo-location-field-removal-plan.md)。这是**报文结构变更**，不只是实现细节。
+2026-09-23 字段清理批次，执行计划见 [字段清理计划](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/geo-location-field-removal-plan.md)。这是**报文结构变更**，不只是实现细节。
 
 | 编号 | 涉及接口/报文 | 变更内容 | 状态 |
 | --- | --- | --- | --- |
@@ -1039,7 +1043,7 @@ x-ani-authz:
 - FIELD-CLEANUP-ISSUE-02：前端/下游消费方若读取 `geo_location`，字段消失后应表现为缺省而非报错；需各自确认容错。
 - FIELD-CLEANUP-ISSUE-03：`admin sync-apis` 依赖的 OpenAPI 本批只删消息字段，未增删路由，升级后仍应按 dry-run → 应用顺序执行。
 - FIELD-CLEANUP-ISSUE-04：`atlas migrate diff` 的 dev 库规范化被既有 `sys_quota_operations` 外键问题阻塞（与本次改动无关），本批迁移改为手写 + `migrate hash` + 独立开发库 apply 验证；该阻塞项另批处理。
-- FIELD-CLEANUP-ISSUE-05：`policy_engine` 枚举变化不产生迁移，既有 `OPA` 值行不受影响，但服务已不再支持该引擎（见 [OPA 移除记录](opa-removal-plan.md)）。
+- FIELD-CLEANUP-ISSUE-05：`policy_engine` 枚举变化不产生迁移，既有 `OPA` 值行不受影响，但服务已不再支持该引擎（见 [OPA 移除记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/opa-removal-plan.md)）。
 
 本轮验证：`go build ./...`、`go vet ./...`、`go test ./pkg/middleware/logging/...` 通过；`make api` / `make openapi` / `make ent` 重新生成并复核 diff 只含本次变更；新迁移在独立开发库 `migrate apply` 通过（4 条 DROP COLUMN）后开发库已回收。真实库迁移、回滚演练与前端展示未验证（`not_verified`）。
 
@@ -1298,19 +1302,13 @@ Resource 仅提供内部 gRPC，本批同步公开 JSON 规格和 SBOM，已发�
 
 执行日志位于本地 `/tmp/flat-details-resource-verify.log`、`/tmp/flat-details-resource-sbom.log`、`/tmp/flat-details-governance-generate-test-3.log`、`/tmp/flat-details-governance-published-validation.log`、`/tmp/flat-details-governance-real-details.log`。首次注解重复和 OpenAPI 重复 200 的失败日志保留，未放宽断言。9 路由测试冻结传输结构；真实数据库链路的上述范围与 ModelDev 仅编译检查分别报告。部署和目标环境业务验收仍为 `not_verified`。
 
+<a id="list-cursor-01"></a>
+
 ## LIST-CURSOR-01：`GET /admin/v1/users` 改为 limit + cursor 游标分页（2026-10-10）
 
-按组长口径把 `GET /admin/v1/users` 由 `page/pageSize` 改为 `limit` + `cursor`，对外形状对齐 vpc 列表（`items` + `next_cursor` + `total`）。本批**只改这一个接口**：其余使用 `pagination.PagingRequest` 的 admin 列表接口行为不变（`cursor` 随共享请求消息出现在 OpenAPI 参数表里，但这些接口不接入游标语义，传了会被忽略）。
+本批仅将 `GET /admin/v1/users` 接入 `limit/cursor`，保留显式页码兼容；其余 admin 列表不因共享请求消息增加 cursor 而完成迁移。参数、响应、签名绑定、排序、过滤、身份与密钥规则的唯一正文见 [分页规范](contracts/pagination.md)。
 
-报文：请求 `?limit=20&cursor=<不透明游标>`，`limit` 不传取 20、只接受 1~100，越界或非法直接 400（不做截断）；`cursor` 首次不传，此后原样回传上一页的 `next_cursor`，与 `page/pageSize`、`offset`、`token` 互斥（同时出现 400）。响应 `{items, next_cursor, total}`：`total` 是当前租户/权限/筛选条件下的总数，不受游标窗口影响（Proto uint64，HTTP JSON 十进制字符串）；`next_cursor` 有下一页才返回，末页为空（protojson 不输出未填充字段，因此末页该键缺席而不是空串）。
-
-游标是服务端 HMAC-SHA256 签名的不透明串（`c1.<base64url(payload)>.<hex(hmac)>`），绑定资源（`identity.user`）、上下文（tenant/platform/system）、可信租户与“筛选 + 排序”指纹。篡改、跨租户、换筛选或换排序复用一律 400，不降级为首页；可信 `viewer` 缺失时 fail-closed。
-
-排序：默认按唯一 ID 降序（与前端既有 `orderBy=['-id']` 一致），客户端 `sorting/orderBy` 只接受单一排序列并强制追加唯一 ID 兜底；可排序列限 `id/tenant_id/username/nickname/realname/email/mobile/status/gender/created_at/updated_at/last_login_at/locked_until`，未列出的排序列 400。`sys_users` 绝大多数列可空，因此排序显式声明 NULLS 位置（降序 NULL 在前、升序 NULL 在后），键集条件单独处理“游标落在 NULL 区段”的情形，避免跨页漏掉整个 NULL 区段；排序值取自数据库实体（可空列在实体里是指针，能区分 SQL NULL 与空值），而不是 DTO。`fieldMask` 只裁剪输出：为生成游标额外读取的排序列与唯一 ID 在输出前清理。
-
-鉴权与租户边界不变：仍走既有 Bearer 鉴权与权限点/`sys_permission_apis` 精确匹配；租户谓词由 Ent 的 TenantPrivacy 在查询侧强制，游标内的租户取自服务端 viewer，不信任入站参数。未新增 `(path, method)`，不触发 API 目录与权限关系变更。
-
-签名密钥不新增配置项：启动装配从既有 AK/SK 主密钥（`ANI_ACCESS_KEY_ENCRYPTION_KEY_FILE`，所有副本同一份文件）用 HMAC-SHA256 域分离派生子密钥，因此多副本可互认游标，轮换主密钥会使存量游标失效（客户端回到第一页）。刻意不复用 `SetTokenSecret`：该密钥当前未在生产配置（全仓只有测试调用它），且其“无密钥时接受未签名 token”的兼容语义不应被新游标的签名要求绑上。
+以下保留 2026-10-10 的历史执行与验收记录，不表示本次文档修订重新运行了这些检查；当前源码差异和后续迁移范围见该规范。
 
 本机（Windows，Go 1.26.9）已执行：`go build ./...`；`go vet`（data/service/server/pkg/localdeps/go-crud/pkg/crypto）；`go test ./pkg/localdeps/go-crud/... ./pkg/crypto/... ./app/admin/service/internal/data ./app/admin/service/internal/server`，覆盖游标 codec 往返/篡改/绑定不匹配/缺密钥/超长/与 token 格式互不兼容、limit 默认值与边界、筛选指纹对筛选与排序敏感、键集谓词四种 NULL 分支的 SQL 文本、repo 层翻页不重不漏/同值排序兜底/`total` 不受窗口影响/可空列升降序都覆盖全量/`fieldMask` 裁剪后仍能生成游标/400 分支。生成物由暂存副本重放已验收 10 个模板后与工作树逐字节比对再回写（未手改生成物、未在正式输出根裸跑 Buf）；分页契约测试 `TestT08PagingRequestContractIsUnchanged` 按本批授权增列 `cursor = 7`。
 
