@@ -68,8 +68,8 @@ make api
 
 | 当前链路 | 客户端身份与服务端名称 | 受管环境变量 |
 |---|---|---|
-| Gov → Network | 客户端 DNS SAN 精确包含 `ani-governance`；服务端 `ServerName` 固定 `ani-network-service` | `ANI_NETWORK_ADDR/CA/CERT/KEY/TIMEOUT` |
-| Gov → Image | 客户端 DNS SAN 精确包含 `ani-governance`；服务端固定 `ani-network-service`，并额外检查字面 DNS SAN | `ANI_IMAGE_ADDR/CA/CERT/KEY/TIMEOUT` |
+| Gov → Network | 客户端唯一 DNS SAN `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-network-service`，复核字面 DNS SAN 并拒绝通配符 | `ANI_NETWORK_ADDR/CA/CERT/KEY/TIMEOUT` |
+| Gov → Image | 与 Network 使用相同 Resource 身份校验，服务端固定 `ani-network-service` | `ANI_IMAGE_ADDR/CA/CERT/KEY/TIMEOUT` |
 | Gov → ModelDev | 客户端唯一 DNS SAN 为 `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-modeldev-service` 并额外检查字面 DNS SAN | `ANI_MODELDEV_ADDR/CA/CERT/KEY/TIMEOUT` |
 | Gov → Accelerator | 客户端唯一 URI SAN 为 `spiffe://ani.internal/service/ani-governance`；服务端名称来自受管配置 | `ANI_ACCELERATOR_ADDR/CA/CERT/KEY/TIMEOUT/SERVER_NAME` |
 | Gov → Inference | 客户端唯一 URI SAN 为 `spiffe://ani.internal/service/ani-governance`；服务端名称来自受管配置，并额外检查字面 DNS SAN | `ANI_INFERENCE_ADDR/CA_FILE/CERT_FILE/KEY_FILE/SERVER_NAME`；固定三秒超时 |
@@ -78,11 +78,11 @@ make api
 
 以下逐条说明 **Network 示例**：
 
-- **fail-closed 构造**：address 与正 timeout 必填；CA 必须能解析（无证书即报错）；客户端证书加载失败即报错；leaf 的 DNS SAN 必须精确包含 `ani-governance`（这是治理中心自己的身份，不是下游的）。
-- **传输**：`tls.Config{MinVersion: TLS13}`；`ServerName` 固定为下游 DNS 名（如 `ani-network-service`）；`grpc.WithDisableServiceConfig()`——本合同没有 DNS TXT 服务发现权威。
+- **fail-closed 构造**：address 与正 timeout 必填；CA 必须能解析（无证书即报错）；客户端证书须有效且允许 clientAuth，唯一 DNS SAN 为 `ani-governance`，不混入 URI、IP、email 或其他 DNS 身份。
+- **传输**：`tls.Config{MinVersion: TLS13}`；`ServerName` 固定为 `ani-network-service`，默认 CA/用途/有效期验证后再复核字面 SAN，拒绝通配符。Network/Image 均关闭 gRPC service config 和未审查的自动 retry。
 - **环境变量**：`ANI_NETWORK_ADDR/CA/CERT/KEY/TIMEOUT`；timeout 默认 3s，解析失败要返回错误，不吞。
 - **身份 header 重建**（见 §9 的 Network/Image 契约表）：用 `metadata.NewOutgoingContext` 整体重建，**绝不 append 入站/公网传来的身份 header**。
-- **错误区分**：`DeadlineExceeded` 且连接态非 Ready → 映射 `Unavailable`（503，传输不可达）；已连接但慢的 RPC 保持 `DeadlineExceeded`（504）。
+- **期限与错误**：继承上游取消并设置本次 deadline；保留原 RPC status 与领域 details，不按连接态把 `DeadlineExceeded` 改为 `Unavailable`。公网错误仍由 Service 做安全映射，超时不证明下游没有执行。
 - 构造期一次性读证书是已知限制：cert-manager 续期后需重启 Pod 重载，见 [governance-mtls README](../scripts/deploy/governance-mtls/README.md)。
 
 ## 6. 入站代理服务（`internal/service/<entity>_service.go`）
@@ -141,7 +141,9 @@ make api
 | `x-ani-actor` | `governance:user:<uid>` 或 `governance:access-key:<key-id>` | 认证后的 `Principal.Actor()`；用户与机器身份独立 |
 | `x-ani-request-id` | 新 UUID | 每次调用重建 |
 
-这两条链路的下游只信任已认证 mTLS 对端（治理中心）传来的上述 header；公网或重复 header 一律不可信。治理中心侧每次出站都整体重建，不从入站请求继承。其他现有链路使用各自合同：
+这两条链路的下游只信任已认证 mTLS 对端（治理中心）传来的上述 header；公网或重复 header 一律不可信。治理中心侧每次出站都整体重建，不从入站请求继承。Network 的 CreateVPC/CreateSubnet Attribution 使用同一次生成的 request ID，以及相同 actor 和固定 `ani-governance` direct caller；接收方拒绝冲突。Network 的旧 `x-ani-operator` 仅从可信 actor 推导，不覆盖 request ID。业务 `idempotency_key` 沿用原意图，与追踪 ID 分开。
+
+Resource 接收方的完整方法、租户范围、超时和幂等统一见 [调用登记](https://github.com/zhangzhe-ctrl/ani-resource-service/blob/82c4b2d6fb7ca6fec15ddcb3cf236e5a0ca9a971/docs/specs/governance-calls.md)，需随接收方源码一起交付；任务分支发布不代表已合入 main 或部署。其他现有链路使用各自合同：
 
 - **Gov → ModelDev**：Resolve/AcceptExecution/ApplyCloseIntent 重建上述三项；查询另加完整 RPC 的 `x-ani-authorized-method` 和 `x-ani-data-scope=tenant-all`，受管目录操作复用该委派并按其幂等合同绑定 request ID。见 [query client](../app/admin/service/internal/data/modeldev_query_client.go)、[management client](../app/admin/service/internal/data/modeldev_management_client.go) 与接口登记。
 - **Gov → Accelerator**：委托 RPC 从 typed context 派生 `x-ani-action`（RPC 短名）、`x-ani-actor-type`、`x-ani-actor-id`，租户调用再加 `x-ani-tenant-id`；`SyncGpuUsage` 使用原持久投影并重建空 metadata。不能照搬 Network actor header。见 [acceleratorMetadata](../app/admin/service/internal/data/accelerator_client.go) 和 GPU owner 指南。

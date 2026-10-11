@@ -2,11 +2,8 @@ package data
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -14,7 +11,6 @@ import (
 	networkv1 "github.com/zhangzhe-ctrl/ani-resource-service/api/network/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -26,11 +22,10 @@ type NetworkClientConfig struct {
 	Timeout                            time.Duration
 }
 type NetworkClient struct {
-	client          networkv1.NetworkServiceClient
-	egress          networkv1.TenantEgressServiceClient
-	loadBalancers   networkv1.TenantLoadBalancerServiceClient
-	timeout         time.Duration
-	connectionState func() connectivity.State
+	client        networkv1.NetworkServiceClient
+	egress        networkv1.TenantEgressServiceClient
+	loadBalancers networkv1.TenantLoadBalancerServiceClient
+	timeout       time.Duration
 }
 
 // NewNetworkClient constructs a fail-closed mTLS client; server identity is fixed.
@@ -38,39 +33,16 @@ func NewNetworkClient(c NetworkClientConfig) (*NetworkClient, func(), error) {
 	if c.Address == "" || c.Timeout <= 0 {
 		return nil, nil, fmt.Errorf("network address and positive timeout are required")
 	}
-	pem, err := os.ReadFile(c.CAFile)
+	security, err := resourceClientTLS(c.CAFile, c.CertFile, c.KeyFile)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read network CA: %w", err)
+		return nil, nil, fmt.Errorf("network mTLS configuration: %w", err)
 	}
-	roots := x509.NewCertPool()
-	if !roots.AppendCertsFromPEM(pem) {
-		return nil, nil, fmt.Errorf("network CA contains no certificates")
-	}
-	cert, err := tls.LoadX509KeyPair(c.CertFile, c.KeyFile)
-	if err != nil {
-		return nil, nil, fmt.Errorf("load governance client certificate: %w", err)
-	}
-	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	// No DNS TXT or resolver-supplied retry/hedging policy is authorized.
+	conn, err := grpc.NewClient(c.Address, grpc.WithDisableServiceConfig(), grpc.WithDisableRetry(), grpc.WithTransportCredentials(credentials.NewTLS(security)))
 	if err != nil {
 		return nil, nil, err
 	}
-	trustedName := false
-	for _, name := range leaf.DNSNames {
-		if name == "ani-governance" {
-			trustedName = true
-		}
-	}
-	if !trustedName {
-		return nil, nil, fmt.Errorf("governance certificate requires exact DNS SAN ani-governance")
-	}
-	// This fixed internal contract has no DNS TXT service-config authority.
-	conn, err := grpc.NewClient(c.Address, grpc.WithDisableServiceConfig(), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-		MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{cert}, ServerName: "ani-network-service",
-	})))
-	if err != nil {
-		return nil, nil, err
-	}
-	return &NetworkClient{client: networkv1.NewNetworkServiceClient(conn), egress: networkv1.NewTenantEgressServiceClient(conn), loadBalancers: networkv1.NewTenantLoadBalancerServiceClient(conn), timeout: c.Timeout, connectionState: conn.GetState}, func() { _ = conn.Close() }, nil
+	return &NetworkClient{client: networkv1.NewNetworkServiceClient(conn), egress: networkv1.NewTenantEgressServiceClient(conn), loadBalancers: networkv1.NewTenantLoadBalancerServiceClient(conn), timeout: c.Timeout}, func() { _ = conn.Close() }, nil
 }
 
 func NetworkConfigFromEnv() (NetworkClientConfig, error) {
@@ -78,67 +50,55 @@ func NetworkConfigFromEnv() (NetworkClientConfig, error) {
 	if v := os.Getenv("ANI_NETWORK_TIMEOUT"); v != "" {
 		var err error
 		timeout, err = time.ParseDuration(v)
-		if err != nil {
-			return NetworkClientConfig{}, err
+		if err != nil || timeout <= 0 {
+			return NetworkClientConfig{}, fmt.Errorf("invalid network client timeout")
 		}
 	}
 	return NetworkClientConfig{Address: os.Getenv("ANI_NETWORK_ADDR"), CAFile: os.Getenv("ANI_NETWORK_CA"), CertFile: os.Getenv("ANI_NETWORK_CERT"), KeyFile: os.Getenv("ANI_NETWORK_KEY"), Timeout: timeout}, nil
 }
 
 func (c *NetworkClient) GetVPC(ctx context.Context, tenant string, actor string, vpcID string) (*networkv1.GetVPCResponse, error) {
-	id, err := uuid.Parse(tenant)
-	if err != nil || id == uuid.Nil || id.String() != tenant || !networkActorPattern.MatchString(actor) {
-		return nil, fmt.Errorf("invalid trusted network identity")
+	tc, err := c.trusted(tenant, actor)
+	if err != nil {
+		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	// Rebuild metadata; never append inbound/public identity headers.
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-ani-tenant-id", tenant, "x-ani-actor", actor, "x-ani-request-id", uuid.NewString()))
-	reply, err := c.client.GetVPC(ctx, &networkv1.GetVPCRequest{TenantId: tenant, VpcId: vpcID})
-	// A disconnected transport can spend the entire deadline reconnecting.
-	// Report that dependency outage as 503; a connected, slow RPC remains 504.
-	if status.Code(err) == codes.DeadlineExceeded && c.connectionState != nil && c.connectionState() != connectivity.Ready {
-		return nil, status.Errorf(codes.Unavailable, "network transport unavailable: %v", err)
-	}
-	return reply, err
+	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.GetVPCResponse, error) {
+		return c.client.GetVPC(ctx, &networkv1.GetVPCRequest{TenantId: tc.tenant, VpcId: vpcID})
+	})
 }
 
 // trusted validates and carries the replayed tenant UUID and the verified
 // actor; both are asserted once per call and never taken from request bodies.
 type trusted struct {
-	tenant string
-	actor  string
+	tenant    string
+	actor     string
+	requestID string
 }
 
 func (c *NetworkClient) trusted(tenant, actor string) (trusted, error) {
-	id, err := uuid.Parse(tenant)
-	if err != nil || id == uuid.Nil || id.String() != tenant || !networkActorPattern.MatchString(actor) {
-		return trusted{}, fmt.Errorf("invalid trusted network identity")
+	if c == nil || c.client == nil || c.timeout <= 0 {
+		return trusted{}, status.Error(codes.Unavailable, "network client unavailable")
 	}
-	return trusted{tenant: tenant, actor: actor}, nil
-}
-
-// classify maps a disconnected-transport deadline to dependency outage.
-func (c *NetworkClient) classify(err error) error {
-	// A disconnected transport can spend the entire deadline reconnecting.
-	// Report that dependency outage as 503; a connected, slow RPC remains 504.
-	if status.Code(err) == codes.DeadlineExceeded && c.connectionState != nil && c.connectionState() != connectivity.Ready {
-		return status.Errorf(codes.Unavailable, "network transport unavailable: %v", err)
+	if !validResourceIdentity(tenant, actor) {
+		return trusted{}, status.Error(codes.Unauthenticated, "invalid trusted network identity")
 	}
-	return err
+	return trusted{tenant: tenant, actor: actor, requestID: uuid.NewString()}, nil
 }
 
 // outCall runs one tenant-scoped RPC with rebuilt trusted metadata; never
 // append inbound/public identity headers.
 func outCall[T any](c *NetworkClient, ctx context.Context, tc trusted, call func(context.Context) (T, error)) (T, error) {
+	if err := ctx.Err(); err != nil {
+		var zero T
+		return zero, status.FromContextError(err).Err()
+	}
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-ani-tenant-id", tc.tenant, "x-ani-actor", tc.actor, "x-ani-request-id", uuid.NewString()))
-	reply, err := call(ctx)
-	return reply, c.classify(err)
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-ani-tenant-id", tc.tenant, "x-ani-actor", tc.actor, "x-ani-request-id", tc.requestID))
+	// Preserve the downstream status and details; connection state cannot
+	// establish whether a timed-out write has already been accepted.
+	return call(ctx)
 }
-
-var networkActorPattern = regexp.MustCompile(`^governance:(user|access-key):[1-9][0-9]*$`)
 
 // resourceState maps the wire state string ("" or RESOURCE_STATE_*) to the
 // pinned enum; unknown names are rejected before any RPC.
@@ -176,7 +136,7 @@ func (c *NetworkClient) CreateVPC(ctx context.Context, tenant, actor string, nam
 	}
 	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.CreateVPCResponse, error) {
 		return c.client.CreateVPC(ctx, &networkv1.CreateVPCRequest{TenantId: tc.tenant, Name: name, Cidr: cidr, Description: description, IdempotencyKey: idempotencyKey,
-			Attribution: &networkv1.Attribution{Actor: actor, DirectCaller: "ani-governance", CorrelationId: uuid.NewString()}})
+			Attribution: &networkv1.Attribution{Actor: tc.actor, DirectCaller: "ani-governance", CorrelationId: tc.requestID}})
 	})
 }
 
@@ -271,7 +231,7 @@ func (c *NetworkClient) CreateSubnet(ctx context.Context, tenant, actor, vpcID, 
 	}
 	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.CreateSubnetResponse, error) {
 		return c.client.CreateSubnet(ctx, &networkv1.CreateSubnetRequest{TenantId: tc.tenant, VpcId: vpcID, Name: name, Cidr: cidr, Description: description, IdempotencyKey: idempotencyKey, Gateway: gateway,
-			Attribution: &networkv1.Attribution{Actor: tc.actor, DirectCaller: "ani-governance", CorrelationId: uuid.NewString()}})
+			Attribution: &networkv1.Attribution{Actor: tc.actor, DirectCaller: "ani-governance", CorrelationId: tc.requestID}})
 	})
 }
 func (c *NetworkClient) ListSubnets(ctx context.Context, tenant, actor, vpcID, name, state string, limit int32, cursor string) (*networkv1.ListSubnetsResponse, error) {

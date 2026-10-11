@@ -2,19 +2,14 @@ package data
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	imagev1 "github.com/zhangzhe-ctrl/ani-resource-service/api/image/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -26,9 +21,8 @@ type ImageClientConfig struct {
 	Timeout                            time.Duration
 }
 type ImageClient struct {
-	client          imagev1.TenantImageServiceClient
-	timeout         time.Duration
-	connectionState func() connectivity.State
+	client  imagev1.TenantImageServiceClient
+	timeout time.Duration
 }
 
 func NewImageClient(c ImageClientConfig) (*ImageClient, func(), error) {
@@ -38,41 +32,15 @@ func NewImageClient(c ImageClientConfig) (*ImageClient, func(), error) {
 	if c.Address == "" || c.Timeout <= 0 || c.Timeout > 45*time.Second {
 		return invalid()
 	}
-	pem, err := os.ReadFile(c.CAFile)
+	security, err := resourceClientTLS(c.CAFile, c.CertFile, c.KeyFile)
 	if err != nil {
-		return invalid()
+		return nil, nil, fmt.Errorf("Image mTLS configuration: %w", err)
 	}
-	roots := x509.NewCertPool()
-	if !roots.AppendCertsFromPEM(pem) {
-		return invalid()
-	}
-	cert, err := tls.LoadX509KeyPair(c.CertFile, c.KeyFile)
+	conn, err := grpc.NewClient(c.Address, grpc.WithDisableServiceConfig(), grpc.WithDisableRetry(), grpc.WithTransportCredentials(credentials.NewTLS(security)))
 	if err != nil {
-		return invalid()
+		return nil, nil, fmt.Errorf("create Image client: %w", err)
 	}
-	leaf, err := x509.ParseCertificate(cert.Certificate[0])
-	if err != nil || !imageExactSAN(leaf, "ani-governance") {
-		return invalid()
-	}
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{cert}, ServerName: "ani-network-service", VerifyConnection: func(cs tls.ConnectionState) error {
-		if len(cs.VerifiedChains) == 0 || len(cs.PeerCertificates) == 0 || !imageExactSAN(cs.PeerCertificates[0], "ani-network-service") {
-			return fmt.Errorf("Image server identity rejected")
-		}
-		return nil
-	}}
-	conn, err := grpc.NewClient(c.Address, grpc.WithDisableServiceConfig(), grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
-	if err != nil {
-		return invalid()
-	}
-	return &ImageClient{client: imagev1.NewTenantImageServiceClient(conn), timeout: c.Timeout, connectionState: conn.GetState}, func() { _ = conn.Close() }, nil
-}
-func imageExactSAN(c *x509.Certificate, name string) bool {
-	for _, dns := range c.DNSNames {
-		if dns == name {
-			return true
-		}
-	}
-	return false
+	return &ImageClient{client: imagev1.NewTenantImageServiceClient(conn), timeout: c.Timeout}, func() { _ = conn.Close() }, nil
 }
 func ImageConfigFromEnv() (ImageClientConfig, error) {
 	timeout := 30 * time.Second
@@ -85,37 +53,24 @@ func ImageConfigFromEnv() (ImageClientConfig, error) {
 	}
 	return ImageClientConfig{Address: os.Getenv("ANI_IMAGE_ADDR"), CAFile: os.Getenv("ANI_IMAGE_CA"), CertFile: os.Getenv("ANI_IMAGE_CERT"), KeyFile: os.Getenv("ANI_IMAGE_KEY"), Timeout: timeout}, nil
 }
-func validImageIdentity(tenant, actor string) bool {
-	id, err := uuid.Parse(tenant)
-	if err != nil || id == uuid.Nil || id.String() != tenant {
-		return false
-	}
-	for _, prefix := range []string{"governance:user:", "governance:access-key:"} {
-		if strings.HasPrefix(actor, prefix) {
-			id, err := strconv.ParseUint(strings.TrimPrefix(actor, prefix), 10, 32)
-			return err == nil && id > 0 && actor == prefix+strconv.FormatUint(id, 10)
-		}
-	}
-	return false
-}
 func trustedImageCall[T any](c *ImageClient, ctx context.Context, tenant, actor string, call func(context.Context) (T, error)) (T, error) {
 	var zero T
-	if c == nil || c.client == nil {
+	if c == nil || c.client == nil || c.timeout <= 0 {
 		return zero, status.Error(codes.Unavailable, "Image client unavailable")
 	}
-	if !validImageIdentity(tenant, actor) {
+	if !validResourceIdentity(tenant, actor) {
 		return zero, status.Error(codes.Unauthenticated, "invalid trusted Image identity")
+	}
+	if err := ctx.Err(); err != nil {
+		return zero, status.FromContextError(err).Err()
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	// Replaces all pre-existing outbound metadata, including public identity,
 	// bearer tokens and operator hints. Only verified principal facts cross hops.
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-ani-tenant-id", tenant, "x-ani-actor", actor, "x-ani-request-id", uuid.NewString()))
-	reply, err := call(ctx)
-	if status.Code(err) == codes.DeadlineExceeded && c.connectionState != nil && c.connectionState() != connectivity.Ready {
-		return zero, status.Error(codes.Unavailable, "Image transport unavailable")
-	}
-	return reply, err
+	// Preserve the original status and domain details, including deadlines.
+	return call(ctx)
 }
 func imageRequestRequired() error {
 	return status.Error(codes.InvalidArgument, "Image request required")
