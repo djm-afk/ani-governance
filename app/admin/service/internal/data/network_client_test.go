@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/google/uuid"
 	networkv1 "github.com/zhangzhe-ctrl/ani-resource-service/api/network/v1"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -14,21 +14,24 @@ import (
 	"time"
 )
 
-type timedOutNetworkRPC struct{ networkv1.NetworkServiceClient }
-
-func (timedOutNetworkRPC) GetVPC(context.Context, *networkv1.GetVPCRequest, ...grpc.CallOption) (*networkv1.GetVPCResponse, error) {
-	return nil, status.Error(codes.DeadlineExceeded, "deadline")
+type failedNetworkRPC struct {
+	networkv1.NetworkServiceClient
+	err error
 }
-func TestNetworkClientTransportOutage(t *testing.T) {
-	for _, state := range []connectivity.State{connectivity.Ready, connectivity.Connecting, connectivity.TransientFailure} {
-		c := &NetworkClient{client: timedOutNetworkRPC{}, timeout: time.Second, connectionState: func() connectivity.State { return state }}
-		_, err := c.GetVPC(context.Background(), "11111111-1111-4111-8111-111111111111", "governance:user:7", "vpc_11111111111111111111111111111111")
-		want := codes.Unavailable
-		if state == connectivity.Ready {
-			want = codes.DeadlineExceeded
+
+func (p failedNetworkRPC) GetVPC(context.Context, *networkv1.GetVPCRequest, ...grpc.CallOption) (*networkv1.GetVPCResponse, error) {
+	return nil, p.err
+}
+func TestNetworkClientPreservesRPCStatus(t *testing.T) {
+	for _, code := range []codes.Code{codes.DeadlineExceeded, codes.Unavailable, codes.FailedPrecondition, codes.PermissionDenied} {
+		downstream, err := status.New(code, "private downstream failure").WithDetails(&errdetails.ErrorInfo{Reason: "RESOURCE_CONFLICT", Domain: "resource.network"})
+		if err != nil {
+			t.Fatal(err)
 		}
-		if status.Code(err) != want {
-			t.Fatalf("state %v: got %v want %v", state, err, want)
+		c := &NetworkClient{client: failedNetworkRPC{err: downstream.Err()}, timeout: time.Second}
+		_, got := c.GetVPC(context.Background(), "11111111-1111-4111-8111-111111111111", "governance:user:7", "vpc_11111111111111111111111111111111")
+		if !proto.Equal(status.Convert(got).Proto(), downstream.Proto()) {
+			t.Fatalf("downstream status or domain details changed: %v", got)
 		}
 	}
 }
@@ -68,7 +71,7 @@ func TestNetworkClientIdentityAndCancellation(t *testing.T) {
 	}
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := c.GetVPC(canceled, "11111111-1111-4111-8111-111111111111", "governance:user:7", "vpc_11111111111111111111111111111111"); err != context.Canceled {
+	if _, err := c.GetVPC(canceled, "11111111-1111-4111-8111-111111111111", "governance:user:7", "vpc_11111111111111111111111111111111"); status.Code(err) != codes.Canceled {
 		t.Fatalf("cancel: %v", err)
 	}
 	if _, _, err := NewNetworkClient(NetworkClientConfig{}); err == nil {
@@ -98,7 +101,7 @@ func TestNetworkClientKeyActor(t *testing.T) {
 	if _, err := c.GetVPC(ctx, "11111111-1111-4111-8111-111111111111", "governance:access-key:42", "vpc_11111111111111111111111111111111"); err != nil {
 		t.Fatal(err)
 	}
-	for _, actor := range []string{"governance:user:0", "governance:access-key:0", "governance:user:01", "governance:evil:1", "user:7"} {
+	for _, actor := range []string{"governance:user:0", "governance:access-key:0", "governance:user:01", "governance:evil:1", "user:7", "governance:user:4294967296", "governance:access-key:4294967296"} {
 		if _, err := c.GetVPC(ctx, "11111111-1111-4111-8111-111111111111", actor, "vpc_11111111111111111111111111111111"); err == nil {
 			t.Fatalf("accepted %s", actor)
 		}
@@ -124,7 +127,20 @@ func (p *networkTenantRPCProbe) capture(ctx context.Context, tenant, method stri
 	if _, ok := ctx.Deadline(); !ok {
 		p.t.Fatal("missing bounded deadline")
 	}
+	if field := request.ProtoReflect().Descriptor().Fields().ByName("attribution"); field != nil {
+		value := request.ProtoReflect().Get(field).Message()
+		actor := value.Descriptor().Fields().ByName("actor")
+		caller := value.Descriptor().Fields().ByName("direct_caller")
+		correlation := value.Descriptor().Fields().ByName("correlation_id")
+		if value.Get(actor).String() != md.Get("x-ani-actor")[0] || value.Get(caller).String() != "ani-governance" || value.Get(correlation).String() != md.Get("x-ani-request-id")[0] {
+			p.t.Fatalf("attribution conflicts with trusted metadata for %s", method)
+		}
+	}
 	p.requests[method] = request
+}
+func (p *networkTenantRPCProbe) CreateVPC(ctx context.Context, in *networkv1.CreateVPCRequest, _ ...grpc.CallOption) (*networkv1.CreateVPCResponse, error) {
+	p.capture(ctx, in.TenantId, "CreateVPC", in)
+	return &networkv1.CreateVPCResponse{}, nil
 }
 func (p *networkTenantRPCProbe) CreateSubnet(ctx context.Context, in *networkv1.CreateSubnetRequest, _ ...grpc.CallOption) (*networkv1.CreateSubnetResponse, error) {
 	p.capture(ctx, in.TenantId, "CreateSubnet", in)
@@ -192,6 +208,10 @@ func TestNetworkClientAllNewMethodsRebuildMetadata(t *testing.T) {
 		name string
 		call func(string) error
 	}{
+		{"CreateVPC", func(a string) error {
+			_, err := c.CreateVPC(ctx, tenant, a, "vpc", "10.0.0.0/16", "description", "vpc-key")
+			return err
+		}},
 		{"CreateSubnet", func(a string) error {
 			_, err := c.CreateSubnet(ctx, tenant, a, "vpc", "subnet", "10.0.1.0/24", "description", "subnet-key", &gateway)
 			return err

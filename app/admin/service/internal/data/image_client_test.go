@@ -3,10 +3,12 @@ package data
 import (
 	"context"
 	imagev1 "github.com/zhangzhe-ctrl/ani-resource-service/api/image/v1"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"testing"
 	"time"
 )
@@ -53,5 +55,28 @@ func TestImageClientRebuildsIdentity(t *testing.T) {
 	}
 	if _, _, err := NewImageClient(ImageClientConfig{}); err == nil {
 		t.Fatal("insecure client accepted")
+	}
+}
+
+type failedImageRPC struct {
+	imagev1.TenantImageServiceClient
+	err error
+}
+
+func (p failedImageRPC) GetImageSpace(context.Context, *imagev1.GetImageSpaceRequest, ...grpc.CallOption) (*imagev1.GetImageSpaceResponse, error) {
+	return nil, p.err
+}
+
+func TestImageClientPreservesRPCStatus(t *testing.T) {
+	for _, code := range []codes.Code{codes.DeadlineExceeded, codes.Unavailable, codes.FailedPrecondition, codes.PermissionDenied} {
+		downstream, err := status.New(code, "private downstream failure").WithDetails(&errdetails.ErrorInfo{Reason: "SPACE_NOT_READY", Domain: "resource.image"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := &ImageClient{client: failedImageRPC{err: downstream.Err()}, timeout: time.Second}
+		_, got := c.GetImageSpace(context.Background(), "11111111-1111-4111-8111-111111111111", "governance:user:7", &imagev1.GetImageSpaceRequest{})
+		if !proto.Equal(status.Convert(got).Proto(), downstream.Proto()) {
+			t.Fatalf("downstream status or domain details changed: %v", got)
+		}
 	}
 }

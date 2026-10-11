@@ -23,6 +23,7 @@
 | API Key / AK-SK | AK-01～AK-07；AK-IDEM-01（创建幂等，2026-10-10） | 签名、角色绑定、加密与可信审计已完成，真实 VPC 闭环 PASS；创建幂等已在 ani-system 真实环境实测（HTTP 20/20 PASS + 8 并发 ALL PASS） | AKSK-VPC-20260922 已完成本批；幂等属即时修复，未并入风格批次 |
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
+| Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
 | 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 正式 Accelerator 目录与 Inference 创建/删除 BFF、账本和受控 owner 装配已接入；旧本地模拟入口已退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
 | ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证，目标集群业务验收仍需独立证明 | CPU-P01，进行中 |
 
@@ -31,6 +32,37 @@
 本批 **AKSK-VPC-20260922** 已由用户明确指定，覆盖 AK-01～07、AK-ISSUE-01～05、NET-01/NET-ISSUE-01：实现、远端定向测试、空库真实链路及必要负向验收均 PASS。证据见 [运行记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/evidence/aksk-vpc-20260922/README.md)。单个批次完成不代表整体登记结束，其他功能风格仍待指定。
 
 历史 **GOV-RESOURCE-20260922** 对接了 NET-01～NET-11 共 11 个租户接口；“17/17”是该批场景数，不是 Resource 租户 RPC 全量覆盖。该批 AK 实际只支持 GetVPC，其余接口的机器访问在 2026-10-09 增补。历史计划、证据及部署保持各自时点；当前覆盖与响应合同以下方本轮小节和源码为准。
+
+<a id="s2s-res-01"></a>
+
+## 2026-10-11：Gov → Resource 调用规范收敛（S2S-RES-01）
+
+范围仅 Governance 与 Resource 的现有 Network/Image 用户业务委托，沿用 NET-01～NET-25 和既有 Image 11 RPC；不新增方法、调用者、配额接口或公开 HTTP 字段。唯一传输规范见 [服务间调用规范](contracts/service-to-service-calls.md)，调用端配置见 [接入指南](service-integration.md#current-client-contracts)，完整接收方方法见 [Resource 调用登记](https://github.com/zhangzhe-ctrl/ani-resource-service/blob/82c4b2d6fb7ca6fec15ddcb3cf236e5a0ca9a971/docs/specs/governance-calls.md)。接收端提交 `82c4b2d` 已推送任务分支并建立 [Resource PR #6](https://github.com/zhangzhe-ctrl/ani-resource-service/pull/6)，尚需仓库要求的批准审查，不能把任务分支发布写成已合入 main。
+
+Governance 的两个客户端统一 TLS 1.3、唯一客户端 DNS SAN `ani-governance`、字面服务器 DNS SAN `ani-network-service`，拒绝混合客户端身份和通配符服务器身份，关闭未经审查的 retry/service config。请求只从可信 Principal 和持久租户映射重建 metadata；CreateVPC/CreateSubnet 的 Attribution 与同次 metadata 一致。追踪 ID 不替代业务幂等键，取消/期限向下游传播，保留原 RPC code、reason 和 details。
+
+Resource 的 full、governance、vpc-read 三种互斥模式共用一个受保护的业务 gRPC 构造。方法按 25 Network + 11 Image 精确允许，vpc-read 再收窄到 GetVPC；无明文 fallback，未登记的方法、health/reflection 和 stream 默认拒绝。兼容的 operator 只能由 actor 推导，报文 Attribution 必须与可信上下文相符；既有业务持久化、幂等、权限、租户边界及 Image 平台只读目录保持原合同。admin `/readyz` 继续提供就绪检查。**部署该候选前必须提供合规证书；此前依赖 full 明文业务端口的调用不再接受。**
+
+源码基线为 Governance `8724a32ab7dda903e1c67def28ad206a06d09c44`、Resource `b258907ac8ac2071f909ae116a0f2839b2d7f55f`，两仓各在 `codex/res-gov-call-rules` 任务工作树修改；验收快照时尚未提交/推送，用户随后授权将两仓本批修改提交并交付 main。两仓规则要求通过 PR，实际发布版本以 Git 历史和远端引用为准。Resource 主工作区的 Image 清理材料未改。API 没有变化，Gov 保持正式 SDK 版本 `v0.0.0-20261011084152-b258907ac8ac`，无本地 replace 或 Proto/生成代码复制，联调接收端为本次 Resource 候选源码编译的真实进程。
+
+验证在 SSH `ubuntu`、Go 1.26.9、任务独占 PostgreSQL/Redis 执行，源码/命令/日志位于 `/home/ubuntu/workspace/ani-network-service-runs/res-gov-call-rules-20261011-01a12a2c`。`checks-01.log`、`checks-related-01.log` 与 `checks-build-04.log` 保存真实结果；源码经校验后解包，远端 gofmt 产物按前后 SHA 校验写回。本地与远端的 19 个改动 Go 文件逐项一致，清单为该目录的 `governance.tested-go.sha256`（清单 SHA256 `2daa697036e22c14ca18f44b048a8ac46a962624e66fa6a33efb2bd2ea19385b`）与 `resource.tested-go.sha256`（`9f13f54d619877c560548d703f352f3c104c58ce968607e78bf7c4673fc2373c`）。本轮通过的定向命令及边界如下：
+
+| 验证 | 命令与结果 |
+|---|---|
+| Gov 调用端 | `go test -mod=readonly -count=1 -timeout=8m -run 'Test(NetworkClient\|ImageClient\|ResourceClient)' ./app/admin/service/internal/data` 及对应 `-race`，PASS；覆盖身份/TLS 拒绝、metadata/Attribution、取消/期限、错误 details、失败写只调用一次 |
+| Resource 接收端 | `go test -mod=readonly -count=1 -timeout=5m ./internal/server ./tests/runtime`，PASS；覆盖严格证书、方法允许清单、明文/未知方法拒绝、vpc-read 和字段冲突 |
+| Resource 真实进程 | `scripts/integration -timeout=8m -run 'TestBuildAppRunsProductionComposition\|TestMainProcessHandlesSignalAndClosesListeners\|TestBuildAppRejectsInvalidConfig' -v ./cmd/ani-resource-service`，PASS；实际数据库装配、mTLS、admin readiness、信号退出与 listener 关闭 |
+| Network 最小主链 | 编译 Resource `networkintegration` helper 后，`RESOURCE_NETWORK_TEST_BINARY=<候选二进制> scripts/network-joint-integration -run '^TestNetworkJointHTTP/(vpc_presets\|preset_access\|authentication_and_plan)$'`，PASS；真实 JWT/AK、权限/套餐、mTLS、PG/worker，VPC/Subnet 创建、原键重放、查询及删除；跨租户、签名和拒绝无副作用 |
+| Image 主链 | 编译 Resource `imageintegration` helper 后，`IMAGE_RESOURCE_CONTRACT_BINARY=<候选二进制> scripts/image-joint-integration`，PASS；含 `AKAll11RealResourceHTTP` 的 11 个真实接口、凭证生命周期、登记/更新/注销及隔离/权限拒绝 |
+| 生产入口编译 | Gov `go build -mod=readonly ./app/admin/service/cmd/server`、Resource `go build -mod=readonly ./cmd/ani-resource-service`，PASS，最终命令整体退出 0 |
+
+构建环境中 `GONOPROXY` 将该账号的全部模块导向 Git。两次构建在固定 quota SDK 拉取整个历史时主动中止（退出 143，`checks-related-01.log` 的所有前置测试已通过、`checks-build-02.log`）；按任务覆盖代理后出现下载 EOF（`checks-build-03.log`，退出 1）。随后用 curl 从官方 Go 代理下载**相同已锁定版本**的 info/mod/zip 到任务私有文件代理（`quota-proxy-download.log`），由 Go 按既有 `go.sum` 校验消费，最终仅续跑两仓构建通过；没有重跑已通过的行为测试，没有修改依赖版本、校验值或远程全局环境。上述原始中止与失败保留，不写成初次全部通过。
+
+用户授权发布后，在同一 Ubuntu 任务目录的 `publication/resource` 上补跑 Resource `make verify TOOLS_DIR=/home/ubuntu/.local/share/ani-network-service/bin`。发布输入快照 SHA256 为 `ba79b4642aaec4ad89080b506635422c7fcea6929d498837f3e6d8a27347c804`，解包逐项核验后建立独立临时 Git 仓库供门禁使用；该临时提交不发布。短独占 TMPDIR 避免 Unix socket 路径超限。生成一致性、边界守卫、故障构建、tidy 和其余单元包通过；命令在 `biz/network` 的 5 个既有 LB 断言处失败，退出 2（`publication/verify-01.log`），**完整 make verify 为 FAIL**。从远端 main 固定基线 `b258907` 独立归档的相同业务包复现同样 5 个失败，退出 1（`publication/lb-baseline-01.log`）：健康端口缺失/0/独立端口、多监听器 TCP、timeout 等于 interval。它们与现行 [Resource LB 规格](https://github.com/zhangzhe-ctrl/ani-resource-service/blob/b258907ac8ac2071f909ae116a0f2839b2d7f55f/docs/specs/vpc-connectivity-lb.md) 的合法输入相冲突；本批未改该包、测试或合同。该基线的 [CI](https://github.com/zhangzhe-ctrl/ani-resource-service/actions/runs/38126448937) 也已失败，不能归为本次调用规范回归，亦未据此豁免或删除断言。
+
+仅续跑被 make 中断的 `go vet ./...`、`go build -trimpath ./...`、`go mod verify` 与 `git diff --check`，全部通过，续跑整体退出 0（`publication/remaining-01.log`）；没有重跑已通过的联合业务验收。提交前已执行 Resource AGENTS 要求的 make verify；本批按用户明确的调用范围交付并保留失败。推送后的两仓 CI 需按该提交的实际运行结果判定，既有定向 PASS 不代表全仓 CI 已通过。
+
+Network 的 KC/Envoy/实例 owner 与 Image 的 Harbor 仅在外部边界使用测试替身；两个联合夹具也包含协议边界测试，不能将这些结果扩展为真实 Provider/数据面/生产验收。产品资源通过现有业务入口清理，独占 helper 数据库、PG/Redis 容器与进程清理通过。本轮未执行共享业务库变更或部署，不结项整体接口登记；源码发布不代表生产验收。
 
 ## 2026-10-11：监听参数与子网 IP 观测
 

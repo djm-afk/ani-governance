@@ -244,6 +244,8 @@ TLS 校验与拦截器行为参照 [Go TLS 文档](https://pkg.go.dev/crypto/tls
 
 下表保留制定规则时核对的跨仓源码快照（2026-10-10），不是本轮已实施或重新验证的改造。尤其 Inference 的 listener 状态仍是该历史快照，不作为本轮运行结论。当前 Governance 客户端的身份、受管配置和 metadata 索引见[业务服务接入指南](../service-integration.md#current-client-contracts)。
 
+2026-10-11 的首个实现批次仅收敛 Gov → Resource 的 Network/Image 调用，候选源码与实际验证见 [S2S-RES-01](../interface-integration-register.md#s2s-res-01)。其他服务仍按各自迁移记录处理；本批未部署，不将下表的历史差异全部标为已解决。
+
 | 现状 | 按本文收敛 |
 |---|---|
 | Gov → Accelerator、Gov → 受管 Inference 使用客户端 URI SAN | 统一为已登记的唯一客户端 DNS SAN；双方同步修改校验、签发和合同，不长期双轨兼容 |
@@ -251,4 +253,4 @@ TLS 校验与拦截器行为参照 [Go TLS 文档](https://pkg.go.dev/crypto/tls
 | Inference 同时存在普通和受管业务 listener | 迁移必要 API、现有调用者和证书到同一个业务 mTLS listener，再删除普通入口；不只改 Gov 客户端就宣布完成 |
 | Gov 退额已有客户端 DNS → 固定 `ani-inference` owner 映射 | 保留显式映射和原账本 owner；按真实证书登记收敛配置，不开放任意 owner |
 
-业务合同继续以 [GPU owner 指南](gpu-owner-integration-guide.md)、[AK/SK 合同](aksk-signature.md)等领域文档为准；本文对新接入和修改调用的传输、身份、授权和上下文规则有优先权。专项文档中的现有 URI SAN、listener 等实现记录应与迁移目标分开阅读。迁移需要独立的实现、证书配置和双方联调；**本轮只将规范入仓，不修改运行逻辑，不宣称存量服务已符合新规。**
+业务合同继续以 [GPU owner 指南](gpu-owner-integration-guide.md)、[AK/SK 合同](aksk-signature.md)等领域文档为准；本文对新接入和修改调用的传输、身份、授权和上下文规则有优先权。专项文档中的现有 URI SAN、listener 等实现记录应与迁移目标分开阅读。迁移需要独立的实现、证书配置和双方联调；**2026-10-10 制定规范的批次只将正文入仓，没有修改运行逻辑或宣称存量服务已符合新规。后续实现以各批次结果为准。**
