@@ -22,6 +22,7 @@ import (
 )
 
 type networkResourcePeer struct {
+	ProviderURL, CertificateName, Namespace                                               string
 	Address, CAFile, CertFile, KeyFile, RuntimeDSN                                        string
 	TenantID, ParentVPC, EntrySubnet, BackendSubnet, BackendAddress, SecondBackendAddress string
 	LiveClusterUID, VPCCIDR, SubnetCIDR                                                   string

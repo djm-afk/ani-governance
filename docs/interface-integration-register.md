@@ -30,6 +30,20 @@
 
 历史 **GOV-RESOURCE-20260922** 对接了 NET-01～NET-11 共 11 个租户接口；“17/17”是该批场景数，不是 Resource 租户 RPC 全量覆盖。该批 AK 实际只支持 GetVPC，其余接口的机器访问在 2026-10-09 增补。历史计划、证据及部署保持各自时点；当前覆盖与响应合同以下方本轮小节和源码为准。
 
+## 2026-10-11：监听参数与子网 IP 观测
+
+沿用 NET-19～NET-24 和既有 Get/ListSubnet，不新增路由、权限码或套餐模块。监听参数通过 `listeners.items[]` 接收，旧 singular listener/backends/health_check 保持原合同；不能混用。协议 HTTP/HTTPS/TCP/UDP/SSL，SSL 为 TLS Terminate；新增 certificate_ref、algorithm（RoundRobin/LeastRequest/SourceIP）、session_persistence、max_connections、gzip_enabled、https_redirect_status_code；health_check 支持 TCP/HTTP、path、可选 hostname，UDP 仅 TCP。检查端口省略/0 使用业务端口，非零独立端口允许；正 timeout/interval 独立校验。证书只引用当前资源绑定 namespace 的本租户 TLS Secret，不新增证书管理。
+
+HTTP/HTTPS 的 Cookie 支持停用、COOKIE_TIMEOUT（cookie_expiry_seconds > 0）、COOKIE_SESSION。Gzip 与 Cookie 不适用于其他协议，UDP 不接受连接限制。HTTP 重定向 301/302 与后端互斥，目标使用本 LB 的 HTTPS 443 listener，否则要求唯一 HTTPS listener，并显式生成其端口。更新继续使用 `data`、`update_mask`、expected_version 和幂等键；提供监听器集合表示整体替换，省略保持。参数进入 Resource 配置版本与持久意图，关闭参数或切换协议清理对应旧字段/自有组件。详情和兼容 singular 摘要返回实际保存参数及算法。
+
+Get/ListSubnet 追加有 presence 的 `available_ip_count`/`used_ip_count`（JSON int64 为十进制字符串），分别来自 KCN `status.v4availableIPs`/`v4usingIPs`，由现有观察 → Worker → PostgreSQL → Resource → BFF 读取。实际零返回 `"0"`；未观测/字段缺失/非法值省略字段。有效新观测清除缺失字段的旧值，读取失败保留历史值且不续鲜，过期沿用 observation_stale；租户、binding、namespace、UID、generation、lease、观测时间围栏不变。GetSubnet 仍读取持久化结果，不同步访问 KCN。
+
+JWT/AK、mTLS 机器身份、可信操作人、租户映射、NETWORK 套餐和既有权限保持原闸门。必要外部条件为选定 Secret 的 namespace 内 get 权限，以及 UDP 所需 EnvoyPatchPolicy CRD/底层扩展开关；本任务不更改共享平台。真实集群验收 `not_verified`，外部 fixture 的控制器状态不表示真实数据面能力。登记范围仅本次字段，不结项整体接口风格登记。
+
+本次 Fedora `go test -count=1 -run '^TestNetworkNewFieldsRetainIntentAndObservations$' ./app/admin/service/internal/service` 通过；`scripts/network-joint-integration -run '^TestNetworkJointHTTP/(multiple_listeners|subnet_ip_counts)$'` 通过，涵盖 JWT 创建/AK 重放、AK 更新/JWT 重放、各协议 CRD、参数关闭与清理、计数三种 presence 与跨租户 404，产品与独占 PG/Redis 清理通过。Resource 计数用例另验证 UID/generation/旧 lease/旧观测与读取失败不续鲜。未执行全量测试或完整 JWT/AK 矩阵。
+
+Resource 依赖固定到真实本地提交 `b258907ac8ac2071f909ae116a0f2839b2d7f55f` 的版本 `v0.0.0-20261011084152-b258907ac8ac`，无个人绝对路径 replace。提交尚未推送；其他环境正常拉取依赖前须先发布该 Resource 提交。当前两仓联调使用任务专用 go.work，单仓编译使用该提交的标准 Go module zip；不将缓存命中视为远端发布完成。Fedora 上 GOWORK=off 的两仓生产入口编译通过；Governance 使用 -mod=readonly，并从该真实版本的 module cache 解析 Resource，未借工作区覆盖旧依赖。
+
 ## 2026-10-10：固定三规格、多监听器与 VPC 预设后端
 
 用户明确禁止修改前端，本批限后端。NET-19～NET-24 沿用路径、旧字段编号和 LB 组合响应，flavor 固定 small/medium/large。创建可提供 `listeners: {items: [...]}`，每监听器有稳定 id/name、HTTP port、独立 backends/health_check；旧 listener/backends/health_check 输入继续兼容，混用拒绝。更新沿用 expected_version/idempotency_key，新输入使用 `data` 和 `update_mask`；集合遗漏保持，提供表示整体替换，空集合拒绝。查询追加 `listeners`，desired/applied 和配置状态继续与真实流量证据分开。

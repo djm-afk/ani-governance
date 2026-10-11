@@ -3,6 +3,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"database/sql"
@@ -438,11 +439,26 @@ func TestNetworkJointHTTP(t *testing.T) {
 	})
 	t.Run("multiple_listeners", func(t *testing.T) {
 		jsonBody := func(v any) string { raw, err := json.Marshal(v); require.NoError(t, err); return string(raw) }
-		listener := func(name string, port int, address string) map[string]any {
-			return map[string]any{"name": name, "protocol": "LOAD_BALANCER_LISTENER_PROTOCOL_HTTP", "port": port, "backends": []any{map[string]any{"subnet_id": peer.BackendSubnet, "address": address, "port": 8080}}, "health_check": map[string]any{"port": 8080}}
+		listener := func(name, protocol string, port int, address string) map[string]any {
+			return map[string]any{"name": name, "protocol": "LOAD_BALANCER_LISTENER_PROTOCOL_" + protocol, "port": port, "backends": []any{map[string]any{"subnet_id": peer.BackendSubnet, "address": address, "port": 8080}}, "health_check": map[string]any{"port": 0}}
 		}
-		first, second := listener("first", 80, peer.BackendAddress), listener("second", 8081, peer.SecondBackendAddress)
-		body := jsonBody(map[string]any{"name": "multi", "vpc_id": peer.ParentVPC, "subnet_id": peer.EntrySubnet, "exposure": "LOAD_BALANCER_EXPOSURE_PRIVATE", "private_ip": "10.42.1.100", "idempotency_key": "multi-create", "listeners": map[string]any{"items": []any{first, second}}})
+		first := listener("first", "HTTP", 80, peer.BackendAddress)
+		first["algorithm"] = "LOAD_BALANCER_ALGORITHM_LEAST_REQUEST"
+		first["gzip_enabled"] = true
+		first["max_connections"] = 100
+		first["session_persistence"] = map[string]any{"mode": "LOAD_BALANCER_SESSION_MODE_COOKIE_TIMEOUT", "cookie_expiry_seconds": 600}
+		first["health_check"] = map[string]any{"protocol": "LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_HTTP", "port": 9090, "path": "/ready", "hostname": "health.example.com", "interval_seconds": 2, "timeout_seconds": 5}
+		second := listener("second", "HTTPS", 443, peer.SecondBackendAddress)
+		second["certificate_ref"] = map[string]any{"name": peer.CertificateName}
+		second["algorithm"] = "LOAD_BALANCER_ALGORITHM_SOURCE_IP"
+		second["session_persistence"] = map[string]any{"mode": "LOAD_BALANCER_SESSION_MODE_COOKIE_SESSION"}
+		tcp := listener("tcp", "TCP", 3001, peer.BackendAddress)
+		tcp["max_connections"] = 200
+		udp := listener("udp", "UDP", 3002, peer.BackendAddress)
+		udp["health_check"] = map[string]any{"port": 9091}
+		ssl := listener("ssl", "SSL", 3003, peer.BackendAddress)
+		ssl["certificate_ref"] = map[string]any{"name": peer.CertificateName, "namespace": peer.Namespace}
+		body := jsonBody(map[string]any{"name": "multi", "vpc_id": peer.ParentVPC, "subnet_id": peer.EntrySubnet, "exposure": "LOAD_BALANCER_EXPOSURE_PRIVATE", "private_ip": "10.42.1.100", "idempotency_key": "multi-create", "listeners": map[string]any{"items": []any{first, second, tcp, udp, ssl}}})
 		accepted := request(t, jwtIdentity, "POST", base+"/load-balancers", body, nil, 200)
 		lbID := accepted["load_balancer"].(map[string]any)["id"].(string)
 		require.Equal(t, accepted, request(t, akIdentity, "POST", base+"/load-balancers", body, nil, 200))
@@ -452,29 +468,129 @@ func TestNetworkJointHTTP(t *testing.T) {
 		}
 		lb := poll(t, jwtIdentity, path, configured)
 		items := lb["listeners"].([]any)
-		require.Len(t, items, 2)
-		first["id"], second["id"] = items[0].(map[string]any)["id"], items[1].(map[string]any)["id"]
-		second["port"] = 8082
-		second["health_check"].(map[string]any)["interval_seconds"] = 7
-		third := listener("third", 8083, peer.BackendAddress)
+		require.Len(t, items, 5)
+		saved := map[string]map[string]any{}
+		for _, item := range items {
+			v := item.(map[string]any)
+			saved[v["name"].(string)] = v
+		}
+		for _, input := range []map[string]any{first, second, tcp, udp, ssl} {
+			input["id"] = saved[input["name"].(string)]["id"]
+			require.Equal(t, input["protocol"], saved[input["name"].(string)]["protocol"])
+		}
+		require.Equal(t, "LOAD_BALANCER_ALGORITHM_LEAST_REQUEST", saved["first"]["algorithm"])
+		require.Equal(t, float64(100), saved["first"]["max_connections"])
+		require.Equal(t, "/ready", saved["first"]["health_check"].(map[string]any)["path"])
+		require.Equal(t, float64(600), saved["first"]["session_persistence"].(map[string]any)["cookie_expiry_seconds"])
+		require.Equal(t, peer.Namespace, saved["second"]["certificate_ref"].(map[string]any)["namespace"])
+		external := func(resource, kind string, id any) map[string]any {
+			var name string
+			require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT provider_name FROM network_lb_components WHERE tenant_id=$1 AND lb_id=$2 AND listener_id=$3 AND kind=$4 AND deleted_at IS NULL`, peer.TenantID, lbID, id, kind).Scan(&name))
+			group := "gateway.envoyproxy.io/v1alpha1"
+			if resource == "httproutes" {
+				group = "gateway.networking.k8s.io/v1"
+			}
+			if resource == "tcproutes" || resource == "udproutes" {
+				group = "gateway.networking.k8s.io/v1alpha2"
+			}
+			response, err := http.Get(peer.ProviderURL + "/apis/" + group + "/namespaces/" + peer.Namespace + "/" + resource + "/" + name)
+			require.NoError(t, err)
+			defer response.Body.Close()
+			require.Equal(t, 200, response.StatusCode)
+			var obj map[string]any
+			require.NoError(t, json.NewDecoder(response.Body).Decode(&obj))
+			return obj["spec"].(map[string]any)
+		}
+		rule := external("httproutes", "route", first["id"])["rules"].([]any)[0].(map[string]any)
+		require.Equal(t, "600s", rule["sessionPersistence"].(map[string]any)["absoluteTimeout"])
+		policy := external("backendtrafficpolicies", "policy", first["id"])
+		require.Equal(t, "default-rule", policy["targetRefs"].([]any)[0].(map[string]any)["sectionName"])
+		require.Equal(t, float64(9090), policy["healthCheck"].(map[string]any)["active"].(map[string]any)["overrides"].(map[string]any)["port"])
+		require.Equal(t, "Gzip", policy["compressor"].([]any)[0].(map[string]any)["type"])
+		require.Len(t, external("tcproutes", "tcp_route", tcp["id"])["rules"], 1)
+		require.Len(t, external("tcproutes", "tcp_route", ssl["id"])["rules"], 1)
+		require.Len(t, external("udproutes", "udp_route", udp["id"])["rules"], 1)
+		require.Len(t, external("envoypatchpolicies", "patch_policy", udp["id"])["jsonPatches"], 3)
 		update := func(key string, set []any) {
 			body := jsonBody(map[string]any{"expected_version": lb["version"], "idempotency_key": key, "data": map[string]any{"listeners": map[string]any{"items": set}}, "update_mask": "listeners"})
 			receipt := request(t, akIdentity, "PATCH", path, body, nil, 200)
 			require.Equal(t, receipt, request(t, jwtIdentity, "PATCH", path, body, nil, 200))
 			lb = poll(t, jwtIdentity, path, configured)
 		}
+		delete(first, "session_persistence")
+		delete(first, "gzip_enabled")
+		delete(first, "max_connections")
+		delete(first, "algorithm")
+		first["health_check"] = map[string]any{"port": 0}
+		second["port"] = 444
+		third := listener("third", "HTTP", 8083, peer.BackendAddress)
 		update("multi-add-change", []any{first, second, third})
-		items = lb["listeners"].([]any)
-		require.Len(t, items, 3)
-		require.Equal(t, second["id"], items[1].(map[string]any)["id"])
-		third["id"] = items[2].(map[string]any)["id"]
-		update("multi-remove", []any{first, third})
-		require.Len(t, lb["listeners"].([]any), 2)
+		require.Len(t, lb["listeners"].([]any), 3)
+		require.Nil(t, external("httproutes", "route", first["id"])["rules"].([]any)[0].(map[string]any)["sessionPersistence"])
+		require.Nil(t, external("backendtrafficpolicies", "policy", first["id"])["compressor"])
+		require.Equal(t, "LOAD_BALANCER_ALGORITHM_ROUND_ROBIN", lb["listeners"].([]any)[0].(map[string]any)["algorithm"])
+		first["https_redirect_status_code"] = 302
+		delete(first, "backends")
+		update("multi-redirect-remove", []any{first, second})
+		rule = external("httproutes", "route", first["id"])["rules"].([]any)[0].(map[string]any)
+		require.Nil(t, rule["backendRefs"])
+		require.Equal(t, float64(302), rule["filters"].([]any)[0].(map[string]any)["requestRedirect"].(map[string]any)["statusCode"])
+		require.Equal(t, float64(444), rule["filters"].([]any)[0].(map[string]any)["requestRedirect"].(map[string]any)["port"])
 		request(t, akIdentity, "DELETE", path, "", nil, 200)
 		poll(t, jwtIdentity, path, state("deleted"))
 		var occupied int
-		require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM network_lb_vip_intents WHERE tenant_id=$1 AND lb_id=$2 AND released_at IS NULL)+(SELECT count(*) FROM network_lb_subnet_refs WHERE tenant_id=$1 AND lb_id=$2 AND released_at IS NULL)`, peer.TenantID, lbID).Scan(&occupied))
+		require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM network_lb_vip_intents WHERE tenant_id=$1 AND lb_id=$2 AND released_at IS NULL)+(SELECT count(*) FROM network_lb_subnet_refs WHERE tenant_id=$1 AND lb_id=$2 AND released_at IS NULL)+(SELECT count(*) FROM network_lb_components WHERE tenant_id=$1 AND lb_id=$2 AND deleted_at IS NULL)`, peer.TenantID, lbID).Scan(&occupied))
 		require.Zero(t, occupied)
+	})
+	t.Run("subnet_ip_counts", func(t *testing.T) {
+		path := base + "/subnets/" + peer.EntrySubnet
+		unknown := get(t, jwtIdentity, path)
+		_, present := unknown["available_ip_count"]
+		require.False(t, present)
+		var ns, name string
+		require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT namespace,provider_name FROM network_provider_bindings WHERE tenant_id=$1 AND subnet_id=$2 AND resource_kind='subnet'`, peer.TenantID, peer.EntrySubnet).Scan(&ns, &name))
+		externalPath := peer.ProviderURL + "/apis/networking.kubercloud.com/v1/namespaces/" + ns + "/subnets/" + name
+		change := func(available, used any) {
+			response, err := http.Get(externalPath)
+			require.NoError(t, err)
+			var obj map[string]any
+			require.NoError(t, json.NewDecoder(response.Body).Decode(&obj))
+			response.Body.Close()
+			status := obj["status"].(map[string]any)
+			delete(status, "v4availableIPs")
+			delete(status, "v4usingIPs")
+			if available != nil {
+				status["v4availableIPs"] = available
+			}
+			if used != nil {
+				status["v4usingIPs"] = used
+			}
+			raw, err := json.Marshal(obj)
+			require.NoError(t, err)
+			r, err := http.NewRequest(http.MethodPut, externalPath+"/status", bytes.NewReader(raw))
+			require.NoError(t, err)
+			r.Header.Set("Content-Type", "application/json")
+			response, err = http.DefaultClient.Do(r)
+			require.NoError(t, err)
+			defer response.Body.Close()
+			require.Equal(t, 200, response.StatusCode)
+		}
+		change(240, 12)
+		v := poll(t, jwtIdentity, path, func(v map[string]any) bool { return v["available_ip_count"] == "240" && v["used_ip_count"] == "12" })
+		observed := v["observed_at"]
+		change(239, 13)
+		v = poll(t, akIdentity, path, func(v map[string]any) bool {
+			return v["available_ip_count"] == "239" && v["used_ip_count"] == "13" && v["observed_at"] != observed
+		})
+		change(0, 0)
+		poll(t, jwtIdentity, path, func(v map[string]any) bool { return v["available_ip_count"] == "0" && v["used_ip_count"] == "0" })
+		change(nil, -1)
+		poll(t, akIdentity, path, func(v map[string]any) bool {
+			_, a := v["available_ip_count"]
+			_, u := v["used_ip_count"]
+			return !a && !u
+		})
+		request(t, identity{bearer: otherToken}, "GET", path, "", nil, 404)
 	})
 	for _, mode := range []struct {
 		name string

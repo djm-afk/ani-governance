@@ -425,7 +425,7 @@ func wireSubnet(v *networkv1.Subnet) *catalogv1.Subnet {
 	return &catalogv1.Subnet{Id: v.Id, VpcId: v.VpcId, Name: v.Name, Description: v.Description, Cidr: v.Cidr, Gateway: v.Gateway,
 		State: strings.ToLower(strings.TrimPrefix(v.State.String(), "RESOURCE_STATE_")), Reason: v.Reason, ReasonMessage: v.ReasonMessage,
 		CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, Version: v.Version, ObservedAt: v.ObservedAt,
-		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId}
+		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, AvailableIpCount: v.AvailableIpCount, UsedIpCount: v.UsedIpCount}
 }
 func validSubnetReply(v *networkv1.Subnet, tenant, id, vpcID string) bool {
 	return v != nil && v.TenantId == tenant && subnetIDPattern.MatchString(v.Id) && (id == "" || v.Id == id) &&
@@ -604,7 +604,7 @@ func networkLBHealth(v *catalogv1.LoadBalancerHealthCheck) *networkv1.LoadBalanc
 	if v == nil {
 		return nil
 	}
-	return &networkv1.LoadBalancerHealthCheck{Protocol: networkv1.LoadBalancerHealthCheckProtocol(v.Protocol), IntervalSeconds: v.IntervalSeconds, TimeoutSeconds: v.TimeoutSeconds, UnhealthyThreshold: v.UnhealthyThreshold, HealthyThreshold: v.HealthyThreshold, Port: v.Port}
+	return &networkv1.LoadBalancerHealthCheck{Protocol: networkv1.LoadBalancerHealthCheckProtocol(v.Protocol), IntervalSeconds: v.IntervalSeconds, TimeoutSeconds: v.TimeoutSeconds, UnhealthyThreshold: v.UnhealthyThreshold, HealthyThreshold: v.HealthyThreshold, Port: v.Port, Path: v.Path, Hostname: v.Hostname}
 }
 func networkLBListeners(v *catalogv1.LoadBalancerListenerSet) (*networkv1.LoadBalancerListenerSet, error) {
 	if v == nil {
@@ -619,7 +619,14 @@ func networkLBListeners(v *catalogv1.LoadBalancerListenerSet) (*networkv1.LoadBa
 		if err != nil {
 			return nil, err
 		}
-		out.Items = append(out.Items, &networkv1.LoadBalancerListenerInput{Id: l.Id, Name: l.Name, Protocol: networkv1.LoadBalancerListenerProtocol(l.Protocol), Port: l.Port, Backends: backends, HealthCheck: networkLBHealth(l.HealthCheck)})
+		listener := &networkv1.LoadBalancerListenerInput{Id: l.Id, Name: l.Name, Protocol: networkv1.LoadBalancerListenerProtocol(l.Protocol), Port: l.Port, Backends: backends, HealthCheck: networkLBHealth(l.HealthCheck), Algorithm: networkv1.LoadBalancerAlgorithm(l.Algorithm), MaxConnections: l.MaxConnections, GzipEnabled: l.GzipEnabled, HttpsRedirectStatusCode: l.HttpsRedirectStatusCode}
+		if l.CertificateRef != nil {
+			listener.CertificateRef = &networkv1.LoadBalancerCertificateRef{Name: l.CertificateRef.Name, Namespace: l.CertificateRef.Namespace}
+		}
+		if l.SessionPersistence != nil {
+			listener.SessionPersistence = &networkv1.LoadBalancerSessionPersistence{Mode: networkv1.LoadBalancerSessionMode(l.SessionPersistence.Mode), CookieExpirySeconds: l.SessionPersistence.CookieExpirySeconds}
+		}
+		out.Items = append(out.Items, listener)
 	}
 	return out, nil
 }
@@ -627,7 +634,7 @@ func wireLBHealth(v *networkv1.LoadBalancerHealthCheck) *catalogv1.LoadBalancerH
 	if v == nil {
 		return nil
 	}
-	return &catalogv1.LoadBalancerHealthCheck{Protocol: catalogv1.LoadBalancerHealthCheckProtocol(v.Protocol), IntervalSeconds: v.IntervalSeconds, TimeoutSeconds: v.TimeoutSeconds, UnhealthyThreshold: v.UnhealthyThreshold, HealthyThreshold: v.HealthyThreshold, Port: v.Port}
+	return &catalogv1.LoadBalancerHealthCheck{Protocol: catalogv1.LoadBalancerHealthCheckProtocol(v.Protocol), IntervalSeconds: v.IntervalSeconds, TimeoutSeconds: v.TimeoutSeconds, UnhealthyThreshold: v.UnhealthyThreshold, HealthyThreshold: v.HealthyThreshold, Port: v.Port, Path: v.Path, Hostname: v.Hostname}
 }
 func wireLoadBalancer(v *networkv1.LoadBalancer) *catalogv1.LoadBalancer {
 	out := &catalogv1.LoadBalancer{Id: v.Id, VpcId: v.VpcId, SubnetId: v.SubnetId, Name: v.Name, Description: v.Description,
@@ -646,11 +653,20 @@ func wireLoadBalancer(v *networkv1.LoadBalancer) *catalogv1.LoadBalancer {
 		out.Backends = append(out.Backends, &catalogv1.LoadBalancerBackendMember{Id: b.Id, SubnetId: b.SubnetId, Address: b.Address, Port: b.Port, Weight: b.Weight, AttachmentId: b.AttachmentId, State: b.State, Reason: b.Reason, ObservedAt: b.ObservedAt, ObservationStale: b.ObservationStale})
 	}
 	for _, l := range v.Listeners {
-		listener := &catalogv1.LoadBalancerListener{Id: l.Id, Name: l.Name, Protocol: catalogv1.LoadBalancerListenerProtocol(l.Protocol), Port: l.Port, HealthCheck: wireLBHealth(l.HealthCheck)}
+		listener := &catalogv1.LoadBalancerListener{Id: l.Id, Name: l.Name, Protocol: catalogv1.LoadBalancerListenerProtocol(l.Protocol), Port: l.Port, HealthCheck: wireLBHealth(l.HealthCheck), Algorithm: catalogv1.LoadBalancerAlgorithm(l.Algorithm), MaxConnections: l.MaxConnections, GzipEnabled: l.GzipEnabled, HttpsRedirectStatusCode: l.HttpsRedirectStatusCode}
+		if l.CertificateRef != nil {
+			listener.CertificateRef = &catalogv1.LoadBalancerCertificateRef{Name: l.CertificateRef.Name, Namespace: l.CertificateRef.Namespace}
+		}
+		if l.SessionPersistence != nil {
+			listener.SessionPersistence = &catalogv1.LoadBalancerSessionPersistence{Mode: catalogv1.LoadBalancerSessionMode(l.SessionPersistence.Mode), CookieExpirySeconds: l.SessionPersistence.CookieExpirySeconds}
+		}
 		for _, b := range l.Backends {
 			listener.Backends = append(listener.Backends, &catalogv1.LoadBalancerBackendMember{Id: b.Id, SubnetId: b.SubnetId, Address: b.Address, Port: b.Port, Weight: b.Weight, AttachmentId: b.AttachmentId, State: b.State, Reason: b.Reason, ObservedAt: b.ObservedAt, ObservationStale: b.ObservationStale})
 		}
 		out.Listeners = append(out.Listeners, listener)
+	}
+	if len(out.Listeners) > 0 {
+		out.Listener = out.Listeners[0]
 	}
 	return out
 }
@@ -703,11 +719,11 @@ func (s *NetworkService) CreateLoadBalancer(ctx context.Context, req *catalogv1.
 		Exposure: networkv1.LoadBalancerExposure(req.Exposure), Flavor: req.Flavor, PublicEipId: req.PublicEipId, PrivateIp: req.PrivateIp,
 		Backends: backends, HealthCheck: networkLBHealth(req.HealthCheck), IdempotencyKey: req.IdempotencyKey}
 	if req.Listener != nil {
-		legacyBackends, err := networkLBBackends(req.Listener.Backends)
+		legacy, err := networkLBListeners(&catalogv1.LoadBalancerListenerSet{Items: []*catalogv1.LoadBalancerListenerInput{req.Listener}})
 		if err != nil {
 			return nil, err
 		}
-		in.Listener = &networkv1.LoadBalancerListenerInput{Id: req.Listener.Id, Name: req.Listener.Name, Protocol: networkv1.LoadBalancerListenerProtocol(req.Listener.Protocol), Port: req.Listener.Port, Backends: legacyBackends, HealthCheck: networkLBHealth(req.Listener.HealthCheck)}
+		in.Listener = legacy.Items[0]
 	}
 	in.Listeners, err = networkLBListeners(req.Listeners)
 	if err != nil {

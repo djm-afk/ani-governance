@@ -158,6 +158,8 @@ message Subnet {
  google.protobuf.Timestamp observed_at = 13 [json_name = "observed_at"];
  bool observation_stale = 14 [json_name = "observation_stale"];
  string last_operation_id = 15 [json_name = "last_operation_id"];
+ optional int64 available_ip_count = 16 [json_name = "available_ip_count"];
+ optional int64 used_ip_count = 17 [json_name = "used_ip_count"];
 }
 message CreateSubnetRequest {
  string vpc_id = 1 [json_name = "vpc_id"];
@@ -206,14 +208,21 @@ enum LoadBalancerExposure {
 enum LoadBalancerListenerProtocol {
   LOAD_BALANCER_LISTENER_PROTOCOL_UNSPECIFIED = 0;
   LOAD_BALANCER_LISTENER_PROTOCOL_HTTP = 1;
+  LOAD_BALANCER_LISTENER_PROTOCOL_HTTPS = 2;
+  LOAD_BALANCER_LISTENER_PROTOCOL_TCP = 3;
+  LOAD_BALANCER_LISTENER_PROTOCOL_UDP = 4;
+  LOAD_BALANCER_LISTENER_PROTOCOL_SSL = 5;
 }
 enum LoadBalancerAlgorithm {
   LOAD_BALANCER_ALGORITHM_UNSPECIFIED = 0;
   LOAD_BALANCER_ALGORITHM_ROUND_ROBIN = 1;
+  LOAD_BALANCER_ALGORITHM_LEAST_REQUEST = 2;
+  LOAD_BALANCER_ALGORITHM_SOURCE_IP = 3;
 }
 enum LoadBalancerHealthCheckProtocol {
   LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_UNSPECIFIED = 0;
   LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_TCP = 1;
+  LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_HTTP = 2;
 }
 enum LoadBalancerConfigurationState {
   LOAD_BALANCER_CONFIGURATION_STATE_UNSPECIFIED = 0;
@@ -229,6 +238,20 @@ enum LoadBalancerDataPlaneState {
   LOAD_BALANCER_DATA_PLANE_STATE_HEALTHY = 2;
   LOAD_BALANCER_DATA_PLANE_STATE_UNHEALTHY = 3;
 }
+enum LoadBalancerSessionMode {
+  LOAD_BALANCER_SESSION_MODE_UNSPECIFIED = 0;
+  LOAD_BALANCER_SESSION_MODE_DISABLED = 3;
+  LOAD_BALANCER_SESSION_MODE_COOKIE_TIMEOUT = 1;
+  LOAD_BALANCER_SESSION_MODE_COOKIE_SESSION = 2;
+}
+message LoadBalancerCertificateRef {
+  string name = 1 [json_name = "name"];
+  string namespace = 2 [json_name = "namespace"];
+}
+message LoadBalancerSessionPersistence {
+  LoadBalancerSessionMode mode = 1 [json_name = "mode"];
+  uint32 cookie_expiry_seconds = 2 [json_name = "cookie_expiry_seconds"];
+}
 message LoadBalancerListenerInput {
   LoadBalancerListenerProtocol protocol = 1 [json_name = "protocol"];
   optional uint32 port = 2 [json_name = "port"];
@@ -236,6 +259,12 @@ message LoadBalancerListenerInput {
   string name = 4 [json_name = "name"];
   repeated LoadBalancerBackendInput backends = 5 [json_name = "backends"];
   LoadBalancerHealthCheck health_check = 6 [json_name = "health_check"];
+  LoadBalancerCertificateRef certificate_ref = 7 [json_name = "certificate_ref"];
+  LoadBalancerAlgorithm algorithm = 8 [json_name = "algorithm"];
+  LoadBalancerSessionPersistence session_persistence = 9 [json_name = "session_persistence"];
+  optional uint32 max_connections = 10 [json_name = "max_connections"];
+  bool gzip_enabled = 11 [json_name = "gzip_enabled"];
+  uint32 https_redirect_status_code = 12 [json_name = "https_redirect_status_code"];
 }
 message LoadBalancerListener {
   string id = 1 [json_name = "id"];
@@ -244,6 +273,12 @@ message LoadBalancerListener {
   string name = 4 [json_name = "name"];
   repeated LoadBalancerBackendMember backends = 5 [json_name = "backends"];
   LoadBalancerHealthCheck health_check = 6 [json_name = "health_check"];
+  LoadBalancerCertificateRef certificate_ref = 7 [json_name = "certificate_ref"];
+  LoadBalancerAlgorithm algorithm = 8 [json_name = "algorithm"];
+  LoadBalancerSessionPersistence session_persistence = 9 [json_name = "session_persistence"];
+  optional uint32 max_connections = 10 [json_name = "max_connections"];
+  bool gzip_enabled = 11 [json_name = "gzip_enabled"];
+  uint32 https_redirect_status_code = 12 [json_name = "https_redirect_status_code"];
 }
 message LoadBalancerBackendInput {
   string id = 1 [json_name = "id"];
@@ -271,6 +306,8 @@ message LoadBalancerHealthCheck {
   optional uint32 unhealthy_threshold = 4 [json_name = "unhealthy_threshold"];
   optional uint32 healthy_threshold = 5 [json_name = "healthy_threshold"];
   optional uint32 port = 6 [json_name = "port"];
+  string path = 7 [json_name = "path"];
+  string hostname = 8 [json_name = "hostname"];
 }
 message LoadBalancer {
   string id = 1 [json_name = "id"];
