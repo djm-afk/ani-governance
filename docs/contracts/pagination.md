@@ -1,6 +1,6 @@
 # 列表分页规范
 
-本文件是 Governance 分页要求的唯一正文，承接已接受的 `LIST-CURSOR-01`，并区分要求、当前实现和待迁移范围。[接口集成登记](../interface-integration-register.md#list-cursor-01) 保留批次、验收与遗留记录；修改列表、筛选或排序前，先核对本文和该接口的领域合同。
+本文件是 Governance 分页要求的唯一正文，承接已接受的 `LIST-CURSOR-01` 与 `LIST-CURSOR-02`，并区分要求、当前实现和待迁移范围。[接口集成登记](../interface-integration-register.md#list-cursor-01) 保留批次、验收与遗留记录；修改列表、筛选或排序前，先核对本文和该接口的领域合同。
 
 ## 适用范围与强制要求
 
@@ -43,7 +43,7 @@
 
 `GET /admin/v1/users` 使用 [PagingRequest](../../api/localdeps/pagination/pagination/v1/pagination.proto)，返回 [ListUserResponse](../../api/protos/identity/service/v1/user.proto)。[UserService.List](../../app/admin/service/internal/service/user_service.go) 委托 [userRepo.List](../../app/admin/service/internal/data/user_repo.go)，游标细节由 [user_cursor.go](../../app/admin/service/internal/data/user_cursor.go) 和本地 [ListWithCursor](../../pkg/localdeps/go-crud/entgo/cursor.go) 实现。
 
-普通分页请求未显式提供 `page`、`pageSize`、`offset` 或 `token` 时进入游标分支，limit 默认 20、范围 1～100；存在非空 cursor 且同时提供上述窗口字段时报错。显式提供旧窗口字段时仍走 `ListWithPaging`，例如 `?page=1&pageSize=20`；该分支返回 items/total，不具备新游标续页语义。
+普通分页请求未显式提供 `page`、`pageSize`、`offset` 或 `token` 时进入游标分支，limit 默认 20、范围 1～100；存在非空 cursor 且同时提供上述窗口字段或 `noPaging` 时报错。显式提供旧窗口字段时仍走 `ListWithPaging`，例如 `?page=1&pageSize=20`；该分支返回 items/total，不具备新游标续页语义。
 
 users 的默认排序为 ID 降序，等价于 `orderBy=["-id"]`。客户端 `sorting/orderBy` 只接受一个有效主排序字段并追加同方向唯一 ID。允许列为 `id/tenant_id/username/nickname/realname/email/mobile/status/gender/created_at/updated_at/last_login_at/locked_until`；降序 NULL 在前、升序 NULL 在后，键集谓词分别处理 NULL 区段。具体字段类型和取值以 `userCursorSortColumns` 为准。
 
@@ -59,6 +59,7 @@ total 为 uint64，HTTP JSON 为字符串。查询侧 Ent TenantPrivacy 继续�
 
 | 范围 | 当前协议与边界 | 依据 |
 | --- | --- | --- |
+| roles 与 api-keys | 已接入与 users 相同的 limit/cursor 基线（`{items, next_cursor, total}`）。roles 默认 `sort_order` 升序、api-keys 默认 `id` 降序，均追加唯一 ID 兜底；可排序列各自白名单，api-keys 显式排除 `secret_ciphertext` | LIST-CURSOR-02、[role_cursor.go](../../app/admin/service/internal/data/role_cursor.go)、[access_key_cursor.go](../../app/admin/service/internal/data/access_key_cursor.go) |
 | 其他使用 PagingRequest 的 admin 列表 | 各接口现有 page/pageSize、offset 或 token 分支保留。共享 cursor 字段可能出现在 OpenAPI，但本批未接入游标语义；不能据此宣称已迁移 | [接口集成登记](../interface-integration-register.md#list-cursor-01)、各 Service/Repo |
 | Network 的 VPC、EIP、Subnet、LB 列表 | 保留 limit/cursor 与 items/next_cursor/total。total 为 int64 字符串，遵守同可信租户、权限和筛选的计数要求；HTTP 对显式 limit 接受规范十进制 1～100 | [Network 策略](../../pkg/middleware/auth/network_policy.go)、[Network BFF](../../app/admin/service/internal/service/network_service.go) |
 | Image registrations | 保留领域已接受的 limit/cursor 与 items/next_cursor/total，按 Image 策略限制参数并透传已验证下游结果；不强制改为 users 的 c1 编码 | [Image 策略](../../pkg/middleware/auth/image_policy.go)、[Image BFF](../../app/admin/service/internal/service/image_service.go) |
@@ -72,12 +73,13 @@ total 为 uint64，HTTP JSON 为字符串。查询侧 Ent TenantPrivacy 继续�
 
 ## 待迁移范围与已知差异
 
-1. **其他历史列表未迁移。** LIST-CURSOR-01 仅改变 users；逐接口明确改造范围、业务排序和兼容策略后再实施。Network、ModelDev、Accelerator 与 Quota 的字段和 token 格式按其专项合同维护，本文不授权统一改名。
-2. **users 的 noPaging 分支绕过游标路径。** `userRepo.List` 在 `noPaging=true` 时直接进入旧分页查询，当前不保证拒绝同时携带的 cursor/window 冲突。需要单独确定兼容规则并实施参数入口校验；不能宣称所有请求均满足游标互斥要求。
-3. **users 的空关系筛选提前返回。** `listWithCursor` 在关联筛选解析为无匹配用户时，先返回空结果，尚未进入 `ResolveCursorLimit/DecodeCursor`。因此这一路径的非法 limit、篡改或绑定不匹配游标不能继承普通路径的 400 验收结论。修正时应将参数与游标校验放在所有空结果返回之前，保持真实租户与过滤行为。
-4. **同快照计数未由 users 实现保证。** 当前 list/count 的谓词一致，但分别执行；本文只记录实际一致性边界，不据此引入全仓事务迁移。若具体业务要求同一次响应的强快照或跨页冻结结果，先确定合同与相应实现。
+1. **其他历史列表未迁移。** LIST-CURSOR-01 仅改变 users；LIST-CURSOR-02 新增 roles 与 api-keys 两个接口。逐接口明确改造范围、业务排序和兼容策略后再实施。Network、ModelDev、Accelerator 与 Quota 的字段和 token 格式按其专项合同维护，本文不授权统一改名。
+2. **同快照计数未由游标实现保证。** 当前 list/count 的谓词一致，但分别执行；本文只记录实际一致性边界，不据此引入全仓事务迁移。若具体业务要求同一次响应的强快照或跨页冻结结果，先确定合同与相应实现。
+3. **多字段筛选的指纹稳定性依赖规范化。** `QueryStringConverter` 按 Go map 随机顺序追加 `Conditions`，因此指纹计算前须经 `NormalizeFilterExpr` 重排（`entgo.CursorFilterKey` 已接入）。新增或重写筛选解析路径时必须保持该规范化，否则语义相同的 query 会产生不同指纹，使原样回传的 `next_cursor` 被误判为篡改。
 
-这些差异属于后续实现任务；本次文档入仓没有修改业务代码、参数解析、签名配置或数据库行为。
+> 原先记录的两条 users 差异——**noPaging 分支绕过游标参数校验**与**空关系筛选提前返回绕过 limit/游标校验**——已由 LIST-CURSOR-02 修复：互斥检查覆盖 `noPaging`，且参数与游标校验前移到空集返回之前（见 [LIST-CURSOR-02](../interface-integration-register.md#list-cursor-02)）。已不在差异列表内。
+
+这些差异属于后续实现任务；本次文档更新没有修改业务代码、参数解析、签名配置或数据库行为。
 
 ## 迁移与验收
 
@@ -89,4 +91,4 @@ total 为 uint64，HTTP JSON 为字符串。查询侧 Ent TenantPrivacy 继续�
 4. 定向验证默认与边界 limit、空列表及末页、同值排序与 NULL 区段、所有受支持类型、原样续页、total 不受窗口影响、fieldMask、旧窗口兼容，以及篡改、跨租户、换资源/筛选/排序、未知版本、超长、缺密钥和缺可信身份。另测 noPaging 冲突与空关系筛选，不能只验证有数据路径。
 5. 在明确授权环境验证真实数据库的时间排序、多副本游标互认、当前权限和撤权拒绝；需要特定快照保证时加入该保证的并发验证。分别报告源码测试、外部边界替身、真实 HTTP/数据库链路与部署验收，未执行保留 `not_verified`。
 
-2026-10-10 的 users 历史验收包含两页读取、total 稳定、参数/签名/绑定拒绝、旧页码回归及 PostgreSQL created_at 翻页，详见 [LIST-CURSOR-01](../interface-integration-register.md#list-cursor-01)。SQLite 夹具的时间值存储不能证明 PostgreSQL 时间列键集行为；历史断言不覆盖上面的两条提前分支差异。本次仅核对源码和文档，未重跑上述测试或运行验收。
+2026-10-10 的 users 历史验收包含两页读取、total 稳定、参数/签名/绑定拒绝、旧页码回归及 PostgreSQL created_at 翻页，详见 [LIST-CURSOR-01](../interface-integration-register.md#list-cursor-01)；roles 与 api-keys 的对应验收见 [LIST-CURSOR-02](../interface-integration-register.md#list-cursor-02)。SQLite 夹具的时间值存储不能证明 PostgreSQL 时间列键集行为。上述两条提前分支差异已修复并由部署实测覆盖（空关系筛选 + 非法 limit/坏游标、`noPaging` + cursor 均 400）；本次入仓的文档更新本身未重跑这些测试或运行验收。

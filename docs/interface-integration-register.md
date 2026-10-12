@@ -1354,6 +1354,8 @@ Resource 仅提供内部 gRPC，本批同步公开 JSON 规格和 SBOM，已发�
 
 未执行/遗留：本批镜像内含上一批次（access-key 幂等）的代码，而该批迁移当时未在 ani-system 的库上执行（本批不含 schema 变更、未跑 Atlas）。**该遗留已于 2026-10-10 处置**：补跑迁移 `20261010131938` 并授予 `gov_app` 权限后，`POST /api/v1/auth/api-keys` 带 `idempotency_key` 的幂等行为已实测通过（见 AK-IDEM-01）。SQLite 上的时间列键集仍不可断言（夹具驱动存储形态问题），PostgreSQL 上已由上述 `created_at` 翻页用例覆盖。
 
+<a id="list-cursor-02"></a>
+
 ## LIST-CURSOR-02：`GET /admin/v1/roles` 与 `GET /api/v1/auth/api-keys` 接入 limit + cursor 游标分页（2026-10-10）
 
 在前一批（LIST-CURSOR-01，users）基础上，把 `GET /admin/v1/roles` 与 `GET /api/v1/auth/api-keys` 两接口由 `page/pageSize` 改为 `limit` + `cursor`，对外形状对齐 users/vpc：`{items, next_cursor, total}`。同时修复 users 接口审查发现的 5 项安全边界问题（§3.1~§3.5）。共用逻辑抽到 `data/cursor_shared.go`（`resolveCursorSortColumn`/`checkCursorWindowConflict`/`shouldUseCursorPaging`/`validateCursorRequest`），三个接口共用同一 codec/keyset/HMAC 实现。
