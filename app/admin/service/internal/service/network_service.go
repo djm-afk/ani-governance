@@ -425,7 +425,7 @@ func wireSubnet(v *networkv1.Subnet) *catalogv1.Subnet {
 	return &catalogv1.Subnet{Id: v.Id, VpcId: v.VpcId, Name: v.Name, Description: v.Description, Cidr: v.Cidr, Gateway: v.Gateway,
 		State: strings.ToLower(strings.TrimPrefix(v.State.String(), "RESOURCE_STATE_")), Reason: v.Reason, ReasonMessage: v.ReasonMessage,
 		CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, Version: v.Version, ObservedAt: v.ObservedAt,
-		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, AvailableIpCount: v.AvailableIpCount, UsedIpCount: v.UsedIpCount}
+		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, AvailableIpRange: v.AvailableIpRange, UsedIpRange: v.UsedIpRange}
 }
 func validSubnetReply(v *networkv1.Subnet, tenant, id, vpcID string) bool {
 	return v != nil && v.TenantId == tenant && subnetIDPattern.MatchString(v.Id) && (id == "" || v.Id == id) &&

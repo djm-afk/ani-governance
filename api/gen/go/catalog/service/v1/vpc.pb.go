@@ -2183,8 +2183,8 @@ type Subnet struct {
 	ObservedAt       *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
 	ObservationStale bool                   `protobuf:"varint,14,opt,name=observation_stale,proto3" json:"observation_stale,omitempty"`
 	LastOperationId  string                 `protobuf:"bytes,15,opt,name=last_operation_id,proto3" json:"last_operation_id,omitempty"`
-	AvailableIpCount *int64                 `protobuf:"varint,16,opt,name=available_ip_count,proto3,oneof" json:"available_ip_count,omitempty"`
-	UsedIpCount      *int64                 `protobuf:"varint,17,opt,name=used_ip_count,proto3,oneof" json:"used_ip_count,omitempty"`
+	AvailableIpRange *string                `protobuf:"bytes,18,opt,name=available_ip_range,proto3,oneof" json:"available_ip_range,omitempty"`
+	UsedIpRange      *string                `protobuf:"bytes,19,opt,name=used_ip_range,proto3,oneof" json:"used_ip_range,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2324,18 +2324,18 @@ func (x *Subnet) GetLastOperationId() string {
 	return ""
 }
 
-func (x *Subnet) GetAvailableIpCount() int64 {
-	if x != nil && x.AvailableIpCount != nil {
-		return *x.AvailableIpCount
+func (x *Subnet) GetAvailableIpRange() string {
+	if x != nil && x.AvailableIpRange != nil {
+		return *x.AvailableIpRange
 	}
-	return 0
+	return ""
 }
 
-func (x *Subnet) GetUsedIpCount() int64 {
-	if x != nil && x.UsedIpCount != nil {
-		return *x.UsedIpCount
+func (x *Subnet) GetUsedIpRange() string {
+	if x != nil && x.UsedIpRange != nil {
+		return *x.UsedIpRange
 	}
-	return 0
+	return ""
 }
 
 type CreateSubnetRequest struct {
@@ -5118,7 +5118,7 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\x06eip_id\x18\x02 \x01(\tR\x06eip_id\x12(\n" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0fidempotency_key\"F\n" +
 	"\x13BindVPCSnatResponse\x12/\n" +
-	"\x04snat\x18\x01 \x01(\v2\x1b.catalog.service.v1.VPCSnatR\x04snat\"\x9f\x05\n" +
+	"\x04snat\x18\x01 \x01(\v2\x1b.catalog.service.v1.VPCSnatR\x04snat\"\xce\x05\n" +
 	"\x06Subnet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06vpc_id\x18\x02 \x01(\tR\x06vpc_id\x12\x12\n" +
@@ -5140,10 +5140,10 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\vobserved_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\vobserved_at\x12,\n" +
 	"\x11observation_stale\x18\x0e \x01(\bR\x11observation_stale\x12,\n" +
 	"\x11last_operation_id\x18\x0f \x01(\tR\x11last_operation_id\x123\n" +
-	"\x12available_ip_count\x18\x10 \x01(\x03H\x00R\x12available_ip_count\x88\x01\x01\x12)\n" +
-	"\rused_ip_count\x18\x11 \x01(\x03H\x01R\rused_ip_count\x88\x01\x01B\x15\n" +
-	"\x13_available_ip_countB\x10\n" +
-	"\x0e_used_ip_count\"\xcc\x01\n" +
+	"\x12available_ip_range\x18\x12 \x01(\tH\x00R\x12available_ip_range\x88\x01\x01\x12)\n" +
+	"\rused_ip_range\x18\x13 \x01(\tH\x01R\rused_ip_range\x88\x01\x01B\x15\n" +
+	"\x13_available_ip_rangeB\x10\n" +
+	"\x0e_used_ip_rangeJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12R\x12available_ip_countR\rused_ip_count\"\xcc\x01\n" +
 	"\x13CreateSubnetRequest\x12\x16\n" +
 	"\x06vpc_id\x18\x01 \x01(\tR\x06vpc_id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +

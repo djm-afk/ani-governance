@@ -158,8 +158,10 @@ message Subnet {
  google.protobuf.Timestamp observed_at = 13 [json_name = "observed_at"];
  bool observation_stale = 14 [json_name = "observation_stale"];
  string last_operation_id = 15 [json_name = "last_operation_id"];
- optional int64 available_ip_count = 16 [json_name = "available_ip_count"];
- optional int64 used_ip_count = 17 [json_name = "used_ip_count"];
+ reserved 16, 17;
+ reserved "available_ip_count", "used_ip_count";
+ optional string available_ip_range = 18 [json_name = "available_ip_range"];
+ optional string used_ip_range = 19 [json_name = "used_ip_range"];
 }
 message CreateSubnetRequest {
  string vpc_id = 1 [json_name = "vpc_id"];

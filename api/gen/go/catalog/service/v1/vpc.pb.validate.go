@@ -3765,12 +3765,12 @@ func (m *Subnet) validate(all bool) error {
 
 	// no validation rules for LastOperationId
 
-	if m.AvailableIpCount != nil {
-		// no validation rules for AvailableIpCount
+	if m.AvailableIpRange != nil {
+		// no validation rules for AvailableIpRange
 	}
 
-	if m.UsedIpCount != nil {
-		// no validation rules for UsedIpCount
+	if m.UsedIpRange != nil {
+		// no validation rules for UsedIpRange
 	}
 
 	if len(errors) > 0 {

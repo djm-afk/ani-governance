@@ -351,6 +351,8 @@ github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261010084537-9191cebb408b
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261010084537-9191cebb408b/go.mod h1:J8jdG+2XoaWmtIBn6dErQzOvA/soOd9slkoKNpkKbEs=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261011084152-b258907ac8ac h1:679q+THYC7Lbj9IOM7awT/60VQalWbGqV6ZPDbSVw5U=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261011084152-b258907ac8ac/go.mod h1:J8jdG+2XoaWmtIBn6dErQzOvA/soOd9slkoKNpkKbEs=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261012021348-7c072b343e6a h1:XQW+qRfxeigRypyTyrg0qhNDlc3+LIx0oEyTFE7kH14=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261012021348-7c072b343e6a/go.mod h1:J8jdG+2XoaWmtIBn6dErQzOvA/soOd9slkoKNpkKbEs=
 go.einride.tech/aip v0.86.3 h1:jg80Ec4XBPYg1i7avzrl3MJol/dUwmMMLHtcmEMyxgM=
 go.einride.tech/aip v0.86.3/go.mod h1:dZuN/0sXeoscfWqsW8QLcLrGZdvsCC1B2R2CZ4kHmao=
 go.mongodb.org/mongo-driver/v2 v2.9.0 h1:e2mQdOmbkiYz+dj3faM7lVDwl7WdnRD+g5VicafMhL0=

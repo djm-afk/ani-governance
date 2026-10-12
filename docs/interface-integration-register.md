@@ -1370,3 +1370,13 @@ ledger adapter action固定为权威 Inference RPC full method `CreateInferenceS
 模块资格 `PlanModule`、上限 `PlanQuota` 与当前用户动作授权各自独立。API先dry-run/显式sync后执行 [权限目录登记](../scripts/ops/sql/register-inference-permissions.sql)，再仅为显式选定tenant:manager角色和选定套餐执行 [启用脚本](../scripts/ops/sql/enable-inference-access.sql)，传tenant_id/role_id/plan_id；不修改基础FREE、模板、所有角色或用户配额。Gov内部退款listener仅编译注册固定ani-inference，生产精确客户端DNS SAN必须明确配置，不猜测。
 
 软件测试使用实际Gov受理/账本/当前权限、真实Acc解析和真实Inference RPC/PG；只有外部provider证据可用明确替身，外部模型/Kubernetes执行暂停。完成通知在持久DELETE后显式注入，通过真实Inference退款客户端调用真实Gov mTLS/PG。源码实现、发布依赖、运行结果、CI及生产/真实GPU验收由本批结果索引分别记录；本文不回填未执行PASS，也不将本批之外的接口风格整体登记结项。
+
+
+## 2026-10-12：子网详情改为 IP 地址范围
+
+用户纠正所需信息为范围。沿用 Get/ListSubnet 与原鉴权/套餐/租户闸门，将公共字段改为有 presence 的 `available_ip_range`/`used_ip_range`；旧 count 字段名称和编号保留为 Proto reserved，不把旧 int64 编号直接改成 string。JSON 返回 KCN `status.v4availableIPrange`/`v4usingIPrange` 的原字符串，例如 `10.42.1.2,10.42.1.4-10.42.1.9`。明确 `""` 为确定空范围；未观测、字段缺失或非字符串为未知。有效新观测清除旧范围，读失败保留历史值但不续鲜，沿用 observation_stale。GetSubnet 仍经 Resource 读取持久化结果；不根据计数或 CIDR 推算，也不同步访问 KCN。
+
+Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 count 列，后台链更新范围。Fedora 正式 `make api` 通过；`go test -count=1 -run '^TestNetworkNewFieldsRetainIntentAndObservations$' ./app/admin/service/internal/service` 通过（0.048s）；`scripts/network-joint-integration -run '^TestNetworkJointHTTP/subnet_ip_ranges$'` 通过（整体 4.867s，范围子场景 0.31s），同一 HTTP 用例修改前失败（缺失 range），修改后通过。两仓生产入口编译通过，Resource 范围详情与旧行迁移定向用例通过。外部替身仅在 Kubernetes/KCN 边界，真实 JWT/AK、mTLS、业务与独占 PostgreSQL 参与验证，产品及 PG/Redis 清理通过；未运行全量测试或重跑监听器矩阵。源码与共享部署分别交付，真实集群验收仍为 not_verified。
+
+本次 range 合同的 Resource 依赖为 `v0.0.0-20261012021348-7c072b343e6a`，对应已推送的真实提交 `7c072b343e6aedb665ae10d981138b11af476eaa`。此前 b258907 的未发布限制也已在 2026-10-11 推送时解除；本次使用正常公开 Go 模块下载和校验，不保留个人路径 replace。
+关闭 `go.work` 后，`go build -mod=readonly -trimpath ./app/admin/service/cmd/server` 在 Fedora 通过，二进制模块信息确认上述 Resource 版本与公开校验和。

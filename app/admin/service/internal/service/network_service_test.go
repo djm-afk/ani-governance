@@ -372,10 +372,10 @@ func TestNetworkNewFieldsRetainIntentAndObservations(t *testing.T) {
 			t.Fatalf("listener readback lost: %v", wire)
 		}
 	}
-	for _, counts := range []*int64{nil, func() *int64 { v := int64(0); return &v }(), func() *int64 { v := int64(37); return &v }()} {
-		got := wireSubnet(&networkv1.Subnet{AvailableIpCount: counts, UsedIpCount: counts, ObservationStale: true})
-		if (got.AvailableIpCount == nil) != (counts == nil) || (got.UsedIpCount == nil) != (counts == nil) || counts != nil && (*got.AvailableIpCount != *counts || *got.UsedIpCount != *counts) || !got.ObservationStale {
-			t.Fatalf("subnet count presence lost: %v", got)
+	for _, ranges := range []*string{nil, func() *string { v := ""; return &v }(), func() *string { v := "10.42.1.2,10.42.1.4-10.42.1.9"; return &v }()} {
+		got := wireSubnet(&networkv1.Subnet{AvailableIpRange: ranges, UsedIpRange: ranges, ObservationStale: true})
+		if (got.AvailableIpRange == nil) != (ranges == nil) || (got.UsedIpRange == nil) != (ranges == nil) || ranges != nil && (*got.AvailableIpRange != *ranges || *got.UsedIpRange != *ranges) || !got.ObservationStale {
+			t.Fatalf("subnet range presence lost: %v", got)
 		}
 	}
 	lbs, err := s.ListLoadBalancers(ctx, &catalogv1.ListLoadBalancersRequest{VpcId: testVPCID, SubnetId: testSubnetID, State: "available", Limit: 1, Cursor: "input-cursor"})

@@ -542,10 +542,10 @@ func TestNetworkJointHTTP(t *testing.T) {
 		require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM network_lb_vip_intents WHERE tenant_id=$1 AND lb_id=$2 AND released_at IS NULL)+(SELECT count(*) FROM network_lb_subnet_refs WHERE tenant_id=$1 AND lb_id=$2 AND released_at IS NULL)+(SELECT count(*) FROM network_lb_components WHERE tenant_id=$1 AND lb_id=$2 AND deleted_at IS NULL)`, peer.TenantID, lbID).Scan(&occupied))
 		require.Zero(t, occupied)
 	})
-	t.Run("subnet_ip_counts", func(t *testing.T) {
+	t.Run("subnet_ip_ranges", func(t *testing.T) {
 		path := base + "/subnets/" + peer.EntrySubnet
 		unknown := get(t, jwtIdentity, path)
-		_, present := unknown["available_ip_count"]
+		_, present := unknown["available_ip_range"]
 		require.False(t, present)
 		var ns, name string
 		require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT namespace,provider_name FROM network_provider_bindings WHERE tenant_id=$1 AND subnet_id=$2 AND resource_kind='subnet'`, peer.TenantID, peer.EntrySubnet).Scan(&ns, &name))
@@ -557,13 +557,14 @@ func TestNetworkJointHTTP(t *testing.T) {
 			require.NoError(t, json.NewDecoder(response.Body).Decode(&obj))
 			response.Body.Close()
 			status := obj["status"].(map[string]any)
-			delete(status, "v4availableIPs")
-			delete(status, "v4usingIPs")
+			status["v4availableIPs"] = 999
+			delete(status, "v4availableIPrange")
+			delete(status, "v4usingIPrange")
 			if available != nil {
-				status["v4availableIPs"] = available
+				status["v4availableIPrange"] = available
 			}
 			if used != nil {
-				status["v4usingIPs"] = used
+				status["v4usingIPrange"] = used
 			}
 			raw, err := json.Marshal(obj)
 			require.NoError(t, err)
@@ -575,19 +576,23 @@ func TestNetworkJointHTTP(t *testing.T) {
 			defer response.Body.Close()
 			require.Equal(t, 200, response.StatusCode)
 		}
-		change(240, 12)
-		v := poll(t, jwtIdentity, path, func(v map[string]any) bool { return v["available_ip_count"] == "240" && v["used_ip_count"] == "12" })
-		observed := v["observed_at"]
-		change(239, 13)
-		v = poll(t, akIdentity, path, func(v map[string]any) bool {
-			return v["available_ip_count"] == "239" && v["used_ip_count"] == "13" && v["observed_at"] != observed
+		change("10.42.1.20-10.42.1.254", "10.42.1.2,10.42.1.4-10.42.1.19")
+		v := poll(t, jwtIdentity, path, func(v map[string]any) bool {
+			return v["available_ip_range"] == "10.42.1.20-10.42.1.254" && v["used_ip_range"] == "10.42.1.2,10.42.1.4-10.42.1.19"
 		})
-		change(0, 0)
-		poll(t, jwtIdentity, path, func(v map[string]any) bool { return v["available_ip_count"] == "0" && v["used_ip_count"] == "0" })
-		change(nil, -1)
+		require.NotContains(t, v, "available_ip_count")
+		require.NotContains(t, v, "used_ip_count")
+		observed := v["observed_at"]
+		change("10.42.1.21-10.42.1.254", "10.42.1.2-10.42.1.20")
+		v = poll(t, akIdentity, path, func(v map[string]any) bool {
+			return v["available_ip_range"] == "10.42.1.21-10.42.1.254" && v["used_ip_range"] == "10.42.1.2-10.42.1.20" && v["observed_at"] != observed
+		})
+		change("", "")
+		poll(t, jwtIdentity, path, func(v map[string]any) bool { return v["available_ip_range"] == "" && v["used_ip_range"] == "" })
+		change(nil, 123)
 		poll(t, akIdentity, path, func(v map[string]any) bool {
-			_, a := v["available_ip_count"]
-			_, u := v["used_ip_count"]
+			_, a := v["available_ip_range"]
+			_, u := v["used_ip_range"]
 			return !a && !u
 		})
 		request(t, identity{bearer: otherToken}, "GET", path, "", nil, 404)

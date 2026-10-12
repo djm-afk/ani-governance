@@ -14045,9 +14045,9 @@ components:
                     type: boolean
                 last_operation_id:
                     type: string
-                available_ip_count:
+                available_ip_range:
                     type: string
-                used_ip_count:
+                used_ip_range:
                     type: string
             description: Tenant-facing subnet fields; ownership is resolved from authenticated context.
         SyncMenusRequest:
