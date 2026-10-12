@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"math"
 
 	"slices"
 	"strconv"
@@ -99,6 +100,9 @@ type userRepo struct {
 	userPositionRepo *UserPositionRepo
 
 	membershipRepo *MembershipRepo
+
+	// roleRepo 用于把 role_code / role_codes__in 解析成角色 ID（需按租户限定）。
+	roleRepo *RoleRepo
 }
 
 func NewUserRepo(
@@ -108,6 +112,7 @@ func NewUserRepo(
 	userOrgUnitRepo *UserOrgUnitRepo,
 	userPositionRepo *UserPositionRepo,
 	membershipRepo *MembershipRepo,
+	roleRepo *RoleRepo,
 ) UserRepo {
 	repo := &userRepo{
 		log:              ctx.NewLoggerHelper("user/repo/admin-service"),
@@ -119,6 +124,7 @@ func NewUserRepo(
 		userOrgUnitRepo:  userOrgUnitRepo,
 		userPositionRepo: userPositionRepo,
 		membershipRepo:   membershipRepo,
+		roleRepo:         roleRepo,
 	}
 
 	repo.init()
@@ -346,22 +352,46 @@ func (r *userRepo) List(ctx context.Context, req *paginationV1.PagingRequest) (*
 
 // applyUserListFilters 把请求中的角色/组织/岗位过滤解析成用户 ID 交集，
 // 写回 req 的 filterExpr（就地修改），并返回是否应直接返回空结果。
+//
+// 除既有的 role_id(s)/org_unit_id(s)/position_id(s) 外，本方法还支持按角色
+// 编码筛选（role_code / role_codes__in）：编码需先在可信租户内解析成角色 ID，
+// 再与 role_id(s) 的解析结果取并集去重，最后统一取用户交集。
 func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.PagingRequest) (empty bool, err error) {
 	filterExpr, err := r.repository.ConvertFilterByPagingRequest(req)
 	if err != nil {
 		r.log.Errorf(ctx, "convert filter by paging request failed: %s", err.Error())
 		return false, err
 	}
+	if filterExpr == nil {
+		filterExpr = &paginationV1.FilterExpr{}
+	}
+
+	// fail-closed：role_code/role_codes 是被白名单拒绝的虚拟列，一旦被放进
+	// $and/$or 子树就无法被下面的顶层摘出（FilterFields 不递归 Groups），会被
+	// 静默丢弃并退化为全量。探测到即拒绝，避免"能解析出就放行、解析不出就退化"。
+	if containsFilterField(filterExpr.Groups, "role_code", "role_codes") {
+		return false, identityV1.ErrorBadRequest(
+			"role_code/role_codes__in must be a top-level filter condition")
+	}
 
 	excludeConditions := pagination.FilterFields(filterExpr, []string{
 		"org_unit_id", "org_unit_ids",
 		"position_id", "position_ids",
 		"role_id", "role_ids",
+		"role_code", "role_codes",
 	})
 
 	var orgUnitIDs []uint32
 	var positionIDs []uint32
 	var roleIDs []uint32
+
+	// roleCodeProvided 依据"role_code(s) 条件是否出现"置位（而非解析后的 ID 数），
+	// 用于区分"没传该条件"与"传了但解析为空"：后者必须短路为空，不能落回全量。
+	var roleCodeProvided bool
+	var roleCodes []string
+	// roleCodeInvalid 标记 role_codes__in 收到非数组标量（契约要求数组），按空结果处理。
+	var roleCodeInvalid bool
+
 	for _, cond := range excludeConditions {
 		//r.log.Debugf(ctx, "excluding filter condition: field=%s operator=%s value=%v", cond.GetField(), cond.GetOp(), cond.GetValue())
 
@@ -411,8 +441,51 @@ func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.P
 					r.log.Errorf(ctx, "parse role_ids value failed: %s", err.Error())
 				}
 			}
+
+		case "role_code":
+			// 单值语义：解析结果写入 Value（见 QueryStringConverter.MakeFieldFilter）。
+			roleCodeProvided = true
+			if code := strings.TrimSpace(cond.GetValue()); code != "" {
+				roleCodes = append(roleCodes, code)
+			}
+		case "role_codes":
+			// 集合语义：query 键为 role_codes__in，转换后 Field="role_codes"、Op=IN；
+			// 数组写入 Values，标量写入 Value（见 QueryStringConverter.MakeFieldFilter）。
+			roleCodeProvided = true
+			if len(cond.GetValues()) == 0 && cond.GetValue() != "" {
+				// 契约要求数组；收到非数组标量按"查不到 → 空结果"处理，不得当无条件。
+				roleCodeInvalid = true
+				continue
+			}
+			for _, v := range cond.GetValues() {
+				if code := strings.TrimSpace(v); code != "" {
+					roleCodes = append(roleCodes, code)
+				}
+			}
 		}
 	}
+
+	if roleCodeProvided {
+		if roleCodeInvalid || len(roleCodes) == 0 {
+			// 空数组 / 非数组标量 / 空白编码：直接空结果。
+			return true, nil
+		}
+
+		// 角色编码仅在 (tenant_id, code) 维度唯一，解析必须先限定可信租户，
+		// 否则跨租户串号；平台上下文需请求显式给出顶层 tenant_id。
+		tenantID, terr := r.resolveRoleCodeTenant(ctx, filterExpr)
+		if terr != nil {
+			return false, terr
+		}
+
+		resolvedIDs, rerr := r.roleRepo.ListRoleIDsByCodesInTenant(ctx, tenantID, roleCodes)
+		if rerr != nil {
+			r.log.Errorf(ctx, "resolve role ids by codes failed: %s", rerr.Error())
+			return false, rerr
+		}
+		roleIDs = append(roleIDs, resolvedIDs...)
+	}
+	roleIDs = sliceutil.Unique(roleIDs)
 
 	var mergedUserIDs []uint32
 	mergedUserIDs, err = r.queryUserIDsByRelationIDs(ctx, roleIDs, orgUnitIDs, positionIDs)
@@ -422,6 +495,13 @@ func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.P
 	}
 
 	//r.log.Debugf(ctx, "filtered user ids by relation ids: [%v] [%v] [%v] [%v]", roleIDs, orgUnitIDs, positionIDs, mergedUserIDs)
+
+	// role_code(s) 条件出现但（与 role_id(s) 并集后）未解析出任何角色 ID → 空结果。
+	// 这是本方案与既有 role_ids 行为的关键差异点：不能依赖 roleIDs==0 的短路，
+	// 否则会落回全量。
+	if roleCodeProvided && len(roleIDs) == 0 {
+		return true, nil
+	}
 
 	hasRelationFilter := len(roleIDs) > 0 || len(orgUnitIDs) > 0 || len(positionIDs) > 0
 	if hasRelationFilter && len(mergedUserIDs) == 0 {
@@ -445,6 +525,69 @@ func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.P
 	req.FilteringType = &paginationV1.PagingRequest_FilterExpr{FilterExpr: filterExpr}
 
 	return false, nil
+}
+
+// resolveRoleCodeTenant 决定按角色编码解析时使用的租户范围：
+//   - 具名租户上下文（viewer tid>0）：以该租户为范围。
+//   - 平台/系统上下文（tid=0）：要求请求给出顶层、EQ、纯数字且 >0 的 tenant_id 条件，
+//     以其为范围；缺失或形态不符一律 400（fail-closed，禁止跨租户按编码解析）。
+func (r *userRepo) resolveRoleCodeTenant(ctx context.Context, filterExpr *paginationV1.FilterExpr) (uint32, error) {
+	if tid, hasTenant := maybeTenantFromViewer(ctx); hasTenant {
+		return tid, nil
+	}
+
+	for _, cond := range filterExpr.GetConditions() {
+		if cond == nil || cond.GetField() != "tenant_id" {
+			continue
+		}
+		if cond.GetOp() != paginationV1.Operator_EQ {
+			return 0, identityV1.ErrorBadRequest(
+				"platform context requires an EQ tenant_id filter to query by role_code")
+		}
+		val, perr := strconv.ParseUint(strings.TrimSpace(cond.GetValue()), 10, 64)
+		if perr != nil || val == 0 || val > math.MaxUint32 {
+			return 0, identityV1.ErrorBadRequest(
+				"platform context requires a numeric tenant_id filter to query by role_code")
+		}
+		return uint32(val), nil
+	}
+
+	return 0, identityV1.ErrorBadRequest(
+		"platform context requires a tenant_id filter to query by role_code")
+}
+
+// containsFilterField 递归判断过滤表达式的任意子组（不含顶层 Conditions）是否
+// 含指定字段。用于探测 role_code(s) 被放进 $and/$or 子树的情形。
+func containsFilterField(groups []*paginationV1.FilterExpr, fields ...string) bool {
+	want := make(map[string]struct{}, len(fields))
+	for _, f := range fields {
+		want[f] = struct{}{}
+	}
+
+	var walk func(expr *paginationV1.FilterExpr, checkSelf bool) bool
+	walk = func(expr *paginationV1.FilterExpr, checkSelf bool) bool {
+		if expr == nil {
+			return false
+		}
+		if checkSelf {
+			for _, cond := range expr.GetConditions() {
+				if cond == nil {
+					continue
+				}
+				if _, ok := want[cond.GetField()]; ok {
+					return true
+				}
+			}
+		}
+		for _, g := range expr.GetGroups() {
+			if walk(g, true) {
+				return true
+			}
+		}
+		return false
+	}
+
+	return walk(&paginationV1.FilterExpr{Groups: groups}, true)
 }
 
 // enrichRelationIDs 逐条回填用户的角色/组织/岗位 ID 列表（读视图字段）。

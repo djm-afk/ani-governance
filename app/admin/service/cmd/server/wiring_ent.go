@@ -107,6 +107,17 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	// ═══════════════════════ 二、仓储层(internal/data) ═══════════════════════
 
 	// 身份与账号
+	// RBAC:权限 → 角色(聚合权限),Api/Menu 为权限挂载点
+	// 需先于 userRepo 构造：userRepo 按 role_code 解析角色 ID 时依赖 roleRepo。
+	permissionApiRepo := data.NewPermissionApiRepo(ctx, entClient)
+	permissionMenuRepo := data.NewPermissionMenuRepo(ctx, entClient)
+	rolePermissionRepo := data.NewRolePermissionRepo(ctx, entClient)
+	roleOrgUnitRepo := data.NewRoleOrgUnitRepo(ctx, entClient)
+	roleFieldPermissionRepo := data.NewRoleFieldPermissionRepo(ctx, entClient)
+	roleMetadataRepo := data.NewRoleMetadataRepo(ctx, entClient)
+	permissionRepo := data.NewPermissionRepo(ctx, entClient, permissionApiRepo, permissionMenuRepo)
+	roleRepo := data.NewRoleRepo(ctx, entClient, rolePermissionRepo, roleOrgUnitRepo, permissionRepo, roleMetadataRepo, roleFieldPermissionRepo)
+
 	userRoleRepo := data.NewUserRoleRepo(ctx, entClient)
 	userOrgUnitRepo := data.NewUserOrgUnitRepo(ctx, entClient)
 	userPositionRepo := data.NewUserPositionRepo(ctx, entClient)
@@ -114,7 +125,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	membershipPositionRepo := data.NewMembershipPositionRepo(ctx, entClient)
 	membershipOrgUnitRepo := data.NewMembershipOrgUnitRepo(ctx, entClient)
 	membershipRepo := data.NewMembershipRepo(ctx, entClient, membershipRoleRepo, membershipPositionRepo, membershipOrgUnitRepo)
-	userRepo := data.NewUserRepo(ctx, entClient, userRoleRepo, userOrgUnitRepo, userPositionRepo, membershipRepo)
+	userRepo := data.NewUserRepo(ctx, entClient, userRoleRepo, userOrgUnitRepo, userPositionRepo, membershipRepo, roleRepo)
 	configRepo := data.NewConfigRepo(ctx, entClient, redisClient)
 	cleanups = append(cleanups, configRepo.Close)
 	userCredentialRepo := data.NewUserCredentialRepo(ctx, entClient, passwordCrypto, configRepo)
@@ -130,15 +141,8 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	modeldevAcceptanceRepo := data.NewModelDevAcceptanceRepo(entClient)
 	modeldevBindingRepo := data.NewModelDevReleaseBindingRepo(entClient)
 
-	// RBAC:权限 → 角色(聚合权限),Api/Menu 为权限挂载点
-	permissionApiRepo := data.NewPermissionApiRepo(ctx, entClient)
-	permissionMenuRepo := data.NewPermissionMenuRepo(ctx, entClient)
-	rolePermissionRepo := data.NewRolePermissionRepo(ctx, entClient)
-	roleOrgUnitRepo := data.NewRoleOrgUnitRepo(ctx, entClient)
-	roleFieldPermissionRepo := data.NewRoleFieldPermissionRepo(ctx, entClient)
-	roleMetadataRepo := data.NewRoleMetadataRepo(ctx, entClient)
-	permissionRepo := data.NewPermissionRepo(ctx, entClient, permissionApiRepo, permissionMenuRepo)
-	roleRepo := data.NewRoleRepo(ctx, entClient, rolePermissionRepo, roleOrgUnitRepo, permissionRepo, roleMetadataRepo, roleFieldPermissionRepo)
+	// RBAC：permission/role 相关仓储已提前到「身份与账号」段构造
+	// （userRepo 按 role_code 解析角色 ID 依赖 roleRepo）。此处仅补充其余挂载点。
 	permissionGroupRepo := data.NewPermissionGroupRepo(ctx, entClient)
 	apiRepo := data.NewApiRepo(ctx, entClient)
 	menuRepo := data.NewMenuRepo(ctx, entClient)

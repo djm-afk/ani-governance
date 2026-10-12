@@ -100,10 +100,22 @@ func (r *PermissionGroupRepo) List(ctx context.Context, req *paginationV1.Paging
 
 	builder := r.entClient.Client().PermissionGroup.Query()
 
+	// exclude_subtree 是查询辅助条件（排除某分组自身及其全部后代），不是真实列；
+	// 必须先从过滤表达式中摘出，否则会被字段白名单静默丢弃，且需作为谓词同时作用于
+	// 列表查询与 Count，保证 total 与 items 一致。
+	excludeSelectors, err := r.applyExcludeSubtree(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
 	whereSelectors, _, err := r.repository.BuildListSelectorWithPaging(builder, req)
 	if err != nil {
 		r.log.Errorf(ctx, "parse list param error [%s]", err.Error())
 		return nil, permissionV1.ErrorBadRequest("invalid query parameter")
+	}
+	whereSelectors = append(whereSelectors, excludeSelectors...)
+	if len(excludeSelectors) != 0 {
+		builder.Modify(excludeSelectors...)
 	}
 
 	entities, err := builder.All(ctx)
@@ -138,6 +150,144 @@ func (r *PermissionGroupRepo) List(ctx context.Context, req *paginationV1.Paging
 		Total: uint64(count),
 		Items: dtos,
 	}, nil
+}
+
+// applyExcludeSubtree 摘出 query 中的 exclude_subtree 条件并解析为“排除自身及
+// 全部后代”的 ID 集合，返回可施加于列表查询与 Count 的谓词选择器。
+//
+// exclude_subtree 只是查询辅助（用于“上级分组”下拉排除当前分组子树），不是真实
+// 列：必须先从过滤表达式中摘出，否则会被字段白名单静默丢弃。id 不存在/空值时按
+// “无排除”处理（分组可能已被删除），不报错。
+func (r *PermissionGroupRepo) applyExcludeSubtree(ctx context.Context, req *paginationV1.PagingRequest) ([]func(s *sql.Selector), error) {
+	filterExpr, err := r.repository.ConvertFilterByPagingRequest(req)
+	if err != nil {
+		r.log.Errorf(ctx, "convert filter by paging request failed: %s", err.Error())
+		return nil, permissionV1.ErrorBadRequest("invalid query parameter")
+	}
+	if filterExpr == nil {
+		return nil, nil
+	}
+
+	excluded := pagination.FilterFields(filterExpr, []string{"exclude_subtree"})
+	if len(excluded) == 0 {
+		return nil, nil
+	}
+	// 摘出后把（已移除该条件的）表达式写回请求，避免其落入通用过滤被丢弃。
+	req.FilteringType = &paginationV1.PagingRequest_FilterExpr{FilterExpr: filterExpr}
+
+	rootID, perr := strconv.ParseUint(strings.TrimSpace(excluded[0].GetValue()), 10, 64)
+	if perr != nil || rootID == 0 {
+		// 非法/空值按无排除处理。
+		return nil, nil
+	}
+
+	ids, cerr := r.collectSubtreeIDs(ctx, rootID)
+	if cerr != nil {
+		return nil, cerr
+	}
+	if len(ids) == 0 {
+		// 该 id 不存在：无排除。
+		return nil, nil
+	}
+
+	return []func(s *sql.Selector){
+		func(s *sql.Selector) {
+			s.Where(sql.NotIn(s.C(permissiongroup.FieldID), toAnySlice(ids)...))
+		},
+	}, nil
+}
+
+// collectSubtreeIDs 以 parent_id 链为准，BFS 收集 rootID 自身及其全部后代 ID。
+// 全程带 visited 防环（历史脏数据可能存在环）；rootID 不存在时返回空集。
+// exclude_subtree 与 Create/Update 的循环校验共用本函数，避免两处推树逻辑漂移。
+func (r *PermissionGroupRepo) collectSubtreeIDs(ctx context.Context, rootID uint64) ([]uint32, error) {
+	exists, err := r.entClient.Client().PermissionGroup.Query().
+		Where(permissiongroup.IDEQ(uint32(rootID))).
+		Exist(ctx)
+	if err != nil {
+		r.log.Errorf(ctx, "collect subtree: query root [%d] failed: %s", rootID, err.Error())
+		return nil, permissionV1.ErrorInternalServerError("query permission group failed")
+	}
+	if !exists {
+		return nil, nil
+	}
+
+	visited := map[uint32]bool{uint32(rootID): true}
+	ids := []uint32{uint32(rootID)}
+	queue := []uint32{uint32(rootID)}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+
+		children, cerr := r.entClient.Client().PermissionGroup.Query().
+			Where(permissiongroup.ParentIDEQ(cur)).
+			Select(permissiongroup.FieldID).
+			All(ctx)
+		if cerr != nil {
+			r.log.Errorf(ctx, "collect subtree: query children of [%d] failed: %s", cur, cerr.Error())
+			return nil, permissionV1.ErrorInternalServerError("query permission group children failed")
+		}
+		for _, ch := range children {
+			if visited[ch.ID] {
+				continue
+			}
+			visited[ch.ID] = true
+			ids = append(ids, ch.ID)
+			queue = append(queue, ch.ID)
+		}
+	}
+
+	return ids, nil
+}
+
+// validatePermissionGroupParent 校验父子关系合法性：父必须存在，且不得把节点挂到
+// 自身或自身后代下（防环）。nodeID 为 0 表示新建节点（自身无后代）。
+// 校验只依赖 nodeID 当前子树，可在落库前独立完成——检测到环即返回 400，环不入库。
+func (r *PermissionGroupRepo) validatePermissionGroupParent(ctx context.Context, nodeID uint32, newParentID uint32) error {
+	if newParentID == 0 {
+		// 置根，跳过。
+		return nil
+	}
+	if nodeID != 0 && newParentID == nodeID {
+		return permissionV1.ErrorBadRequest("cannot move permission group under its own descendant")
+	}
+
+	exists, err := r.entClient.Client().PermissionGroup.Query().
+		Where(permissiongroup.IDEQ(newParentID)).
+		Exist(ctx)
+	if err != nil {
+		r.log.Errorf(ctx, "validate permission group parent: query parent [%d] failed: %s", newParentID, err.Error())
+		return permissionV1.ErrorInternalServerError("query permission group failed")
+	}
+	if !exists {
+		return permissionV1.ErrorBadRequest("parent permission group not found")
+	}
+
+	if nodeID == 0 {
+		return nil
+	}
+
+	// newParentID 是 nodeID 的后代 → 成环，拒绝。
+	ids, cerr := r.collectSubtreeIDs(ctx, uint64(nodeID))
+	if cerr != nil {
+		return cerr
+	}
+	for _, id := range ids {
+		if id == newParentID {
+			return permissionV1.ErrorBadRequest("cannot move permission group under its own descendant")
+		}
+	}
+
+	return nil
+}
+
+// toAnySlice 把 uint32 ID 切片转换为 sql.NotIn 接受的 any 切片。
+func toAnySlice(ids []uint32) []any {
+	out := make([]any, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, id)
+	}
+	return out
 }
 
 func (r *PermissionGroupRepo) IsExist(ctx context.Context, id uint32) (bool, error) {
@@ -177,6 +327,17 @@ func (r *PermissionGroupRepo) Get(ctx context.Context, req *permissionV1.GetPerm
 func (r *PermissionGroupRepo) Create(ctx context.Context, req *permissionV1.CreatePermissionGroupRequest) (dto *permissionV1.PermissionGroup, err error) {
 	if req == nil || req.Data == nil {
 		return nil, permissionV1.ErrorBadRequest("invalid parameter")
+	}
+
+	// 新建节点自身无后代，仅需判“父存在 + 自身成父”两种非法情形。
+	// nodeID 传 data.Id（可能显式指定主键）；parent 为 nil/0 时视为置根，直接通过。
+	if parentID := req.Data.GetParentId(); parentID != 0 {
+		if req.Data.Id != nil && req.Data.GetId() == parentID {
+			return nil, permissionV1.ErrorBadRequest("permission group cannot be its own parent")
+		}
+		if verr := r.validatePermissionGroupParent(ctx, 0, parentID); verr != nil {
+			return nil, verr
+		}
 	}
 
 	var tx *ent.Tx
@@ -306,8 +467,61 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 		}
 	}
 
-	builder := r.entClient.Client().PermissionGroup.UpdateOneID(req.GetId())
-	_, err := r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
+	// 防环校验先于落库：判断 newParentID 是否为 nodeID 的后代只依赖 nodeID 当前
+	// 子树，与本次改父无关，可在落库前独立完成；检测到环即返回 400，环不入库。
+	// （仅当本次请求携带 parent_id 变更时才需要校验。）
+	parentChanged := req.Data.ParentId != nil
+	if parentChanged {
+		if err := r.validatePermissionGroupParent(ctx, req.GetId(), req.Data.GetParentId()); err != nil {
+			return err
+		}
+	}
+
+	// 未改父：维持既有非事务行为。
+	if !parentChanged {
+		builder := r.entClient.Client().PermissionGroup.UpdateOneID(req.GetId())
+		_, err := r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
+			func(dto *permissionV1.PermissionGroup) {
+				builder.
+					SetNillableName(req.Data.Name).
+					SetNillableStatus(r.statusConverter.ToEntity(req.Data.Status)).
+					SetNillableModule(req.Data.Module).
+					SetNillableSortOrder(req.Data.SortOrder).
+					SetNillableDescription(req.Data.Description).
+					SetNillableParentID(req.Data.ParentId).
+					SetNillableUpdatedBy(req.Data.UpdatedBy).
+					SetUpdatedAt(time.Now())
+			},
+			func(s *sql.Selector) {
+				s.Where(sql.EQ(permissiongroup.FieldID, req.GetId()))
+			},
+		)
+		return err
+	}
+
+	// 改父：把「parent_id 落库 + relocateSubtree 全部路径更新」绑成一个事务，
+	// 保证 relocateSubtree 多步 SetPath 中途失败时回滚，path 不出现半新半旧。
+	var txErr error
+	tx, err := r.entClient.Client().Tx(ctx)
+	if err != nil {
+		r.log.Errorf(ctx, "start transaction failed: %s", err.Error())
+		return permissionV1.ErrorInternalServerError("start transaction failed")
+	}
+	defer func() {
+		if txErr != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				r.log.Errorf(ctx, "transaction rollback failed: %s", rollbackErr.Error())
+			}
+			return
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			r.log.Errorf(ctx, "transaction commit failed: %s", commitErr.Error())
+			txErr = permissionV1.ErrorInternalServerError("transaction commit failed")
+		}
+	}()
+
+	builder := tx.PermissionGroup.UpdateOneID(req.GetId())
+	if _, txErr = r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
 		func(dto *permissionV1.PermissionGroup) {
 			builder.
 				SetNillableName(req.Data.Name).
@@ -322,15 +536,13 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 		func(s *sql.Selector) {
 			s.Where(sql.EQ(permissiongroup.FieldID, req.GetId()))
 		},
-	)
-	if err != nil {
-		return err
+	); txErr != nil {
+		return txErr
 	}
 
-	// parent_id 变更后重算本节点及全部后代的物化路径（path 是树形结构的
-	// 权威物化形态，挂载关系变了路径必须跟着走）。
-	if req.Data.ParentId != nil {
-		return r.relocateSubtree(ctx, r.entClient.Client(), req.GetId())
+	// 事务内重算本节点及全部后代的物化路径：relocate 要读到本事务内未提交的新 parent_id。
+	if txErr = r.relocateSubtree(ctx, tx.Client(), req.GetId()); txErr != nil {
+		return txErr
 	}
 
 	return nil

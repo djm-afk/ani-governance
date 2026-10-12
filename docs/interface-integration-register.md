@@ -372,7 +372,7 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 | TENANT-07 | `GET /admin/v1/tenants:exists` | `code` / `name` 查重，返回 `exist` |
 | TENANT-08 | `GET /admin/v1/tenants/{id}/usage` | 用户数、API 审计记录数、套餐及配额；文件管理移除后 `storageUsedBytes` 固定为 0，不代表外部存储真实用量；不是计费周期用量 |
 | TENANT-09 | `POST /admin/v1/tenants/{id}/cleanup` | 显式删除实现所列 Governance 租户数据，保留租户并置 OFF；不等于清理下游资源或对象存储文件 |
-| ACCOUNT-01 | `GET /admin/v1/users` | 用户分页；按租户、角色等过滤 |
+| ACCOUNT-01 | `GET /admin/v1/users` | 用户分页；按租户、角色等过滤；`query` 支持顶层 `role_code`（单值）与 `role_codes__in`（集合），详见 [ROLE-CODE-FILTER-01](#role-code-filter-01) |
 | ACCOUNT-02 | `GET /admin/v1/users/{id}` | 用户详情 |
 | ACCOUNT-03 | `POST /admin/v1/users` | `{data:{tenantId,username,roleIds,...},password,activationMode}`；角色必须与目标租户/系统类型匹配 |
 | ACCOUNT-04 | `PUT /admin/v1/users/{id}` | `data`、`updateMask`，可另传 `password`；当前 Service 即使只改资料/状态也要求传有效角色 |
@@ -410,7 +410,7 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 | PERM-04 | `PUT /admin/v1/permissions/{id}` | `data`、`updateMask`；当前关联更新存在丢失风险，完整数组也不能规避 mask 过滤，见 [已知实现缺陷](api-role-permission-ops.md#permission-update-mask-risk) 和 MGMT-09 |
 | PERM-05 | `DELETE /admin/v1/permissions/{id}` | 删除权限点；`sys:*` 受保护清单未在本路径强制（见 MGMT-10） |
 | PERM-06 | `POST /admin/v1/permissions/sync:perms` | 无请求体；先截断再重建非 `sys:*` 的权限组/权限点，破坏性同步，执行前需备份 |
-| PERMGROUP-01 | `GET /admin/v1/permission-groups` | 权限组分页 |
+| PERMGROUP-01 | `GET /admin/v1/permission-groups` | 权限组分页；`query` 支持顶层 `exclude_subtree`（排除某分组自身及全部后代），详见 [PERMGROUP-SUBTREE-01](#permgroup-subtree-01) |
 | PERMGROUP-02 | `GET /admin/v1/permission-groups/{id}` | 权限组详情 |
 | PERMGROUP-03 | `POST /admin/v1/permission-groups` | `data`；不触发 `ResetPolicies`（策略生成不读分组 module，非刷新缺口） |
 | PERMGROUP-04 | `PUT /admin/v1/permission-groups/{id}` | `data`、`updateMask`；不触发 `ResetPolicies` |
@@ -1383,6 +1383,55 @@ roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采�
 同批核查同时观测到**同类但表现不同**的现象：users/roles 的**非游标路径**在 `fieldMask` 不含 `id` 时，`items` 完整返回但关联 ID（users 的 `role_ids`、roles 的 `permissions`）为空——因为该路径同样先用 `fieldMask` 裁掉 id，随后 `enrichRelationIDs`/`fillPermissionIDs` 以 `item.GetId()`（已为 0）取关联；两接口的**游标路径**因有 `DeferHelperTrim` 不受影响。该现象非本批引入，是否修复待确认，暂未改动。
 
 补充修复的部署实测（2026-10-12，ani-system @ ani-01）：镜像 `172.16.101.10:5000/ani/ani-governance:20261012-list-cursor-fix`（53,743,519 字节 / md5 `abc31c32c24ba753ae1920e847218d0a`，上传 `VERIFY: OK elapsed=65s`）→ registry tags 追加该 tag → `kubectl set image ... server=...:20261012-list-cursor-fix -n ani-system` → rollout 成功，新 Pod `ani-governance-7dc7f449bd-frdkx` 1/1 Running（ani-03）。实测：`verify-cursor.py` **24/24 PASS**、`verify-list-cursor.py` **38/38 PASS**（新增 2 项：api-keys `fieldMask=name` → 200 且 `total` 与无掩码一致）、`smoke-regression.py` fail=0。本环境 api-keys 租户上下文无存量凭证（`total="0"`），fieldMask 修复的**真实翻页**仍只在 SQLite 用例覆盖。
+
+<a id="role-code-filter-01"></a>
+
+## ROLE-CODE-FILTER-01：`GET /admin/v1/users` 支持按角色编码筛选（2026-10-12）
+
+在既有 `role_id` / `role_ids__in`（按 ID 过滤）之外，`query` 新增按**角色编码**过滤，省去前端“先查角色 ID 再拼用户条件”的两段调用。参数为顶层条件：
+
+- `role_code`：单值精确匹配（`{"role_code":"tenant:manager"}`）。
+- `role_codes__in`：集合匹配（`{"role_codes__in":["tenant:manager","tenant:member"]}`），**必须是数组**。
+
+语义与边界：
+
+- 二者可同时出现，与 `role_id(s)`、`org_unit_id(s)`、`position_id(s)` 等关系条件**合并取并集后去重**（沿用既有关系过滤口径，`sliceutil.Unique`）。
+- 编码需在**明确租户**下解析：租户上下文直接使用当前租户；平台上下文必须在同一顶层条件中给出 `tenant_id`（顶层、`EQ`、纯数字且 >0），否则 400（fail-closed，防跨租户串号）。`tenant_id__ne` 等非 `EQ` 写法、非数字值一律 400。
+- **不可退化**：条件出现但编码不存在、`role_codes__in` 为显式空数组、或 `role_codes__in` 传了非数组标量时，结果必须是 `{total:"0", items:[]}`，**不得退化为“等于无条件”而返回全量**。空数组/非法标量按空结果短路，不进入租户解析。
+- 角色编码条件**必须出现在顶层 `Conditions`**；写入 `$and/$or` 子树会被 fail-closed 拒绝（400），因为摘出机制只处理顶层条件，子组内的虚拟列会落到白名单外被静默丢弃。
+- 该行为是“条件存在性”驱动（新增状态位），与 `role_ids__in` 的“有命中用户才短路”不同：`role_code(s)` 条件出现而解析不到任何角色 ID 时必须短路为空。
+
+首个租户用 `role_code` 即可，平台管理页面用 `tenant_id + role_code(s)`。
+
+部署实测（ani-system @ ani-01，2026-10-12）：镜像 `172.16.101.10:5000/ani/ani-governance:20261012-role-code-filter`（53,754,806 字节 / md5 `8790AC74A45F86623B5AF138B2FCA039`，上传 `VERIFY: OK elapsed=70s`）→ registry tags 追加该 tag → `kubectl set image ... server=...:20261012-role-code-filter -n ani-system` → rollout 成功，新 Pod `ani-governance-54c87b4cbb-8fhhg` 1/1 Running（ani-03）。实测 `verify-role-code-filter.py` **19/19 PASS**：平台缺 `tenant_id` / `tenant_id__ne` / 非数字 → 400；平台给顶层 `EQ` 数字 `tenant_id` + `role_code` → 200 且命中数 ≤ 全量；不存在编码 → `total="0"`（base=5 不退化）；空数组 → 200 且 `total="0"`；标量 `role_codes__in` → 200 且 `total="0"`；租户上下文 `role_code` → 200、不存在编码 → `total="0"`。本批无 schema 变更，未跑迁移；回滚目标为换镜像前的 `localhost/ani-governance:4e3e5b4e750a-20261012-tzfix@sha256:149583f4033bb87829b2190def6ba1b1307c876eb987c7b73ed6b28ceb378fc2`。
+
+本机（Windows，Go 1.26.x）已执行：`go build` / `go vet ./app/admin/service/...` 通过；`go test ./app/admin/service/internal/data -count=1` ok，新增 SQLite 定向用例覆盖集合/单值交集、不存在编码与空数组与非法标量的空结果（不退化）、`$and/$or` 子树 fail-closed、与 `role_id` 的并集去重、平台租户范围校验、游标路径与页码路径一致。`app/admin/service/internal/service` 包仅 `TestTaskService_RealAsynqSchedulerLifecycle` 因缺 `ANI_TEST_REDIS_URI` 环境性失败，与本批无关。
+
+边界：角色编码解析按“同租户 + `code IN (...)`”查询，编码在租户内唯一由既有约束保证；平台上下文必须显式给出目标租户，不提供跨租户一次性聚合。
+
+<a id="permgroup-subtree-01"></a>
+
+## PERMGROUP-SUBTREE-01：`GET /admin/v1/permission-groups` 支持 `exclude_subtree` 与父子循环校验（2026-10-12）
+
+### 列表排除子树
+
+`query` 新增顶层 `exclude_subtree`（单个分组 ID）：结果**排除该分组自身及其全部后代**，用于“选择上级分组”等需要从候选里去掉当前节点子树的场景。
+
+- 列表 `items` 与 `total` 使用同一排除条件，二者一致（不复用未排除的 Count）。
+- 传入不存在的 ID 或空值时按“无排除”处理，不报错。
+- 实现按 `parent_id` 链 BFS 收集子树，带 `visited` 防环（预置环不会死循环）；脏数据形态（环）已在 SQLite 用例覆盖。悬空 `parent_id` 在开外键的库上无法注入，未覆盖。
+
+### 创建/更新父子循环校验
+
+- `PERMGROUP-03`（创建）：父节点必须存在；不允许把自身设为父。
+- `PERMGROUP-04`（更新）：携带 `parent_id` 变更时，落库前预检 `parent_id` 存在性并拒绝“父为自身或自身后代”（返回 400，`cannot move permission group under its own descendant`）。防环判断只依赖节点当前子树，**不依赖事务**；事务仅用于保证“`parent_id` 落库 + 全部后代物化路径重算（`relocateSubtree`）”的原子性，因此**仅在请求携带 `parent_id` 变更时启用**，未改父的更新保持既有非事务路径。被拒的更新不改动任何数据。
+- `updateMask` 路径用 proto JSON 的 camelCase（`parentId`）；写 snake_case `parent_id` 会在解码阶段直接失败（CODEC），测到的是解码失败而非防环校验，写用例/脚本时须避免这种“假通过”。
+
+部署实测（同批镜像 `20261012-role-code-filter`）：`verify-permgroup-subtree.py` **12/12 PASS**——`exclude_subtree` 排除自身与全部后代（该环境仅 1 个分组、无后代，`total="0"` 与 `items` 一致、总数 = 全量 − 子树）、不存在 ID 不改变总数；`PUT` 把父设为自身 → 400 且原因体为 `BAD_REQUEST / cannot move permission group under its own descendant`（非 CODEC 解码失败），被拒后 `parentId` 未变。
+
+本机已执行：`go build` / `go vet ./app/admin/service/...` 通过；`go test ./app/admin/service/internal/data -count=1` ok，新增 SQLite 定向用例覆盖排除自身+后代与 total 一致、不存在 ID/空值不排除、环状脏数据不死循环、更新成环被拒且无残留、合法改父原子重算子树路径、创建非法父被拒。
+
+边界：本环境权限分组仅 1 条且无后代，`exclude_subtree` 的真实“多后代排除”由 SQLite 用例覆盖；并发 move 的残余竞态（两个请求同时改父子链）未加行锁，属已知未覆盖项。
 
 ## GOV-ACC-INF-V12-WIRING-01：推理创建与删除接线（2026-10-09）
 
