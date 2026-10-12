@@ -311,6 +311,8 @@ func (m *ListAccessKeyResponse) validate(all bool) error {
 
 	// no validation rules for Total
 
+	// no validation rules for NextCursor
+
 	if len(errors) > 0 {
 		return ListAccessKeyResponseMultiError(errors)
 	}
@@ -625,10 +627,6 @@ func (m *CreateAccessKeyData) validate(all bool) error {
 		// no validation rules for Name
 	}
 
-	if m.RoleId != nil {
-		// no validation rules for RoleId
-	}
-
 	if m.ExpiresAt != nil {
 
 		if all {
@@ -660,6 +658,10 @@ func (m *CreateAccessKeyData) validate(all bool) error {
 			}
 		}
 
+	}
+
+	if m.RoleId != nil {
+		// no validation rules for RoleId
 	}
 
 	if m.IdempotencyKey != nil {

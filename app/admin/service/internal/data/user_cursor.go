@@ -183,6 +183,13 @@ func (r *userRepo) listWithCursor(ctx context.Context, req *paginationV1.PagingR
 		return nil, err
 	}
 
+	// 参数与游标签名校验必须前置到"空关系筛选短路"之前：否则筛选一个没有成员的
+	// 角色再传 limit=101 或 cursor=bogus 会返回成功空列表，而不是约定的 400。
+	// 校验与 ListWithCursor 内部一致，后者仍会重复校验（幂等）。
+	if err = validateCursorRequest(req, userCursorResource, bindingContext, tenantID, filterKey, identityV1.ErrorBadRequest); err != nil {
+		return nil, err
+	}
+
 	empty, err := r.applyUserListFilters(ctx, req)
 	if err != nil {
 		return nil, err
@@ -204,6 +211,9 @@ func (r *userRepo) listWithCursor(ctx context.Context, req *paginationV1.PagingR
 		IDColumn:         userCursorIDColumn,
 		ExtractID:        func(entity *ent.User) uint64 { return uint64(entity.ID) },
 		ExtractSortValue: sort.value,
+		// 延迟裁剪：fieldMask 未含 id 时，关联回填仍需要实体 ID，
+		// 因此待关联回填完成后由本方法调用 TrimCursorHelperFields 再裁剪输出。
+		DeferHelperTrim: true,
 	})
 	if err != nil {
 		// limit 越界、游标被篡改或绑定不匹配属于调用方输入问题，映射为 400。
@@ -222,7 +232,11 @@ func (r *userRepo) listWithCursor(ctx context.Context, req *paginationV1.PagingR
 		NextCursor: ret.NextCursor,
 	}
 
+	// 关联回填依赖 DTO 的 ID，必须在裁剪辅助列之前完成。
 	r.enrichRelationIDs(ctx, resp.Items)
+	if len(ret.HelperPaths) > 0 {
+		entCrud.TrimCursorHelperFields(resp.Items, ret.HelperPaths)
+	}
 
 	return resp, nil
 }

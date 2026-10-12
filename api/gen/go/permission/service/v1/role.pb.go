@@ -725,9 +725,11 @@ func (x *RoleMetadata) GetDeletedAt() *timestamppb.Timestamp {
 
 // 角色列表 - 答复
 type ListRoleResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*Role                `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	Total         uint64                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*Role                `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total uint64                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// 游标分页的下一页游标；末页为空字符串。仅在 limit+cursor 分页下返回。
+	NextCursor    string `protobuf:"bytes,3,opt,name=next_cursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -774,6 +776,13 @@ func (x *ListRoleResponse) GetTotal() uint64 {
 		return x.Total
 	}
 	return 0
+}
+
+func (x *ListRoleResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
 }
 
 // 角色数据 - 请求
@@ -1633,10 +1642,11 @@ const file_permission_service_v1_role_proto_rawDesc = "" +
 	"\v_deleted_byB\r\n" +
 	"\v_created_atB\r\n" +
 	"\v_updated_atB\r\n" +
-	"\v_deleted_at\"[\n" +
+	"\v_deleted_at\"}\n" +
 	"\x10ListRoleResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.permission.service.v1.RoleR\x05items\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x04R\x05total\"\x93\x02\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total\x12 \n" +
+	"\vnext_cursor\x18\x03 \x01(\tR\vnext_cursor\"\x93\x02\n" +
 	"\x0eGetRoleRequest\x12\x1c\n" +
 	"\x02id\x18\x01 \x01(\rB\n" +
 	"\xbaG\a\x18\x01\x92\x02\x02IDH\x00R\x02id\x12$\n" +

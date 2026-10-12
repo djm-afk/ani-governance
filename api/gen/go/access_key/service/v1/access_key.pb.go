@@ -128,9 +128,11 @@ func (x *AccessKey) GetCreatedAt() *timestamppb.Timestamp {
 }
 
 type ListAccessKeyResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*AccessKey           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	Total         uint64                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*AccessKey           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total uint64                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// 游标分页的下一页游标；末页为空字符串。仅在 limit+cursor 分页下返回。
+	NextCursor    string `protobuf:"bytes,3,opt,name=next_cursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -177,6 +179,13 @@ func (x *ListAccessKeyResponse) GetTotal() uint64 {
 		return x.Total
 	}
 	return 0
+}
+
+func (x *ListAccessKeyResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
 }
 
 type CountAccessKeyResponse struct {
@@ -269,15 +278,21 @@ func (x *GetAccessKeyRequest) GetKeyId() uint32 {
 
 // Create-only input. It stays separate from the read model (AccessKey) so the
 // idempotency key never leaks into GET/List responses or the OpenAPI read schema.
+//
+// 字段编号刻意沿用旧 CreateAccessKeyRequest.data（原 AccessKey）的编号：
+// 旧定义里 name=2、expires_at=5、role_id=7，若改编号会让仍用旧 Proto 的 gRPC
+// 客户端发来的 name/role_id/expires_at 无法解码。旧 AccessKey 在两处共用的
+// 编号（1/3/4/6/200）在本输入里不再使用，用 reserved 标注防止被复用作新字段。
 type CreateAccessKeyData struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
-	Name      *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	RoleId    *uint32                `protobuf:"varint,2,opt,name=role_id,proto3,oneof" json:"role_id,omitempty"`
-	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,proto3,oneof" json:"expires_at,omitempty"`
+	Name      *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expires_at,proto3,oneof" json:"expires_at,omitempty"`
+	RoleId    *uint32                `protobuf:"varint,7,opt,name=role_id,proto3,oneof" json:"role_id,omitempty"`
 	// Optional. When present, retrying with the same value and the same intent
 	// replays the original key instead of creating a second one; a different
 	// intent under the same value is rejected with 409 IDEMPOTENCY_CONFLICT.
-	IdempotencyKey *string `protobuf:"bytes,4,opt,name=idempotency_key,proto3,oneof" json:"idempotency_key,omitempty"`
+	// 使用全新的未占用编号，不与旧字段冲突。
+	IdempotencyKey *string `protobuf:"bytes,8,opt,name=idempotency_key,proto3,oneof" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -319,18 +334,18 @@ func (x *CreateAccessKeyData) GetName() string {
 	return ""
 }
 
-func (x *CreateAccessKeyData) GetRoleId() uint32 {
-	if x != nil && x.RoleId != nil {
-		return *x.RoleId
-	}
-	return 0
-}
-
 func (x *CreateAccessKeyData) GetExpiresAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.ExpiresAt
 	}
 	return nil
+}
+
+func (x *CreateAccessKeyData) GetRoleId() uint32 {
+	if x != nil && x.RoleId != nil {
+		return *x.RoleId
+	}
+	return 0
 }
 
 func (x *CreateAccessKeyData) GetIdempotencyKey() string {
@@ -659,26 +674,29 @@ const file_access_key_service_v1_access_key_proto_rawDesc = "" +
 	"\r_last_used_atB\n" +
 	"\n" +
 	"\b_role_idB\r\n" +
-	"\v_created_at\"e\n" +
+	"\v_created_at\"\x87\x01\n" +
 	"\x15ListAccessKeyResponse\x126\n" +
 	"\x05items\x18\x01 \x03(\v2 .access_key.service.v1.AccessKeyR\x05items\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x04R\x05total\".\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total\x12 \n" +
+	"\vnext_cursor\x18\x03 \x01(\tR\vnext_cursor\".\n" +
 	"\x16CountAccessKeyResponse\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\x04R\x05count\"-\n" +
 	"\x13GetAccessKeyRequest\x12\x16\n" +
-	"\x06key_id\x18\x01 \x01(\rR\x06key_id\"\xf5\x01\n" +
+	"\x06key_id\x18\x01 \x01(\rR\x06key_id\"\xca\x02\n" +
 	"\x13CreateAccessKeyData\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1d\n" +
-	"\arole_id\x18\x02 \x01(\rH\x01R\arole_id\x88\x01\x01\x12?\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12?\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\n" +
-	"expires_at\x88\x01\x01\x12-\n" +
-	"\x0fidempotency_key\x18\x04 \x01(\tH\x03R\x0fidempotency_key\x88\x01\x01B\a\n" +
-	"\x05_nameB\n" +
+	"expires_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
+	"expires_at\x88\x01\x01\x12\x1d\n" +
+	"\arole_id\x18\a \x01(\rH\x02R\arole_id\x88\x01\x01\x12-\n" +
+	"\x0fidempotency_key\x18\b \x01(\tH\x03R\x0fidempotency_key\x88\x01\x01B\a\n" +
+	"\x05_nameB\r\n" +
+	"\v_expires_atB\n" +
 	"\n" +
-	"\b_role_idB\r\n" +
-	"\v_expires_atB\x12\n" +
-	"\x10_idempotency_key\"X\n" +
+	"\b_role_idB\x12\n" +
+	"\x10_idempotency_keyJ\x04\b\x01\x10\x02J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x06\x10\aJ\x06\b\xc8\x01\x10\xc9\x01R\x02idR\n" +
+	"access_keyR\tis_activeR\flast_used_atR\n" +
+	"created_at\"X\n" +
 	"\x16CreateAccessKeyRequest\x12>\n" +
 	"\x04data\x18\x01 \x01(\v2*.access_key.service.v1.CreateAccessKeyDataR\x04data\"\xf6\x01\n" +
 	"\x16UpdateAccessKeyRequest\x12\x16\n" +

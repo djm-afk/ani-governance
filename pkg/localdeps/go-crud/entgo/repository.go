@@ -105,6 +105,11 @@ type PagingResult[E any] struct {
 	// NextCursor 是游标分页（ListWithCursor）的下一页游标；末页为空字符串。
 	// page/offset/token 分页不使用该字段。
 	NextCursor string `json:"next_cursor,omitempty"`
+
+	// HelperPaths 仅在游标分页且调用方要求延迟裁剪时非空：它列出"仅为生成游标
+	// 而多读"、尚未从 Items 清除的列。调用方在完成关联回填等收尾工作后，
+	// 调用 entgo.TrimCursorHelperFields 清除它们（保持 fieldMask 只裁剪输出的语义）。
+	HelperPaths []string `json:"-"`
 }
 
 // Count 计算符合条件的记录数

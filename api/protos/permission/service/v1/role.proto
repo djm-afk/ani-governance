@@ -291,6 +291,8 @@ message RoleMetadata {
 message ListRoleResponse {
   repeated Role items = 1;
   uint64 total = 2;
+  // 游标分页的下一页游标；末页为空字符串。仅在 limit+cursor 分页下返回。
+  string next_cursor = 3 [json_name = "next_cursor"];
 }
 
 // 角色数据 - 请求

@@ -1354,6 +1354,36 @@ Resource 仅提供内部 gRPC，本批同步公开 JSON 规格和 SBOM，已发�
 
 未执行/遗留：本批镜像内含上一批次（access-key 幂等）的代码，而该批迁移当时未在 ani-system 的库上执行（本批不含 schema 变更、未跑 Atlas）。**该遗留已于 2026-10-10 处置**：补跑迁移 `20261010131938` 并授予 `gov_app` 权限后，`POST /api/v1/auth/api-keys` 带 `idempotency_key` 的幂等行为已实测通过（见 AK-IDEM-01）。SQLite 上的时间列键集仍不可断言（夹具驱动存储形态问题），PostgreSQL 上已由上述 `created_at` 翻页用例覆盖。
 
+<a id="list-cursor-02"></a>
+
+## LIST-CURSOR-02：`GET /admin/v1/roles` 与 `GET /api/v1/auth/api-keys` 接入 limit + cursor 游标分页（2026-10-10）
+
+在前一批（LIST-CURSOR-01，users）基础上，把 `GET /admin/v1/roles` 与 `GET /api/v1/auth/api-keys` 两接口由 `page/pageSize` 改为 `limit` + `cursor`，对外形状对齐 users/vpc：`{items, next_cursor, total}`。同时修复 users 接口审查发现的 5 项安全边界问题（§3.1~§3.5）。共用逻辑抽到 `data/cursor_shared.go`（`resolveCursorSortColumn`/`checkCursorWindowConflict`/`shouldUseCursorPaging`/`validateCursorRequest`），三个接口共用同一 codec/keyset/HMAC 实现。
+
+报文与游标语义同 LIST-CURSOR-01：`limit` 不传取 20、只接受 1~100，越界或非法直接 400；`cursor` 与 `page/pageSize/offset/token/noPaging` 互斥（同时出现 400）；游标绑定资源、上下文、可信租户与"筛选+排序"指纹，篡改/跨租户/换筛选/换排序复用一律 400，不降级为首页。两接口均**新增响应字段 `next_cursor`**（`ListRoleResponse.next_cursor = 3`、`ListAccessKeyResponse.next_cursor = 3`），未新增 `(path, method)`，不触发 API 目录与权限关系变更。
+
+roles 默认排序 `sort_order` 升序（同值按唯一 ID 升序兜底）；可排序列限 `id/tenant_id/sort_order/created_by/name/code/type/data_scope/status/created_at/updated_at`，未列出的排序列 400。api-keys 默认排序 `id` 降序（新建凭证最新在前）；可排序列限 `id/tenant_id/role_id/name/access_key/status/expires_at/last_used_at/created_at/updated_at`，**白名单显式排除 `secret_ciphertext`**，密文既不入响应也不入游标材料。
+
+roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采用延迟裁剪（`CursorSpec.DeferHelperTrim`）：辅助列（唯一 ID、排序列）保留到关联回填完成再清理；api-keys 输出需把内部 ON/OFF 映射为公开布尔 `is_active`，沿用"取一页 ID → 二次查询实体 → 显式构造 DTO"的既有做法，`secret_ciphertext` 不进响应。
+
+§3 五项修复（users 为主，两新接口按同一套约束实现）：① `FilterExpr` 规范化（`pagination/filter/normalize.go`）在指纹计算前递归重排 Conditions，消除 Go map 随机遍历导致的"同语义不同指纹"误判；② 游标参数校验前移到空关系筛选短路之前，空集不再绕过 limit/游标 fail-closed，`noPaging` 与 `cursor` 同时出现也 400；③ `fieldMask` 不含 `id` 时延迟裁剪辅助列，保证关联字段仍被回填（不再因掩码裁掉关联视图字段而返回空）；④ `EncodeCursor`（`cursor_codec.go`）补长度上限校验，与解码侧范围一致，超长排序值明确失败而非产生不可解码游标；⑤ `CreateAccessKeyData` 沿用旧 `CreateAccessKeyRequest.data`（原 `AccessKey`）的字段编号（`name=2`/`expires_at=5`/`role_id=7`）并对旧编号 `1,3,4,6,200` 显式 `reserved`，使旧 Proto 的 gRPC 客户端仍能解码。
+
+本机（Windows，Go 1.26.9）已执行：`go build ./...`、`go vet`（data/service/pkg/localdeps/go-crud/pkg/crypto）；`go test ./pkg/localdeps/go-crud/pagination/... ./app/admin/service/internal/data ./app/admin/service/internal/service`，新增定向用例覆盖：规范化对顺序稳定/递归进 Groups/不增删条件（§3.1）、空关系筛选 fail-closed 与 noPaging 互斥（§3.2）、fieldMask 不含 id 仍回填关联（§3.3）、`EncodeCursor` 超长失败（§3.4）、旧创建消息 wire 字节新解码字段正确（§3.5）、两接口键集翻页不重不漏/同值排序兜底/`limit+1` 边界/末页游标为空/`total` 与筛选一致、api-keys `is_active` 映射与 `secret_ciphertext` 不入响应与游标材料、roles 关联填充完整。
+
+部署实测（ani-system @ ani-01，2026-10-10）：交叉编译 linux/amd64 → `craft_images.py`（tag `172.16.101.10:5000/ani/ani-governance:20261010-list-cursor`，53,732,859 字节 / md5 `8b010072a2a7b2caa100c36a1ba17403`）→ ttyd 通道上传（整包 md5 `VERIFY: OK`）→ ani-01 `ctr -n k8s.io images import` 并推 5001 → 重启只读 registry 5000 → 该 tag 可见（`tags: ["20261008","20261010-cursor","20261010-list-cursor"]`）→ `kubectl set image deployment/ani-governance server=...:20261010-list-cursor -n ani-system` → rollout 成功，新 Pod `ani-governance-59fbffcc9b-h6gsw` 1/1 Running（调度到 ani-03，从 registry 拉取）。本批无 schema 变更，未跑迁移；回滚目标为换镜像前的 `172.16.101.10:5000/ani/ani-governance@sha256:de9c9fb87a55c76b01db96e59a92f2d8af2141ae0aadaff9ccc32abf1fd9f6d5`。
+
+实测（全程只读）：`verify-cursor.py`（users，本次扩至 24 项断言）全通过，含 §3.2 两项（空关系筛选 + `limit=101` / `cursor=bogus` → 400）与 `noPaging` + `cursor` 互斥 → 400；`verify-list-cursor.py`（roles 平台/租户、api-keys 租户，36 项断言）全通过——两接口 `limit=2` 返回 `next_cursor`/`total`（十进制字符串）、`limit=0/101/abc` → 400、`cursor=bogus` → 400、篡改游标 → 400、`cursor`+`page` 互斥 → 400、换排序（`-created_at`）复用游标 → 400、roles 平台上下文连翻 5 行无重复且末页游标为空串、api-keys 平台上下文 → 403（非租户用户拒绝）、roles 平台游标用于租户上下文 → 400；`smoke-regression.py` fail=0（users 旧 `page/pageSize` 路径仍 200、plans/tenants 带 `cursor=bogus` 仍 200、roles 坏游标 400 且合法分页 200 带 `next_cursor`/`total`、无 token 401、`/admin/v1/me` 200）。
+
+实测修正：`smoke-regression.py` 原"roles 忽略 cursor 仍 200"断言基于 LIST-CURSOR-01 的旧事实（roles 当时未接入游标），本批 roles 已接入，该行改为"坏游标 → 400 + 合法分页 200 带新字段"，以实测为准。
+
+未验证与边界：api-keys 租户上下文在本环境无存量凭证（`total="0"`），其键集翻页与 `is_active` 映射的**真实翻页**未在部署环境覆盖（同值排序兜底与映射由 SQLite repo 用例覆盖，`secret_ciphertext` 不入响应/游标材料由用例覆盖）；roles 租户上下文仅 2 条数据，下一页游标断言被跳过（平台上下文 5 条已覆盖真实翻页）。
+
+事后核查补充修复（同批，2026-10-10）：核查三接口 fieldMask 行为时发现 api-keys 的既有缺陷——`fieldMask` 被当作 SELECT 字段掩码，若不含 `id`，取页结果的 ID 退化为零值，随后"按 ID 二次查询实体映射 `is_active`"命中不到任何行，整页 `items` 变空（`total` 正常但 `items=0`）。游标路径（`listAccessKeysWithCursor`）与存量非游标路径（`List` 的 `ListWithPaging`）都受影响，非本批引入。修复：新增 `data/cursor_shared.go` 的 `withFieldMaskIncludingID`（fieldMask 非空且不含 id 时克隆请求补入 `id`；空掩码即 SELECT * 原样返回），在两条路径取页前调用。`id` 是主键且与游标分页内部"为排序/回填多读唯一 ID"的既有处理一致。新增用例 `TestAccessKeyRepoSqlite_ListCursorFieldMaskKeepsPageItems` 覆盖两路径。
+
+同批核查同时观测到**同类但表现不同**的现象：users/roles 的**非游标路径**在 `fieldMask` 不含 `id` 时，`items` 完整返回但关联 ID（users 的 `role_ids`、roles 的 `permissions`）为空——因为该路径同样先用 `fieldMask` 裁掉 id，随后 `enrichRelationIDs`/`fillPermissionIDs` 以 `item.GetId()`（已为 0）取关联；两接口的**游标路径**因有 `DeferHelperTrim` 不受影响。该现象非本批引入，是否修复待确认，暂未改动。
+
+补充修复的部署实测（2026-10-12，ani-system @ ani-01）：镜像 `172.16.101.10:5000/ani/ani-governance:20261012-list-cursor-fix`（53,743,519 字节 / md5 `abc31c32c24ba753ae1920e847218d0a`，上传 `VERIFY: OK elapsed=65s`）→ registry tags 追加该 tag → `kubectl set image ... server=...:20261012-list-cursor-fix -n ani-system` → rollout 成功，新 Pod `ani-governance-7dc7f449bd-frdkx` 1/1 Running（ani-03）。实测：`verify-cursor.py` **24/24 PASS**、`verify-list-cursor.py` **38/38 PASS**（新增 2 项：api-keys `fieldMask=name` → 200 且 `total` 与无掩码一致）、`smoke-regression.py` fail=0。本环境 api-keys 租户上下文无存量凭证（`total="0"`），fieldMask 修复的**真实翻页**仍只在 SQLite 用例覆盖。
+
 ## GOV-ACC-INF-V12-WIRING-01：推理创建与删除接线（2026-10-09）
 
 用户明确批准本仓登记 `INFERENCE=15`。新增推理模块和两项独立动作；当前源码登记与实际授权/部署分别验收，不据此向基础套餐、所有角色或生产环境自动开放。

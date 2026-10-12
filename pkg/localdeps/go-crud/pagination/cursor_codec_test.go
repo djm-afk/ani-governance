@@ -155,6 +155,30 @@ func TestCursorCodec_InvalidInputRejected(t *testing.T) {
 	}
 }
 
+// TestCursorCodec_EncodeRejectsOversizedPayload 验证 §3.4：编码侧与解码侧的长度
+// 上限必须一致。排序值过长（如未设置列长度上限的长字符串列）时，Encode 必须明确
+// 失败，而不是产出一个必然被 DecodeCursor 拒绝的坏游标——否则客户端原样回传
+// next_cursor 反而得到 400。
+func TestCursorCodec_EncodeRejectsOversizedPayload(t *testing.T) {
+	binding := testBinding()
+
+	// 在长度上限内：正常往返
+	fitting := strings.Repeat("a", maxCursorPayloadLen/2)
+	if _, err := EncodeCursor(binding, Cursor{SortKey: cursorString(fitting), ID: 1}, []byte(testCursorSecret)); err != nil {
+		t.Fatalf("未超限的排序值应可编码，实际 %v", err)
+	}
+
+	// 远超上限：编码必须失败，且错误可被 ErrInvalidCursor 识别
+	oversized := strings.Repeat("a", maxCursorPayloadLen*2)
+	_, err := EncodeCursor(binding, Cursor{SortKey: cursorString(oversized), ID: 1}, []byte(testCursorSecret))
+	if err == nil {
+		t.Fatal("超长排序值必须让 EncodeCursor 明确失败，不得产出坏游标")
+	}
+	if !errors.Is(err, ErrInvalidCursor) {
+		t.Fatalf("超长载荷错误应可被 ErrInvalidCursor 识别，实际 %v", err)
+	}
+}
+
 // TestCursorCodec_TokenCodecCannotParseCursor 验证两种游标格式互不兼容：
 // token 的解码器不能把签名游标当成自己的 token 读出来。
 func TestCursorCodec_TokenCodecCannotParseCursor(t *testing.T) {
