@@ -106,7 +106,9 @@ func (r *AccessKeyRepo) listAccessKeysWithCursor(ctx context.Context, req *pagin
 
 	builder := r.entClient.Client().AccessKey.Query()
 
-	ret, err := r.repository.ListWithCursor(ctx, builder, builder.Clone(), req, entCrud.CursorSpec[ent.AccessKey]{
+	// 取页时强制读入 id：下方要按 ID 二次查询实体映射 is_active。
+	// fieldMask 若不含 id，取页结果的 ID 会是零值，导致 IDIn(0,...) 命不中、整页为空。
+	ret, err := r.repository.ListWithCursor(ctx, builder, builder.Clone(), withFieldMaskIncludingID(req), entCrud.CursorSpec[ent.AccessKey]{
 		Resource:         accessKeyCursorResource,
 		Context:          bindingContext,
 		TenantID:         tenantID,

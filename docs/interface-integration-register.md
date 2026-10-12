@@ -1378,6 +1378,12 @@ roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采�
 
 未验证与边界：api-keys 租户上下文在本环境无存量凭证（`total="0"`），其键集翻页与 `is_active` 映射的**真实翻页**未在部署环境覆盖（同值排序兜底与映射由 SQLite repo 用例覆盖，`secret_ciphertext` 不入响应/游标材料由用例覆盖）；roles 租户上下文仅 2 条数据，下一页游标断言被跳过（平台上下文 5 条已覆盖真实翻页）。
 
+事后核查补充修复（同批，2026-10-10）：核查三接口 fieldMask 行为时发现 api-keys 的既有缺陷——`fieldMask` 被当作 SELECT 字段掩码，若不含 `id`，取页结果的 ID 退化为零值，随后"按 ID 二次查询实体映射 `is_active`"命中不到任何行，整页 `items` 变空（`total` 正常但 `items=0`）。游标路径（`listAccessKeysWithCursor`）与存量非游标路径（`List` 的 `ListWithPaging`）都受影响，非本批引入。修复：新增 `data/cursor_shared.go` 的 `withFieldMaskIncludingID`（fieldMask 非空且不含 id 时克隆请求补入 `id`；空掩码即 SELECT * 原样返回），在两条路径取页前调用。`id` 是主键且与游标分页内部"为排序/回填多读唯一 ID"的既有处理一致。新增用例 `TestAccessKeyRepoSqlite_ListCursorFieldMaskKeepsPageItems` 覆盖两路径。
+
+同批核查同时观测到**同类但表现不同**的现象：users/roles 的**非游标路径**在 `fieldMask` 不含 `id` 时，`items` 完整返回但关联 ID（users 的 `role_ids`、roles 的 `permissions`）为空——因为该路径同样先用 `fieldMask` 裁掉 id，随后 `enrichRelationIDs`/`fillPermissionIDs` 以 `item.GetId()`（已为 0）取关联；两接口的**游标路径**因有 `DeferHelperTrim` 不受影响。该现象非本批引入，是否修复待确认，暂未改动。
+
+补充修复的部署实测（2026-10-12，ani-system @ ani-01）：镜像 `172.16.101.10:5000/ani/ani-governance:20261012-list-cursor-fix`（53,743,519 字节 / md5 `abc31c32c24ba753ae1920e847218d0a`，上传 `VERIFY: OK elapsed=65s`）→ registry tags 追加该 tag → `kubectl set image ... server=...:20261012-list-cursor-fix -n ani-system` → rollout 成功，新 Pod `ani-governance-7dc7f449bd-frdkx` 1/1 Running（ani-03）。实测：`verify-cursor.py` **24/24 PASS**、`verify-list-cursor.py` **38/38 PASS**（新增 2 项：api-keys `fieldMask=name` → 200 且 `total` 与无掩码一致）、`smoke-regression.py` fail=0。本环境 api-keys 租户上下文无存量凭证（`total="0"`），fieldMask 修复的**真实翻页**仍只在 SQLite 用例覆盖。
+
 ## GOV-ACC-INF-V12-WIRING-01：推理创建与删除接线（2026-10-09）
 
 用户明确批准本仓登记 `INFERENCE=15`。新增推理模块和两项独立动作；当前源码登记与实际授权/部署分别验收，不据此向基础套餐、所有角色或生产环境自动开放。

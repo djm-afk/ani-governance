@@ -10,14 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"entgo.io/ent/privacy"
-	kerrors "github.com/go-kratos/kratos/v2/errors"
 	paginationV1 "go-wind-admin/pkg/localdeps/go-crud/api/gen/go/pagination/v1"
 	entCrud "go-wind-admin/pkg/localdeps/go-crud/entgo"
 	"go-wind-admin/pkg/localdeps/go-utils/copierutil"
 	"go-wind-admin/pkg/localdeps/go-utils/mapper"
 	"go-wind-admin/pkg/localdeps/go-utils/trans"
 	"go-wind-admin/pkg/localdeps/kratos-bootstrap/bootstrap"
+
+	"entgo.io/ent/privacy"
+	kerrors "github.com/go-kratos/kratos/v2/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	accesskeyV1 "go-wind-admin/api/gen/go/access_key/service/v1"
@@ -103,7 +104,9 @@ func (r *AccessKeyRepo) List(ctx context.Context, req *paginationV1.PagingReques
 	}
 
 	builder := r.entClient.Client().AccessKey.Query()
-	ret, err := r.repository.ListWithPaging(ctx, builder, builder.Clone(), req)
+	// 取页时强制读入 id：下方要按 ID 二次查询实体映射 is_active。
+	// fieldMask 若不含 id，取页结果的 ID 会是零值，导致 IDIn(0,...) 命不中、整页为空。
+	ret, err := r.repository.ListWithPaging(ctx, builder, builder.Clone(), withFieldMaskIncludingID(req))
 	if err != nil {
 		return nil, err
 	}

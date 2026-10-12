@@ -1,11 +1,16 @@
 package data
 
 import (
+	"strings"
+
 	kerrors "github.com/go-kratos/kratos/v2/errors"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	paginationV1 "go-wind-admin/pkg/localdeps/go-crud/api/gen/go/pagination/v1"
 	paginationCurd "go-wind-admin/pkg/localdeps/go-crud/pagination"
 	"go-wind-admin/pkg/localdeps/go-crud/pagination/sorting"
+	"go-wind-admin/pkg/localdeps/go-utils/stringcase"
 )
 
 // cursorBadRequest 是各领域 ErrorBadRequest 的统一签名（返回 kratos Error）。
@@ -81,6 +86,34 @@ func shouldUseCursorPaging(req *paginationV1.PagingRequest) bool {
 		return false
 	}
 	return req.GetCursor() != "" || !hasCursorWindowParams(req)
+}
+
+// withFieldMaskIncludingID 返回一个确保 fieldMask 包含 id 的请求副本。
+//
+// 当原 fieldMask 为空（即 SELECT *）或已含 id 时原样返回；否则克隆请求并把 id 补入路径。
+//
+// 用途：api-keys 的输出需把内部 ON/OFF 映射为公开布尔 is_active，实现上是
+// "先取一页的 ID，再按 ID 二次查询实体"。fieldMask 会被当作 SELECT 字段掩码，
+// 若其中不含 id，取页结果的 ID 便是零值，二次查询 IDIn(0,0,...) 命不中任何行、
+// 整页 items 变空。id 是主键、恒非空，且与游标分页内部"为排序/回填多读唯一 ID"
+// 的处理一致，故显式补入，保证取页始终拿得到 ID。
+func withFieldMaskIncludingID(req *paginationV1.PagingRequest) *paginationV1.PagingRequest {
+	fm := req.GetFieldMask()
+	if fm == nil || len(fm.GetPaths()) == 0 {
+		return req
+	}
+	for _, path := range fm.GetPaths() {
+		if stringcase.ToSnakeCase(strings.TrimSpace(path)) == "id" {
+			return req
+		}
+	}
+
+	cloned := proto.Clone(req).(*paginationV1.PagingRequest)
+	paths := make([]string, 0, len(fm.GetPaths())+1)
+	paths = append(paths, fm.GetPaths()...)
+	paths = append(paths, "id")
+	cloned.FieldMask = &fieldmaskpb.FieldMask{Paths: paths}
+	return cloned
 }
 
 // validateCursorRequest 前置校验游标分页参数：limit 越界、游标被篡改或与绑定

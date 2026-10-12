@@ -9,6 +9,7 @@ import (
 	"go-wind-admin/pkg/localdeps/go-crud/viewer"
 	"go-wind-admin/pkg/localdeps/go-utils/trans"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	accesskeyV1 "go-wind-admin/api/gen/go/access_key/service/v1"
 	adminV1 "go-wind-admin/api/gen/go/admin/service/v1"
@@ -131,6 +132,40 @@ func TestAccessKeyRepoSqlite_ListCursorRejectsInvalidRequest(t *testing.T) {
 		Cursor: trans.Ptr(flippingLastChar(first.GetNextCursor())),
 	})
 	require.True(t, accessKeyIsBadRequest(err), "被篡改的游标应返回 400，实际 %v", err)
+}
+
+// TestAccessKeyRepoSqlite_ListCursorFieldMaskKeepsPageItems 验证修复：
+// fieldMask 被当作 SELECT 字段掩码，若不含 id，取页结果的 ID 会退化为零值，
+// 随后"按 ID 二次查询实体映射 is_active"会命中不到任何行、整页 items 变空。
+// 取页时应强制补入 id，使 items 正常返回。游标与非游标两条路径都要修好。
+func TestAccessKeyRepoSqlite_ListCursorFieldMaskKeepsPageItems(t *testing.T) {
+	repo, ctx, roleID := newAccessKeyCursorFixture(t)
+	setUserCursorSecretForTest(t)
+	createCursorAccessKeysForTest(t, repo, ctx, roleID, 3)
+
+	mask := func() *fieldmaskpb.FieldMask { return &fieldmaskpb.FieldMask{Paths: []string{"name"}} }
+
+	// 游标路径（limit，不带窗口参数）
+	cursorResp, err := repo.List(ctx, &paginationV1.PagingRequest{
+		Limit:     trans.Ptr(uint32(10)),
+		FieldMask: mask(),
+	})
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), cursorResp.GetTotal())
+	require.Len(t, cursorResp.GetItems(), 3, "fieldMask 不含 id 时游标路径仍应返回完整一页")
+	for _, item := range cursorResp.GetItems() {
+		require.NotZero(t, item.GetId(), "取页强制读入 id，items 应带可用 ID")
+	}
+
+	// 非游标路径（page/pageSize）
+	pageResp, err := repo.List(ctx, &paginationV1.PagingRequest{
+		Page:      trans.Ptr(uint32(1)),
+		PageSize:  trans.Ptr(uint32(10)),
+		FieldMask: mask(),
+	})
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), pageResp.GetTotal())
+	require.Len(t, pageResp.GetItems(), 3, "fieldMask 不含 id 时非游标路径仍应返回完整一页")
 }
 
 // TestAccessKeyRepoSqlite_CursorDoesNotLeakSecretInMaterial 验证 §安全：
