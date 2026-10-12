@@ -1,0 +1,427 @@
+syntax = "proto3";
+package catalog.service.v1;
+import "google/protobuf/timestamp.proto";
+
+// Platform-owned resources. No request can assert an actor, tenant or administrator.
+message PlatformResource {
+  string id = 1 [json_name = "id"];
+  string cluster_id = 2 [json_name = "cluster_id"];
+  string name = 3 [json_name = "name"];
+  string description = 4 [json_name = "description"];
+  string state = 5 [json_name = "state"];
+  string reason = 6 [json_name = "reason"];
+  string reason_message = 7 [json_name = "reason_message"];
+  int64 version = 8 [json_name = "version"];
+  google.protobuf.Timestamp created_at = 9 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 10 [json_name = "updated_at"];
+  google.protobuf.Timestamp observed_at = 11 [json_name = "observed_at"];
+  bool observation_stale = 12 [json_name = "observation_stale"];
+  string last_operation_id = 13 [json_name = "last_operation_id"];
+  NetworkDevice device = 14 [json_name = "device"];
+  VlanNetwork vlan = 15 [json_name = "vlan"];
+  EgressGateway gateway = 16 [json_name = "gateway"];
+  PublicAddressPool pool = 17 [json_name = "pool"];
+  IntranetAddressPool intranet_pool = 18 [json_name = "intranet_pool"];
+}
+
+message NodeInterface {
+  string node_name = 1 [json_name = "node_name"];
+  string node_uid = 2 [json_name = "node_uid"];
+  string name = 3 [json_name = "name"];
+  string kind = 4 [json_name = "kind"];
+  string mac = 5 [json_name = "mac"];
+  int32 mtu = 6 [json_name = "mtu"];
+  bool link_up = 7 [json_name = "link_up"];
+  bool carrier = 8 [json_name = "carrier"];
+  repeated string addresses = 9 [json_name = "addresses"];
+  string master = 10 [json_name = "master"];
+  bool ovs_managed = 11 [json_name = "ovs_managed"];
+  bool kc_managed = 12 [json_name = "kc_managed"];
+  bool default_route = 13 [json_name = "default_route"];
+  bool management = 14 [json_name = "management"];
+  bool selectable = 15 [json_name = "selectable"];
+  repeated string unavailable_reasons = 16 [json_name = "unavailable_reasons"];
+  google.protobuf.Timestamp observed_at = 17 [json_name = "observed_at"];
+  repeated string vlan_network_ids = 18 [json_name = "vlan_network_ids"];
+}
+
+message NetworkDevice {
+  string device_name = 1 [json_name = "device_name"];
+  string inventory_fingerprint = 2 [json_name = "inventory_fingerprint"];
+  repeated NodeInterface nodes = 3 [json_name = "nodes"];
+}
+
+message VlanNetwork {
+  string device_id = 1 [json_name = "device_id"];
+  int32 vlan_id = 2 [json_name = "vlan_id"];
+}
+
+message EgressGateway {
+}
+
+message PublicAddressPool {
+  string mode = 1 [json_name = "mode"];
+  string gateway_id = 2 [json_name = "gateway_id"];
+  string cidr = 3 [json_name = "cidr"];
+  string ovn_gateway_ip = 4 [json_name = "ovn_gateway_ip"];
+  repeated string excluded_ips = 5 [json_name = "excluded_ips"];
+  string vlan_network_id = 6 [json_name = "vlan_network_id"];
+  string upstream_gateway_ip = 7 [json_name = "upstream_gateway_ip"];
+  bool allocation_enabled = 8 [json_name = "allocation_enabled"];
+  bool is_default = 9 [json_name = "is_default"];
+  int64 config_revision = 10 [json_name = "config_revision"];
+  PublicPoolVerification verification = 11 [json_name = "verification"];
+  string topology_fingerprint = 12 [json_name = "topology_fingerprint"];
+  repeated string observed_provider_images = 13 [json_name = "observed_provider_images"];
+  string scope = 14 [json_name = "scope"];
+}
+
+message IntranetAddressPool {
+  string cidr = 1 [json_name = "cidr"];
+  string ovn_gateway_ip = 2 [json_name = "ovn_gateway_ip"];
+  repeated string excluded_ips = 3 [json_name = "excluded_ips"];
+  string default_vpc_name = 4 [json_name = "default_vpc_name"];
+  string default_vpc_uid = 5 [json_name = "default_vpc_uid"];
+  repeated string intranet_networks = 6 [json_name = "intranet_networks"];
+  bool allocation_enabled = 7 [json_name = "allocation_enabled"];
+  bool is_default = 8 [json_name = "is_default"];
+  int64 config_revision = 9 [json_name = "config_revision"];
+  IntranetPoolVerification verification = 10 [json_name = "verification"];
+  string topology_fingerprint = 11 [json_name = "topology_fingerprint"];
+  repeated string observed_provider_images = 12 [json_name = "observed_provider_images"];
+  string scope = 13 [json_name = "scope"];
+}
+
+message IntranetPoolVerification {
+  string provider_source_revision = 1 [json_name = "provider_source_revision"];
+  repeated string provider_image_digests = 2 [json_name = "provider_image_digests"];
+  string topology_fingerprint = 3 [json_name = "topology_fingerprint"];
+  string evidence_reference = 4 [json_name = "evidence_reference"];
+  string scope = 5 [json_name = "scope"];
+  google.protobuf.Timestamp verified_at = 6 [json_name = "verified_at"];
+  google.protobuf.Timestamp expires_at = 7 [json_name = "expires_at"];
+}
+
+message CapabilityObservation {
+  string reason = 1 [json_name = "reason"];
+  string reason_message = 2 [json_name = "reason_message"];
+  google.protobuf.Timestamp observed_at = 3 [json_name = "observed_at"];
+  bool observation_stale = 4 [json_name = "observation_stale"];
+}
+
+message PlatformNetworkCapabilities {
+  bool base_connectivity_ready = 1 [json_name = "base_connectivity_ready"];
+  bool public_address_ready = 2 [json_name = "public_address_ready"];
+  bool load_balancer_ready = 3 [json_name = "load_balancer_ready"];
+  CapabilityObservation base_connectivity = 4 [json_name = "base_connectivity"];
+  CapabilityObservation public_address = 5 [json_name = "public_address"];
+  CapabilityObservation load_balancer = 6 [json_name = "load_balancer"];
+}
+
+message PublicPoolVerification {
+  string provider_source_revision = 1 [json_name = "provider_source_revision"];
+  repeated string provider_image_digests = 2 [json_name = "provider_image_digests"];
+  string topology_fingerprint = 3 [json_name = "topology_fingerprint"];
+  string evidence_reference = 4 [json_name = "evidence_reference"];
+  string scope = 5 [json_name = "scope"];
+  google.protobuf.Timestamp verified_at = 6 [json_name = "verified_at"];
+  google.protobuf.Timestamp expires_at = 7 [json_name = "expires_at"];
+}
+
+message PlatformOperation {
+  string id = 1 [json_name = "id"];
+  string resource_id = 2 [json_name = "resource_id"];
+  string kind = 3 [json_name = "kind"];
+  string state = 4 [json_name = "state"];
+  string reason = 5 [json_name = "reason"];
+  string reason_message = 6 [json_name = "reason_message"];
+  google.protobuf.Timestamp created_at = 7 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 8 [json_name = "updated_at"];
+  google.protobuf.Timestamp completed_at = 9 [json_name = "completed_at"];
+  google.protobuf.Timestamp next_attempt_at = 10 [json_name = "next_attempt_at"];
+}
+
+message ListNodeInterfacesRequest {
+  string node_name = 1 [json_name = "node_name"];
+}
+message ListNodeInterfacesResponse {
+  repeated NodeInterface items = 1 [json_name = "items"];
+  string inventory_fingerprint = 2 [json_name = "inventory_fingerprint"];
+  int64 total = 3 [json_name = "total"];
+}
+
+message AdoptNetworkDeviceData {
+  string name = 1 [json_name = "name"];
+  string device_name = 2 [json_name = "device_name"];
+  string inventory_fingerprint = 3 [json_name = "inventory_fingerprint"];
+  string idempotency_key = 4 [json_name = "idempotency_key"];
+}
+message AdoptNetworkDeviceRequest {
+  AdoptNetworkDeviceData data = 1 [json_name = "data"];
+}
+message AdoptNetworkDeviceResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message GetNetworkDeviceRequest {
+  string device_id = 1 [json_name = "device_id"];
+}
+message GetNetworkDeviceResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message CreateVlanNetworkData {
+  string name = 1 [json_name = "name"];
+  string description = 2 [json_name = "description"];
+  string device_id = 3 [json_name = "device_id"];
+  int32 vlan_id = 4 [json_name = "vlan_id"];
+  string idempotency_key = 5 [json_name = "idempotency_key"];
+}
+message CreateVlanNetworkRequest {
+  CreateVlanNetworkData data = 1 [json_name = "data"];
+}
+message CreateVlanNetworkResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message GetVlanNetworkRequest {
+  string vlan_network_id = 1 [json_name = "vlan_network_id"];
+}
+message GetVlanNetworkResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message ListVlanNetworksRequest {
+  string name = 1 [json_name = "name"];
+  string state = 2 [json_name = "state"];
+  int32 limit = 3 [json_name = "limit"];
+  string cursor = 4 [json_name = "cursor"];
+}
+message ListVlanNetworksResponse {
+  repeated PlatformResource items = 1 [json_name = "items"];
+  string next_cursor = 2 [json_name = "next_cursor"];
+  int64 total = 3 [json_name = "total"];
+}
+
+message DeleteVlanNetworkRequest {
+  string vlan_network_id = 1 [json_name = "vlan_network_id"];
+}
+message DeleteVlanNetworkResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message CreateEgressGatewayData {
+  string name = 1 [json_name = "name"];
+  string description = 2 [json_name = "description"];
+  string idempotency_key = 3 [json_name = "idempotency_key"];
+}
+message CreateEgressGatewayRequest {
+  CreateEgressGatewayData data = 1 [json_name = "data"];
+}
+message CreateEgressGatewayResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message GetEgressGatewayRequest {
+  string gateway_id = 1 [json_name = "gateway_id"];
+}
+message GetEgressGatewayResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message ListEgressGatewaysRequest {
+  string name = 1 [json_name = "name"];
+  string state = 2 [json_name = "state"];
+  int32 limit = 3 [json_name = "limit"];
+  string cursor = 4 [json_name = "cursor"];
+}
+message ListEgressGatewaysResponse {
+  repeated PlatformResource items = 1 [json_name = "items"];
+  string next_cursor = 2 [json_name = "next_cursor"];
+  int64 total = 3 [json_name = "total"];
+}
+
+message DeleteEgressGatewayRequest {
+  string gateway_id = 1 [json_name = "gateway_id"];
+}
+message DeleteEgressGatewayResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message CreatePublicAddressPoolData {
+  string name = 1 [json_name = "name"];
+  string description = 2 [json_name = "description"];
+  string mode = 3 [json_name = "mode"];
+  string gateway_id = 4 [json_name = "gateway_id"];
+  string cidr = 5 [json_name = "cidr"];
+  string ovn_gateway_ip = 6 [json_name = "ovn_gateway_ip"];
+  repeated string excluded_ips = 7 [json_name = "excluded_ips"];
+  string vlan_network_id = 8 [json_name = "vlan_network_id"];
+  string upstream_gateway_ip = 9 [json_name = "upstream_gateway_ip"];
+  string idempotency_key = 10 [json_name = "idempotency_key"];
+}
+message CreatePublicAddressPoolRequest {
+  CreatePublicAddressPoolData data = 1 [json_name = "data"];
+}
+message CreatePublicAddressPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message GetPublicAddressPoolRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+}
+message GetPublicAddressPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message ListPublicAddressPoolsRequest {
+  string name = 1 [json_name = "name"];
+  string state = 2 [json_name = "state"];
+  int32 limit = 3 [json_name = "limit"];
+  string cursor = 4 [json_name = "cursor"];
+}
+message ListPublicAddressPoolsResponse {
+  repeated PlatformResource items = 1 [json_name = "items"];
+  string next_cursor = 2 [json_name = "next_cursor"];
+  int64 total = 3 [json_name = "total"];
+}
+
+message DeletePublicAddressPoolRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+}
+message DeletePublicAddressPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message RecordPublicPoolVerificationData {
+  int64 expected_version = 2 [json_name = "expected_version"];
+  PublicPoolVerification verification = 3 [json_name = "verification"];
+  string idempotency_key = 4 [json_name = "idempotency_key"];
+}
+message RecordPublicPoolVerificationRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+  RecordPublicPoolVerificationData data = 2 [json_name = "data"];
+}
+message RecordPublicPoolVerificationResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message SetPublicPoolAllocationEnabledData {
+  bool enabled = 2 [json_name = "enabled"];
+  int64 expected_version = 3 [json_name = "expected_version"];
+  string idempotency_key = 4 [json_name = "idempotency_key"];
+}
+message SetPublicPoolAllocationEnabledRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+  SetPublicPoolAllocationEnabledData data = 2 [json_name = "data"];
+}
+message SetPublicPoolAllocationEnabledResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message SetDefaultPublicPoolData {
+  int64 expected_version = 2 [json_name = "expected_version"];
+  string idempotency_key = 3 [json_name = "idempotency_key"];
+}
+message SetDefaultPublicPoolRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+  SetDefaultPublicPoolData data = 2 [json_name = "data"];
+}
+message SetDefaultPublicPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message CreateIntranetAddressPoolData {
+  string name = 1 [json_name = "name"];
+  string description = 2 [json_name = "description"];
+  string cidr = 3 [json_name = "cidr"];
+  string ovn_gateway_ip = 4 [json_name = "ovn_gateway_ip"];
+  repeated string excluded_ips = 5 [json_name = "excluded_ips"];
+  string default_vpc_name = 6 [json_name = "default_vpc_name"];
+  string default_vpc_uid = 7 [json_name = "default_vpc_uid"];
+  repeated string intranet_networks = 8 [json_name = "intranet_networks"];
+  string idempotency_key = 9 [json_name = "idempotency_key"];
+}
+message CreateIntranetAddressPoolRequest {
+  CreateIntranetAddressPoolData data = 1 [json_name = "data"];
+}
+message CreateIntranetAddressPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message GetIntranetAddressPoolRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+}
+message GetIntranetAddressPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message ListIntranetAddressPoolsRequest {
+  string name = 1 [json_name = "name"];
+  string state = 2 [json_name = "state"];
+  int32 limit = 3 [json_name = "limit"];
+  string cursor = 4 [json_name = "cursor"];
+}
+message ListIntranetAddressPoolsResponse {
+  repeated PlatformResource items = 1 [json_name = "items"];
+  string next_cursor = 2 [json_name = "next_cursor"];
+  int64 total = 3 [json_name = "total"];
+}
+
+message DeleteIntranetAddressPoolRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+}
+message DeleteIntranetAddressPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message RecordIntranetPoolVerificationData {
+  int64 expected_version = 2 [json_name = "expected_version"];
+  IntranetPoolVerification verification = 3 [json_name = "verification"];
+  string idempotency_key = 4 [json_name = "idempotency_key"];
+}
+message RecordIntranetPoolVerificationRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+  RecordIntranetPoolVerificationData data = 2 [json_name = "data"];
+}
+message RecordIntranetPoolVerificationResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message SetIntranetPoolAllocationEnabledData {
+  bool enabled = 2 [json_name = "enabled"];
+  int64 expected_version = 3 [json_name = "expected_version"];
+  string idempotency_key = 4 [json_name = "idempotency_key"];
+}
+message SetIntranetPoolAllocationEnabledRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+  SetIntranetPoolAllocationEnabledData data = 2 [json_name = "data"];
+}
+message SetIntranetPoolAllocationEnabledResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message SetDefaultIntranetPoolData {
+  int64 expected_version = 2 [json_name = "expected_version"];
+  string idempotency_key = 3 [json_name = "idempotency_key"];
+}
+message SetDefaultIntranetPoolRequest {
+  string pool_id = 1 [json_name = "pool_id"];
+  SetDefaultIntranetPoolData data = 2 [json_name = "data"];
+}
+message SetDefaultIntranetPoolResponse {
+  PlatformResource resource = 1 [json_name = "resource"];
+}
+
+message GetPlatformNetworkCapabilitiesRequest {
+}
+message GetPlatformNetworkCapabilitiesResponse {
+  PlatformNetworkCapabilities capabilities = 1 [json_name = "capabilities"];
+}
+
+message GetPlatformOperationRequest {
+  string operation_id = 1 [json_name = "operation_id"];
+}
+message GetPlatformOperationResponse {
+  PlatformOperation operation = 1 [json_name = "operation"];
+}

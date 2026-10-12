@@ -110,6 +110,8 @@ inputs:
       - protos/admin/service/v1/i_menu.proto
       - protos/admin/service/v1/i_mfa.proto
       - protos/admin/service/v1/i_network.proto
+      - protos/admin/service/v1/i_platform_network.proto
+      - protos/catalog/service/v1/platform_network.proto
       - protos/admin/service/v1/i_notification_channel.proto
       - protos/admin/service/v1/i_online_session.proto
       - protos/admin/service/v1/i_operation_audit_log.proto

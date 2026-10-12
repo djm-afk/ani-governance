@@ -68,7 +68,7 @@ func NetworkPermission(method, path string) (string, bool) {
 }
 
 func IsNetworkPath(path string) bool {
-	return path == "/api/v1/networks" || strings.HasPrefix(path, "/api/v1/networks/")
+	return path == "/api/v1/networks" || strings.HasPrefix(path, "/api/v1/networks/") || path == "/api/v1/admin/networks" || strings.HasPrefix(path, "/api/v1/admin/networks/")
 }
 
 var networkIDPatterns = map[string]*regexp.Regexp{
@@ -141,6 +141,9 @@ func networkRequestMessage(operation string) proto.Message {
 }
 
 func networkHTTPRoute(r *http.Request) (string, proto.Message, string, string) {
+	if op, msg, field, id := platformNetworkHTTPRoute(r); op != "" {
+		return op, msg, field, id
+	}
 	for operation, policy := range NetworkOperations {
 		if policy.Method != r.Method {
 			continue
@@ -167,6 +170,9 @@ func networkHTTPRoute(r *http.Request) (string, proto.Message, string, string) {
 }
 
 func networkQueryFields(operation string) map[string]bool {
+	if IsPlatformNetworkOperation(operation) {
+		return platformNetworkQueryFields(operation)
+	}
 	fields := map[string]bool{}
 	switch strings.TrimPrefix(operation, "/admin.service.v1.NetworkService/") {
 	case "ListVPCs", "ListEIPs":
@@ -229,7 +235,11 @@ func validateNetworkMessage(m protoreflect.Message) bool {
 			if f.Kind() == protoreflect.MessageKind {
 				return validateNetworkMessage(value.Message())
 			}
-			if pattern := networkIDPatterns[string(f.Name())]; pattern != nil && f.Kind() == protoreflect.StringKind {
+			pattern := networkIDPatterns[string(f.Name())]
+			if pattern == nil {
+				pattern = platformNetworkIDPatterns[string(f.Name())]
+			}
+			if pattern != nil && f.Kind() == protoreflect.StringKind {
 				return value.String() == "" || pattern.MatchString(value.String())
 			}
 			return true
@@ -252,7 +262,7 @@ func validateNetworkMessage(m protoreflect.Message) bool {
 }
 
 // NetworkHTTPFilter runs before generated decoding for both JWT and AK calls.
-// It admits only the tenant surface, rejects identity/field ambiguity and
+// It validates registered tenant and platform routes, rejects identity/field ambiguity and
 // restores the exact bounded body bytes used by the HMAC verifier.
 func NetworkHTTPFilter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -268,7 +278,7 @@ func NetworkHTTPFilter(next http.Handler) http.Handler {
 			fail()
 			return
 		}
-		for _, header := range []string{"X-Ani-Tenant-Id", "X-Tenant-Id", "X-Ani-Actor", "X-Actor", "X-Ani-Operator", "X-Operator", "X-Operator-Id", "X-Ani-Request-Id", "X-Resource-Tenant-Id", "X-Platform-Admin", "X-Is-Platform-Admin"} {
+		for _, header := range []string{"X-Ani-Tenant-Id", "X-Tenant-Id", "X-Ani-Actor", "X-Actor", "X-Ani-Operator", "X-Operator", "X-Operator-Id", "X-Ani-Request-Id", "X-Resource-Tenant-Id", "X-Platform-Admin", "X-Is-Platform-Admin", "X-Ani-Scope"} {
 			if len(r.Header.Values(header)) != 0 {
 				fail()
 				return

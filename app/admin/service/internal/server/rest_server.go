@@ -178,6 +178,7 @@ func NewRestServer(
 	accessKeyService *service.AccessKeyService,
 	configService *service.ConfigService,
 	networkService *service.NetworkService,
+	platformNetworkService *service.PlatformNetworkService,
 	acceleratorService *service.AcceleratorService,
 	imageService *service.ImageService,
 	modeldevService *service.ModelDevService,
@@ -252,6 +253,7 @@ func NewRestServer(
 	registerAccessKeyHTTP(srv, accessKeyService)
 	adminV1.RegisterConfigServiceHTTPServer(srv, configService)
 	adminV1.RegisterNetworkServiceHTTPServer(srv, networkService)
+	adminV1.RegisterPlatformNetworkServiceHTTPServer(srv, platformNetworkService)
 	adminV1.RegisterImageServiceHTTPServer(srv, imageService)
 	adminV1.RegisterAcceleratorAdminServiceHTTPServer(srv, acceleratorService)
 	adminV1.RegisterAcceleratorServiceHTTPServer(srv, acceleratorService)

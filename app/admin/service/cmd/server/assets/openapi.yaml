@@ -6075,6 +6075,669 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorBindings'
+    /api/v1/admin/networks/capabilities:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetPlatformNetworkCapabilities
+            description: Requires platform user JWT and network:platform:capability:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetPlatformNetworkCapabilities
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetPlatformNetworkCapabilitiesResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/devices:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: AdoptNetworkDevice
+            description: Requires platform user JWT and network:platform:device:adopt. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_AdoptNetworkDevice
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AdoptNetworkDeviceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AdoptNetworkDeviceResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/devices/{device_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetNetworkDevice
+            description: Requires platform user JWT and network:platform:device:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetNetworkDevice
+            parameters:
+                - name: device_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetNetworkDeviceResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/egress-gateways:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListEgressGateways
+            description: Requires platform user JWT and network:platform:egress-gateway:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListEgressGateways
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListEgressGatewaysResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateEgressGateway
+            description: Requires platform user JWT and network:platform:egress-gateway:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_CreateEgressGateway
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateEgressGatewayRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateEgressGatewayResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/egress-gateways/{gateway_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetEgressGateway
+            description: Requires platform user JWT and network:platform:egress-gateway:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetEgressGateway
+            parameters:
+                - name: gateway_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetEgressGatewayResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteEgressGateway
+            description: Requires platform user JWT and network:platform:egress-gateway:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_DeleteEgressGateway
+            parameters:
+                - name: gateway_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteEgressGatewayResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pools:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListIntranetAddressPools
+            description: Requires platform user JWT and network:platform:intranet-pool:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListIntranetAddressPools
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListIntranetAddressPoolsResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateIntranetAddressPool
+            description: Requires platform user JWT and network:platform:intranet-pool:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_CreateIntranetAddressPool
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateIntranetAddressPoolRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateIntranetAddressPoolResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pools/{pool_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetIntranetAddressPool
+            description: Requires platform user JWT and network:platform:intranet-pool:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetIntranetAddressPool
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetIntranetAddressPoolResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteIntranetAddressPool
+            description: Requires platform user JWT and network:platform:intranet-pool:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_DeleteIntranetAddressPool
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteIntranetAddressPoolResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pools/{pool_id}/allocation:
+        patch:
+            tags:
+                - PlatformNetworkService
+            summary: SetIntranetPoolAllocationEnabled
+            description: Requires platform user JWT and network:platform:intranet-pool:allocate. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_SetIntranetPoolAllocationEnabled
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetIntranetPoolAllocationEnabledRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SetIntranetPoolAllocationEnabledResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pools/{pool_id}/default:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: SetDefaultIntranetPool
+            description: Requires platform user JWT and network:platform:intranet-pool:default. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_SetDefaultIntranetPool
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetDefaultIntranetPoolRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SetDefaultIntranetPoolResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pools/{pool_id}/verification:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: RecordIntranetPoolVerification
+            description: Requires platform user JWT and network:platform:intranet-pool:verify. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_RecordIntranetPoolVerification
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RecordIntranetPoolVerificationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RecordIntranetPoolVerificationResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/node-interfaces:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListNodeInterfaces
+            description: Requires platform user JWT and network:platform:device:list. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListNodeInterfaces
+            parameters:
+                - name: node_name
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListNodeInterfacesResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/operations/{operation_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetPlatformOperation
+            description: Requires platform user JWT and network:platform:operation:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetPlatformOperation
+            parameters:
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetPlatformOperationResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/public-address-pools:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListPublicAddressPools
+            description: Requires platform user JWT and network:platform:public-pool:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListPublicAddressPools
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListPublicAddressPoolsResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreatePublicAddressPool
+            description: Requires platform user JWT and network:platform:public-pool:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_CreatePublicAddressPool
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreatePublicAddressPoolRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreatePublicAddressPoolResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/public-address-pools/{pool_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetPublicAddressPool
+            description: Requires platform user JWT and network:platform:public-pool:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetPublicAddressPool
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetPublicAddressPoolResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeletePublicAddressPool
+            description: Requires platform user JWT and network:platform:public-pool:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_DeletePublicAddressPool
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeletePublicAddressPoolResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/public-address-pools/{pool_id}/allocation:
+        patch:
+            tags:
+                - PlatformNetworkService
+            summary: SetPublicPoolAllocationEnabled
+            description: Requires platform user JWT and network:platform:public-pool:allocate. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_SetPublicPoolAllocationEnabled
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetPublicPoolAllocationEnabledRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SetPublicPoolAllocationEnabledResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/public-address-pools/{pool_id}/default:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: SetDefaultPublicPool
+            description: Requires platform user JWT and network:platform:public-pool:default. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_SetDefaultPublicPool
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetDefaultPublicPoolRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SetDefaultPublicPoolResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/public-address-pools/{pool_id}/verification:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: RecordPublicPoolVerification
+            description: Requires platform user JWT and network:platform:public-pool:verify. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_RecordPublicPoolVerification
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RecordPublicPoolVerificationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RecordPublicPoolVerificationResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/vlan-networks:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListVlanNetworks
+            description: Requires platform user JWT and network:platform:vlan-network:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListVlanNetworks
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVlanNetworksResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateVlanNetwork
+            description: Requires platform user JWT and network:platform:vlan-network:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_CreateVlanNetwork
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVlanNetworkRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateVlanNetworkResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/vlan-networks/{vlan_network_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetVlanNetwork
+            description: Requires platform user JWT and network:platform:vlan-network:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetVlanNetwork
+            parameters:
+                - name: vlan_network_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetVlanNetworkResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteVlanNetwork
+            description: Requires platform user JWT and network:platform:vlan-network:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_DeleteVlanNetwork
+            parameters:
+                - name: vlan_network_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteVlanNetworkResponse'
+            security:
+                - BearerAuth: []
     /api/v1/auth/api-keys:
         get:
             tags:
@@ -8348,6 +9011,27 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/AdoptAcceleratorSupplyData'
+        AdoptNetworkDeviceData:
+            type: object
+            properties:
+                name:
+                    type: string
+                device_name:
+                    type: string
+                inventory_fingerprint:
+                    type: string
+                idempotency_key:
+                    type: string
+        AdoptNetworkDeviceRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/AdoptNetworkDeviceData'
+        AdoptNetworkDeviceResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         Any:
             type: object
             properties:
@@ -8647,6 +9331,18 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/NamedCallbackOrReference'
+        CapabilityObservation:
+            type: object
+            properties:
+                reason:
+                    type: string
+                reason_message:
+                    type: string
+                observed_at:
+                    type: string
+                    format: date-time
+                observation_stale:
+                    type: boolean
         ChangePasswordRequest:
             type: object
             properties:
@@ -8861,6 +9557,25 @@ components:
             properties:
                 eip:
                     $ref: '#/components/schemas/EIP'
+        CreateEgressGatewayData:
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                idempotency_key:
+                    type: string
+        CreateEgressGatewayRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateEgressGatewayData'
+        CreateEgressGatewayResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         CreateExecutionRequest:
             required:
                 - name
@@ -8953,6 +9668,41 @@ components:
                 data:
                     $ref: '#/components/schemas/InternalMessageCategory'
             description: 创建站内信消息分类 - 请求
+        CreateIntranetAddressPoolData:
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                cidr:
+                    type: string
+                ovn_gateway_ip:
+                    type: string
+                excluded_ips:
+                    type: array
+                    items:
+                        type: string
+                default_vpc_name:
+                    type: string
+                default_vpc_uid:
+                    type: string
+                intranet_networks:
+                    type: array
+                    items:
+                        type: string
+                idempotency_key:
+                    type: string
+        CreateIntranetAddressPoolRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateIntranetAddressPoolData'
+        CreateIntranetAddressPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         CreateLanguageRequest:
             type: object
             properties:
@@ -9066,6 +9816,41 @@ components:
                 data:
                     $ref: '#/components/schemas/Position'
             description: 创建职位 - 请求
+        CreatePublicAddressPoolData:
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                mode:
+                    type: string
+                gateway_id:
+                    type: string
+                cidr:
+                    type: string
+                ovn_gateway_ip:
+                    type: string
+                excluded_ips:
+                    type: array
+                    items:
+                        type: string
+                vlan_network_id:
+                    type: string
+                upstream_gateway_ip:
+                    type: string
+                idempotency_key:
+                    type: string
+        CreatePublicAddressPoolRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreatePublicAddressPoolData'
+        CreatePublicAddressPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         CreateRoleRequest:
             type: object
             properties:
@@ -9152,6 +9937,30 @@ components:
             properties:
                 vpc:
                     $ref: '#/components/schemas/VPC'
+        CreateVlanNetworkData:
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                device_id:
+                    type: string
+                vlan_id:
+                    type: integer
+                    format: int32
+                idempotency_key:
+                    type: string
+        CreateVlanNetworkRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVlanNetworkData'
+        CreateVlanNetworkResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         DashboardOverviewResponse:
             type: object
             properties:
@@ -9328,6 +10137,11 @@ components:
             properties:
                 eip:
                     $ref: '#/components/schemas/EIP'
+        DeleteEgressGatewayResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         DeleteInferenceData:
             type: object
             properties:
@@ -9340,6 +10154,11 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/DeleteInferenceData'
+        DeleteIntranetAddressPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         DeleteLoadBalancerResponse:
             type: object
             properties:
@@ -9360,6 +10179,11 @@ components:
                         type: integer
                         format: uint32
                     description: 收件箱记录ID列表，为空表示清空收件箱
+        DeletePublicAddressPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         DeleteSubnetResponse:
             type: object
             properties:
@@ -9375,6 +10199,11 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        DeleteVlanNetworkResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         DeviceInfo:
             type: object
             properties:
@@ -9725,6 +10554,9 @@ components:
                     type: string
                     description: 新密码
             description: 强制修改用户密码（不验证） - 请求
+        EgressGateway:
+            type: object
+            properties: {}
         EmailVerification:
             required:
                 - code
@@ -9979,6 +10811,11 @@ components:
             properties:
                 eip:
                     $ref: '#/components/schemas/EIP'
+        GetEgressGatewayResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         GetExecutionLogsResponse:
             type: object
             properties:
@@ -10013,6 +10850,11 @@ components:
             properties:
                 input_version:
                     $ref: '#/components/schemas/InputVersionView'
+        GetIntranetAddressPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         GetLoadBalancerOperationResponse:
             type: object
             properties:
@@ -10039,11 +10881,31 @@ components:
                         - MFA_REQUIRED
                     type: string
                     format: enum
+        GetNetworkDeviceResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         GetOperationResponse:
             type: object
             properties:
                 operation:
                     $ref: '#/components/schemas/NetworkOperation'
+        GetPlatformNetworkCapabilitiesResponse:
+            type: object
+            properties:
+                capabilities:
+                    $ref: '#/components/schemas/PlatformNetworkCapabilities'
+        GetPlatformOperationResponse:
+            type: object
+            properties:
+                operation:
+                    $ref: '#/components/schemas/PlatformOperation'
+        GetPublicAddressPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         GetPublisherCredentialResponse:
             type: object
             properties:
@@ -10069,6 +10931,11 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        GetVlanNetworkResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         GoRuntimeInfo:
             type: object
             properties:
@@ -10556,6 +11423,62 @@ components:
                     description: 删除时间
                     format: date-time
             description: 站内信消息用户接收信息
+        IntranetAddressPool:
+            type: object
+            properties:
+                cidr:
+                    type: string
+                ovn_gateway_ip:
+                    type: string
+                excluded_ips:
+                    type: array
+                    items:
+                        type: string
+                default_vpc_name:
+                    type: string
+                default_vpc_uid:
+                    type: string
+                intranet_networks:
+                    type: array
+                    items:
+                        type: string
+                allocation_enabled:
+                    type: boolean
+                is_default:
+                    type: boolean
+                config_revision:
+                    type: string
+                verification:
+                    $ref: '#/components/schemas/IntranetPoolVerification'
+                topology_fingerprint:
+                    type: string
+                observed_provider_images:
+                    type: array
+                    items:
+                        type: string
+                scope:
+                    type: string
+        IntranetPoolVerification:
+            type: object
+            properties:
+                provider_source_revision:
+                    type: string
+                provider_image_digests:
+                    type: array
+                    items:
+                        type: string
+                topology_fingerprint:
+                    type: string
+                evidence_reference:
+                    type: string
+                scope:
+                    type: string
+                verified_at:
+                    type: string
+                    format: date-time
+                expires_at:
+                    type: string
+                    format: date-time
         IssuePublisherCredentialRequest:
             type: object
             properties:
@@ -10772,6 +11695,17 @@ components:
                     type: string
                 total:
                     type: string
+        ListEgressGatewaysResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PlatformResource'
+                next_cursor:
+                    type: string
+                total:
+                    type: string
         ListEnrolledMethodsResponse:
             type: object
             properties:
@@ -10837,6 +11771,17 @@ components:
                 total:
                     type: string
             description: 查询站内信消息列表 - 回应
+        ListIntranetAddressPoolsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PlatformResource'
+                next_cursor:
+                    type: string
+                total:
+                    type: string
         ListLanguageResponse:
             type: object
             properties:
@@ -10888,6 +11833,17 @@ components:
                 total:
                     type: string
             description: 查询菜单列表 - 回应
+        ListNodeInterfacesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/NodeInterface'
+                inventory_fingerprint:
+                    type: string
+                total:
+                    type: string
         ListNotificationChannelResponse:
             type: object
             properties:
@@ -11029,6 +11985,17 @@ components:
                         $ref: '#/components/schemas/PresetView'
                 next_page_token:
                     type: string
+        ListPublicAddressPoolsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PlatformResource'
+                next_cursor:
+                    type: string
+                total:
+                    type: string
         ListQuotaDefinitionsResponse:
             type: object
             properties:
@@ -11146,6 +12113,17 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/VPC'
+                next_cursor:
+                    type: string
+                total:
+                    type: string
+        ListVlanNetworksResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PlatformResource'
                 next_cursor:
                     type: string
                 total:
@@ -12076,6 +13054,64 @@ components:
                         - $ref: '#/components/schemas/StringArray'
                     description: Mapped value
             description: Automatically-generated message used to represent maps of StringArray as ordered (name,value) pairs.
+        NetworkDevice:
+            type: object
+            properties:
+                device_name:
+                    type: string
+                inventory_fingerprint:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/NodeInterface'
+        NodeInterface:
+            type: object
+            properties:
+                node_name:
+                    type: string
+                node_uid:
+                    type: string
+                name:
+                    type: string
+                kind:
+                    type: string
+                mac:
+                    type: string
+                mtu:
+                    type: integer
+                    format: int32
+                link_up:
+                    type: boolean
+                carrier:
+                    type: boolean
+                addresses:
+                    type: array
+                    items:
+                        type: string
+                master:
+                    type: string
+                ovs_managed:
+                    type: boolean
+                kc_managed:
+                    type: boolean
+                default_route:
+                    type: boolean
+                management:
+                    type: boolean
+                selectable:
+                    type: boolean
+                unavailable_reasons:
+                    type: array
+                    items:
+                        type: string
+                observed_at:
+                    type: string
+                    format: date-time
+                vlan_network_ids:
+                    type: array
+                    items:
+                        type: string
         NotificationChannel:
             type: object
             properties:
@@ -12966,6 +14002,48 @@ components:
                     description: 删除时间
                     format: date-time
             description: 套餐配额
+        PlatformNetworkCapabilities:
+            type: object
+            properties:
+                base_connectivity_ready:
+                    type: boolean
+                public_address_ready:
+                    type: boolean
+                load_balancer_ready:
+                    type: boolean
+                base_connectivity:
+                    $ref: '#/components/schemas/CapabilityObservation'
+                public_address:
+                    $ref: '#/components/schemas/CapabilityObservation'
+                load_balancer:
+                    $ref: '#/components/schemas/CapabilityObservation'
+        PlatformOperation:
+            type: object
+            properties:
+                id:
+                    type: string
+                resource_id:
+                    type: string
+                kind:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                reason_message:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                completed_at:
+                    type: string
+                    format: date-time
+                next_attempt_at:
+                    type: string
+                    format: date-time
         PlatformPasswordLoginRequest:
             type: object
             properties:
@@ -12981,6 +14059,49 @@ components:
                  与租户登录拆为独立端点而非复用 tenant_name 留空，是为消除静默降级：
                  单端点下"漏传租户"会被当成平台登录，无法区分"忘记传参"与"有意平台登录"。
                  独立端点同时为平台登录单独施加风控/审计策略留出位置。
+        PlatformResource:
+            type: object
+            properties:
+                id:
+                    type: string
+                cluster_id:
+                    type: string
+                name:
+                    type: string
+                description:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                reason_message:
+                    type: string
+                version:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                observed_at:
+                    type: string
+                    format: date-time
+                observation_stale:
+                    type: boolean
+                last_operation_id:
+                    type: string
+                device:
+                    $ref: '#/components/schemas/NetworkDevice'
+                vlan:
+                    $ref: '#/components/schemas/VlanNetwork'
+                gateway:
+                    $ref: '#/components/schemas/EgressGateway'
+                pool:
+                    $ref: '#/components/schemas/PublicAddressPool'
+                intranet_pool:
+                    $ref: '#/components/schemas/IntranetAddressPool'
+            description: Platform-owned resources. No request can assert an actor, tenant or administrator.
         PolicyEvaluationLog:
             type: object
             properties:
@@ -13186,6 +14307,62 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/NamedSchemaOrReference'
+        PublicAddressPool:
+            type: object
+            properties:
+                mode:
+                    type: string
+                gateway_id:
+                    type: string
+                cidr:
+                    type: string
+                ovn_gateway_ip:
+                    type: string
+                excluded_ips:
+                    type: array
+                    items:
+                        type: string
+                vlan_network_id:
+                    type: string
+                upstream_gateway_ip:
+                    type: string
+                allocation_enabled:
+                    type: boolean
+                is_default:
+                    type: boolean
+                config_revision:
+                    type: string
+                verification:
+                    $ref: '#/components/schemas/PublicPoolVerification'
+                topology_fingerprint:
+                    type: string
+                observed_provider_images:
+                    type: array
+                    items:
+                        type: string
+                scope:
+                    type: string
+        PublicPoolVerification:
+            type: object
+            properties:
+                provider_source_revision:
+                    type: string
+                provider_image_digests:
+                    type: array
+                    items:
+                        type: string
+                topology_fingerprint:
+                    type: string
+                evidence_reference:
+                    type: string
+                scope:
+                    type: string
+                verified_at:
+                    type: string
+                    format: date-time
+                expires_at:
+                    type: string
+                    format: date-time
         PublishAcceleratorProfileData:
             type: object
             properties:
@@ -13293,6 +14470,48 @@ components:
                     type: string
                     description: 配额编码
             description: 配额用量项
+        RecordIntranetPoolVerificationData:
+            type: object
+            properties:
+                expected_version:
+                    type: string
+                verification:
+                    $ref: '#/components/schemas/IntranetPoolVerification'
+                idempotency_key:
+                    type: string
+        RecordIntranetPoolVerificationRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RecordIntranetPoolVerificationData'
+        RecordIntranetPoolVerificationResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
+        RecordPublicPoolVerificationData:
+            type: object
+            properties:
+                expected_version:
+                    type: string
+                verification:
+                    $ref: '#/components/schemas/PublicPoolVerification'
+                idempotency_key:
+                    type: string
+        RecordPublicPoolVerificationRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RecordPublicPoolVerificationData'
+        RecordPublicPoolVerificationResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         RedisCacheMonitorInfo:
             type: object
             properties:
@@ -13914,6 +15133,86 @@ components:
                     type: string
                 data:
                     $ref: '#/components/schemas/SetAcceleratorAdmissionData'
+        SetDefaultIntranetPoolData:
+            type: object
+            properties:
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        SetDefaultIntranetPoolRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetDefaultIntranetPoolData'
+        SetDefaultIntranetPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
+        SetDefaultPublicPoolData:
+            type: object
+            properties:
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        SetDefaultPublicPoolRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetDefaultPublicPoolData'
+        SetDefaultPublicPoolResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
+        SetIntranetPoolAllocationEnabledData:
+            type: object
+            properties:
+                enabled:
+                    type: boolean
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        SetIntranetPoolAllocationEnabledRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetIntranetPoolAllocationEnabledData'
+        SetIntranetPoolAllocationEnabledResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
+        SetPublicPoolAllocationEnabledData:
+            type: object
+            properties:
+                enabled:
+                    type: boolean
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        SetPublicPoolAllocationEnabledRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetPublicPoolAllocationEnabledData'
+        SetPublicPoolAllocationEnabledResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         SetVPCSnatEnabledRequest:
             type: object
             properties:
@@ -15082,6 +16381,14 @@ components:
                     $ref: '#/components/schemas/WebAuthnAssertion'
                 backupCode:
                     type: string
+        VlanNetwork:
+            type: object
+            properties:
+                device_id:
+                    type: string
+                vlan_id:
+                    type: integer
+                    format: int32
         WebAuthnAssertion:
             type: object
             properties:
@@ -15242,6 +16549,8 @@ tags:
       description: 套餐配额管理服务
     - name: PlanService
       description: 套餐管理服务
+    - name: PlatformNetworkService
+      description: Platform user JWT, current action permission and Casbin authorization required.
     - name: PolicyEvaluationLogService
       description: 策略评估日志服务
     - name: PositionService

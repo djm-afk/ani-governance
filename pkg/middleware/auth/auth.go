@@ -82,7 +82,7 @@ func Server(opts ...Option) middleware.Middleware {
 				tokenPayload = payload
 				ctx = NewContext(ctx, tokenPayload)
 				principal, _ = PrincipalFromContext(ctx)
-				if isHTTP && IsNetworkOperation(tr.Operation()) {
+				if isHTTP && (IsNetworkOperation(tr.Operation()) || IsPlatformNetworkOperation(tr.Operation())) {
 					if err := ValidateNetworkRequest(htr.Request(), tr.Operation()); err != nil {
 						return nil, err
 					}

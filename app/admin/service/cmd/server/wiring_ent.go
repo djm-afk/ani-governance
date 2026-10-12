@@ -280,6 +280,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	var networkClient service.NetworkTenantClient
+	var platformNetworkClient service.NetworkPlatformClient
 	if networkConfig.Address != "" {
 		client, closeNetwork, err := data.NewNetworkClient(networkConfig)
 		if err != nil {
@@ -288,8 +289,10 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		}
 		cleanups = append(cleanups, closeNetwork)
 		networkClient = client
+		platformNetworkClient = client
 	}
 	networkService := service.NewNetworkService(networkClient, tenantRepo)
+	platformNetworkService := service.NewPlatformNetworkService(platformNetworkClient)
 	imageConfig, err := data.ImageConfigFromEnv()
 	if err != nil {
 		rollback()
@@ -367,6 +370,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		accessKeyService,
 		configService,
 		networkService,
+		platformNetworkService,
 		acceleratorService,
 		imageService,
 		modeldevService,

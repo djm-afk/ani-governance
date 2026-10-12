@@ -1,0 +1,117 @@
+syntax = "proto3";
+package admin.service.v1;
+import "google/api/annotations.proto";
+import "gnostic/openapi/v3/annotations.proto";
+import "catalog/service/v1/platform_network.proto";
+
+// Platform user JWT, current action permission and Casbin authorization required.
+service PlatformNetworkService {
+  rpc ListNodeInterfaces(catalog.service.v1.ListNodeInterfacesRequest) returns (catalog.service.v1.ListNodeInterfacesResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/node-interfaces" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "ListNodeInterfaces" description: "Requires platform user JWT and network:platform:device:list. Tenant identities and API keys are denied." };
+  }
+  rpc AdoptNetworkDevice(catalog.service.v1.AdoptNetworkDeviceRequest) returns (catalog.service.v1.AdoptNetworkDeviceResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/devices" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "AdoptNetworkDevice" description: "Requires platform user JWT and network:platform:device:adopt. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc GetNetworkDevice(catalog.service.v1.GetNetworkDeviceRequest) returns (catalog.service.v1.GetNetworkDeviceResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/devices/{device_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetNetworkDevice" description: "Requires platform user JWT and network:platform:device:get. Tenant identities and API keys are denied." };
+  }
+  rpc CreateVlanNetwork(catalog.service.v1.CreateVlanNetworkRequest) returns (catalog.service.v1.CreateVlanNetworkResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/vlan-networks" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "CreateVlanNetwork" description: "Requires platform user JWT and network:platform:vlan-network:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc GetVlanNetwork(catalog.service.v1.GetVlanNetworkRequest) returns (catalog.service.v1.GetVlanNetworkResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/vlan-networks/{vlan_network_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetVlanNetwork" description: "Requires platform user JWT and network:platform:vlan-network:get. Tenant identities and API keys are denied." };
+  }
+  rpc ListVlanNetworks(catalog.service.v1.ListVlanNetworksRequest) returns (catalog.service.v1.ListVlanNetworksResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/vlan-networks" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "ListVlanNetworks" description: "Requires platform user JWT and network:platform:vlan-network:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied." };
+  }
+  rpc DeleteVlanNetwork(catalog.service.v1.DeleteVlanNetworkRequest) returns (catalog.service.v1.DeleteVlanNetworkResponse) {
+    option (google.api.http) = { delete: "/api/v1/admin/networks/vlan-networks/{vlan_network_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "DeleteVlanNetwork" description: "Requires platform user JWT and network:platform:vlan-network:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc CreateEgressGateway(catalog.service.v1.CreateEgressGatewayRequest) returns (catalog.service.v1.CreateEgressGatewayResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/egress-gateways" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "CreateEgressGateway" description: "Requires platform user JWT and network:platform:egress-gateway:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc GetEgressGateway(catalog.service.v1.GetEgressGatewayRequest) returns (catalog.service.v1.GetEgressGatewayResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/egress-gateways/{gateway_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetEgressGateway" description: "Requires platform user JWT and network:platform:egress-gateway:get. Tenant identities and API keys are denied." };
+  }
+  rpc ListEgressGateways(catalog.service.v1.ListEgressGatewaysRequest) returns (catalog.service.v1.ListEgressGatewaysResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/egress-gateways" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "ListEgressGateways" description: "Requires platform user JWT and network:platform:egress-gateway:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied." };
+  }
+  rpc DeleteEgressGateway(catalog.service.v1.DeleteEgressGatewayRequest) returns (catalog.service.v1.DeleteEgressGatewayResponse) {
+    option (google.api.http) = { delete: "/api/v1/admin/networks/egress-gateways/{gateway_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "DeleteEgressGateway" description: "Requires platform user JWT and network:platform:egress-gateway:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc CreatePublicAddressPool(catalog.service.v1.CreatePublicAddressPoolRequest) returns (catalog.service.v1.CreatePublicAddressPoolResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/public-address-pools" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "CreatePublicAddressPool" description: "Requires platform user JWT and network:platform:public-pool:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc GetPublicAddressPool(catalog.service.v1.GetPublicAddressPoolRequest) returns (catalog.service.v1.GetPublicAddressPoolResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/public-address-pools/{pool_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetPublicAddressPool" description: "Requires platform user JWT and network:platform:public-pool:get. Tenant identities and API keys are denied." };
+  }
+  rpc ListPublicAddressPools(catalog.service.v1.ListPublicAddressPoolsRequest) returns (catalog.service.v1.ListPublicAddressPoolsResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/public-address-pools" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "ListPublicAddressPools" description: "Requires platform user JWT and network:platform:public-pool:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied." };
+  }
+  rpc DeletePublicAddressPool(catalog.service.v1.DeletePublicAddressPoolRequest) returns (catalog.service.v1.DeletePublicAddressPoolResponse) {
+    option (google.api.http) = { delete: "/api/v1/admin/networks/public-address-pools/{pool_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "DeletePublicAddressPool" description: "Requires platform user JWT and network:platform:public-pool:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc RecordPublicPoolVerification(catalog.service.v1.RecordPublicPoolVerificationRequest) returns (catalog.service.v1.RecordPublicPoolVerificationResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/public-address-pools/{pool_id}/verification" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "RecordPublicPoolVerification" description: "Requires platform user JWT and network:platform:public-pool:verify. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc SetPublicPoolAllocationEnabled(catalog.service.v1.SetPublicPoolAllocationEnabledRequest) returns (catalog.service.v1.SetPublicPoolAllocationEnabledResponse) {
+    option (google.api.http) = { patch: "/api/v1/admin/networks/public-address-pools/{pool_id}/allocation" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "SetPublicPoolAllocationEnabled" description: "Requires platform user JWT and network:platform:public-pool:allocate. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc SetDefaultPublicPool(catalog.service.v1.SetDefaultPublicPoolRequest) returns (catalog.service.v1.SetDefaultPublicPoolResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/public-address-pools/{pool_id}/default" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "SetDefaultPublicPool" description: "Requires platform user JWT and network:platform:public-pool:default. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc CreateIntranetAddressPool(catalog.service.v1.CreateIntranetAddressPoolRequest) returns (catalog.service.v1.CreateIntranetAddressPoolResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/intranet-address-pools" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "CreateIntranetAddressPool" description: "Requires platform user JWT and network:platform:intranet-pool:create. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc GetIntranetAddressPool(catalog.service.v1.GetIntranetAddressPoolRequest) returns (catalog.service.v1.GetIntranetAddressPoolResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/intranet-address-pools/{pool_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetIntranetAddressPool" description: "Requires platform user JWT and network:platform:intranet-pool:get. Tenant identities and API keys are denied." };
+  }
+  rpc ListIntranetAddressPools(catalog.service.v1.ListIntranetAddressPoolsRequest) returns (catalog.service.v1.ListIntranetAddressPoolsResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/intranet-address-pools" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "ListIntranetAddressPools" description: "Requires platform user JWT and network:platform:intranet-pool:list. List uses limit/cursor and items/next_cursor/total; total excludes the page window. Tenant identities and API keys are denied." };
+  }
+  rpc DeleteIntranetAddressPool(catalog.service.v1.DeleteIntranetAddressPoolRequest) returns (catalog.service.v1.DeleteIntranetAddressPoolResponse) {
+    option (google.api.http) = { delete: "/api/v1/admin/networks/intranet-address-pools/{pool_id}" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "DeleteIntranetAddressPool" description: "Requires platform user JWT and network:platform:intranet-pool:delete. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc RecordIntranetPoolVerification(catalog.service.v1.RecordIntranetPoolVerificationRequest) returns (catalog.service.v1.RecordIntranetPoolVerificationResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/intranet-address-pools/{pool_id}/verification" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "RecordIntranetPoolVerification" description: "Requires platform user JWT and network:platform:intranet-pool:verify. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc SetIntranetPoolAllocationEnabled(catalog.service.v1.SetIntranetPoolAllocationEnabledRequest) returns (catalog.service.v1.SetIntranetPoolAllocationEnabledResponse) {
+    option (google.api.http) = { patch: "/api/v1/admin/networks/intranet-address-pools/{pool_id}/allocation" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "SetIntranetPoolAllocationEnabled" description: "Requires platform user JWT and network:platform:intranet-pool:allocate. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc SetDefaultIntranetPool(catalog.service.v1.SetDefaultIntranetPoolRequest) returns (catalog.service.v1.SetDefaultIntranetPoolResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/networks/intranet-address-pools/{pool_id}/default" body: "*" response_body: "resource" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "SetDefaultIntranetPool" description: "Requires platform user JWT and network:platform:intranet-pool:default. Write acceptance is asynchronous; inspect resource state and last_operation_id. Tenant identities and API keys are denied." };
+  }
+  rpc GetPlatformNetworkCapabilities(catalog.service.v1.GetPlatformNetworkCapabilitiesRequest) returns (catalog.service.v1.GetPlatformNetworkCapabilitiesResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/capabilities" response_body: "capabilities" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetPlatformNetworkCapabilities" description: "Requires platform user JWT and network:platform:capability:get. Tenant identities and API keys are denied." };
+  }
+  rpc GetPlatformOperation(catalog.service.v1.GetPlatformOperationRequest) returns (catalog.service.v1.GetPlatformOperationResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/operations/{operation_id}" response_body: "operation" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetPlatformOperation" description: "Requires platform user JWT and network:platform:operation:get. Tenant identities and API keys are denied." };
+  }
+}

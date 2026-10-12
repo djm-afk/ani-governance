@@ -22,6 +22,7 @@ type NetworkClientConfig struct {
 	Timeout                            time.Duration
 }
 type NetworkClient struct {
+	platform      networkv1.PlatformNetworkServiceClient
 	client        networkv1.NetworkServiceClient
 	egress        networkv1.TenantEgressServiceClient
 	loadBalancers networkv1.TenantLoadBalancerServiceClient
@@ -42,7 +43,7 @@ func NewNetworkClient(c NetworkClientConfig) (*NetworkClient, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return &NetworkClient{client: networkv1.NewNetworkServiceClient(conn), egress: networkv1.NewTenantEgressServiceClient(conn), loadBalancers: networkv1.NewTenantLoadBalancerServiceClient(conn), timeout: c.Timeout}, func() { _ = conn.Close() }, nil
+	return &NetworkClient{platform: networkv1.NewPlatformNetworkServiceClient(conn), client: networkv1.NewNetworkServiceClient(conn), egress: networkv1.NewTenantEgressServiceClient(conn), loadBalancers: networkv1.NewTenantLoadBalancerServiceClient(conn), timeout: c.Timeout}, func() { _ = conn.Close() }, nil
 }
 
 func NetworkConfigFromEnv() (NetworkClientConfig, error) {
