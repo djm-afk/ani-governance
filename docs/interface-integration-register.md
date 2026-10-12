@@ -25,7 +25,7 @@
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
 | 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 正式 Accelerator 目录与 Inference 创建/删除 BFF、账本和受控 owner 装配已接入；旧本地模拟入口已退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
-| ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证，目标集群业务验收仍需独立证明 | CPU-P01，进行中 |
+| ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08；服务间调用登记 S2S-MODELDEV-CPUP01-01 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证；Gov→ModelDev 传输/身份/白名单三个差异收敛已实施并在 ani-system 真实环境完成正/负向验证 | CPU-P01，进行中 |
 
 ## 风格改动批次
 
@@ -1288,6 +1288,83 @@ worker 仅在显式 ModelDev mTLS client 已配置时装配；构造不访问网
 完整 uint64 revision 同时验证并以私有版本化规范字节保存。此候选仍待固定版本
 生成、迁移、模块与真实 owner 软件集成验证，不代表目标集群运行或整卡完成。
 
+## 服务间调用登记：Governance → ModelDev（CPU-P01，S2S-MODELDEV-CPUP01-01）
+
+本段按 [服务间调用规则](contracts/service-to-service-calls.md) 第 1 节登记 Governance → ModelDev 的内部业务 RPC。登记源码合同现状、已确认的待迁移项与 2026-10-12 在 `ani-system` 的真实环境验证结果。已有功能条目 MODELDEV-01～08 不变，本段只补传输、身份、授权和上下文规则。
+
+调用关系（§1 必填项）：
+
+| 项目 | 登记值 | 源码位置 |
+| --- | --- | --- |
+| 调用服务身份 | 客户端唯一精确 DNS SAN `ani-governance`（无 URI/IP/email） | `data/modeldev_client.go` |
+| 接收服务身份 | 服务器字面 DNS SAN `ani-modeldev-service`（固定 `ServerName` 校验） | `data/modeldev_client.go` |
+| 传输 | TLS 1.3、双向证书、`RequireAndVerifyClientCert`，无明文 fallback | 双方 |
+| 允许清单 | 接收方按精确 `FullMethod` 白名单，未知方法默认 `PermissionDenied`，流式一律拒绝 | `internal/server/governance_command.go` |
+| 用户委托 | `ResolveAdmission`（解析）；Query/Management/Operations 各方法（新签发 mTLS 委派，附 `x-ani-authorized-method` 与 `x-ani-data-scope=tenant-all`） | 见下 RPC 列表 |
+| 后台事实 | `AcceptExecution`、`ApplyCloseIntent`（持久投递事实，不伪造用户 Principal） | `data/modeldev_dispatch_client.go`、`data/modeldev_close_client.go` |
+| 允许业务范围 | CPU-P01 受管入口 | 本组 |
+| 租户来源 | Governance 已持久化的内部租户主键 → 业务租户 UUID 映射（ResourceTenantResolver），不使用公网 tenant | MODELDEV-01 |
+| 幂等键 | `operation_id`（受理/投递）；关闭意图 `intent_generation` | — |
+| 超时 | `ANI_MODELDEV_TIMEOUT`（未设置时默认 3s） | `data/modeldev_client_config.go` |
+| 出站元数据 | 每次重建 `x-ani-tenant-id`/`x-ani-actor`/`x-ani-request-id`；查询另加 `x-ani-authorized-method`、`x-ani-data-scope`；不透传 Authorization/AK-SK/身份头 | 各 client |
+| 证书轮换 | 客户端与服务器证书仅在启动期读取一次，续期后必须重启 Pod | — |
+
+RPC 方法清单（接收方白名单，精确 FullMethod）：
+
+- `ModelDevAdmissionService/ResolveAdmission`
+- `ModelDevCommandService/AcceptExecution`、`ModelDevCommandService/ApplyCloseIntent`
+- `ModelDevQueryService/GetExecution`、`ListExecutions`、`GetExecutionLogs`、`ListExecutionArtifacts`、`AuthorizeArtifactDownload`、`ListPresets`、`GetInputVersion`、`ListInputVersions`
+- `ModelDevManagementService/ImportRelease`、`ValidateRelease`、`ImportCSV`
+- `ModelDevOperationsService/InspectExecution`、`ReconcileExecution`、`PlanExecutionCleanup`、`ApplyExecutionCleanup`
+
+配置依赖定性（本轮评审确认）：Governance 对 ModelDev 为**可选依赖**。`ANI_MODELDEV_*` 全空时客户端置 nil，仅禁用远程解析/投递并返回不可用，不启动失败；命令 `modeldev-pause` 不依赖 ModelDev 在线。
+
+与 [服务间调用规则](contracts/service-to-service-calls.md) 的差异收敛（三个差异均已实施并部署，源码改动 + 真实环境验证见下节）：
+
+| 差异 | 收敛实现 |
+| --- | --- |
+| 客户端未显式拒绝含通配符的服务器证书 | `data/modeldev_client.go` 的 `VerifyConnection` 遍历 `DNSNames`，遇 `*` 即失败，再判定字面 `ani-modeldev-service`；客户端/服务器 DNS 名收敛为包内登记常量 |
+| 接收方未在启动期校验自身命令服务器证书 | `internal/server/governance_command.go` 新增 `ValidCommandServerCertificate`，要求证书含字面 `ani-modeldev-service` SAN 且 EKU 含 ServerAuth、拒绝通配符；`cmd/ani-modeldev-service/command.go` 装配时校验，不通过即启动失败 |
+| `bc.Command == nil` 走无 TLS grpc | `cmd/ani-modeldev-service/app.go` 保留构造该 server，但不加入 `kratos.Server(...)`，shell 模式不再监听明文业务端口 |
+
+对应测试：Gov 侧 `data/modeldev_client_response_test.go` 增加「literal plus wildcard DNS」负向；ModelDev 侧新增 `internal/server/command_certificate_test.go` 覆盖注册身份、附加 SAN、通配符、未注册身份、缺 ServerAuth、过期六类；`internal/testsupport/commandtls` 夹具 SAN 对齐为生产字面 `ani-modeldev-service`。
+
+身份命名约定：客户端 DNS 名固定 `ani-governance`，服务器 DNS 名固定 `ani-modeldev-service`，与部署侧 `GOVERNANCE_DNS_NAME` 取值登记一致。本链路使用 DNS SAN，不改为 URI SAN；已发布字段（`ResourceTenantId`/`AdmittedActorId`/`RequestedActorId`、`ErrorDetail.CorrelationId`、状态枚举）保持不变。
+
+### 2026-10-12 真实环境验证（ani-system @ ani-01）
+
+以含上述三个差异收敛的新镜像部署到 `ani-system` 后验证。两个服务新镜像 tag 均为 `20261012-s2s-modeldev`：
+
+| 服务 | 部署镜像 | 运行标识 |
+| --- | --- | --- |
+| ani-governance | `172.16.101.10:5000/ani/ani-governance:20261012-s2s-modeldev` | `service.version=1.0.1-s2s-modeldev`，Pod 1/1，HTTP 监听 7788 |
+| ani-modeldev | `172.16.101.10:5000/ani/ani-modeldev-service:20261012-s2s-modeldev` | `service.version=s2s-modeldev`，Pod 1/1，readyz/healthz 200 |
+
+**正向（真实业务链路，实走 mTLS）**：以租户 A 重新登录取得当前 token，经 BFF 触发三条真实 Gov→ModelDev 调用，全部 HTTP 200 且返回真实业务数据：
+
+| 调用 | 结果 |
+| --- | --- |
+| `GET /admin/v1/modeldev/presets` | 200，返回真实 preset（`active_release_id`、`binding_generation=1`、参数规则） |
+| `GET /admin/v1/modeldev/executions?page_size=2` | 200，返回真实执行（`compute_state`/`delivery_state`/`close_state`） |
+| `GET /admin/v1/modeldev/input-versions?state=READY` | 200，返回真实输入版本（row_count=1024、feature_count=16） |
+
+**负向（新校验确实生效）**：
+
+| 用例 | 手段 | 结果 |
+| --- | --- | --- |
+| 接收方拒绝非受信 CA 的客户端证书 | 自建 rogue-CA 签发的同名 `ani-governance` 证书（SAN 相同、CA 不同）直连 ModelDev 9000 | 被拒：`tlsv1 alert unknown ca (alert 48)` |
+| 正向对照 | 真实 Gov 客户端证书直连 9000 | 通过：握手成功、无 alert |
+| 协议版本下限 | 强制 TLS1.2 直连 9000 | 被拒：`tlsv1 alert protocol version (alert 70)` |
+| 接收方服务器证书身份 | 检查 `modeldev-runtime-private` 证书 | `SAN=DNS:ani-modeldev-service`、EKU=ServerAuth，字面且无通配符 |
+| M-1 启动期服务器证书校验 | ModelDev 新镜像启动 | 通过（SAN/EKU 不符将 fail-fast） |
+| G-1 客户端拒绝通配符服务器证书 | `data/modeldev_client_response_test.go` 的 `literal_plus_wildcard_DNS` | PASS（Gov 侧遇 `*.ani.internal` 即拒） |
+
+**边界（如实标注）**：
+
+- 上述正向结论在本次会话当日有效证书（`notAfter=Oct 12 06:55:28 2026 GMT`）有效期内取得；会话结束时该证书**尚未重签**，证书到期或重启后须重做正向验证。证书轮换需重启 Pod，见上表"证书轮换"行。
+- 负向验证在节点侧用 `openssl s_client` 直连 ModelDev 9000 完成，未改动任何集群对象；rogue-CA 材料为一次性临时生成，测试后已清理。
+- 本次未验证 GPU 退额、Stream 方法授权、多租户 dispatch 等相关但不在本链路范围的行为。
+
 ## LIST-TOTAL-01：Resource 列表总数（2026-10-08）
 
 本次增量保留既有路由、鉴权和 cursor/limit，给 `GET /api/v1/networks/vpcs`、`GET /api/v1/networks/eips`、`GET /api/v1/images/registrations` 的响应增加 `total`（Proto int64，HTTP JSON 十进制字符串）。总数是受信租户/scope 和相同筛选条件下的匹配数，不是本页 items 长度，且不应用 cursor/limit；空列表返回 `"0"`。本批不改变其他领域的分页协议。
@@ -1459,3 +1536,15 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 
 本次 range 合同的 Resource 依赖为 `v0.0.0-20261012021348-7c072b343e6a`，对应已推送的真实提交 `7c072b343e6aedb665ae10d981138b11af476eaa`。此前 b258907 的未发布限制也已在 2026-10-11 推送时解除；本次使用正常公开 Go 模块下载和校验，不保留个人路径 replace。
 关闭 `go.work` 后，`go build -mod=readonly -trimpath ./app/admin/service/cmd/server` 在 Fedora 通过，二进制模块信息确认上述 Resource 版本与公开校验和。
+
+
+<a id="gov-platform-network-01"></a>
+## GOV-PLATFORM-NETWORK-01：平台网络 BFF
+
+2026-10-12 用户要求接入 Public/Intranet 地址池、VLAN 网络与配套接口，并参考 VPC 核对分页、响应。本批新增 27 个平台用户 JWT 接口；同轮按用户要求将 HTTP 前缀统一为 `/api/v1/admin/networks`。入口、权限、请求、内部委托及分页的唯一合同见 [平台网络接入](contracts/platform-network.md)；完整路由清单引用平台策略和 Proto，不在登记复制。角色与生产目录授权不自动改变，部署/真实数据面验收独立记录。
+
+实现包含 Gov HTTP/BFF/客户端/权限目录步骤，以及 Resource 平台范围校验和注册。Fedora Go 1.26.9 的完整 make api、受影响包定向测试/vet、生产入口构建及 platform_network 真实 HTTP/JWT/Casbin/mTLS/PostgreSQL/worker 场景通过，覆盖 27 平台方法。KC/Envoy/NodeFacts/owner 仅在外部边界受控；租户 JWT、AK 与 VPC 等定向流程也通过。共享夹具整批 Network 回归仍失败：LB 更新停留 PROVIDER_NOT_READY，后续占用/清理失败保留；原始两仓基线同序列也有子网起始事实和后段 AK DEPENDENCY_UNAVAILABLE 失败，但没有复现相同 LB 更新失败，不能归并成同一原因。子网用例通过外部 status API 建立未知起点，原断言保留。未执行真实物理网络/公网转发、业务库目录授权或部署；受控验收快照未提交或推送，用户随后授权发布两仓 main，最终版本以 Git 历史和远端引用为准。实际命令/日志/快照保留在仓库外任务工件目录 `/home/chabking/workspace/platform-network-gov-artifacts-20261012-01a124d1`，不由本登记称整仓已绿。
+
+同轮前缀调整复验 **pass**：Fedora 完整 `make api`，仅生成平台 HTTP/Proto 路由描述及 OpenAPI 路径变更；27 路由的 Proto、生成 HTTP、鉴权策略与权限 SQL 一致，OpenAPI 语义差异只有前缀。`go test -mod=readonly -count=1 -run "TestPlatformNetwork|TestNetwork" ./pkg/middleware/auth` 与 `scripts/network-joint-integration -run "^TestNetworkJointHTTP$/^platform_network$"` 均退出 0，新前缀的 27 平台方法及现有负向、分页和响应检查通过，任务自有 PG/Redis 已清理。沿用同一 Resource 夹具二进制与外部边界替身，不扩大为共享整批 Network 回归或真实数据面通过；前述 LB 未解失败保留。本轮命令、源码哈希、生成和复验日志在既有工件目录的 `gov/admin-prefix/`；该复验快照未提交、推送或部署，后续 main 发布不代表部署。
+
+main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依赖固定为 `v0.0.0-20261012083359-e7b5a8a34359`。Fedora 新模块缓存已验证下载内容、模块/go.mod 校验和及 `Origin.Hash` 与发布提交一致，完整 `make api` 复验无生成差异。发布时保留最新 Governance main 的 ModelDev 和鉴权计划更新；源码发布不改变共享部署或此前 LB 回归未解结论。提交前 Resource 完整 `make verify` 已通过，前缀和平台方法的证据沿用上述入口；发布补充日志保留在同一工件目录的 `publication/`。

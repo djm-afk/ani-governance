@@ -240,6 +240,7 @@ func TestModelDevClientRequiresFixedTLSIdentityAndMaterials(t *testing.T) {
 		valid bool
 	}{
 		{"literal plus additional DNS", []string{"ani-modeldev-service", "extra.test"}, true},
+		{"literal plus wildcard DNS", []string{"ani-modeldev-service", "*.ani.internal"}, false},
 		{"different server DNS", []string{"other-modeldev.test"}, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {

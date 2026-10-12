@@ -158,6 +158,24 @@ func TestNetworkJointHTTP(t *testing.T) {
 			require.NoError(t, err)
 		}
 	}
+	platformSeed, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "sql", "data", "20261012_platform_network_permissions.sql"))
+	require.NoError(t, err)
+	for i := 0; i < 2; i++ {
+		_, err = fixtureDB.ExecContext(ctx, string(platformSeed))
+		require.NoError(t, err)
+	}
+	platformRole, err := client.Role.Create().SetTenantID(0).SetCode("platform:network-fixture").SetName("platform-network-fixture").SetType(role.TypeSystem).SetStatus(role.StatusOn).Save(sys)
+	require.NoError(t, err)
+	deniedPlatformRole, err := client.Role.Create().SetTenantID(0).SetCode("platform:network-denied").SetName("platform-network-denied").SetType(role.TypeSystem).SetStatus(role.StatusOn).Save(sys)
+	require.NoError(t, err)
+	platformPermissions := []string{}
+	for _, op := range auth.PlatformNetworkOperations {
+		perm, err := client.Permission.Query().Where(permission.CodeEQ(op.Permission)).Only(sys)
+		require.NoError(t, err)
+		_, err = client.RolePermission.Create().SetTenantID(0).SetRoleID(platformRole.ID).SetPermissionID(perm.ID).SetEffect(rolepermission.EffectAllow).SetStatus(rolepermission.StatusOn).Save(sys)
+		require.NoError(t, err)
+		platformPermissions = append(platformPermissions, op.Permission)
+	}
 	require.NoError(t, policy.ResetPolicies(ctx))
 	token := func(r *ent.Role, uid uint32) string {
 		v, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: uid, TenantId: r.TenantID, Roles: []string{*r.Code}})
@@ -165,6 +183,10 @@ func TestNetworkJointHTTP(t *testing.T) {
 		return v
 	}
 	readerToken, publisherToken, otherToken := token(reader, 1), token(publisher, 2), token(other, 3)
+	platformToken, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: 9, TenantId: platformRole.TenantID, Roles: []string{*platformRole.Code}, Permissions: platformPermissions})
+	require.NoError(t, err)
+	deniedPlatformToken, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: 10, TenantId: deniedPlatformRole.TenantID, Roles: []string{*deniedPlatformRole.Code}, Permissions: platformPermissions})
+	require.NoError(t, err)
 	cipher, err := appcrypto.NewAccessKeyCipher(hex.EncodeToString(randomKey))
 	require.NoError(t, err)
 	keys := data.NewAccessKeyRepo(bctx, ec, cipher)
@@ -183,6 +205,7 @@ func TestNetworkJointHTTP(t *testing.T) {
 	// reads at the fixture boundary before the Network client's own deadline.
 	server := khttp.NewServer(khttp.Timeout(10*time.Second), khttp.Filter(auth.NetworkHTTPFilter), khttp.Middleware(auth.CredentialHeaders(), auth.Server(auth.WithAccessTokenChecker(checker), auth.WithSigningKeyStore(keys), auth.WithTenantAccessChecker(data.NewTenantAccessCheckerImpl(bctx, ec)), auth.WithInjectMetadata(false)), authzMiddleware.Server(policy.Engine())))
 	admin.RegisterNetworkServiceHTTPServer(server, NewNetworkService(peer.Client, data.NewTenantRepo(bctx, ec)))
+	admin.RegisterPlatformNetworkServiceHTTPServer(server, NewPlatformNetworkService(peer.Client))
 	host := httptest.NewServer(server)
 	t.Cleanup(host.Close)
 	type identity struct {
@@ -344,14 +367,16 @@ func TestNetworkJointHTTP(t *testing.T) {
 	}
 	poll := func(t *testing.T, id identity, path string, ready func(map[string]any) bool) map[string]any {
 		t.Helper()
+		var last map[string]any
 		for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); {
 			out := get(t, id, path)
+			last = out
 			if ready(out) {
 				return out
 			}
 			time.Sleep(40 * time.Millisecond)
 		}
-		t.Fatalf("asynchronous Resource worker must converge: %s", path)
+		t.Fatalf("asynchronous Resource worker must converge: %s state=%v reason=%v desired=%v applied=%v", path, last["state"], last["reason"], last["desired_version"], last["applied_version"])
 		return nil
 	}
 	state := func(want string) func(map[string]any) bool {
@@ -370,10 +395,180 @@ func TestNetworkJointHTTP(t *testing.T) {
 	}
 	beforeSideEffects := func(t *testing.T) int {
 		var count int
-		require.NoError(t, peer.DB.QueryRowContext(ctx, "SELECT count(*) FROM network_operations").Scan(&count))
+		require.NoError(t, peer.DB.QueryRowContext(ctx, "SELECT (SELECT count(*) FROM network_operations)+(SELECT count(*) FROM network_platform_operations)").Scan(&count))
 		return count
 	}
 	const base = "/api/v1/networks"
+	t.Run("platform_network", func(t *testing.T) {
+		const platformBase = "/api/v1/admin/networks"
+		caller := identity{bearer: platformToken}
+		t.Run("denials", func(t *testing.T) {
+			before := beforeSideEffects(t)
+			for _, id := range []identity{jwtIdentity, akIdentity, {bearer: readerToken}, {bearer: otherToken}, {bearer: deniedPlatformToken}} {
+				request(t, id, "GET", platformBase+"/public-address-pools", "", nil, 403)
+			}
+			request(t, identity{}, "GET", platformBase+"/capabilities", "", nil, 401)
+			for _, query := range []string{"limit=0", "limit=101", "limit=01", "page=1", "cursor=x&offset=1", "limit=1&limit=2", "state=unknown", "tenant_id=0"} {
+				request(t, caller, "GET", platformBase+"/public-address-pools?"+query, "", nil, 400)
+			}
+			request(t, caller, "GET", platformBase+"/capabilities", "", func(r *http.Request) { r.Header.Set("X-Ani-Scope", "platform") }, 400)
+			request(t, caller, "POST", platformBase+"/egress-gateways", `{"name":"flat","idempotency_key":"flat"}`, nil, 400)
+			request(t, caller, "POST", platformBase+"/egress-gateways", `{"data":{"name":"forged","tenant_id":0}}`, nil, 400)
+			require.Equal(t, before, beforeSideEffects(t))
+		})
+		t.Run("gateway_vertical_flow", func(t *testing.T) {
+			body := `{"data":{"name":"gov-platform-gateway","description":"platform HTTP fixture","idempotency_key":"gov-platform-gateway"}}`
+			created := request(t, caller, "POST", platformBase+"/egress-gateways", body, nil, 200)
+			require.NotContains(t, created, "resource")
+			gid := created["id"].(string)
+			require.Regexp(t, `^egw_[0-9a-f]{32}$`, gid)
+			defer func() {
+				request(t, caller, "DELETE", platformBase+"/egress-gateways/"+gid, "", nil, 200)
+				poll(t, caller, platformBase+"/egress-gateways/"+gid, state("deleted"))
+			}()
+			replay := request(t, caller, "POST", platformBase+"/egress-gateways", body, nil, 200)
+			require.Equal(t, gid, replay["id"])
+			var savedActor, savedState string
+			require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT r.state,h.actor_ref FROM network_platform_resources r JOIN network_platform_history h ON h.operation_id=r.last_operation_id WHERE r.resource_id=$1 AND h.event='create_egress_gateway_accepted'`, gid).Scan(&savedState, &savedActor))
+			require.Equal(t, "governance:user:9", savedActor)
+			require.Contains(t, []string{"provisioning", "available"}, savedState)
+			poll(t, caller, platformBase+"/egress-gateways/"+gid, state("available"))
+			operationID := created["last_operation_id"].(string)
+			op := get(t, caller, platformBase+"/operations/"+operationID)
+			require.Equal(t, operationID, op["id"])
+			require.NotContains(t, op, "operation")
+			page := get(t, caller, platformBase+"/egress-gateways?limit=1")
+			total := page["total"].(string)
+			require.NotEqual(t, "1", total)
+			cursor := page["next_cursor"].(string)
+			require.NotEmpty(t, cursor)
+			next := get(t, caller, platformBase+"/egress-gateways?limit=1&cursor="+url.QueryEscape(cursor))
+			require.Equal(t, total, next["total"])
+			request(t, caller, "GET", platformBase+"/egress-gateways?limit=1&name=changed&cursor="+url.QueryEscape(cursor), "", nil, 400)
+			request(t, caller, "GET", platformBase+"/vlan-networks?limit=1&cursor="+url.QueryEscape(cursor), "", nil, 400)
+			request(t, caller, "GET", platformBase+"/egress-gateways?limit=1&cursor="+url.QueryEscape(cursor+"x"), "", nil, 400)
+			empty := get(t, caller, platformBase+"/egress-gateways?name=not-present")
+			require.Equal(t, "0", empty["total"])
+			require.Empty(t, empty["items"])
+		})
+
+		t.Run("layer2_lifecycle", func(t *testing.T) {
+			inventory := get(t, caller, platformBase+"/node-interfaces")
+			var usable map[string]any
+			for _, raw := range inventory["items"].([]any) {
+				v := raw.(map[string]any)
+				if v["name"] == "phys0" {
+					usable = v
+				}
+			}
+			require.NotNil(t, usable)
+			require.Equal(t, true, usable["selectable"])
+			data := map[string]any{"name": "gov-physical-device", "device_name": "phys0", "inventory_fingerprint": inventory["inventory_fingerprint"], "idempotency_key": "gov-device"}
+			encoded, err := json.Marshal(map[string]any{"data": data})
+			require.NoError(t, err)
+			device := request(t, caller, "POST", platformBase+"/devices", string(encoded), nil, 200)
+			did := device["id"].(string)
+			require.Equal(t, did, request(t, caller, "POST", platformBase+"/devices", string(encoded), nil, 200)["id"])
+			poll(t, caller, platformBase+"/devices/"+did, state("available"))
+			data = map[string]any{"name": "gov-layer2", "device_id": did, "vlan_id": 100, "idempotency_key": "gov-layer2"}
+			encoded, err = json.Marshal(map[string]any{"data": data})
+			require.NoError(t, err)
+			vlan := request(t, caller, "POST", platformBase+"/vlan-networks", string(encoded), nil, 200)
+			vid := vlan["id"].(string)
+			defer func() {
+				request(t, caller, "DELETE", platformBase+"/vlan-networks/"+vid, "", nil, 200)
+				poll(t, caller, platformBase+"/vlan-networks/"+vid, state("deleted"))
+			}()
+			current := poll(t, caller, platformBase+"/vlan-networks/"+vid, state("available"))
+			require.Equal(t, did, current["vlan"].(map[string]any)["device_id"])
+			require.Equal(t, float64(100), current["vlan"].(map[string]any)["vlan_id"])
+			page := get(t, caller, platformBase+"/vlan-networks?limit=1")
+			require.Equal(t, "1", page["total"])
+			require.Empty(t, page["next_cursor"])
+			var state, actor string
+			require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT r.state,h.actor_ref FROM network_platform_resources r JOIN network_platform_history h ON h.operation_id=r.last_operation_id WHERE r.resource_id=$1 AND h.event='create_vlan_accepted'`, vid).Scan(&state, &actor))
+			require.Equal(t, "available", state)
+			require.Equal(t, "governance:user:9", actor)
+		})
+		t.Run("address_pool_lifecycles", func(t *testing.T) {
+			for _, scope := range []string{"public", "intranet"} {
+				t.Run(scope, func(t *testing.T) {
+					path := platformBase + "/" + scope + "-address-pools"
+					existing := get(t, caller, path)["items"].([]any)[0].(map[string]any)
+					oldID := existing["id"].(string)
+					configKey := "pool"
+					if scope == "intranet" {
+						configKey = "intranet_pool"
+					}
+					config := existing[configKey].(map[string]any)
+					data := map[string]any{"name": "gov-" + scope + "-pool", "idempotency_key": "gov-" + scope + "-pool"}
+					if scope == "public" {
+						data["mode"] = "overlay"
+						data["gateway_id"] = config["gateway_id"]
+						data["cidr"] = "198.51.100.0/24"
+						data["ovn_gateway_ip"] = "198.51.100.1"
+					} else {
+						data["cidr"] = "10.232.253.0/24"
+						data["ovn_gateway_ip"] = "10.232.253.1"
+						data["default_vpc_name"] = config["default_vpc_name"]
+						data["default_vpc_uid"] = config["default_vpc_uid"]
+						data["intranet_networks"] = config["intranet_networks"]
+					}
+					encoded, err := json.Marshal(map[string]any{"data": data})
+					require.NoError(t, err)
+					created := request(t, caller, "POST", path, string(encoded), nil, 200)
+					pid := created["id"].(string)
+					require.NotContains(t, created, "resource")
+					defer func() {
+						request(t, caller, "DELETE", path+"/"+pid, "", nil, 200)
+						poll(t, caller, path+"/"+pid, state("deleted"))
+					}()
+					require.Equal(t, pid, request(t, caller, "POST", path, string(encoded), nil, 200)["id"])
+					poll(t, caller, path+"/"+pid, state("available"))
+					var stored, storedScope string
+					require.NoError(t, peer.DB.QueryRowContext(ctx, "SELECT r.kind,p.scope FROM network_platform_resources r JOIN network_public_pools p ON p.resource_id=r.resource_id WHERE r.resource_id=$1", pid).Scan(&stored, &storedScope))
+					require.Equal(t, "public_pool", stored)
+					require.Equal(t, scope, storedScope)
+					first := get(t, caller, path+"?limit=1")
+					require.Equal(t, "2", first["total"])
+					next := get(t, caller, path+"?limit=1&cursor="+url.QueryEscape(first["next_cursor"].(string)))
+					require.Equal(t, "2", next["total"])
+					require.Empty(t, next["next_cursor"])
+					// Exercise the existing default pool's real evidence and commands, preserving
+					// the fixture's original default and allocation state for tenant regressions.
+					current := get(t, caller, path+"/"+oldID)
+					pool := current[configKey].(map[string]any)
+					verification := pool["verification"]
+					require.NotNil(t, verification)
+					command := func(action, verb string, extras map[string]any) map[string]any {
+						current := get(t, caller, path+"/"+oldID)
+						data := map[string]any{"expected_version": current["version"], "idempotency_key": "gov-" + scope + "-" + action}
+						for k, v := range extras {
+							data[k] = v
+						}
+						body, err := json.Marshal(map[string]any{"data": data})
+						require.NoError(t, err)
+						suffix := action
+						if strings.HasPrefix(action, "allocation-") {
+							suffix = "allocation"
+						}
+						out := request(t, caller, verb, path+"/"+oldID+"/"+suffix, string(body), nil, 200)
+						require.Equal(t, oldID, out["id"])
+						require.NotContains(t, out, "resource")
+						return out
+					}
+					command("verification", "POST", map[string]any{"verification": verification})
+					command("allocation-off", "PATCH", map[string]any{"enabled": false})
+					command("allocation-on", "PATCH", map[string]any{"enabled": true})
+					command("default", "POST", nil)
+				})
+			}
+		})
+		for _, path := range []string{"public-address-pools", "intranet-address-pools", "vlan-networks", "node-interfaces", "capabilities"} {
+			t.Run(path, func(t *testing.T) { get(t, caller, platformBase+"/"+path) })
+		}
+	})
+
 	t.Run("fixed_flavors", func(t *testing.T) {
 		for _, scenario := range []struct {
 			flavor string
@@ -544,9 +739,6 @@ func TestNetworkJointHTTP(t *testing.T) {
 	})
 	t.Run("subnet_ip_ranges", func(t *testing.T) {
 		path := base + "/subnets/" + peer.EntrySubnet
-		unknown := get(t, jwtIdentity, path)
-		_, present := unknown["available_ip_range"]
-		require.False(t, present)
 		var ns, name string
 		require.NoError(t, peer.DB.QueryRowContext(ctx, `SELECT namespace,provider_name FROM network_provider_bindings WHERE tenant_id=$1 AND subnet_id=$2 AND resource_kind='subnet'`, peer.TenantID, peer.EntrySubnet).Scan(&ns, &name))
 		externalPath := peer.ProviderURL + "/apis/networking.kubercloud.com/v1/namespaces/" + ns + "/subnets/" + name
@@ -576,6 +768,18 @@ func TestNetworkJointHTTP(t *testing.T) {
 			defer response.Body.Close()
 			require.Equal(t, 200, response.StatusCode)
 		}
+		// Earlier LB scenarios can populate the external controller's ranges.
+		// Establish this scenario's unknown facts through its existing status API;
+		// the production observer must persist that transition before assertions.
+		change(nil, nil)
+		unknown := poll(t, jwtIdentity, path, func(v map[string]any) bool {
+			_, available := v["available_ip_range"]
+			_, used := v["used_ip_range"]
+			return !available && !used
+		})
+		_, present := unknown["available_ip_range"]
+		require.False(t, present)
+
 		change("10.42.1.20-10.42.1.254", "10.42.1.2,10.42.1.4-10.42.1.19")
 		v := poll(t, jwtIdentity, path, func(v map[string]any) bool {
 			return v["available_ip_range"] == "10.42.1.20-10.42.1.254" && v["used_ip_range"] == "10.42.1.2,10.42.1.4-10.42.1.19"

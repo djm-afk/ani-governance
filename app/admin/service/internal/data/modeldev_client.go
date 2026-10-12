@@ -26,6 +26,15 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// Registered service identities for the Governance -> ModelDev internal RPC.
+// See docs/interface-integration-register.md (S2S-MODELDEV-CPUP01-01): the
+// client presents one exact DNS SAN and verifies the literal ModelDev server
+// DNS SAN. Neither is supplied by a public request.
+const (
+	modelDevClientDNSName = "ani-governance"
+	modelDevServerDNSName = "ani-modeldev-service"
+)
+
 // ModelDevClientConfig is explicit internal connection material. The server
 // identity is fixed to ani-modeldev-service, never supplied by a public request.
 type ModelDevClientConfig struct {
@@ -91,7 +100,7 @@ func modelDevClientTLS(config ModelDevClientConfig) (*tls.Config, error) {
 		return nil, unavailable
 	}
 	leaf, err := x509.ParseCertificate(certificate.Certificate[0])
-	if err != nil || len(leaf.DNSNames) != 1 || leaf.DNSNames[0] != "ani-governance" || len(leaf.IPAddresses) != 0 || len(leaf.URIs) != 0 || len(leaf.EmailAddresses) != 0 {
+	if err != nil || len(leaf.DNSNames) != 1 || leaf.DNSNames[0] != modelDevClientDNSName || len(leaf.IPAddresses) != 0 || len(leaf.URIs) != 0 || len(leaf.EmailAddresses) != 0 {
 		return nil, unavailable
 	}
 	now := time.Now()
@@ -108,19 +117,24 @@ func modelDevClientTLS(config ModelDevClientConfig) (*tls.Config, error) {
 		return nil, unavailable
 	}
 	return &tls.Config{
-		MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{certificate}, ServerName: "ani-modeldev-service",
+		MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{certificate}, ServerName: modelDevServerDNSName,
 		// Normal TLS verification checks the chain, usage, time and ServerName.
 		// Also require the literal service SAN rather than a wildcard identity.
 		VerifyConnection: func(state tls.ConnectionState) error {
 			if len(state.VerifiedChains) == 0 || len(state.PeerCertificates) == 0 {
 				return unavailable
 			}
+			matched := false
 			for _, name := range state.PeerCertificates[0].DNSNames {
-				if name == "ani-modeldev-service" {
-					return nil
+				if strings.Contains(name, "*") {
+					return unavailable
 				}
+				matched = matched || name == modelDevServerDNSName
 			}
-			return unavailable
+			if !matched {
+				return unavailable
+			}
+			return nil
 		},
 	}, nil
 }

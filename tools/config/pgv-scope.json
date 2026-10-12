@@ -5,7 +5,7 @@
   "proto_roots": [
     "api/protos"
   ],
-  "validator_count": 103,
+  "validator_count": 105,
   "source_proto_count": 103,
   "note": "Inventory only. Buf paths must be relative to its actual invocation directory. Do not regenerate this approved scope automatically from candidate outputs.",
   "entries": [
@@ -935,6 +935,24 @@
       "source_header_file": "api/gen/go/task/service/v1/task_error.pb.validate.go",
       "source_repo_path": "api/protos/task/service/v1/task_error.proto",
       "source_sha256": "ad89caaa0a1a431515a6df23828e95bf79b728b2508302a693b9360dd7a825d4"
+    },
+    {
+      "validator": "api/gen/go/admin/service/v1/i_platform_network.pb.validate.go",
+      "source_proto": "admin/service/v1/i_platform_network.proto",
+      "source_repo_path": "api/protos/admin/service/v1/i_platform_network.proto",
+      "validator_sha256": "c5adc1ce93df130c63ac338a9a82f8c5e0b94fec4f17000c2a31493b2d598a0f",
+      "validator_git_blob": "3371cbb996bf28ad2bff442ec7e057441762597f",
+      "source_header_file": "api/gen/go/admin/service/v1/i_platform_network.pb.validate.go",
+      "source_sha256": "7c540eaa7578e1b7aad410715b103f3c595b9c2e4622addb734a901d20b2093d"
+    },
+    {
+      "validator": "api/gen/go/catalog/service/v1/platform_network.pb.validate.go",
+      "source_proto": "catalog/service/v1/platform_network.proto",
+      "source_repo_path": "api/protos/catalog/service/v1/platform_network.proto",
+      "validator_sha256": "06030223634312cd224631ccfffbe957eaa479ec56bea050d77c801ed1f66a22",
+      "validator_git_blob": "7665f3c94135f89b5e98f39be49fafb3658e13e9",
+      "source_header_file": "api/gen/go/catalog/service/v1/platform_network.pb.validate.go",
+      "source_sha256": "e8e391a3eff675c622df964505a545f6918b9e884f5418c199e79499936cc5b4"
     }
   ]
 }
