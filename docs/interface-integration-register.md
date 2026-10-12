@@ -1473,18 +1473,26 @@ roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采�
 语义与边界：
 
 - 二者可同时出现，与 `role_id(s)`、`org_unit_id(s)`、`position_id(s)` 等关系条件**合并取并集后去重**（沿用既有关系过滤口径，`sliceutil.Unique`）。
-- 编码需在**明确租户**下解析：租户上下文直接使用当前租户；平台上下文必须在同一顶层条件中给出 `tenant_id`（顶层、`EQ`、纯数字且 >0），否则 400（fail-closed，防跨租户串号）。`tenant_id__ne` 等非 `EQ` 写法、非数字值一律 400。
+- 编码需在明确的租户范围下解析。**单轴模型**：租户上下文直接使用当前租户；平台上下文的范围由**顶层 `tenant_id` 条件是否存在**表达——
+  - 给出顶层、`EQ`、纯数字的 `tenant_id=v`（`0 ≤ v ≤ MaxUint32`）→ 解析范围 = `Tenant(v)`；`v=0` 表示**平台行范围**（只匹配 `tenant_id=0` 的平台侧角色，如 `platform:admin`），用于「平台管理员列表」。
+  - **缺省 `tenant_id`** → 解析范围 = **全部租户**（`AllTenants`），用于「跨租户管理员列表」（如一次查各租户的 `tenant:manager`）。**这是本批的行为变更**：原「平台 + `role_code` 缺 `tenant_id`」为 400，现改为 200 跨租户。
+  - `tenant_id__ne` 等非 `EQ` 写法、非数字值一律 400。
+- ⚠️ **同名角色提示**：`role.code` 仅在 `(tenant_id, code)` 唯一，某租户可自建同名 `platform:admin`。要「只查平台行」必须**显式** `tenant_id=0`；若写 `{"role_code":"platform:admin"}`（不带 `tenant_id`），会走 `AllTenants`，把各租户同名角色一并匹配。前端须按语义选择写法。
 - **不可退化**：条件出现但编码不存在、`role_codes__in` 为显式空数组、或 `role_codes__in` 传了非数组标量时，结果必须是 `{total:"0", items:[]}`，**不得退化为“等于无条件”而返回全量**。空数组/非法标量按空结果短路，不进入租户解析。
 - 角色编码条件**必须出现在顶层 `Conditions`**；写入 `$and/$or` 子树会被 fail-closed 拒绝（400），因为摘出机制只处理顶层条件，子组内的虚拟列会落到白名单外被静默丢弃。
+- ⚠️ **`$and/$or` 同层键被丢弃（实测）**：`QueryStringConverter.parseRawQuery` 处理含 `$and`/`$or` 的对象时**只解析该逻辑键，同层其它键静默丢弃**。因此「顶层 `role_code` + 同层 `$and`」写法里 `role_code` 会被丢掉，请求退化为只按其余条件过滤，既不报 400 也不按角色筛选。前端/调用方须把 `role_code(s)` 与 `tenant_id` 都平铺在最外层。
+- `tenant_id` 与 `role_code(s)` 同现时，`tenant_id` 也应**位于顶层**：代码对「`role_code` 在顶层而 `tenant_id` 落在 `$and/$or` 子树」有 fail-closed 拒绝（400，防“想限定单租户却静默放大为 `AllTenants`”）。**该形态经 HTTP `query` 字符串实际不可达**（受上一条的丢弃行为影响，`role_code` 会先被丢），该 400 分支仅对直接构造 `FilterExpr` 的调用方（如 gRPC 入参）生效。
 - 该行为是“条件存在性”驱动（新增状态位），与 `role_ids__in` 的“有命中用户才短路”不同：`role_code(s)` 条件出现而解析不到任何角色 ID 时必须短路为空。
 
-首个租户用 `role_code` 即可，平台管理页面用 `tenant_id + role_code(s)`。
+首个租户用 `role_code` 即可，平台管理页面用 `tenant_id + role_code(s)`（平台行）或 `role_code(s)`（跨租户）。
 
-部署实测（ani-system @ ani-01，2026-10-12）：镜像 `172.16.101.10:5000/ani/ani-governance:20261012-role-code-filter`（53,754,806 字节 / md5 `8790AC74A45F86623B5AF138B2FCA039`，上传 `VERIFY: OK elapsed=70s`）→ registry tags 追加该 tag → `kubectl set image ... server=...:20261012-role-code-filter -n ani-system` → rollout 成功，新 Pod `ani-governance-54c87b4cbb-8fhhg` 1/1 Running（ani-03）。实测 `verify-role-code-filter.py` **19/19 PASS**：平台缺 `tenant_id` / `tenant_id__ne` / 非数字 → 400；平台给顶层 `EQ` 数字 `tenant_id` + `role_code` → 200 且命中数 ≤ 全量；不存在编码 → `total="0"`（base=5 不退化）；空数组 → 200 且 `total="0"`；标量 `role_codes__in` → 200 且 `total="0"`；租户上下文 `role_code` → 200、不存在编码 → `total="0"`。本批无 schema 变更，未跑迁移；回滚目标为换镜像前的 `localhost/ani-governance:4e3e5b4e750a-20261012-tzfix@sha256:149583f4033bb87829b2190def6ba1b1307c876eb987c7b73ed6b28ceb378fc2`。
+部署实测（ani-system @ ani-01，2026-10-12，单轴模型；**已合入 main 后重部署**）：合入 `origin/main`（含 platform-network / S2S ModelDev 等）后重新构建镜像 `172.16.101.10:5000/ani/ani-governance:20261012-merge-role-scope`（53,925,987 字节 / md5 `FAAC1F8DDA5D0CEF095F034F46A17ECB`，上传 `VERIFY: OK elapsed=98s`）→ registry tags 追加该 tag → `kubectl set image ... server=...:20261012-merge-role-scope -n ani-system` → rollout 成功，新 Pod `ani-governance-f775c6547-pjrlc` 1/1 Running（ani-03）。合入后实测 `verify-role-code-filter.py` **22/22 PASS**：平台缺 `tenant_id` + `role_code` → **200（AllTenants）** 且命中数 ≤ 全量（all=2 base=5）；`tenant_id__ne` / 非数字 → 400；`tenant_id=0` + `role_code=platform:admin` → 200 命中平台行（total=2）；顶层 `EQ` 数字 `tenant_id` + `role_code` → 200 且命中数 ≤ 全量；不存在编码 → `total="0"`（base=5 不退化）；空数组 → 200 且 `total="0"`；标量 `role_codes__in` → 200 且 `total="0"`；租户上下文 `role_code` → 200、不存在编码 → `total="0"`。同批回归 `verify-cursor.py` **24/24**、`verify-list-cursor.py` **38/38**、`verify-permgroup-subtree.py` **12/12**、`smoke-regression.py` **fail=0** 全绿。本批无 schema 变更，未跑迁移；回滚目标为换镜像前的 `172.16.101.10:5000/ani/ani-governance:20261012-role-code-scope`（旧 Pod 已在 rollout 中替换）。
 
-本机（Windows，Go 1.26.x）已执行：`go build` / `go vet ./app/admin/service/...` 通过；`go test ./app/admin/service/internal/data -count=1` ok，新增 SQLite 定向用例覆盖集合/单值交集、不存在编码与空数组与非法标量的空结果（不退化）、`$and/$or` 子树 fail-closed、与 `role_id` 的并集去重、平台租户范围校验、游标路径与页码路径一致。`app/admin/service/internal/service` 包仅 `TestTaskService_RealAsynqSchedulerLifecycle` 因缺 `ANI_TEST_REDIS_URI` 环境性失败，与本批无关。
+> 排障记录（2026-10-12 重部署）：新 Pod 首次拉起后 liveness/readiness（tcpSocket 7788）连续失败并触发重启（exitCode 2）。经诊断 pod 内独立运行 `/app/bin/server -c /run/configs` 可正常监听 `:7788`；失败窗口恰为**进程启动期**——casbin 策略加载、asynq 定时任务注册与 DB 连接之间耗时超过 `initialDelaySeconds=15`，探测在端口监听前即判死。该现象**非本批改动引入**（失败点全部在 infrastructure 装配段，早于 users 过滤逻辑），且容器**在重启后即自愈**为 1/1 Running。合入 main 引入的 platform-network 装配未改变该启动时序。最终状态 `availableReplicas=1 / readyReplicas=1`，接口全部 PASS。
 
-边界：角色编码解析按“同租户 + `code IN (...)`”查询，编码在租户内唯一由既有约束保证；平台上下文必须显式给出目标租户，不提供跨租户一次性聚合。
+本机（Windows，Go 1.26.x）已执行：`go build` / `go vet ./app/admin/service/...` 通过；`go test ./app/admin/service/internal/data -count=1` ok，新增/修正 SQLite 定向用例覆盖集合/单值交集、不存在编码与空数组与非法标量的空结果（不退化）、`$and/$or` 子树 fail-closed（`role_code` 与 `tenant_id` 两处）、与 `role_id` 的并集去重、平台租户范围（缺省 AllTenants / `tenant_id=0` 平台行 / 跨租户命中多租户 / 租户上下文不跨租户 / 同名冒牌角色不串号）、游标路径与页码路径一致。`app/admin/service/internal/service` 包仅 `TestTaskService_RealAsynqSchedulerLifecycle` 因缺 `ANI_TEST_REDIS_URI` 环境性失败，与本批无关。
+
+边界：角色编码解析按“同租户 + `code IN (...)`”或“无租户谓词全表匹配（仅平台/系统上下文）”查询，编码在租户内唯一由既有约束保证；平台上下文的跨租户 `AllTenants` 为缺省行为（无修饰符），属有意设计。
 
 <a id="permgroup-subtree-01"></a>
 

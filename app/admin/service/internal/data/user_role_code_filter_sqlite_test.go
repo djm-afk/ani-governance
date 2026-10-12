@@ -169,15 +169,18 @@ func TestUserRepoSqlite_RoleCodeFilterUnionWithRoleID(t *testing.T) {
 	require.ElementsMatch(t, []uint32{adminUserID, memberUserID}, idsOf(resp))
 }
 
-// TestUserRepoSqlite_RoleCodeFilterTenantScope 验证租户边界：
-// 平台/系统上下文必须显式给出顶层 EQ 数字 tenant_id，否则 400；给出后精确命中目标租户。
+// TestUserRepoSqlite_RoleCodeFilterTenantScope 验证平台/系统上下文下的租户范围：
+// 缺省 tenant_id 即跨全部租户（AllTenants）；给出顶层 EQ 数字 tenant_id 则精确到该租户；
+// tenant_id 形态不符（非 EQ / 非数字 / 位于子树）一律 400。
 func TestUserRepoSqlite_RoleCodeFilterTenantScope(t *testing.T) {
 	repo, _, _, _, adminUserID, _, _ := newRoleCodeFilterFixture(t)
 	sysCtx := testutil.NewSystemViewerCtx(context.Background())
 
-	// 平台上下文缺 tenant_id → 400
-	_, err := repo.List(sysCtx, pageQueryReq(`{"role_code":"tenant:manager"}`))
-	require.True(t, identityV1.IsBadRequest(err), "平台上下文缺 tenant_id 应 400，实际 %v", err)
+	// 平台上下文缺 tenant_id → 200，跨全部租户（此处仅租户 7 有该角色）
+	all, err := repo.List(sysCtx, pageQueryReq(`{"role_code":"tenant:manager"}`))
+	require.NoError(t, err, "平台上下文缺 tenant_id 应走 AllTenants，不得再 400")
+	require.Equal(t, uint64(1), all.Total)
+	require.Equal(t, []uint32{adminUserID}, idsOf(all))
 
 	// tenant_id 非 EQ → 400
 	_, err = repo.List(sysCtx, pageQueryReq(
@@ -188,12 +191,134 @@ func TestUserRepoSqlite_RoleCodeFilterTenantScope(t *testing.T) {
 	_, err = repo.List(sysCtx, pageQueryReq(`{"tenant_id":"not-a-number","role_code":"tenant:manager"}`))
 	require.True(t, identityV1.IsBadRequest(err), "tenant_id 非数字应 400，实际 %v", err)
 
+	// tenant_id 位于 $and 子树 + role_code 在顶层 → 400（防静默放大为 AllTenants）。
+	// 该形态经 query 字符串不可达（含 $and 的对象会丢弃同层其它键），故直接用 filterExpr 构造。
+	_, err = repo.List(sysCtx, &paginationV1.PagingRequest{
+		Page:     trans.Ptr(uint32(1)),
+		PageSize: trans.Ptr(uint32(20)),
+		FilteringType: &paginationV1.PagingRequest_FilterExpr{FilterExpr: &paginationV1.FilterExpr{
+			Type: paginationV1.ExprType_AND,
+			Conditions: []*paginationV1.FilterCondition{
+				{Field: "role_code", Op: paginationV1.Operator_EQ,
+					ValueOneof: &paginationV1.FilterCondition_Value{Value: "tenant:manager"}},
+			},
+			Groups: []*paginationV1.FilterExpr{{
+				Type: paginationV1.ExprType_AND,
+				Conditions: []*paginationV1.FilterCondition{
+					{Field: "tenant_id", Op: paginationV1.Operator_EQ,
+						ValueOneof: &paginationV1.FilterCondition_Value{Value: fmt.Sprintf("%d", roleCodeFilterTenantID)}},
+				},
+			}},
+		}},
+	})
+	require.True(t, identityV1.IsBadRequest(err), "tenant_id 位于子树应 400，实际 %v", err)
+
 	// tenant_id 顶层 EQ 数字 → 精确命中目标租户管理员
 	ok, err := repo.List(sysCtx, pageQueryReq(
 		fmt.Sprintf(`{"tenant_id":"%d","role_code":"tenant:manager"}`, roleCodeFilterTenantID)))
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), ok.Total)
 	require.Equal(t, []uint32{adminUserID}, idsOf(ok))
+}
+
+// newRoleCodeCrossTenantFixture 造跨租户夹具：
+//   - 平台行（tenant_id=0）的 platform:admin 角色与平台用户；
+//   - 租户 7、租户 8 各一个 tenant:manager 角色与对应管理员用户；
+//   - 租户 7 内一个**同名冒牌** platform:admin 角色（验证 AllTenants 会命中它，
+//     而 tenant_id=0 不会）。
+//
+// 返回 repo、系统上下文、各实体 ID。
+func newRoleCodeCrossTenantFixture(t *testing.T) (repo *userRepo, sysCtx context.Context,
+	platformRoleID, platformUserID uint32,
+	tenant7ManagerRoleID, tenant7ManagerUserID, tenant7FakeAdminRoleID, tenant7FakeAdminUserID uint32,
+	tenant8ManagerRoleID, tenant8ManagerUserID uint32) {
+	t.Helper()
+	repo = newUserRepoSqlite(t)
+	sysCtx = testutil.NewSystemViewerCtx(context.Background())
+	ec := repo.entClient.Client()
+
+	createRole := func(tenantID uint32, code, name string) uint32 {
+		r := ec.Role.Create().
+			SetTenantID(tenantID).SetCode(code).SetName(name).
+			SetType(entRole.TypeTenant).SetStatus(entRole.StatusOn).SaveX(sysCtx)
+		return r.ID
+	}
+	createUser := func(tenantID uint32, name string) uint32 {
+		dto, err := repo.Create(sysCtx, &identityV1.CreateUserRequest{
+			Data: &identityV1.User{
+				TenantId: trans.Ptr(tenantID),
+				Username: trans.Ptr(name),
+				Status:   identityV1.User_NORMAL.Enum(),
+			},
+		})
+		require.NoError(t, err)
+		return dto.GetId()
+	}
+	assign := func(tenantID, userID, roleID uint32) {
+		// 显式带 TenantId：user_role 行需与用户同租户，否则租户上下文查询会被租户策略过滤掉。
+		require.NoError(t, repo.AssignUserRoles(sysCtx, userID, []*permissionV1.UserRole{
+			{TenantId: trans.Ptr(tenantID), UserId: trans.Ptr(userID), RoleId: trans.Ptr(roleID), Status: trans.Ptr(permissionV1.UserRole_ACTIVE)},
+		}))
+	}
+
+	platformRoleID = createRole(0, "platform:admin", "平台管理员")
+	platformUserID = createUser(0, "platform_admin_user")
+	assign(0, platformUserID, platformRoleID)
+
+	tenant7ManagerRoleID = createRole(7, "tenant:manager", "租户7管理员")
+	tenant7ManagerUserID = createUser(7, "tenant7_manager_user")
+	assign(7, tenant7ManagerUserID, tenant7ManagerRoleID)
+
+	// 租户 7 内自建的冒牌 platform:admin（code 跨租户重名）。
+	tenant7FakeAdminRoleID = createRole(7, "platform:admin", "租户7冒牌平台管理员")
+	tenant7FakeAdminUserID = createUser(7, "tenant7_fake_admin_user")
+	assign(7, tenant7FakeAdminUserID, tenant7FakeAdminRoleID)
+
+	tenant8ManagerRoleID = createRole(8, "tenant:manager", "租户8管理员")
+	tenant8ManagerUserID = createUser(8, "tenant8_manager_user")
+	assign(8, tenant8ManagerUserID, tenant8ManagerRoleID)
+
+	return
+}
+
+// TestUserRepoSqlite_RoleCodeFilterCrossTenant 验证「缺省即跨租户」单轴模型：
+//   - 平台 tenant_id=0 + role_code=platform:admin → 只命中平台行，不串入租户同名冒牌角色；
+//   - 平台 role_code=platform:admin（缺省 tenant_id）→ AllTenants，命中平台行与冒牌角色；
+//   - 平台 role_code=tenant:manager（缺省 tenant_id）→ 命中租户 7 与 8 的管理员；
+//   - 租户上下文 role_code=tenant:manager → 仅本租户（不跨租户）。
+func TestUserRepoSqlite_RoleCodeFilterCrossTenant(t *testing.T) {
+	repo, sysCtx,
+		_, platformUserID,
+		tenant7ManagerRoleID, tenant7ManagerUserID, _, tenant7FakeAdminUserID,
+		_, tenant8ManagerUserID := newRoleCodeCrossTenantFixture(t)
+
+	// 场景1：平台行，显式 tenant_id=0，只命中平台用户
+	platformOnly, err := repo.List(sysCtx, pageQueryReq(`{"tenant_id":0,"role_code":"platform:admin"}`))
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), platformOnly.Total, "tenant_id=0 应只命中平台行")
+	require.Equal(t, []uint32{platformUserID}, idsOf(platformOnly),
+		"tenant_id=0 不得串入租户内的同名冒牌 platform:admin 用户")
+
+	// 缺省 tenant_id：AllTenants，命中平台行 + 租户7冒牌
+	allFake, err := repo.List(sysCtx, pageQueryReq(`{"role_code":"platform:admin"}`))
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), allFake.Total, "缺省 tenant_id 应跨全部租户，命中平台行与冒牌角色")
+	require.ElementsMatch(t, []uint32{platformUserID, tenant7FakeAdminUserID}, idsOf(allFake))
+
+	// 场景2：跨租户管理员（缺省 tenant_id），命中租户 7 与 8
+	crossManagers, err := repo.List(sysCtx, pageQueryReq(`{"role_code":"tenant:manager"}`))
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), crossManagers.Total, "跨租户应命中租户 7 与 8 的管理员")
+	require.ElementsMatch(t, []uint32{tenant7ManagerUserID, tenant8ManagerUserID}, idsOf(crossManagers))
+
+	// 租户上下文：仅本租户，不跨租户
+	tenant7Ctx := viewer.WithContext(context.Background(), appViewer.NewUserViewer(
+		100, uint64(7), 0, "", []viewer.DataScope{{ScopeType: viewer.ScopeTypeAll}}))
+	scoped, err := repo.List(tenant7Ctx, pageQueryReq(`{"role_code":"tenant:manager"}`))
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), scoped.Total, "租户上下文只应命中本租户管理员")
+	require.Equal(t, []uint32{tenant7ManagerUserID}, idsOf(scoped))
+	_ = tenant7ManagerRoleID
 }
 
 // TestUserRepoSqlite_RoleCodeFilterCursorPathConsistency 验证游标路径与旧页码

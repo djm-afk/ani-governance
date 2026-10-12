@@ -471,14 +471,29 @@ func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.P
 			return true, nil
 		}
 
-		// 角色编码仅在 (tenant_id, code) 维度唯一，解析必须先限定可信租户，
-		// 否则跨租户串号；平台上下文需请求显式给出顶层 tenant_id。
-		tenantID, terr := r.resolveRoleCodeTenant(ctx, filterExpr)
+		// tenant_id 是 sys_users 合法列，单独放 $and/$or 子树属正常列过滤；但当
+		// role_code(s) 出现时，tenant_id 若落在子树里就无法被顶层范围解析读到，
+		// 会静默从 Tenant(v) 放大为 AllTenants（跨租户）。探测到即拒，避免
+		// "想限定单租户却拿到跨租户"。
+		if containsFilterField(filterExpr.Groups, "tenant_id") {
+			return false, identityV1.ErrorBadRequest(
+				"tenant_id must be a top-level filter condition to query by role_code")
+		}
+
+		// 角色编码仅在 (tenant_id, code) 维度唯一，解析必须先限定租户范围；平台
+		// 上下文由请求的 tenant_id 条件决定（缺省即跨全部租户），详见范围解析。
+		tenantID, allTenants, terr := r.resolveRoleCodeScope(ctx, filterExpr)
 		if terr != nil {
 			return false, terr
 		}
 
-		resolvedIDs, rerr := r.roleRepo.ListRoleIDsByCodesInTenant(ctx, tenantID, roleCodes)
+		var resolvedIDs []uint32
+		var rerr error
+		if allTenants {
+			resolvedIDs, rerr = r.roleRepo.ListRoleIDsByCodesAcrossTenants(ctx, roleCodes)
+		} else {
+			resolvedIDs, rerr = r.roleRepo.ListRoleIDsByCodesInTenant(ctx, tenantID, roleCodes)
+		}
 		if rerr != nil {
 			r.log.Errorf(ctx, "resolve role ids by codes failed: %s", rerr.Error())
 			return false, rerr
@@ -527,13 +542,18 @@ func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.P
 	return false, nil
 }
 
-// resolveRoleCodeTenant 决定按角色编码解析时使用的租户范围：
-//   - 具名租户上下文（viewer tid>0）：以该租户为范围。
-//   - 平台/系统上下文（tid=0）：要求请求给出顶层、EQ、纯数字且 >0 的 tenant_id 条件，
-//     以其为范围；缺失或形态不符一律 400（fail-closed，禁止跨租户按编码解析）。
-func (r *userRepo) resolveRoleCodeTenant(ctx context.Context, filterExpr *paginationV1.FilterExpr) (uint32, error) {
+// resolveRoleCodeScope 决定按角色编码解析时使用的租户范围（两态）：
+//   - 具名租户上下文（viewer tid>0）：范围恒为该租户（allTenants=false），请求里的
+//     tenant_id 条件不参与解析（仅作普通用户列过滤保留）。
+//   - 平台/系统上下文（tid=0）：由请求顶层 tenant_id 条件决定——
+//     有顶层、EQ、纯数字的 tenant_id=v（0 ≤ v ≤ MaxUint32）→ 范围 Tenant(v)；
+//     缺省 tenant_id → 范围全部租户（allTenants=true）；
+//     tenant_id 形态不符（非 EQ / 非数字 / 越界）→ 400（fail-closed）。
+//
+// 注：role_code(s) 出现在子树时的 tenant_id 子树探测在调用处完成（见 applyUserListFilters）。
+func (r *userRepo) resolveRoleCodeScope(ctx context.Context, filterExpr *paginationV1.FilterExpr) (uint32, bool, error) {
 	if tid, hasTenant := maybeTenantFromViewer(ctx); hasTenant {
-		return tid, nil
+		return tid, false, nil
 	}
 
 	for _, cond := range filterExpr.GetConditions() {
@@ -541,19 +561,19 @@ func (r *userRepo) resolveRoleCodeTenant(ctx context.Context, filterExpr *pagina
 			continue
 		}
 		if cond.GetOp() != paginationV1.Operator_EQ {
-			return 0, identityV1.ErrorBadRequest(
+			return 0, false, identityV1.ErrorBadRequest(
 				"platform context requires an EQ tenant_id filter to query by role_code")
 		}
 		val, perr := strconv.ParseUint(strings.TrimSpace(cond.GetValue()), 10, 64)
-		if perr != nil || val == 0 || val > math.MaxUint32 {
-			return 0, identityV1.ErrorBadRequest(
+		if perr != nil || val > math.MaxUint32 {
+			return 0, false, identityV1.ErrorBadRequest(
 				"platform context requires a numeric tenant_id filter to query by role_code")
 		}
-		return uint32(val), nil
+		return uint32(val), false, nil
 	}
 
-	return 0, identityV1.ErrorBadRequest(
-		"platform context requires a tenant_id filter to query by role_code")
+	// 平台上下文缺省 tenant_id → 跨全部租户解析。
+	return 0, true, nil
 }
 
 // containsFilterField 递归判断过滤表达式的任意子组（不含顶层 Conditions）是否
