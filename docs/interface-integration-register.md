@@ -1472,11 +1472,11 @@ roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采�
 
 语义与边界：
 
-- 二者可同时出现，与 `role_id(s)`、`org_unit_id(s)`、`position_id(s)` 等关系条件**合并取并集后去重**（沿用既有关系过滤口径，`sliceutil.Unique`）。
+- 二者可同时出现。`role_code(s)` 的解析结果只并入**角色 ID 集合**，与 `role_id(s)`（同为角色维度）**合并取并集后去重**（`sliceutil.Unique`）；随后角色、组织单元、岗位三类关系各自的用户集合按既有口径**取交集**（`queryUserIDsByRelationIDs`）。因此 `role_code` 与 `role_id` 之间是并集，而与 `org_unit_id(s)` / `position_id(s)` 之间是交集——如「管理员 A 不属于组织 X、成员 B 属于 X」时，`role_code=tenant:manager + org_unit_id=X` 返回空（非并集）。这是沿用既有 ID 组合语义，不做改变。
 - 编码需在明确的租户范围下解析。**单轴模型**：租户上下文直接使用当前租户；平台上下文的范围由**顶层 `tenant_id` 条件是否存在**表达——
   - 给出顶层、`EQ`、纯数字的 `tenant_id=v`（`0 ≤ v ≤ MaxUint32`）→ 解析范围 = `Tenant(v)`；`v=0` 表示**平台行范围**（只匹配 `tenant_id=0` 的平台侧角色，如 `platform:admin`），用于「平台管理员列表」。
   - **缺省 `tenant_id`** → 解析范围 = **全部租户**（`AllTenants`），用于「跨租户管理员列表」（如一次查各租户的 `tenant:manager`）。**这是本批的行为变更**：原「平台 + `role_code` 缺 `tenant_id`」为 400，现改为 200 跨租户。
-  - `tenant_id__ne` 等非 `EQ` 写法、非数字值一律 400。
+  - `tenant_id__ne` 等非 `EQ` 写法、非数字值一律 400。校验扫描**全部**顶层 `tenant_id` 条件（不因先遇到合法 EQ 而短路），出现多个取值不同的合法 `EQ` 视为歧义范围同样 400。
 - ⚠️ **同名角色提示**：`role.code` 仅在 `(tenant_id, code)` 唯一，某租户可自建同名 `platform:admin`。要「只查平台行」必须**显式** `tenant_id=0`；若写 `{"role_code":"platform:admin"}`（不带 `tenant_id`），会走 `AllTenants`，把各租户同名角色一并匹配。前端须按语义选择写法。
 - **不可退化**：条件出现但编码不存在、`role_codes__in` 为显式空数组、或 `role_codes__in` 传了非数组标量时，结果必须是 `{total:"0", items:[]}`，**不得退化为“等于无条件”而返回全量**。空数组/非法标量按空结果短路，不进入租户解析。
 - 角色编码条件**必须出现在顶层 `Conditions`**；写入 `$and/$or` 子树会被 fail-closed 拒绝（400），因为摘出机制只处理顶层条件，子组内的虚拟列会落到白名单外被静默丢弃。

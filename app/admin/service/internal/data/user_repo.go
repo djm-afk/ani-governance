@@ -550,12 +550,20 @@ func (r *userRepo) applyUserListFilters(ctx context.Context, req *paginationV1.P
 //     缺省 tenant_id → 范围全部租户（allTenants=true）；
 //     tenant_id 形态不符（非 EQ / 非数字 / 越界）→ 400（fail-closed）。
 //
+// 校验遍历**全部**顶层 tenant_id 条件，而不是遇到首个合法 EQ 就返回：否则结果会
+// 随条件顺序而变（如 `{tenant_id EQ 7, tenant_id__ne 8}` 中 NE 先到才报 400）。
+// 出现多个取值不同的合法 EQ 时属歧义范围，同样 400。
+//
 // 注：role_code(s) 出现在子树时的 tenant_id 子树探测在调用处完成（见 applyUserListFilters）。
 func (r *userRepo) resolveRoleCodeScope(ctx context.Context, filterExpr *paginationV1.FilterExpr) (uint32, bool, error) {
 	if tid, hasTenant := maybeTenantFromViewer(ctx); hasTenant {
 		return tid, false, nil
 	}
 
+	var (
+		scope    uint32
+		hasScope bool
+	)
 	for _, cond := range filterExpr.GetConditions() {
 		if cond == nil || cond.GetField() != "tenant_id" {
 			continue
@@ -569,7 +577,14 @@ func (r *userRepo) resolveRoleCodeScope(ctx context.Context, filterExpr *paginat
 			return 0, false, identityV1.ErrorBadRequest(
 				"platform context requires a numeric tenant_id filter to query by role_code")
 		}
-		return uint32(val), false, nil
+		if hasScope && uint32(val) != scope {
+			return 0, false, identityV1.ErrorBadRequest(
+				"platform context requires a single unambiguous tenant_id filter to query by role_code")
+		}
+		scope, hasScope = uint32(val), true
+	}
+	if hasScope {
+		return scope, false, nil
 	}
 
 	// 平台上下文缺省 tenant_id → 跨全部租户解析。

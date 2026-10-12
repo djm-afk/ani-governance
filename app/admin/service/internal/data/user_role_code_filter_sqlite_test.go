@@ -221,6 +221,74 @@ func TestUserRepoSqlite_RoleCodeFilterTenantScope(t *testing.T) {
 	require.Equal(t, []uint32{adminUserID}, idsOf(ok))
 }
 
+// tenantIDCondition 构造顶层 tenant_id 过滤条件。
+func tenantIDCondition(op paginationV1.Operator, value string) *paginationV1.FilterCondition {
+	return &paginationV1.FilterCondition{
+		Field: "tenant_id", Op: op,
+		ValueOneof: &paginationV1.FilterCondition_Value{Value: value},
+	}
+}
+
+// roleCodeCondition 构造顶层 role_code 过滤条件。
+func roleCodeCondition(code string) *paginationV1.FilterCondition {
+	return &paginationV1.FilterCondition{
+		Field: "role_code", Op: paginationV1.Operator_EQ,
+		ValueOneof: &paginationV1.FilterCondition_Value{Value: code},
+	}
+}
+
+// filterExprReq 用给定的顶层条件构造走 FilterExpr 的列表请求。
+func filterExprReq(conds ...*paginationV1.FilterCondition) *paginationV1.PagingRequest {
+	return &paginationV1.PagingRequest{
+		Page:     trans.Ptr(uint32(1)),
+		PageSize: trans.Ptr(uint32(20)),
+		FilteringType: &paginationV1.PagingRequest_FilterExpr{FilterExpr: &paginationV1.FilterExpr{
+			Type:       paginationV1.ExprType_AND,
+			Conditions: conds,
+		}},
+	}
+}
+
+// TestUserRepoSqlite_RoleCodeFilterTenantConditionOrder 验证 tenant_id 校验不依赖
+// 条件顺序：无论合法 EQ 在前还是在后，混入非 EQ（如 tenant_id__ne）都必须 400。
+func TestUserRepoSqlite_RoleCodeFilterTenantConditionOrder(t *testing.T) {
+	repo, _, _, _, _, _, _ := newRoleCodeFilterFixture(t)
+	sysCtx := testutil.NewSystemViewerCtx(context.Background())
+
+	// EQ 在前、NEQ 在后：旧实现遇首个合法 EQ 即返回 → 会漏检
+	_, err := repo.List(sysCtx, filterExprReq(
+		tenantIDCondition(paginationV1.Operator_EQ, "7"),
+		tenantIDCondition(paginationV1.Operator_NEQ, "8"),
+		roleCodeCondition("tenant:manager"),
+	))
+	require.True(t, identityV1.IsBadRequest(err), "EQ 在前也应检出后续 NEQ → 400，实际 %v", err)
+
+	// NEQ 在前、EQ 在后
+	_, err = repo.List(sysCtx, filterExprReq(
+		tenantIDCondition(paginationV1.Operator_NEQ, "8"),
+		tenantIDCondition(paginationV1.Operator_EQ, "7"),
+		roleCodeCondition("tenant:manager"),
+	))
+	require.True(t, identityV1.IsBadRequest(err), "NEQ 在前应 400，实际 %v", err)
+
+	// 两个取值不同的合法 EQ：歧义范围 → 400
+	_, err = repo.List(sysCtx, filterExprReq(
+		tenantIDCondition(paginationV1.Operator_EQ, "7"),
+		tenantIDCondition(paginationV1.Operator_EQ, "8"),
+		roleCodeCondition("tenant:manager"),
+	))
+	require.True(t, identityV1.IsBadRequest(err), "多个不同 EQ 应视为歧义 → 400，实际 %v", err)
+
+	// 重复但取值一致的两个 EQ：允许，等价单值
+	ok, err := repo.List(sysCtx, filterExprReq(
+		tenantIDCondition(paginationV1.Operator_EQ, "7"),
+		tenantIDCondition(paginationV1.Operator_EQ, "7"),
+		roleCodeCondition("tenant:manager"),
+	))
+	require.NoError(t, err, "重复且一致的 EQ 应允许，实际 %v", err)
+	require.Equal(t, uint64(1), ok.Total)
+}
+
 // newRoleCodeCrossTenantFixture 造跨租户夹具：
 //   - 平台行（tenant_id=0）的 platform:admin 角色与平台用户；
 //   - 租户 7、租户 8 各一个 tenant:manager 角色与对应管理员用户；

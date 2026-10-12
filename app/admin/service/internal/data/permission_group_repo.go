@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"go-wind-admin/pkg/localdeps/kratos-bootstrap/bootstrap"
 	bLogger "go-wind-admin/pkg/localdeps/kratos-bootstrap/logger"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	paginationV1 "go-wind-admin/pkg/localdeps/go-crud/api/gen/go/pagination/v1"
 	entCrud "go-wind-admin/pkg/localdeps/go-crud/entgo"
@@ -16,6 +17,7 @@ import (
 
 	"go-wind-admin/pkg/localdeps/go-utils/copierutil"
 	"go-wind-admin/pkg/localdeps/go-utils/mapper"
+	"go-wind-admin/pkg/localdeps/go-utils/stringcase"
 
 	"go-wind-admin/app/admin/service/internal/data/ent"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
@@ -443,8 +445,23 @@ func (r *PermissionGroupRepo) newPermissionCreateWithBuilder(builder *ent.Permis
 	return builder
 }
 
+// fieldMaskIncludes 判断更新掩码是否选中了指定字段：空掩码（nil 或空 paths）表示
+// “全字段可更新”，一律视为选中；比较前统一归一到 snake_case。
+func fieldMaskIncludes(mask *fieldmaskpb.FieldMask, name string) bool {
+	if mask == nil || len(mask.GetPaths()) == 0 {
+		return true
+	}
+	want := stringcase.ToSnakeCase(name)
+	for _, p := range mask.GetPaths() {
+		if stringcase.ToSnakeCase(strings.TrimSpace(p)) == want {
+			return true
+		}
+	}
+	return false
+}
+
 // Update 更新 Permission
-func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.UpdatePermissionGroupRequest) error {
+func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.UpdatePermissionGroupRequest) (err error) {
 	if req == nil || req.Data == nil {
 		return permissionV1.ErrorBadRequest("invalid parameter")
 	}
@@ -454,25 +471,26 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 
 	// 如果不存在则创建
 	if req.GetAllowMissing() {
-		exist, err := r.IsExist(ctx, req.GetId())
-		if err != nil {
-			return err
+		exist, ierr := r.IsExist(ctx, req.GetId())
+		if ierr != nil {
+			return ierr
 		}
 		if !exist {
 			createReq := &permissionV1.CreatePermissionGroupRequest{Data: req.Data}
 			createReq.Data.CreatedBy = createReq.Data.UpdatedBy
 			createReq.Data.UpdatedBy = nil
-			_, err = r.Create(ctx, createReq)
-			return err
+			_, cerr := r.Create(ctx, createReq)
+			return cerr
 		}
 	}
 
-	// 防环校验先于落库：判断 newParentID 是否为 nodeID 的后代只依赖 nodeID 当前
-	// 子树，与本次改父无关，可在落库前独立完成；检测到环即返回 400，环不入库。
-	// （仅当本次请求携带 parent_id 变更时才需要校验。）
-	parentChanged := req.Data.ParentId != nil
+	// 是否“真正改父”取决于**生效的更新掩码**：掩码未选中 parent_id 时，即使载荷带了
+	// parentId 也会被 Repository 忽略（保留原父），此时不应触发防环预检，否则“只改
+	// name 的表单捎带旧/非法 parentId”会被误拒 400。防环校验只依赖 nodeID 当前子树，
+	// 可在落库前独立完成；检测到环即返回 400，环不入库。
+	parentChanged := fieldMaskIncludes(req.GetUpdateMask(), "parent_id") && req.Data.ParentId != nil
 	if parentChanged {
-		if err := r.validatePermissionGroupParent(ctx, req.GetId(), req.Data.GetParentId()); err != nil {
+		if err = r.validatePermissionGroupParent(ctx, req.GetId(), req.Data.GetParentId()); err != nil {
 			return err
 		}
 	}
@@ -480,7 +498,7 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 	// 未改父：维持既有非事务行为。
 	if !parentChanged {
 		builder := r.entClient.Client().PermissionGroup.UpdateOneID(req.GetId())
-		_, err := r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
+		_, err = r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
 			func(dto *permissionV1.PermissionGroup) {
 				builder.
 					SetNillableName(req.Data.Name).
@@ -501,14 +519,15 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 
 	// 改父：把「parent_id 落库 + relocateSubtree 全部路径更新」绑成一个事务，
 	// 保证 relocateSubtree 多步 SetPath 中途失败时回滚，path 不出现半新半旧。
-	var txErr error
-	tx, err := r.entClient.Client().Tx(ctx)
-	if err != nil {
-		r.log.Errorf(ctx, "start transaction failed: %s", err.Error())
+	// 用命名返回值 err 承接提交结果：defer 内才能把 Commit 失败写回返回值，
+	// 否则“业务成功但提交失败”会被误报为成功（吞错）。
+	tx, terr := r.entClient.Client().Tx(ctx)
+	if terr != nil {
+		r.log.Errorf(ctx, "start transaction failed: %s", terr.Error())
 		return permissionV1.ErrorInternalServerError("start transaction failed")
 	}
 	defer func() {
-		if txErr != nil {
+		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				r.log.Errorf(ctx, "transaction rollback failed: %s", rollbackErr.Error())
 			}
@@ -516,12 +535,12 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			r.log.Errorf(ctx, "transaction commit failed: %s", commitErr.Error())
-			txErr = permissionV1.ErrorInternalServerError("transaction commit failed")
+			err = permissionV1.ErrorInternalServerError("transaction commit failed")
 		}
 	}()
 
 	builder := tx.PermissionGroup.UpdateOneID(req.GetId())
-	if _, txErr = r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
+	if _, err = r.repository.UpdateOne(ctx, builder, req.Data, req.GetUpdateMask(),
 		func(dto *permissionV1.PermissionGroup) {
 			builder.
 				SetNillableName(req.Data.Name).
@@ -536,13 +555,13 @@ func (r *PermissionGroupRepo) Update(ctx context.Context, req *permissionV1.Upda
 		func(s *sql.Selector) {
 			s.Where(sql.EQ(permissiongroup.FieldID, req.GetId()))
 		},
-	); txErr != nil {
-		return txErr
+	); err != nil {
+		return err
 	}
 
 	// 事务内重算本节点及全部后代的物化路径：relocate 要读到本事务内未提交的新 parent_id。
-	if txErr = r.relocateSubtree(ctx, tx.Client(), req.GetId()); txErr != nil {
-		return txErr
+	if err = r.relocateSubtree(ctx, tx.Client(), req.GetId()); err != nil {
+		return err
 	}
 
 	return nil
