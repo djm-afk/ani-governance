@@ -1,11 +1,12 @@
 # 业务服务接入指南（Service Integration）
 
-本指南固化"把一个业务微服务的 API 接入 governance，让租户用户经治理中心拿到结果"的标准流程。参照实现：
+本指南说明"把一个业务微服务的 API 接入 governance，让租户用户经治理中心拿到结果"的装配步骤，并索引现有客户端实现。新增或修改调用先遵守 [服务间调用规范](contracts/service-to-service-calls.md)；本文的当前身份差异和 Network 示例不是新规范的例外。存量证书、接收端和调用者按 [迁移边界](contracts/service-to-service-calls.md#current-differences) 独立接线、联调与验收。参照实现：
 
-- **Network（Resource 的网络领域，可选依赖）**：[i_network.proto](../api/protos/admin/service/v1/i_network.proto) + [network_client.go](../app/admin/service/internal/data/network_client.go) + [network_service.go](../app/admin/service/internal/service/network_service.go)。地址为空则跳过客户端装配。当前租户面 24 方法及 JWT/AK 合同见 [接口登记](interface-integration-register.md)，部署与运行是否可用以实际验收为准。
-- **Model（已暂摘，2026-09-21）**：出站客户端、`GET /api/v1/models` 路由与其 proto/生成物已删除，`identityV1.Module_MODEL` 枚举刻意保留。重接时按下文流程重建，或从 git 历史找回 [model_client.go / model_service.go / i_model.proto] 作参照。
+- **Network（Resource 的网络领域，可选依赖）**：[i_network.proto](../api/protos/admin/service/v1/i_network.proto) + [network_client.go](../app/admin/service/internal/data/network_client.go) + [network_service.go](../app/admin/service/internal/service/network_service.go)。地址为空则跳过客户端装配。当前租户面 25 方法（包括 NET-25 VPC CIDR 预设）及 JWT/AK 合同见 [接口登记](interface-integration-register.md)，部署与运行是否可用以实际验收为准。
+- **ModelDev（当前使用 MODEL 模块）**：[modeldev_client.go](../app/admin/service/internal/data/modeldev_client.go) 与 [CPU-P01 接口登记](interface-integration-register.md) 记录受理、投递、查询和受管目录操作。旧 Model 的 `GET /api/v1/models` 路由、客户端与 Proto 仍已暂摘；ModelDev 承接 `identityV1.Module_MODEL` 不等于恢复该旧接口。
+- **Accelerator / Inference**：[GPU owner 接入指南](contracts/gpu-owner-integration-guide.md) 记录唯一 URI SAN、typed context、冻结命令及退款 listener 等专项合同。
 
-下游在目标环境可能缺席时用 Network 的可选模式；强制依赖型接入（地址未配置则启动失败）在删除的 Model 实现里有先例，重接 Model 时按它恢复。
+下游在目标环境可能缺席时可参考 Network 的可选装配模式；是否属于启动必需依赖由本次接入合同决定。旧 Model 的强制依赖装配仅是历史先例，重接时须重新确定授权范围和启动条件。
 
 ## 执行环境边界
 
@@ -37,7 +38,7 @@ scripts/dev/new-service-scaffold.sh \
 
 参数：`-n` 服务名（PascalCase）、`-d` 领域包段（proto package 与 gen 目录）、`-m` identityV1 模块枚举后缀、`-r` 下游 Go API import 路径、`-p` HTTP 路由、`-s` 下游 mTLS ServerName（DNS SAN）。
 
-脚本只写入四个骨架文件（领域 proto、BFF proto、出站 client、入站 service），已存在的文件拒绝覆盖，末尾打印手工装配清单。它不执行任何生成/构建。
+脚本只写入四个骨架文件（领域 proto、BFF proto、出站 client、入站 service），已存在的文件拒绝覆盖，末尾打印手工装配清单。它不执行任何生成/构建。 骨架沿用现有 Network 模式；新调用仍须按统一规范核对并落实证书身份、完整 RPC 允许清单和可信业务范围，文件生成不代表已满足合同。
 
 ## 2. 领域 Proto（`api/protos/<domain>/service/v1/<entity>.proto`）
 
@@ -61,13 +62,27 @@ make api
 
 ## 5. 出站 mTLS 客户端（`internal/data/<entity>_client.go`）
 
-照 [network_client.go](../app/admin/service/internal/data/network_client.go) 的不变量逐条核对：
+<a id="current-client-contracts"></a>
 
-- **fail-closed 构造**：address 与正 timeout 必填；CA 必须能解析（无证书即报错）；客户端证书加载失败即报错；leaf 的 DNS SAN 必须精确包含 `ani-governance`（这是治理中心自己的身份，不是下游的）。
-- **传输**：`tls.Config{MinVersion: TLS13}`；`ServerName` 固定为下游 DNS 名（如 `ani-network-service`）；`grpc.WithDisableServiceConfig()`——本合同没有 DNS TXT 服务发现权威。
-- **环境变量**：`ANI_<NAME>_ADDR / _CA / _CERT / _KEY / _TIMEOUT`；timeout 默认 3s，解析失败要返回错误，不吞。
-- **身份 header 重建**（见 §9 契约表）：用 `metadata.NewOutgoingContext` 整体重建，**绝不 append 入站/公网传来的身份 header**。
-- **错误区分**：`DeadlineExceeded` 且连接态非 Ready → 映射 `Unavailable`（503，传输不可达）；已连接但慢的 RPC 保持 `DeadlineExceeded`（504）。
+以下是当前源码的客户端配置索引，保留独立迁移前的实际行为；新增和修改遵循统一服务间调用规范。各客户端均要求受管目的地址、CA/证书/密钥、TLS 1.3、明确超时及出站 metadata 重建。现有身份与环境变量有所不同：
+
+| 当前链路 | 客户端身份与服务端名称 | 受管环境变量 |
+|---|---|---|
+| Gov → Network | 客户端唯一 DNS SAN `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-network-service`，复核字面 DNS SAN 并拒绝通配符 | `ANI_NETWORK_ADDR/CA/CERT/KEY/TIMEOUT` |
+| Gov → Image | 与 Network 使用相同 Resource 身份校验，服务端固定 `ani-network-service` | `ANI_IMAGE_ADDR/CA/CERT/KEY/TIMEOUT` |
+| Gov → ModelDev | 客户端唯一 DNS SAN 为 `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-modeldev-service` 并额外检查字面 DNS SAN | `ANI_MODELDEV_ADDR/CA/CERT/KEY/TIMEOUT` |
+| Gov → Accelerator | 客户端唯一 URI SAN 为 `spiffe://ani.internal/service/ani-governance`；服务端名称来自受管配置 | `ANI_ACCELERATOR_ADDR/CA/CERT/KEY/TIMEOUT/SERVER_NAME` |
+| Gov → Inference | 客户端唯一 URI SAN 为 `spiffe://ani.internal/service/ani-governance`；服务端名称来自受管配置，并额外检查字面 DNS SAN | `ANI_INFERENCE_ADDR/CA_FILE/CERT_FILE/KEY_FILE/SERVER_NAME`；固定三秒超时 |
+
+以各客户端源码和专项合同为准：[Network](../app/admin/service/internal/data/network_client.go)、[Image](../app/admin/service/internal/data/image_client.go)、[ModelDev](../app/admin/service/internal/data/modeldev_client.go) / [配置](../app/admin/service/internal/data/modeldev_client_config.go)、[Accelerator](../app/admin/service/internal/data/accelerator_client.go)、[Inference](../app/admin/service/internal/data/inference_client.go)。此表描述现有实现；统一身份规则或迁移须另有明确合同，不以修改本文代替运行代码迁移。
+
+以下逐条说明 **Network 示例**：
+
+- **fail-closed 构造**：address 与正 timeout 必填；CA 必须能解析（无证书即报错）；客户端证书须有效且允许 clientAuth，唯一 DNS SAN 为 `ani-governance`，不混入 URI、IP、email 或其他 DNS 身份。
+- **传输**：`tls.Config{MinVersion: TLS13}`；`ServerName` 固定为 `ani-network-service`，默认 CA/用途/有效期验证后再复核字面 SAN，拒绝通配符。Network/Image 均关闭 gRPC service config 和未审查的自动 retry。
+- **环境变量**：`ANI_NETWORK_ADDR/CA/CERT/KEY/TIMEOUT`；timeout 默认 3s，解析失败要返回错误，不吞。
+- **身份 header 重建**（见 §9 的 Network/Image 契约表）：用 `metadata.NewOutgoingContext` 整体重建，**绝不 append 入站/公网传来的身份 header**。
+- **期限与错误**：继承上游取消并设置本次 deadline；保留原 RPC status 与领域 details，不按连接态把 `DeadlineExceeded` 改为 `Unavailable`。公网错误仍由 Service 做安全映射，超时不证明下游没有执行。
 - 构造期一次性读证书是已知限制：cert-manager 续期后需重启 Pod 重载，见 [governance-mtls README](../scripts/deploy/governance-mtls/README.md)。
 
 ## 6. 入站代理服务（`internal/service/<entity>_service.go`）
@@ -112,11 +127,13 @@ make api
 
 ## 8. 模块与权限登记
 
-1. **[module_mapping.go](../pkg/constants/module_mapping.go)**：`"<Name>Service": identityV1.Module_<MODULE>`。漏登记会导致 `business_module` 为 UNSPECIFIED，租户白名单直接拒绝。若模块枚举已定义但服务暂摘（如当前的 `MODULE_MODEL`），需在 [module_mapping_test.go](../pkg/constants/module_mapping_test.go) 的 `modulesWithoutService` 显式豁免。
+1. **[module_mapping.go](../pkg/constants/module_mapping.go)**：`"<Name>Service": identityV1.Module_<MODULE>`。漏登记会导致 `business_module` 为 UNSPECIFIED，租户白名单直接拒绝。当前 `MODEL` 由 `ModelDevService` 承接，`modulesWithoutService` 为空。仅当某模块确实没有任何服务承接且该状态属于明确接入范围时，才在 [module_mapping_test.go](../pkg/constants/module_mapping_test.go) 的 `modulesWithoutService` 记录有理由的豁免；不得为已有服务添加豁免。
 2. **Api 表登记**：新增接口明确登记 `(path, method)`、权限和套餐关系，参照 [bootstrap-network-access.sql](../scripts/ops/sql/bootstrap-network-access.sql) 写专项脚本；先 `admin sync-apis --dry-run` 再显式同步。[SyncAPIs](../sql/bootstrap/catalog.go) 按 `(method,path)` 幂等 UPSERT，保留既有 ID、status 和权限关联，不删除、不自动授权；源码 SQL、目录登记与运行租户角色授权分别验证，具体步骤见 [API 权限运维](api-role-permission-ops.md)。
 3. 套餐：目标租户的 Plan 必须包含该 Module，否则闸门 403。
 
-## 9. 身份 Header 契约（治理中心 → 下游）
+## 9. 出站身份与报文（按链路区分）
+
+**Gov → Network/Image** 当前使用以下三个 header：
 
 | Header | 值 | 来源 |
 |---|---|---|
@@ -124,13 +141,19 @@ make api
 | `x-ani-actor` | `governance:user:<uid>` 或 `governance:access-key:<key-id>` | 认证后的 `Principal.Actor()`；用户与机器身份独立 |
 | `x-ani-request-id` | 新 UUID | 每次调用重建 |
 
-下游只信任 mTLS 对端（治理中心）传来的这三个 header；公网或重复 header 一律不可信。治理中心侧每次出站都整体重建，不从入站请求继承。
+这两条链路的下游只信任已认证 mTLS 对端（治理中心）传来的上述 header；公网或重复 header 一律不可信。治理中心侧每次出站都整体重建，不从入站请求继承。Network 的 CreateVPC/CreateSubnet Attribution 使用同一次生成的 request ID，以及相同 actor 和固定 `ani-governance` direct caller；接收方拒绝冲突。Network 的旧 `x-ani-operator` 仅从可信 actor 推导，不覆盖 request ID。业务 `idempotency_key` 沿用原意图，与追踪 ID 分开。
 
-mTLS 材料由 [scripts/deploy/governance-mtls/](../scripts/deploy/governance-mtls/) 的 cert-manager 配置签发（`clientAuth` EKU、共享 `ca-issuer` 信任根、90 天/提前 30 天续期）；新下游需要自己的 Certificate + 部署补丁，并把治理中心客户端证书 Secret 挂载路径填进 `ANI_<NAME>_*` 环境变量。
+Resource 接收方的完整方法、租户范围、超时和幂等统一见 [调用登记](https://github.com/zhangzhe-ctrl/ani-resource-service/blob/82c4b2d6fb7ca6fec15ddcb3cf236e5a0ca9a971/docs/specs/governance-calls.md)，需随接收方源码一起交付；任务分支发布不代表已合入 main 或部署。其他现有链路使用各自合同：
+
+- **Gov → ModelDev**：Resolve/AcceptExecution/ApplyCloseIntent 重建上述三项；查询另加完整 RPC 的 `x-ani-authorized-method` 和 `x-ani-data-scope=tenant-all`，受管目录操作复用该委派并按其幂等合同绑定 request ID。见 [query client](../app/admin/service/internal/data/modeldev_query_client.go)、[management client](../app/admin/service/internal/data/modeldev_management_client.go) 与接口登记。
+- **Gov → Accelerator**：委托 RPC 从 typed context 派生 `x-ani-action`（RPC 短名）、`x-ani-actor-type`、`x-ani-actor-id`，租户调用再加 `x-ani-tenant-id`；`SyncGpuUsage` 使用原持久投影并重建空 metadata。不能照搬 Network actor header。见 [acceleratorMetadata](../app/admin/service/internal/data/accelerator_client.go) 和 GPU owner 指南。
+- **Gov → Inference**：创建/删除 RPC 重建空 metadata，可信租户和原命令身份来自冻结附件及完整 charges，由唯一 Gov URI 证书身份保护。见 [inference_client.go](../app/admin/service/internal/data/inference_client.go) 和 GPU owner 指南；不得改用普通 metadata 自报授权。
+
+[scripts/deploy/governance-mtls/](../scripts/deploy/governance-mtls/) 提供 Network/Image DNS 身份材料的 cert-manager 模板（`clientAuth` EKU、Issuer `ani-internal-ca`、有效期 72 小时/提前 24 小时续期；以 [certificate.yaml](../scripts/deploy/governance-mtls/certificate.yaml) 为准）。新下游的 Certificate、SAN、信任根、部署补丁和环境变量须按其具体合同准备；现有 URI 身份不能直接套用该 DNS 证书。
 
 ## 10. 验收清单
 
-编译与生成只是起点；隔离、鉴权、持久化、故障恢复**不能由 HTTP 200 或静态检查代替**。最小负向用例集如下；各批实际执行结果见 [接口登记](interface-integration-register.md)，历史 Network 验收不替代当前新增能力：
+编译与生成只是起点；隔离、鉴权、持久化、故障恢复**不能由 HTTP 200 或静态检查代替**。以下以 Network 租户入口为例；其他链路按其平台/租户、用户/机器范围及专项合同选择用例。各批实际执行结果见 [接口登记](interface-integration-register.md)，历史 Network 验收不替代当前新增能力：
 
 - [ ] 未登录 → 401
 - [ ] 平台租户（tid=0）→ 403 `TENANT_REQUIRED`

@@ -1,6 +1,6 @@
 # 租户 Network / Image 的 AK/SK 请求合同
 
-公开入口的身份有两种：用户 Bearer JWT，或独立 API Key 主体。AK/SK 只开放 [NetworkOperations](../../pkg/middleware/auth/network_policy.go) 的 24 个租户 Network 方法与 [ImageOperations](../../pkg/middleware/auth/image_policy.go) 的 11 个方法。平台 Network、Attachment、ImageRuntime 和 Key 管理不开放机器访问。接口、权限及实际验证统一见 [接口登记](../interface-integration-register.md)；OpenAPI 的 security 声明不替客户端计算签名。
+公开入口的身份有两种：用户 Bearer JWT，或独立 API Key 主体。AK/SK 只开放 [NetworkOperations](../../pkg/middleware/auth/network_policy.go) 的 25 个租户 Network 方法（含 NET-25 `ListVPCCIDRPresets`）与 [ImageOperations](../../pkg/middleware/auth/image_policy.go) 的 11 个方法。平台 Network、Attachment、ImageRuntime 和 Key 管理不开放机器访问。接口、权限及实际验证统一见 [接口登记](../interface-integration-register.md)；OpenAPI 的 security 声明不替客户端计算签名。
 
 ## 签名
 
@@ -26,7 +26,7 @@ GET/DELETE 使用空 body；POST/PATCH 使用 JSON 对象及 `application/json`�
 
 ## Python 调用
 
-[签名客户端](../../scripts/ops/aksk_vpc_client.py) 的 `sign_vpc` 保留原 GET 向量，`sign_network` 与 `request_network` 支持完整 24 方法。真实 AK/SK 由调用环境注入，示例、日志和提交中不填写凭据：
+[签名客户端](../../scripts/ops/aksk_vpc_client.py) 的 `sign_vpc` 保留原 GET 向量，`sign_network` 与 `request_network` 当前支持原 24 个 Network 方法，尚未包含 NET-25 VPC CIDR 预设；服务端支持 25 方法不等于该 helper 已全部覆盖。NET-25 为无 body/query 的 `GET /api/v1/networks/vpc-cidr-presets`，仍采用上述七行签名。真实 AK/SK 由调用环境注入，示例、日志和提交中不填写凭据：
 
 ```python
 import importlib.util

@@ -1,15 +1,31 @@
-# 认证权鉴中间件
+# 认证与授权上下文中间件
 
-## 介绍
+[Server](auth.go) 校验请求凭据，建立可信 `Principal`、Ent viewer 和授权上下文，并可检查租户状态与套餐模块。实际 HTTP 链由 [rest_server.go](../../../app/admin/service/internal/server/rest_server.go) 装配；公开登录、刷新、邀请等接口通过该文件的 selector 白名单另行处理。
 
-本目录下的中间件用于处理用户认证和权限管理，确保只有经过授权的用户才能访问特定的资源和功能。
+## Bearer / JWT
 
-## JWT 校验
+HTTP Bearer 分支要求恰好一个 `Authorization` header，并从 Kratos metadata 提取 Bearer token。必须通过 `WithAccessTokenChecker` 或 `WithAccessTokenCheckerFromFuncs` 配置有效性检查器；缺失检查器、校验失败、空 payload 或零用户 ID 都拒绝请求。
 
-登录的时候，JWT Token会存一份到Redis，后续每次请求携带Token时，会去Redis校验Token的有效性，防止Token被篡改或伪造。
+当前主服务的 [TokenChecker](../../../app/admin/service/internal/data/token_checker.go) 委托 [Authenticator](../../../app/admin/service/internal/data/authenticator.go) 校验 JWT 签名、过期时间和 payload，再核对 Redis 中的访问令牌及 JTI 黑名单。`Server` 调用检查器时固定传 `skipRedis=false`。JWT 签名用于验证令牌真实性；Redis 记录与黑名单用于会话撤销和失效判断，二者分别承担职责。
 
-我们可以使用`WithAccessTokenChecker`和`WithAccessTokenCheckerFunc`来启用对访问令牌的校验。默认这个功能是关闭的。
+当前 API 定义于 [options.go](options.go)：`WithAccessTokenCheckerFromFuncs(valid, blocker)` 使用 `NewAccessTokenCheckerFromFuncs` 组合接口。`Server` 实际调用的是 `IsValidAccessToken`，不会单独调用组合对象的 `IsBlockedAccessToken`；自定义 `valid` 函数须包含所需的撤销检查。没有独立的 `WithAccessTokenBlocker` 开关。
 
-我们采用的是“白名单”机制来校验JWT Token，虽然这违背了JWT无状态的初衷，但能有效防止Token被篡改或伪造。也可以有效的踢掉某个用户的登录状态。
+## AK/SK
 
-另外还有一种“黑名单”机制，可以使用`WithAccessTokenBlocker`和`WithAccessTokenBlockerFunc`来启用对访问令牌的阻断。默认这个功能是关闭的。
+HTTP 请求带任一签名 header 时进入 AK 分支，和 `Authorization` 混用会被拒绝。该分支需要 `WithSigningKeyStore`，验证固定 header、时间窗口、请求规范化及 HMAC 签名；当前仅允许明确登记的 Network/Image 操作。存储缺失或不可用不会放行。
+
+AK 通过后主体类型为 `api_key`，主体 ID 是 Access Key ID，不能当作用户 ID；租户、角色和 `Actor()` 均从校验后的主体获得。详细报文、允许范围与错误合同见 [AK/SK 签名合同](../../../docs/contracts/aksk-signature.md)，不在本页另建一套协议。
+
+## 可信身份与授权
+
+业务代码通过 [PrincipalFromContext](principal.go) 读取用户或机器主体；[FromContext](context.go) 保留旧的用户 claims 接口。不能从公网 tenant、actor 或角色字段建立可信身份。AK 的兼容 claims 没有用户 ID，需使用 `Principal` 区分主体。
+
+`WithTenantAccessChecker` 配置租户闸门；当前主服务在认证后、业务处理前检查非零租户的状态、到期策略和套餐模块。`WithInjectEnt`、`WithInjectMetadata`、`WithInjectOperatorId` 和 `WithInjectTenantId` 控制上下文或请求注入；默认注入 Ent viewer 与 metadata，默认不改请求操作人/租户字段。主服务显式关闭 metadata 注入，出站身份另按调用合同重建。
+
+`WithEnableAuthority` 控制是否准备授权 claims，不等于执行策略判定。[utils.go](utils.go) 对 HTTP 使用路由模板与方法，对其他传输使用 operation 与 `ANY`，租户 domain 来自可信 claims。主服务随后通过 `authz.Server` 的 Casbin 引擎执行授权；认证成功不等于已获业务权限。
+
+## 验证与来源
+
+正常和拒绝路径见 [auth_test.go](auth_test.go)、[signature_test.go](signature_test.go)、[authorization_domain_test.go](authorization_domain_test.go) 及本目录请求策略测试。包测试入口为仓库根目录的 `go test ./pkg/middleware/auth`；它不代替真实 JWT/Redis、Casbin 或下游联调验收。
+
+项目来源、原许可和本地接管说明见 [THIRD_PARTY_NOTICES.md](../../../THIRD_PARTY_NOTICES.md)。

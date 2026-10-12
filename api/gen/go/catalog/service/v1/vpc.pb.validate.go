@@ -3765,6 +3765,14 @@ func (m *Subnet) validate(all bool) error {
 
 	// no validation rules for LastOperationId
 
+	if m.AvailableIpCount != nil {
+		// no validation rules for AvailableIpCount
+	}
+
+	if m.UsedIpCount != nil {
+		// no validation rules for UsedIpCount
+	}
+
 	if len(errors) > 0 {
 		return SubnetMultiError(errors)
 	}
@@ -5522,6 +5530,219 @@ var _ interface {
 	ErrorName() string
 } = DeleteVPCSnatBindingResponseValidationError{}
 
+// Validate checks the field values on LoadBalancerCertificateRef with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *LoadBalancerCertificateRef) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on LoadBalancerCertificateRef with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// LoadBalancerCertificateRefMultiError, or nil if none found.
+func (m *LoadBalancerCertificateRef) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *LoadBalancerCertificateRef) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Name
+
+	// no validation rules for Namespace
+
+	if len(errors) > 0 {
+		return LoadBalancerCertificateRefMultiError(errors)
+	}
+
+	return nil
+}
+
+// LoadBalancerCertificateRefMultiError is an error wrapping multiple
+// validation errors returned by LoadBalancerCertificateRef.ValidateAll() if
+// the designated constraints aren't met.
+type LoadBalancerCertificateRefMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m LoadBalancerCertificateRefMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m LoadBalancerCertificateRefMultiError) AllErrors() []error { return m }
+
+// LoadBalancerCertificateRefValidationError is the validation error returned
+// by LoadBalancerCertificateRef.Validate if the designated constraints aren't met.
+type LoadBalancerCertificateRefValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e LoadBalancerCertificateRefValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e LoadBalancerCertificateRefValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e LoadBalancerCertificateRefValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e LoadBalancerCertificateRefValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e LoadBalancerCertificateRefValidationError) ErrorName() string {
+	return "LoadBalancerCertificateRefValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e LoadBalancerCertificateRefValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sLoadBalancerCertificateRef.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = LoadBalancerCertificateRefValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = LoadBalancerCertificateRefValidationError{}
+
+// Validate checks the field values on LoadBalancerSessionPersistence with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *LoadBalancerSessionPersistence) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on LoadBalancerSessionPersistence with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// LoadBalancerSessionPersistenceMultiError, or nil if none found.
+func (m *LoadBalancerSessionPersistence) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *LoadBalancerSessionPersistence) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Mode
+
+	// no validation rules for CookieExpirySeconds
+
+	if len(errors) > 0 {
+		return LoadBalancerSessionPersistenceMultiError(errors)
+	}
+
+	return nil
+}
+
+// LoadBalancerSessionPersistenceMultiError is an error wrapping multiple
+// validation errors returned by LoadBalancerSessionPersistence.ValidateAll()
+// if the designated constraints aren't met.
+type LoadBalancerSessionPersistenceMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m LoadBalancerSessionPersistenceMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m LoadBalancerSessionPersistenceMultiError) AllErrors() []error { return m }
+
+// LoadBalancerSessionPersistenceValidationError is the validation error
+// returned by LoadBalancerSessionPersistence.Validate if the designated
+// constraints aren't met.
+type LoadBalancerSessionPersistenceValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e LoadBalancerSessionPersistenceValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e LoadBalancerSessionPersistenceValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e LoadBalancerSessionPersistenceValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e LoadBalancerSessionPersistenceValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e LoadBalancerSessionPersistenceValidationError) ErrorName() string {
+	return "LoadBalancerSessionPersistenceValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e LoadBalancerSessionPersistenceValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sLoadBalancerSessionPersistence.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = LoadBalancerSessionPersistenceValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = LoadBalancerSessionPersistenceValidationError{}
+
 // Validate checks the field values on LoadBalancerListenerInput with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -5613,8 +5834,76 @@ func (m *LoadBalancerListenerInput) validate(all bool) error {
 		}
 	}
 
+	if all {
+		switch v := interface{}(m.GetCertificateRef()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, LoadBalancerListenerInputValidationError{
+					field:  "CertificateRef",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, LoadBalancerListenerInputValidationError{
+					field:  "CertificateRef",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCertificateRef()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return LoadBalancerListenerInputValidationError{
+				field:  "CertificateRef",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for Algorithm
+
+	if all {
+		switch v := interface{}(m.GetSessionPersistence()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, LoadBalancerListenerInputValidationError{
+					field:  "SessionPersistence",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, LoadBalancerListenerInputValidationError{
+					field:  "SessionPersistence",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetSessionPersistence()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return LoadBalancerListenerInputValidationError{
+				field:  "SessionPersistence",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for GzipEnabled
+
+	// no validation rules for HttpsRedirectStatusCode
+
 	if m.Port != nil {
 		// no validation rules for Port
+	}
+
+	if m.MaxConnections != nil {
+		// no validation rules for MaxConnections
 	}
 
 	if len(errors) > 0 {
@@ -5788,6 +6077,74 @@ func (m *LoadBalancerListener) validate(all bool) error {
 				cause:  err,
 			}
 		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetCertificateRef()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, LoadBalancerListenerValidationError{
+					field:  "CertificateRef",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, LoadBalancerListenerValidationError{
+					field:  "CertificateRef",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCertificateRef()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return LoadBalancerListenerValidationError{
+				field:  "CertificateRef",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for Algorithm
+
+	if all {
+		switch v := interface{}(m.GetSessionPersistence()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, LoadBalancerListenerValidationError{
+					field:  "SessionPersistence",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, LoadBalancerListenerValidationError{
+					field:  "SessionPersistence",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetSessionPersistence()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return LoadBalancerListenerValidationError{
+				field:  "SessionPersistence",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for GzipEnabled
+
+	// no validation rules for HttpsRedirectStatusCode
+
+	if m.MaxConnections != nil {
+		// no validation rules for MaxConnections
 	}
 
 	if len(errors) > 0 {
@@ -6156,6 +6513,10 @@ func (m *LoadBalancerHealthCheck) validate(all bool) error {
 	var errors []error
 
 	// no validation rules for Protocol
+
+	// no validation rules for Path
+
+	// no validation rules for Hostname
 
 	if m.IntervalSeconds != nil {
 		// no validation rules for IntervalSeconds

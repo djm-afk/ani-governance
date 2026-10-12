@@ -1,6 +1,6 @@
 # ANI Governance 本仓开发指南
 
-本指南描述“仓库入口整理”PR 的目标实现。工具和业务基线为 `main@9ba13ad933b66e8f675f7eb9519123abcdb12e8f`；命令接线与文档在同一 PR 中更新，实际执行证明见该 PR，不因文档写了命令就视为全部环境均已验证。
+本指南描述当前仓库的开发流程；命令和工具版本以 HEAD 中的 Makefile、工具锁与源码为准。原“仓库入口整理”任务以 `main@9ba13ad933b66e8f675f7eb9519123abcdb12e8f` 为基线，其验证只覆盖当时的源码与环境。后续任务按实际变更记录验证，不因指南列出命令就视为当前环境已通过。
 
 ## 1. 仓库身份与工作范围
 
@@ -189,13 +189,26 @@ API 目录同步也是显式动作：先执行 `admin sync-apis --dry-run`，核
 
 - 可信租户和操作人来自已有认证上下文，不直接相信入站请求中的身份字段。
 - `tenant_id` 列并不自动等于隔离；读取、更新、删除、关联、缓存、异步和下游元数据都检查租户边界。
-- 部分更新遵循 `update_mask`，区分未请求修改与显式清空；主表与关联更新保留事务边界。复杂关联参考当前 `RoleRepo.Update`，不是全量字段覆盖。
-- 分页、过滤、排序和搜索按当前 PagingRequest／Repository 合同，不在清理仓库时改变语义。
+- 部分更新遵循 `update_mask`，区分未请求修改与显式清空；主表与关联更新保留事务边界。实现细节见 [Repository 与 DTO 合同](#repository-contracts)。
+- 分页、过滤、排序和搜索先读 [分页规范](contracts/pagination.md)，按对应接口的当前合同实现；不在清理仓库时改变窗口或响应语义。
 - 用户字段权限与脱敏保持既有处理顺序，不能为了“统一命名”改 JWT claim、Cookie、请求头、Redis key 或 topic。
 - 下游身份元数据按既有客户端重建，不透传未验证的公网身份信息。保持 mTLS 和稳定错误映射，不为接入方便降级。
 - 不吞错误；错误日志不泄露密码、令牌、密钥或跨租户私有内容。
 
 规则与具体函数优先查现有 AGENTS、Service／Repository 和专项合同，不从历史上游教程复制行为。
+
+<a id="repository-contracts"></a>
+
+### 6.3 Repository 与 DTO 合同
+
+新增或修改 Repository、DTO 映射和关联 FieldMask 前，核对本节及当前 [ApiRepo](../app/admin/service/internal/data/api_repo.go)、[RoleRepo.Update](../app/admin/service/internal/data/role_repo.go)。这些合同针对本仓维护的 [go-crud/entgo Repository](../pkg/localdeps/go-crud/entgo/repository.go)，不按上游最新版推断。
+
+- Repository 泛型参数依次为 `Query`、`Select`、`Create`、`CreateBulk`、`Update`、`UpdateOne`、`Delete`、`Predicate`、`DTO`、`Entity`，共 10 项；类型声明和构造保持同一次序。
+- DTO mapper 注册 `copierutil.NewTimeStringConverterPair()` 与 `copierutil.NewTimeTimestamppbConverterPair()`；每个需要映射的枚举注册相应转换器的 `NewConverterPair()`。
+- `ListWithPaging` 同时传查询 builder 和 `builder.Clone()`，参照 `ApiRepo.List`；查询条件与具体接口的分页合同保持一致。
+- 关联是否更新由关联字段是否出现在 `update_mask` 中决定：未请求修改则保留原关联，显式空集合则清空，非空集合按请求替换。
+- 先识别关联 mask 并保存关联载荷，再把关联路径从通用标量 mask 分离；避免标量 `FilterByFieldMask` 清掉载荷后误清空关联，或把关联字段当作主表列更新。mask 使用 Proto 字段名；绕过 protojson 的直接调用如需兼容 JSON 字段名，以当前源码的明确处理为准。
+- 主表与关联更新使用同一事务，任一步失败回滚。关联 ID 必须在可信租户范围内验证；定向回归覆盖未指定、显式清空、重新添加、跨租户拒绝及失败回滚，不能以清空成功代替租户隔离验证。
 
 ## 7. 验证层次与实际前置
 

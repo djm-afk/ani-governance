@@ -11189,6 +11189,8 @@ components:
                     enum:
                         - LOAD_BALANCER_ALGORITHM_UNSPECIFIED
                         - LOAD_BALANCER_ALGORITHM_ROUND_ROBIN
+                        - LOAD_BALANCER_ALGORITHM_LEAST_REQUEST
+                        - LOAD_BALANCER_ALGORITHM_SOURCE_IP
                     type: string
                     format: enum
                 state:
@@ -11284,6 +11286,13 @@ components:
                     format: date-time
                 observation_stale:
                     type: boolean
+        LoadBalancerCertificateRef:
+            type: object
+            properties:
+                name:
+                    type: string
+                namespace:
+                    type: string
         LoadBalancerHealthCheck:
             type: object
             properties:
@@ -11291,6 +11300,7 @@ components:
                     enum:
                         - LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_UNSPECIFIED
                         - LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_TCP
+                        - LOAD_BALANCER_HEALTH_CHECK_PROTOCOL_HTTP
                     type: string
                     format: enum
                 interval_seconds:
@@ -11308,6 +11318,10 @@ components:
                 port:
                     type: integer
                     format: uint32
+                path:
+                    type: string
+                hostname:
+                    type: string
         LoadBalancerListener:
             type: object
             properties:
@@ -11317,6 +11331,10 @@ components:
                     enum:
                         - LOAD_BALANCER_LISTENER_PROTOCOL_UNSPECIFIED
                         - LOAD_BALANCER_LISTENER_PROTOCOL_HTTP
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_HTTPS
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_TCP
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_UDP
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_SSL
                     type: string
                     format: enum
                 port:
@@ -11330,6 +11348,26 @@ components:
                         $ref: '#/components/schemas/LoadBalancerBackendMember'
                 health_check:
                     $ref: '#/components/schemas/LoadBalancerHealthCheck'
+                certificate_ref:
+                    $ref: '#/components/schemas/LoadBalancerCertificateRef'
+                algorithm:
+                    enum:
+                        - LOAD_BALANCER_ALGORITHM_UNSPECIFIED
+                        - LOAD_BALANCER_ALGORITHM_ROUND_ROBIN
+                        - LOAD_BALANCER_ALGORITHM_LEAST_REQUEST
+                        - LOAD_BALANCER_ALGORITHM_SOURCE_IP
+                    type: string
+                    format: enum
+                session_persistence:
+                    $ref: '#/components/schemas/LoadBalancerSessionPersistence'
+                max_connections:
+                    type: integer
+                    format: uint32
+                gzip_enabled:
+                    type: boolean
+                https_redirect_status_code:
+                    type: integer
+                    format: uint32
         LoadBalancerListenerInput:
             type: object
             properties:
@@ -11337,6 +11375,10 @@ components:
                     enum:
                         - LOAD_BALANCER_LISTENER_PROTOCOL_UNSPECIFIED
                         - LOAD_BALANCER_LISTENER_PROTOCOL_HTTP
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_HTTPS
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_TCP
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_UDP
+                        - LOAD_BALANCER_LISTENER_PROTOCOL_SSL
                     type: string
                     format: enum
                 port:
@@ -11352,6 +11394,26 @@ components:
                         $ref: '#/components/schemas/LoadBalancerBackendInput'
                 health_check:
                     $ref: '#/components/schemas/LoadBalancerHealthCheck'
+                certificate_ref:
+                    $ref: '#/components/schemas/LoadBalancerCertificateRef'
+                algorithm:
+                    enum:
+                        - LOAD_BALANCER_ALGORITHM_UNSPECIFIED
+                        - LOAD_BALANCER_ALGORITHM_ROUND_ROBIN
+                        - LOAD_BALANCER_ALGORITHM_LEAST_REQUEST
+                        - LOAD_BALANCER_ALGORITHM_SOURCE_IP
+                    type: string
+                    format: enum
+                session_persistence:
+                    $ref: '#/components/schemas/LoadBalancerSessionPersistence'
+                max_connections:
+                    type: integer
+                    format: uint32
+                gzip_enabled:
+                    type: boolean
+                https_redirect_status_code:
+                    type: integer
+                    format: uint32
         LoadBalancerListenerSet:
             type: object
             properties:
@@ -11369,6 +11431,20 @@ components:
                     type: string
                 listeners:
                     $ref: '#/components/schemas/LoadBalancerListenerSet'
+        LoadBalancerSessionPersistence:
+            type: object
+            properties:
+                mode:
+                    enum:
+                        - LOAD_BALANCER_SESSION_MODE_UNSPECIFIED
+                        - LOAD_BALANCER_SESSION_MODE_DISABLED
+                        - LOAD_BALANCER_SESSION_MODE_COOKIE_TIMEOUT
+                        - LOAD_BALANCER_SESSION_MODE_COOKIE_SESSION
+                    type: string
+                    format: enum
+                cookie_expiry_seconds:
+                    type: integer
+                    format: uint32
         LoginAuditLog:
             type: object
             properties:
@@ -13980,6 +14056,10 @@ components:
                 observation_stale:
                     type: boolean
                 last_operation_id:
+                    type: string
+                available_ip_count:
+                    type: string
+                used_ip_count:
                     type: string
             description: Tenant-facing subnet fields; ownership is resolved from authenticated context.
         SyncMenusRequest:

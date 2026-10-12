@@ -7,7 +7,7 @@
 
 ## 1. 准备配置和制品
 
-构建环境使用 Go 1.26.7，从仓库根目录执行：
+构建环境按 `go.mod` 使用 Go 1.26.9，从仓库根目录执行：
 
 ```bash
 make build_only
@@ -36,7 +36,7 @@ docker build --target runtime-admin  -t <registry>/ani-governance-admin:<tag> .
 | `data.database` | PostgreSQL 地址、库名、账号；`migrate: false` |
 | `data.redis`、`server.asynq.uri` | 两处都指向可用 Redis，密码正确 |
 | `auth`、加密配置 | 使用部署环境自己的密钥，多副本保持一致；`ANI_ACCESS_KEY_ENCRYPTION_KEY_FILE` 必填，指向独立 64 位十六进制主密钥文件，不能明文降级 |
-| `authz.type` | 必须填 `casbin`；主装配在启动期校验，非 `casbin` 直接拒绝启动，不会退化为 noop。可选值仅 `casbin` / `noop`，`opa` 已移除（见 [OPA 移除记录](opa-removal-plan.md)） |
+| `authz.type` | 主服务只支持 `casbin`；主装配在启动期校验，非 `casbin` 直接拒绝启动。库内 noop 类型不构成受支持部署配置；`opa` 已移除（见 [历史 OPA 移除记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/opa-removal-plan.md)） |
 | `server.rest.addr` | 默认 7788；按实际监听地址与反向代理配置 |
 | CORS / Cookie | 优先同域代理；跨端口开发需正确 Origin、凭证设置；代理 HTTPS 传递正确协议 |
 | Network | 未接入时不设置 `ANI_NETWORK_ADDR`；接入时另配 mTLS 和下游数据 |
@@ -83,7 +83,7 @@ containers:
     args: ["migrate", "apply", "--dir", "file://migrations", "--url", "$(ANI_DATABASE_DSN)"]
 ```
 
-完整可复现的镜像构建与导入见 [隔离实验镜像说明](../scripts/lab/README.md)。
+当前镜像构建与导入入口见 [独占开发镜像说明](../scripts/dev/images/README.md)。
 
 ### 字段清理迁移（FIELD-CLEANUP-01）
 
@@ -93,7 +93,7 @@ containers:
 
 `sys_permission_policies.policy_engine` 的枚举值 `OPA` 只在代码与 Ent 生成码中删除；该列在 PostgreSQL 中是 `character varying NOT NULL DEFAULT 'CASBIN'`（无 CHECK 约束），**数据库侧不需要变更，也没有对应迁移**。既有行若存了 `OPA` 值不受影响，但服务已不再使用该引擎。
 
-生成方式说明：本迁移为手写后经 `atlas migrate hash` 校验并在独立开发库 `migrate apply` 验证——`atlas migrate diff` 的 dev 库规范化目前被既有的 `sys_quota_operations` 外键问题阻塞（见 [字段清理计划](geo-location-field-removal-plan.md)），该问题属另一批。
+历史生成方式：本迁移为手写后经 `atlas migrate hash` 校验并在独立开发库 `migrate apply` 验证；当时 `migrate diff` 的 dev 库规范化被既有的 `sys_quota_operations` 外键问题阻塞，见 [固定版本字段清理计划](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/geo-location-field-removal-plan.md)。该记录不证明当前 diff 仍被阻塞；本次文档修订未运行生成或数据库验证。
 
 开发者修改 schema 后，先完成 Ent 生成并运行 `go run ./cmd/schema > schema.sql`（在 `app/admin/service` 下；`make ent` 和 `scripts/generate-aksk-slice.sh` 已包含此步），再用**独立、可清空的开发数据库**生成下一份迁移：
 
@@ -122,11 +122,11 @@ Atlas 的声明式来源为生成的 `app/admin/service/schema.sql`。其导出�
 docker run --rm \
   -e ANI_DATABASE_DSN='postgres://USER@HOST:5432/DB?sslmode=require' \
   -v /run/secrets/governance-admin-password:/run/secrets/governance-admin-password:ro \
-  <registry>/ani-governance-admin:<tag> admin init --username admin \
+  <registry>/ani-governance-admin:<tag> /app/bin/admin init --username admin \
   --password-file /run/secrets/governance-admin-password
 
 docker run --rm -e ANI_DATABASE_DSN='postgres://USER@HOST:5432/DB?sslmode=require' \
-  <registry>/ani-governance-admin:<tag> admin check
+  <registry>/ani-governance-admin:<tag> /app/bin/admin check
 ```
 
 `admin` 只连接 PostgreSQL，不需要 Redis、邮件或其他业务服务。密码须满足当前初始策略：至少 8 位、至少三类字符，并受 bcrypt 长度限制。没有内置默认管理员密码。
@@ -196,7 +196,7 @@ gow run admin
 ./bin/admin check
 ```
 
-运维镜像内把 `./bin/admin` 换成 `docker run --rm -e ANI_DATABASE_DSN=... <registry>/ani-governance-admin:<tag> admin`（K8s 场景用一次性 Job，命令与参数按上面的子命令填写）。
+运维镜像内把 `./bin/admin` 换成 `docker run --rm -e ANI_DATABASE_DSN=... <registry>/ani-governance-admin:<tag> /app/bin/admin`。根 Dockerfile 使用 CMD 而非 ENTRYPOINT；覆盖命令时必须给出镜像内二进制路径。K8s 一次性 Job 使用 `command: ["/app/bin/admin"]`，子命令放在 `args`。
 
 预览只读；应用不清表、不重新编号、不删除旧 API、不改权限关联。代码已删除的 API 会显示 `REVIEW`，保留到人工审查其授权关系后再明确清理。相同 `(path,method)` 已有多行会报冲突，不猜测应该保留哪一行。
 
@@ -272,12 +272,12 @@ token/request 文件必须是 `0600` 的普通文件；命令不播种权限、�
 
 “基础管理”套餐不包含 Network 等下游模块；需要时明确增加套餐模块和接口权限，并单独验收下游接线。进程启动、只读检查、真实登录、目标 API 成功分别记录，不能互相替代。
 
-当前 Ubuntu kind 的初始化、账号获取、NodePort 验收与恢复步骤见 [2026-09-21 kind 运行记录](deployment-kind-20260921.md)。
+2026-09-21 Ubuntu kind 的初始化、账号获取、NodePort 验收与恢复记录见 [固定版本运行记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/deployment-kind-20260921.md)。其中环境与结果只对应当时版本，不是当前部署状态。
 
 
 ## 7. AK/SK 签名与首次 VPC 查询
 
-本批按无旧 Key、无存量用户实施，直接提供最终初始结构和种子，不提供旧 Key 转换或兼容交换入口。管理接口为 `/api/v1/auth/api-keys`，仅接受有权限的非零租户用户 JWT；业务签名当前只开放 VPC 详情。完整报文、300 秒窗口及 FieldMask 编码见 [执行合同与验收](aksk-vpc-execution-plan.md)。
+2026-09-22 首批按无旧 Key、无存量用户实施，直接提供最终初始结构和种子，不提供旧 Key 转换或兼容交换入口，见 [固定版本执行与验收记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/aksk-vpc-execution-plan.md)。管理接口为 `/api/v1/auth/api-keys`，仅接受有权限的非零租户用户 JWT。当前业务签名覆盖登记的 Network 与 Image 操作，范围和鉴权条件见 [接口登记](interface-integration-register.md)；300 秒窗口、规范签名和写入重试见 [AK/SK 合同](contracts/aksk-signature.md)。支持签名不自动授予角色权限或套餐模块。
 
 启动前必须提供 `ANI_ACCESS_KEY_ENCRYPTION_KEY_FILE`。文件内容为 32 随机字节的 64 位十六进制文本，最多一个结尾 LF，所有副本一致，以 Secret 挂载并备份；丢失后不能仅凭数据库恢复 SK。缺失、长度错误或不可读时服务构造失败。示例生成命令在部署主机执行：
 
@@ -301,6 +301,6 @@ export ANI_ACCESS_KEY_ENCRYPTION_KEY_FILE=/run/secrets/governance-access-key-enc
 2. `sql/data/20260922_quota_catalog_backfill.sql`：版本数据脚本，插入固定目录（user.count/storage.bytes/api.calls/gpu.count）并精确回填旧行；任何坏数据（NULL/未知类型/重复/越界/悬空 plan）整笔失败，不合并不删除。幂等可重跑。
 3. `migrations/20260922190100_quota_constraints.sql`：回填完成后加 NOT NULL、UNIQUE(plan_id,quota_code)、目录 FK、数值 CHECK。
 
-运行账号仍无 DDL；服务配置保持 `migrate: false`。配额内部退额 listener 由 `ANI_QUOTA_ENABLED`（默认 disabled）+ `ANI_QUOTA_INTERNAL_ADDR/_CA_FILE/_CERT_FILE/_KEY_FILE` 控制，enabled 缺凭据或显式 owner 身份映射启动失败，不降级明文。`gpu.count` 当前没有生产 GPU 执行器；旧 `quota_lab` 模拟路由与构建标签已退役。新账本表的 CHECK 约束已通过 `entsql.Annotation.Checks` 进入 Ent 导出的 schema.sql，与手写迁移同名同义。
+运行账号仍无 DDL；服务配置保持 `migrate: false`。配额内部退额 listener 默认关闭；启用时显式设置 `ANI_QUOTA_ENABLED=true`、`ANI_QUOTA_INTERNAL_ADDR`、`ANI_QUOTA_CA_FILE`、`ANI_QUOTA_CERT_FILE`、`ANI_QUOTA_KEY_FILE` 和 `ANI_QUOTA_INFERENCE_DNS_SAN`。SAN 映射仅注册编译装配的 `ani-inference` owner，缺凭据或合法映射即启动失败，不降级明文。完整接线、GPU code 与验收边界见 [GPU owner 接入指南](contracts/gpu-owner-integration-guide.md)；旧 `quota_lab` 模拟路由与构建标签已退役。新账本表的 CHECK 约束已通过 `entsql.Annotation.Checks` 进入 Ent 导出的 schema.sql，与手写迁移同名同义。
 
 本次 Atlas 检查确认 AK/SK、审计与角色复合约束一致。同时发现实施前初始基线仍保留 `files` 表、`sys_users.avatar` 列，而 Ent 已移除它们；这两项既有偏差不属于本批，未执行删除。今后 `migrate diff` 必须审查这些 DROP 候选，不得直接应用。
