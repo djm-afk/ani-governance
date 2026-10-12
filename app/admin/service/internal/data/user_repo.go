@@ -304,15 +304,15 @@ func (r *userRepo) List(ctx context.Context, req *paginationV1.PagingRequest) (*
 
 	// 分页方式判定：cursor 与 page/pageSize/offset/token 互斥；不带任何窗口参数时
 	// 走游标分页（limit 默认 20），继续沿用 PagingRequest 的过滤/排序/fieldMask 能力。
-	if !req.GetNoPaging() {
-		hasWindowParam := req.Page != nil || req.PageSize != nil || req.Offset != nil || req.Token != nil
-		if req.GetCursor() != "" && hasWindowParam {
-			return nil, identityV1.ErrorBadRequest(
-				"cursor is mutually exclusive with page/pageSize/offset/token")
-		}
-		if req.GetCursor() != "" || !hasWindowParam {
-			return r.listWithCursor(ctx, req)
-		}
+	// 互斥检查放在 noPaging 分支之外：noPaging 也不应与 cursor 同时出现（否则
+	// 客户端以为在翻页、服务端却忽略了游标）。
+	hasWindowParam := req.Page != nil || req.PageSize != nil || req.Offset != nil || req.Token != nil
+	if req.GetCursor() != "" && (hasWindowParam || req.GetNoPaging()) {
+		return nil, identityV1.ErrorBadRequest(
+			"cursor is mutually exclusive with page/pageSize/offset/token/noPaging")
+	}
+	if !req.GetNoPaging() && (req.GetCursor() != "" || !hasWindowParam) {
+		return r.listWithCursor(ctx, req)
 	}
 
 	builder := r.entClient.Client().User.Query()

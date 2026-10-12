@@ -8789,21 +8789,27 @@ components:
             properties:
                 name:
                     type: string
-                role_id:
-                    type: integer
-                    format: uint32
                 expires_at:
                     type: string
                     format: date-time
+                role_id:
+                    type: integer
+                    format: uint32
                 idempotency_key:
                     type: string
                     description: |-
                         Optional. When present, retrying with the same value and the same intent
                          replays the original key instead of creating a second one; a different
                          intent under the same value is rejected with 409 IDEMPOTENCY_CONFLICT.
+                         使用全新的未占用编号，不与旧字段冲突。
             description: |-
                 Create-only input. It stays separate from the read model (AccessKey) so the
                  idempotency key never leaks into GET/List responses or the OpenAPI read schema.
+
+                 字段编号刻意沿用旧 CreateAccessKeyRequest.data（原 AccessKey）的编号：
+                 旧定义里 name=2、expires_at=5、role_id=7，若改编号会让仍用旧 Proto 的 gRPC
+                 客户端发来的 name/role_id/expires_at 无法解码。旧 AccessKey 在两处共用的
+                 编号（1/3/4/6/200）在本输入里不再使用，用 reserved 标注防止被复用作新字段。
         CreateAccessKeyRequest:
             type: object
             properties:
@@ -10685,6 +10691,9 @@ components:
                         $ref: '#/components/schemas/AccessKey'
                 total:
                     type: string
+                next_cursor:
+                    type: string
+                    description: 游标分页的下一页游标；末页为空字符串。仅在 limit+cursor 分页下返回。
         ListApiAuditLogResponse:
             type: object
             properties:
@@ -11039,6 +11048,9 @@ components:
                         $ref: '#/components/schemas/Role'
                 total:
                     type: string
+                next_cursor:
+                    type: string
+                    description: 游标分页的下一页游标；末页为空字符串。仅在 limit+cursor 分页下返回。
             description: 角色列表 - 答复
         ListRouteResponse:
             type: object

@@ -13,6 +13,7 @@ import (
 	"go-wind-admin/pkg/localdeps/go-utils/trans"
 
 	identityV1 "go-wind-admin/api/gen/go/identity/service/v1"
+	permissionV1 "go-wind-admin/api/gen/go/permission/service/v1"
 	"go-wind-admin/app/admin/service/tests/testutil"
 )
 
@@ -240,6 +241,133 @@ func TestUserRepoSqlite_ListCursorDoesNotRequireWindowParams(t *testing.T) {
 	require.Len(t, resp.GetItems(), 3)
 	require.Equal(t, uint64(3), resp.GetTotal())
 	require.Empty(t, resp.GetNextCursor(), "不足默认页长时不应返回下一页游标")
+}
+
+// TestUserRepoSqlite_ListCursorEmptyRelationFilterFailsClosed 验证 §3.2：
+// 关系筛选（如 role_ids）在短路返回空集之前，limit 越界与游标校验必须先行执行。
+// 否则筛一个没有成员的角色再传 limit=101 或 cursor=bogus 会返回成功空列表，
+// 而不是约定的 400——参数校验被静默跳过。
+func TestUserRepoSqlite_ListCursorEmptyRelationFilterFailsClosed(t *testing.T) {
+	repo := newUserRepoSqlite(t)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+	setUserCursorSecretForTest(t)
+
+	// 造若干用户，但都不关联角色 999（关系筛选命空集）
+	createCursorUsersForTest(t, repo, ctx, 2,
+		func(i int) string { return fmt.Sprintf("cursoremptyrel_user_%d", i) }, "空关系筛选")
+
+	emptyQuery := `{"role_ids__in":[999]}`
+
+	// 先确认该筛选确实会短路为空集
+	empty, err := repo.List(ctx, &paginationV1.PagingRequest{
+		Limit:         trans.Ptr(uint32(20)),
+		FilteringType: &paginationV1.PagingRequest_Query{Query: emptyQuery},
+	})
+	require.NoError(t, err)
+	require.Zero(t, empty.GetTotal(), "关联角色 999 的用户应为空")
+
+	// limit 越界：必须 400，而不是成功空列表
+	_, err = repo.List(ctx, &paginationV1.PagingRequest{
+		Limit:         trans.Ptr(uint32(101)),
+		FilteringType: &paginationV1.PagingRequest_Query{Query: emptyQuery},
+	})
+	require.True(t, identityV1.IsBadRequest(err), "空关系筛选 + limit=101 应返回 400，实际 %v", err)
+
+	// 游标非空但无法解码：必须 400
+	_, err = repo.List(ctx, &paginationV1.PagingRequest{
+		Limit:         trans.Ptr(uint32(20)),
+		Cursor:        trans.Ptr("c1.bogus.signature"),
+		FilteringType: &paginationV1.PagingRequest_Query{Query: emptyQuery},
+	})
+	require.True(t, identityV1.IsBadRequest(err), "空关系筛选 + cursor=bogus 应返回 400，实际 %v", err)
+}
+
+// TestUserRepoSqlite_ListCursorNoPagingCursorConflict 验证 §3.2：
+// 互斥检查移出 noPaging 分支——noPaging 与 cursor 同时出现同样应拒绝，
+// 否则客户端以为在翻页、服务端却忽略了游标。
+func TestUserRepoSqlite_ListCursorNoPagingCursorConflict(t *testing.T) {
+	repo := newUserRepoSqlite(t)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+	setUserCursorSecretForTest(t)
+	createCursorUsersForTest(t, repo, ctx, 1,
+		func(i int) string { return fmt.Sprintf("cursornopaging_user_%d", i) }, "noPaging 冲突")
+
+	_, err := repo.List(ctx, &paginationV1.PagingRequest{
+		NoPaging: trans.Ptr(true),
+		Cursor:   trans.Ptr("c1.whatever.signature"),
+	})
+	require.True(t, identityV1.IsBadRequest(err), "noPaging 与 cursor 同时出现应返回 400，实际 %v", err)
+}
+
+// TestUserRepoSqlite_ListCursorFieldMaskKeepsRelationFill 验证 §3.3：
+// fieldMask 不含 id（只含其它真实列）时，关联回填依赖的实体 ID 必须保留到回填
+// 完成再裁剪，因此有关联的用户仍返回非空 role_ids；而 id 作为输出仍被裁掉。
+func TestUserRepoSqlite_ListCursorFieldMaskKeepsRelationFill(t *testing.T) {
+	repo := newUserRepoSqlite(t)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+	setUserCursorSecretForTest(t)
+
+	ids := createCursorUsersForTest(t, repo, ctx, 1,
+		func(i int) string { return fmt.Sprintf("cursormaskrel_user_%d", i) }, "掩码关联用户")
+
+	// 给该用户分配一个角色关联，供回填读取
+	require.NoError(t, repo.AssignUserRoles(ctx, ids[0], []*permissionV1.UserRole{
+		{UserId: trans.Ptr(ids[0]), RoleId: trans.Ptr(uint32(2201)), Status: trans.Ptr(permissionV1.UserRole_ACTIVE)},
+	}))
+
+	resp, err := repo.List(ctx, &paginationV1.PagingRequest{
+		Limit:     trans.Ptr(uint32(1)),
+		FieldMask: &fieldmaskpb.FieldMask{Paths: []string{"username"}},
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.GetItems(), 1)
+	item := resp.GetItems()[0]
+	require.Zero(t, item.GetId(), "id 不在 fieldMask 内，输出应被裁掉")
+	require.NotEmpty(t, item.GetUsername(), "mask 内的真实列应正常返回")
+	require.Equal(t, []uint32{2201}, item.GetRoleIds(),
+		"fieldMask 不含 id 时，关联回填仍应返回非空 role_ids")
+}
+
+// TestUserRepoSqlite_ListCursorMultiFieldQueryPaging 验证 §3.1：
+// 多字段 query（Go map 遍历顺序随机）在两页之间应保持同一指纹，
+// 原样回传服务端生成的 next_cursor 不得被误判为篡改。
+func TestUserRepoSqlite_ListCursorMultiFieldQueryPaging(t *testing.T) {
+	repo := newUserRepoSqlite(t)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+	setUserCursorSecretForTest(t)
+
+	createCursorUsersForTest(t, repo, ctx, 5,
+		func(i int) string { return fmt.Sprintf("cursormulti_user_%d", i) }, "多字段筛选")
+	// 另造不命中的记录，确保筛选确有作用
+	createCursorUsersForTest(t, repo, ctx, 2,
+		func(i int) string { return fmt.Sprintf("cursormulti_other_%d", i) }, "未命中")
+
+	query := `{"username__contains":"cursormulti_user","nickname":"多字段筛选"}`
+	req := &paginationV1.PagingRequest{
+		Limit:         trans.Ptr(uint32(2)),
+		FilteringType: &paginationV1.PagingRequest_Query{Query: query},
+	}
+
+	var got []uint32
+	for page := 1; ; page++ {
+		require.LessOrEqual(t, page, 4, "翻页应当在有限页内结束")
+
+		resp, err := repo.List(ctx, req)
+		require.NoErrorf(t, err, "第 %d 页不应因游标指纹不稳定被拒", page)
+		require.Equal(t, uint64(5), resp.GetTotal(), "total 应为筛选后的条数")
+		for _, item := range resp.GetItems() {
+			got = append(got, item.GetId())
+		}
+		if resp.GetNextCursor() == "" {
+			break
+		}
+		req = &paginationV1.PagingRequest{
+			Limit:         trans.Ptr(uint32(2)),
+			FilteringType: &paginationV1.PagingRequest_Query{Query: query},
+			Cursor:        trans.Ptr(resp.GetNextCursor()),
+		}
+	}
+	require.Len(t, got, 5, "多字段筛选下应完整翻页，不重不漏")
 }
 
 // 说明（未在 SQLite 上断言的部分）：时间列（created_at 等）的键集翻页刻意不在本文件断言，

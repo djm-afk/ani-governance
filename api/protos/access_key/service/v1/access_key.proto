@@ -27,19 +27,33 @@ message AccessKey {
   optional uint32 role_id = 7 [json_name = "role_id"];
   optional google.protobuf.Timestamp created_at = 200 [json_name = "created_at"];
 }
-message ListAccessKeyResponse { repeated AccessKey items = 1; uint64 total = 2; }
+message ListAccessKeyResponse {
+  repeated AccessKey items = 1;
+  uint64 total = 2;
+  // 游标分页的下一页游标；末页为空字符串。仅在 limit+cursor 分页下返回。
+  string next_cursor = 3 [json_name = "next_cursor"];
+}
 message CountAccessKeyResponse { uint64 count = 1; }
 message GetAccessKeyRequest { uint32 key_id = 1 [json_name = "key_id"]; }
 // Create-only input. It stays separate from the read model (AccessKey) so the
 // idempotency key never leaks into GET/List responses or the OpenAPI read schema.
+//
+// 字段编号刻意沿用旧 CreateAccessKeyRequest.data（原 AccessKey）的编号：
+// 旧定义里 name=2、expires_at=5、role_id=7，若改编号会让仍用旧 Proto 的 gRPC
+// 客户端发来的 name/role_id/expires_at 无法解码。旧 AccessKey 在两处共用的
+// 编号（1/3/4/6/200）在本输入里不再使用，用 reserved 标注防止被复用作新字段。
 message CreateAccessKeyData {
-  optional string name = 1;
-  optional uint32 role_id = 2 [json_name = "role_id"];
-  optional google.protobuf.Timestamp expires_at = 3 [json_name = "expires_at"];
+  reserved 1, 3, 4, 6, 200;
+  reserved "id", "access_key", "is_active", "last_used_at", "created_at";
+
+  optional string name = 2;
+  optional google.protobuf.Timestamp expires_at = 5 [json_name = "expires_at"];
+  optional uint32 role_id = 7 [json_name = "role_id"];
   // Optional. When present, retrying with the same value and the same intent
   // replays the original key instead of creating a second one; a different
   // intent under the same value is rejected with 409 IDEMPOTENCY_CONFLICT.
-  optional string idempotency_key = 4 [json_name = "idempotency_key"];
+  // 使用全新的未占用编号，不与旧字段冲突。
+  optional string idempotency_key = 8 [json_name = "idempotency_key"];
 }
 message CreateAccessKeyRequest { CreateAccessKeyData data = 1; }
 message UpdateAccessKeyRequest {

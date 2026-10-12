@@ -74,6 +74,11 @@ type CursorSpec[ENTITY any] struct {
 	// （时间用 FormatCursorTime，整型用十进制，字符串原样）；第二个返回值为 true
 	// 表示该列的值为 SQL NULL。
 	ExtractSortValue func(entity *ENTITY) (string, bool)
+	// DeferHelperTrim 为 true 时不在此处清理"仅为生成游标而多读"的辅助列
+	// （排序列与唯一 ID），而是把它们经 PagingResult.HelperPaths 返回给调用方，
+	// 由调用方在完成关联回填等依赖 ID 的收尾工作后再调用 TrimCursorHelperFields。
+	// 用途：fieldMask 未包含 id 时，关联回填仍需要实体 ID（见 user_cursor.go）。
+	DeferHelperTrim bool
 }
 
 // FormatCursorTime 把时间格式化为游标内的规范排序值（UTC、RFC3339Nano）。
@@ -94,7 +99,13 @@ func CursorFilterKey(req *paginationV1.PagingRequest, sortColumn string, desc bo
 
 	h := sha256.New()
 	if filterExpr, err := paginationFilter.ConvertFilterByPagingRequest(req); err == nil && filterExpr != nil {
-		if raw, err := (proto.MarshalOptions{Deterministic: true}).Marshal(filterExpr); err == nil {
+		// 规范化必须在 marshal 之前：QueryStringConverter 按 Go map 的随机遍历顺序
+		// 追加 Conditions，而 deterministic 编码不重排 repeated 字段。不规范化时，
+		// 语义相同的两条 query 可能得到不同指纹，使原样回传的 next_cursor 被误判为篡改。
+		// 规范化作用在副本上，避免就地改动调用方（applyUserListFilters 等）持有的表达式。
+		normalized := proto.Clone(filterExpr).(*paginationV1.FilterExpr)
+		paginationFilter.NormalizeFilterExpr(normalized)
+		if raw, err := (proto.MarshalOptions{Deterministic: true}).Marshal(normalized); err == nil {
 			h.Write(raw)
 		}
 	} else {
@@ -273,8 +284,8 @@ func (r *Repository[
 		}
 	}
 
-	if len(helperPaths) > 0 {
-		trimCursorHelperFields(dtos, helperPaths)
+	if len(helperPaths) > 0 && !spec.DeferHelperTrim {
+		TrimCursorHelperFields(dtos, helperPaths)
 	}
 
 	var count int
@@ -289,10 +300,19 @@ func (r *Repository[
 	}
 
 	return &PagingResult[DTO]{
-		Items:      dtos,
-		Total:      uint64(count),
-		NextCursor: nextCursor,
+		Items:       dtos,
+		Total:       uint64(count),
+		NextCursor:  nextCursor,
+		HelperPaths: deferHelperPaths(spec, helperPaths),
 	}, nil
+}
+
+// deferHelperPaths 仅在调用方要求延迟裁剪时回传辅助列清单。
+func deferHelperPaths[ENTITY any](spec CursorSpec[ENTITY], helperPaths []string) []string {
+	if !spec.DeferHelperTrim {
+		return nil
+	}
+	return helperPaths
 }
 
 // buildCursorKeysetSelector 构造 (排序列, 唯一 ID) 的键集谓词。
@@ -387,10 +407,14 @@ func parseCursorSortValue(sortKey *string, kind CursorSortKind) (any, bool, erro
 	}
 }
 
-// trimCursorHelperFields 把"仅为生成游标而多读"的列从响应中清除，保持
+// TrimCursorHelperFields 把"仅为生成游标而多读"的列从响应中清除，保持
 // fieldMask 只裁剪输出的语义。清除失败（路径对 DTO 不合法等）只记录日志：
 // 多出的一个字段不影响契约，不值得让整个请求失败。
-func trimCursorHelperFields[DTO any](dtos []*DTO, paths []string) {
+//
+// 当 CursorSpec.DeferHelperTrim 为 true 时，ListWithCursor 不自行调用它，
+// 而是把待清理路径经 PagingResult.HelperPaths 交给业务调用方——后者需在
+// 关联回填（依赖实体 ID）完成后再调用本函数。
+func TrimCursorHelperFields[DTO any](dtos []*DTO, paths []string) {
 	mask := &fieldmaskpb.FieldMask{Paths: paths}
 	for _, dto := range dtos {
 		if dto == nil {

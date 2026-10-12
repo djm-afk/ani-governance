@@ -92,6 +92,16 @@ func (r *AccessKeyRepo) List(ctx context.Context, req *paginationV1.PagingReques
 	if req == nil {
 		return nil, adminV1.ErrorBadRequest("invalid parameter")
 	}
+	// 分页方式判定：cursor 与 page/pageSize/offset/token 互斥；不带任何窗口参数时
+	// 走游标分页（limit 默认 20），沿用 PagingRequest 的过滤/排序/fieldMask 能力。
+	// 互斥检查放在 noPaging 之外，noPaging 与 cursor 同时出现同样拒绝。
+	if err := checkCursorWindowConflict(req, adminV1.ErrorBadRequest); err != nil {
+		return nil, err
+	}
+	if shouldUseCursorPaging(req) {
+		return r.listAccessKeysWithCursor(ctx, req)
+	}
+
 	builder := r.entClient.Client().AccessKey.Query()
 	ret, err := r.repository.ListWithPaging(ctx, builder, builder.Clone(), req)
 	if err != nil {

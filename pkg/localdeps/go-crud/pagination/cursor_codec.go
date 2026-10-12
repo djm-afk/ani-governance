@@ -96,6 +96,12 @@ func EncodeCursor(binding CursorBinding, cursor Cursor, secret []byte) (string, 
 	}
 
 	encoded := base64.RawURLEncoding.EncodeToString(payload)
+	// 编解码长度范围必须一致：否则会生成一个必然被 DecodeCursor 拒绝的游标
+	// （排序列如长字符串列没有存储长度上限时，边界值就会触发），
+	// 使客户端拿到的 next_cursor 原样回传却 400。
+	if len(encoded) > maxCursorPayloadLen {
+		return "", fmt.Errorf("%w: payload too large (%d > %d)", ErrInvalidCursor, len(encoded), maxCursorPayloadLen)
+	}
 	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte(encoded))
 	return signedCursorPrefix + encoded + "." + hex.EncodeToString(mac.Sum(nil)), nil
