@@ -1567,7 +1567,6 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 本次 range 合同的 Resource 依赖为 `v0.0.0-20261012021348-7c072b343e6a`，对应已推送的真实提交 `7c072b343e6aedb665ae10d981138b11af476eaa`。此前 b258907 的未发布限制也已在 2026-10-11 推送时解除；本次使用正常公开 Go 模块下载和校验，不保留个人路径 replace。
 关闭 `go.work` 后，`go build -mod=readonly -trimpath ./app/admin/service/cmd/server` 在 Fedora 通过，二进制模块信息确认上述 Resource 版本与公开校验和。
 
-
 <a id="gov-platform-network-01"></a>
 ## GOV-PLATFORM-NETWORK-01：平台网络 BFF
 
@@ -1587,3 +1586,11 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 列表协议登记为 `page_size/after_id`、`items/next_after_id`：默认 50、1～100、按实例 UUID 升序键集；无过滤/排序参数，查询每页重新当前授权并限定可信租户。不宣称 HMAC cursor、total 或跨页快照。前端本轮由用户指定专人接手。
 
 早期定向联调已使用真实授权、PG/Redis/mTLS 和生产业务代码，GPU/Kubernetes/exec 边界受控；真实 GPU 产品验收仍未完成。2026-10-13 用户授权先推送 main，剩余门禁由后续任务处理：已固定正式 Resource/Acc/SG API 版本并核对下载 SHA/sums，但新版 main 合入后的最终独立构建、定向组合用例及 CI 尚未完成，不声明通过。权威当前状态统一见 Resource `docs/execution/status.md#gpu-container-instance-mvp-v15`。`scripts/ops/sql/register-instance-permissions.sql` 只准备已同步的 API/permission 目录，未执行共享环境授权；本轮没有部署。
+
+## MODELDEV-09：产物列表分页参数校验对齐（2026-10-13）
+
+前端联调时提出 `next_page_token` 是否为分页参数、能否与其他 ModelDev 列表对齐。核对确认四个列表统一使用 `page_size` + `page_token` / `next_page_token`，见 [分页规范](contracts/pagination.md#existing-protocols) 的「其他列表：保留各自协议」和 MODELDEV-03/06/07。`presets`、`input-versions`（含 `state` 过滤，`state` 非分页参数）本就一致，无需改动；不迁移为 users/vpc 的 `limit/cursor`。
+
+发现并修复一处源码实现偏离：`GET /admin/v1/modeldev/executions/{execution_id}/artifacts` 的 HTTP 参数解析原为手写 `url.ParseQuery`，只判 `page_size > 100`，会接受 `page_size=0` 和带请求体的 GET，与前端文档 §2 和 MODELDEV-03 声明的「显式传 `0` 返回 400」矛盾。现改为复用与 `presets`/`input-versions`/`executions` 相同的 `modelDevBoundedQuery` + `modelDevQueryPositiveBound`，对 `page_size=0`、前导零、越界、重复参数、未知参数、超长 token、GET 请求体/`ForceQuery` 一律 400。未改字段名、未改路由、未动 Proto/OpenAPI 与鉴权。
+
+本机（Windows）已执行：`go build ./app/admin/service/internal/server/...`、`go vet ./app/admin/service/internal/server/`、`go test -count=1 ./app/admin/service/internal/server/`，均通过。定向用例 `TestModelDevListAndLogRejectUnboundedSelectors` 增列 5 条 artifacts 负向断言（`page_size=0`、`page_size=101`、超长 `page_token`、未知参数、executions 带请求体），全部 pass。真实环境/部署验收尚未执行，保留 `not_verified`。
