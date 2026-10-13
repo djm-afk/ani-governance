@@ -223,6 +223,72 @@ func TestPermissionGroupRepoSqlite_Update(t *testing.T) {
 	require.Equal(t, pathBefore, *after[0].Path, "物化路径不应随非结构更新变化")
 }
 
+// TestPermissionGroupRepoSqlite_Update_IgnoresParentOutsideMask 验证掩码未选中
+// parent_id 时，载荷里捎带的非法 parentId 不触发防环预检：只改 name 应成功，
+// 原有父子关系保持不变（防环预检须尊重生效掩码）。
+func TestPermissionGroupRepoSqlite_Update_IgnoresParentOutsideMask(t *testing.T) {
+	entClient := testutil.NewEntClientForTest(t)
+	repo := newPermissionGroupRepoSqlite(t, entClient)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+
+	parent, err := repo.Create(ctx, &permissionV1.CreatePermissionGroupRequest{
+		Data: &permissionV1.PermissionGroup{Name: trans.Ptr("掩码父")},
+	})
+	require.NoError(t, err)
+	child, err := repo.Create(ctx, &permissionV1.CreatePermissionGroupRequest{
+		Data: &permissionV1.PermissionGroup{
+			Name:     trans.Ptr("掩码子-原名"),
+			ParentId: trans.Ptr(parent.GetId()),
+		},
+	})
+	require.NoError(t, err)
+
+	// 只改 name，但载荷携带一个不存在的 parentId：掩码不含 parent_id，应忽略父字段。
+	err = repo.Update(ctx, &permissionV1.UpdatePermissionGroupRequest{
+		Id:         child.GetId(),
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"name"}},
+		Data: &permissionV1.PermissionGroup{
+			Name:     trans.Ptr("掩码子-新名"),
+			ParentId: trans.Ptr(uint32(9999999)),
+		},
+	})
+	require.NoError(t, err, "掩码不含 parent_id 时不得因载荷里的非法 parentId 而 400")
+
+	row, err := entClient.Client().PermissionGroup.Query().
+		Where(permissiongroup.IDEQ(child.GetId())).Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "掩码子-新名", *row.Name, "掩码内 name 应被更新")
+	require.Equal(t, parent.GetId(), *row.ParentID, "掩码外 parent_id 应保持原值")
+}
+
+// TestPermissionGroupRepoSqlite_Update_RootNameWithStaleParent 验证只改根节点的
+// name、载荷带自身 ID 作为 parentId（掩码不含 parent_id）不会被误判成环。
+func TestPermissionGroupRepoSqlite_Update_RootNameWithStaleParent(t *testing.T) {
+	entClient := testutil.NewEntClientForTest(t)
+	repo := newPermissionGroupRepoSqlite(t, entClient)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+
+	root, err := repo.Create(ctx, &permissionV1.CreatePermissionGroupRequest{
+		Data: &permissionV1.PermissionGroup{Name: trans.Ptr("根-原名")},
+	})
+	require.NoError(t, err)
+
+	err = repo.Update(ctx, &permissionV1.UpdatePermissionGroupRequest{
+		Id:         root.GetId(),
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"name"}},
+		Data: &permissionV1.PermissionGroup{
+			Name:     trans.Ptr("根-新名"),
+			ParentId: trans.Ptr(root.GetId()),
+		},
+	})
+	require.NoError(t, err, "掩码不含 parent_id 时改自身 name 不应触发防环 400")
+
+	row, err := entClient.Client().PermissionGroup.Query().
+		Where(permissiongroup.IDEQ(root.GetId())).Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "根-新名", *row.Name)
+}
+
 // TestPermissionGroupRepoSqlite_Delete 验证叶子分组可删、
 // 有子分组/有权限点的分组删除被拒绝。
 func TestPermissionGroupRepoSqlite_Delete(t *testing.T) {

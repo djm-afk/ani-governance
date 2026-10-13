@@ -83,7 +83,7 @@ func newOnboardingEnv(t *testing.T) *onboardingEnv {
 	ec := onboardingClient(t)
 	ctx := testutil.NewSystemViewerCtx(context.Background())
 	bctx := bootstrap.NewContextWithParam(ctx, nil, nil, bLogger.NopLogger())
-	u := data.NewUserRepo(bctx, ec, data.NewUserRoleRepo(bctx, ec), data.NewUserOrgUnitRepo(bctx, ec), data.NewUserPositionRepo(bctx, ec), nil)
+	u := data.NewUserRepo(bctx, ec, data.NewUserRoleRepo(bctx, ec), data.NewUserOrgUnitRepo(bctx, ec), data.NewUserPositionRepo(bctx, ec), nil, newRoleRepo(ec))
 	c := data.NewUserCredentialRepo(newRepoContext(), ec, password.NewBCryptCrypto(), newConfigRepo(t, ec, nil))
 	r := newRoleRepo(ec)
 	channels := data.NewNotificationChannelRepo(newRepoContext(), ec)

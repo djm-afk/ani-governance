@@ -54,6 +54,8 @@ func newUserRepoSqlite(t *testing.T) *userRepo {
 		userRoleRepo:     userRoleRepo,
 		userOrgUnitRepo:  userOrgUnitRepo,
 		userPositionRepo: userPositionRepo,
+		// roleRepo 供 role_code / role_codes__in 解析使用；在同一 SQLite client 上内联构造。
+		roleRepo: newRoleRepoSqliteOn(t, entClient),
 	}
 	repo.init()
 	return repo

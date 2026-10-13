@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	paginationV1 "go-wind-admin/pkg/localdeps/go-crud/api/gen/go/pagination/v1"
+	entCrud "go-wind-admin/pkg/localdeps/go-crud/entgo"
 	"go-wind-admin/pkg/localdeps/go-utils/mapper"
 	"go-wind-admin/pkg/localdeps/go-utils/trans"
 	bLogger "go-wind-admin/pkg/localdeps/kratos-bootstrap/logger"
@@ -29,7 +30,13 @@ import (
 // 生产构造器），保证全部共享同一个 SQLite 内存库。
 func newRoleRepoSqlite(t *testing.T) *RoleRepo {
 	t.Helper()
-	entClient := testutil.NewEntClientForTest(t)
+	return newRoleRepoSqliteOn(t, testutil.NewEntClientForTest(t))
+}
+
+// newRoleRepoSqliteOn 在调用方给定的 entclient 上构造 RoleRepo，供需要与其它
+// repo 共享同一 SQLite 内存库的测试复用（例如 userRepo 按 role_code 解析角色 ID）。
+func newRoleRepoSqliteOn(t *testing.T, entClient *entCrud.EntClient[*ent.Client]) *RoleRepo {
+	t.Helper()
 
 	// 内联依赖 1/5：PermissionApiRepo（复刻 NewPermissionApiRepo）
 	permissionApiRepo := &PermissionApiRepo{

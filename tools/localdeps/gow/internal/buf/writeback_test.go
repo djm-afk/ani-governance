@@ -462,7 +462,7 @@ func TestWriteBackScopeRules(t *testing.T) {
 		}
 
 		// The same result from a partial slice is legitimate: it never claimed the whole list, so it
-		// is not required to produce 103 items and is judged only on what it writes.
+		// is not required to produce every approved artifact and is judged only on what it writes.
 		slice := newWriteBackFixture(t, []string{approved, second}, managed)
 		slice.write(approved, "a\n")
 		slice.write(second, "b\n")
@@ -560,8 +560,8 @@ func TestReadPGVScopeRejectsADamagedInventory(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(scope.approved) != 103 {
-			t.Errorf("the committed scope has %d validators, the accepted contract is 103", len(scope.approved))
+		if len(scope.approved) != 105 {
+			t.Errorf("the committed scope has %d validators, the accepted contract is 105", len(scope.approved))
 		}
 		for v := range scope.approved {
 			if !strings.HasPrefix(v, "api/gen/go/") || !strings.HasSuffix(v, ".pb.validate.go") {

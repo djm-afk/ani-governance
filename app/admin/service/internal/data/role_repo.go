@@ -329,6 +329,66 @@ func (r *RoleRepo) ListRoleIDsByRoleCodes(ctx context.Context, codes []string) (
 	return ids, nil
 }
 
+// ListRoleIDsByCodesInTenant 在指定租户内按角色编码列表解析角色 ID。
+//
+// 与 ListRoleIDsByRoleCodes 的区别：后者的租户范围来自 viewer 上下文且要求 tid>0，
+// 平台上下文直接拒绝；本方法改用**显式租户谓词**，供平台上下文在请求已给出
+// 顶层 tenant_id 时按编码解析（users 列表按角色编码筛选）。role.code 仅在
+// (tenant_id, code) 维度唯一，因此按租户解析即得确定角色。
+//
+// tenantID==0 表示**平台行范围**（只匹配 tenant_id=0 的平台侧角色，如 platform:admin），
+// 是合法的解析范围，不再视为无条件返回空。调用方须保证仅在平台/系统上下文才传 0。
+func (r *RoleRepo) ListRoleIDsByCodesInTenant(ctx context.Context, tenantID uint32, codes []string) ([]uint32, error) {
+	if len(codes) == 0 {
+		return []uint32{}, nil
+	}
+
+	entities, err := r.entClient.Client().Role.Query().
+		Where(role.TenantIDEQ(tenantID), role.CodeIn(codes...)).
+		Select(role.FieldID).
+		All(ctx)
+	if err != nil {
+		r.log.Errorf(ctx, "query role ids by codes in tenant failed: %s", err.Error())
+		return nil, permissionV1.ErrorInternalServerError("query role ids failed")
+	}
+
+	ids := make([]uint32, 0, len(entities))
+	for _, entity := range entities {
+		ids = append(ids, entity.ID)
+	}
+
+	return ids, nil
+}
+
+// ListRoleIDsByCodesAcrossTenants 跨全部租户按角色编码列表解析角色 ID。
+//
+// 不加租户谓词，直接以 role.CodeIn(codes...) 全表匹配，返回各租户下同名角色的
+// ID 集合。role.code 仅在 (tenant_id, code) 维度唯一，跨租户解析会同时命中多个
+// 租户的同名角色——这是 users 列表「跨租户管理员」场景（平台上下文缺省 tenant_id）
+// 的预期行为。**仅平台/系统上下文可调用**（Ent 租户策略对平台/系统上下文放行）；
+// 租户上下文不得进入本方法，其范围解析恒为本租户。
+func (r *RoleRepo) ListRoleIDsByCodesAcrossTenants(ctx context.Context, codes []string) ([]uint32, error) {
+	if len(codes) == 0 {
+		return []uint32{}, nil
+	}
+
+	entities, err := r.entClient.Client().Role.Query().
+		Where(role.CodeIn(codes...)).
+		Select(role.FieldID).
+		All(ctx)
+	if err != nil {
+		r.log.Errorf(ctx, "query role ids by codes across tenants failed: %s", err.Error())
+		return nil, permissionV1.ErrorInternalServerError("query role ids failed")
+	}
+
+	ids := make([]uint32, 0, len(entities))
+	for _, entity := range entities {
+		ids = append(ids, entity.ID)
+	}
+
+	return ids, nil
+}
+
 // Get 获取角色信息
 func (r *RoleRepo) Get(ctx context.Context, req *permissionV1.GetRoleRequest) (*permissionV1.Role, error) {
 	if req == nil {
