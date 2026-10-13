@@ -1,6 +1,6 @@
 # 功能对接与接口风格改动登记
 
-总体状态：**进行中，未结项**。最后更新：2026-10-11。
+总体状态：**进行中，未结项**。最后更新：2026-10-13。
 
 本文件覆盖所有后续对接功能。每次用户对接一个新功能时，AI 先排查真实调用链，将涉及的接口、请求和响应、鉴权条件、现有问题追加到对应功能组。先累计登记，等用户指定某个批次后，再统一修改该批接口的路径、字段和响应风格；不能因排查或登记就自动改接口风格。
 
@@ -63,6 +63,18 @@ Resource 的 full、governance、vpc-read 三种互斥模式共用一个受保�
 仅续跑被 make 中断的 `go vet ./...`、`go build -trimpath ./...`、`go mod verify` 与 `git diff --check`，全部通过，续跑整体退出 0（`publication/remaining-01.log`）；没有重跑已通过的联合业务验收。提交前已执行 Resource AGENTS 要求的 make verify；本批按用户明确的调用范围交付并保留失败。推送后的两仓 CI 需按该提交的实际运行结果判定，既有定向 PASS 不代表全仓 CI 已通过。
 
 Network 的 KC/Envoy/实例 owner 与 Image 的 Harbor 仅在外部边界使用测试替身；两个联合夹具也包含协议边界测试，不能将这些结果扩展为真实 Provider/数据面/生产验收。产品资源通过现有业务入口清理，独占 helper 数据库、PG/Redis 容器与进程清理通过。本轮未执行共享业务库变更或部署，不结项整体接口登记；源码发布不代表生产验收。
+
+<a id="lb-deferred-01"></a>
+
+## 2026-10-13：LB 延迟下发合同（LB-DEFERRED-01）
+
+复用 NET-19～NET-24 的 POST/GET/List/PATCH/DELETE/operation 和原 JWT/AK、NETWORK 套餐、权限及 mTLS 身份链。`listeners.items` 内普通监听器允许省略或清空 `backends`，先保存配置；添加后端才激活。PATCH 沿用 `data`、`update_mask`、`expected_version` 和 `idempotency_key`，监听器集合仍表示整体替换，空集合仍拒绝。
+
+Resource 与 Governance 的 `LoadBalancerConfigurationState` 在原 0～5 后追加 `WAITING_FOR_BACKENDS=6`。LB 响应追加只读 `provider_target_version`（字段31）；`desired_version` 是完整配置版本，`provider_target_version` 是改变下发投影的版本，`applied_version` 是经真实外部证据确认的目标或空投影清理版本。仅编辑待配置监听器可使 desired 前进而 target/applied 保持。首次全部待配置时 target/applied 为0、operation 表示配置已保存；混合 LB 的其他监听器继续使用已确认的投影。配置完成、operation 成功与流量健康仍分别表达。
+
+监听器响应追加只读 `deployment_state`（字段13）及 `reason`（字段14），包括 `waiting_for_backends`、`applying`、`configured`、`removing`、`degraded`、`unknown`；重定向等待既定 HTTPS 目标时返回 `WAITING_FOR_REDIRECT_TARGET`。从 GET 组装 PATCH 时只提取 [ListenerInput](../api/protos/catalog/service/v1/vpc.proto) 可写字段，不回填上述观察字段。新字段不进入客户端输入或旧幂等 fingerprint，已保存的受理回执原样重放。
+
+定向联合用例为现有 [Network HTTP 联调](../app/admin/service/internal/service/network_joint_http_test.go) 的 `deferred_load_balancer`：真实身份、mTLS、PG、worker 和 adapter，外部 K8s/controller/owner 协议边界沿用既有夹具；检查零 Provider mutation、三个版本、混合监听器、清空与新 Provider 身份、回执重放、版本冲突、只读输入拒绝和跨租户拒绝。实际结果与真实集群范围只记入 Resource 的 LB-DEFERRED-01 执行状态，不由本合同宣称通过。
 
 ## 2026-10-11：监听参数与子网 IP 观测
 
@@ -135,7 +147,7 @@ HTTP 方法、字段、签名与请求限制以 [Network 路由输入](../api/pr
 
 [Network Service](../app/admin/service/internal/service/network_service.go) 从认证主体取得本地租户，经持久 `resource_tenant_id` 映射后调用 [出站客户端](../app/admin/service/internal/data/network_client.go)。客户端整体重建单值 `x-ani-tenant-id/x-ani-actor/x-ani-request-id`，actor 区分 `governance:user:<id>` 与 `governance:access-key:<id>`；不转发公网身份或认证材料。Resource 继续负责真实租户过滤、父子归属、持久幂等、版本、占用和删除约束，Governance 核对返回对象的租户和资源关联。
 
-HTTP 成功表示 Resource 返回了持久资源或受理快照；资源生命周期与 operation 结果分别查询。SNAT 的 `desired_enabled` 与可选 `applied_enabled` 保留期望、实际观测和未知状态，解绑保留独立 EIP。LB 的 `state/configuration_state/data_plane_state` 与 `desired_version/applied_version`、观测时间分别保留，不能把受理、配置完成或 operation 成功解释为流量健康；删除结果仍含资源与 operation，并由 Resource 释放关联、保留独立 EIP 和工作负载。公开错误保留 Resource 的领域 reason 和适当 HTTP 码，不暴露下游私有错误详情。
+HTTP 成功表示 Resource 返回了持久资源或受理快照；资源生命周期与 operation 结果分别查询。SNAT 的 `desired_enabled` 与可选 `applied_enabled` 保留期望、实际观测和未知状态，解绑保留独立 EIP。LB 的 `state/configuration_state/data_plane_state` 与 `desired_version/provider_target_version/applied_version`、监听器只读部署事实、观测时间分别保留，不能把受理、配置完成或 operation 成功解释为流量健康；删除结果仍含资源与 operation，并由 Resource 释放关联、保留独立 EIP 和工作负载。公开错误保留 Resource 的领域 reason 和适当 HTTP 码，不暴露下游私有错误详情。
 
 平台 Network 27 方法、Attachment 四个方法、ImageRuntime 两个方法和实例 owner 的 GetSubmission 不属于此租户 HTTP/AK 接入范围。
 

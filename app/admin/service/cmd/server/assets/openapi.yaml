@@ -12191,6 +12191,7 @@ components:
                         - LOAD_BALANCER_CONFIGURATION_STATE_CONFIGURED
                         - LOAD_BALANCER_CONFIGURATION_STATE_DEGRADED
                         - LOAD_BALANCER_CONFIGURATION_STATE_UNKNOWN
+                        - LOAD_BALANCER_CONFIGURATION_STATE_WAITING_FOR_BACKENDS
                     type: string
                     format: enum
                 data_plane_state:
@@ -12223,6 +12224,11 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/LoadBalancerListener'
+                provider_target_version:
+                    type: string
+                    description: |-
+                        Read-only; pure database edits may advance desired_version without changing
+                         this Provider target. Zero means no projection has ever been targeted.
         LoadBalancerBackendInput:
             type: object
             properties:
@@ -12346,6 +12352,13 @@ components:
                 https_redirect_status_code:
                     type: integer
                     format: uint32
+                deployment_state:
+                    type: string
+                    description: |-
+                        Read-only: waiting_for_backends, applying, configured, removing, degraded
+                         or unknown. Waiting redirect listeners report WAITING_FOR_REDIRECT_TARGET.
+                reason:
+                    type: string
         LoadBalancerListenerInput:
             type: object
             properties:
