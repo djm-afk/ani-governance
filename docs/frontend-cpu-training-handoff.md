@@ -453,4 +453,3 @@ Query：`page_size`、`page_token`。先等 `delivery_state=PUBLISHED` 再拉取
 - ❌ 在 body/query 传 `tenant_id`、`namespace`、对象存储 key、Pod 名。
 - ❌ 期望推送，或高频轮询日志接口。
 - ❌ 用 camelCase 字段名（本模块统一 `lower_snake_case`）。
-
