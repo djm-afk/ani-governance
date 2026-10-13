@@ -3,6 +3,8 @@ module go-wind-admin
 go 1.26.9
 
 require (
+	github.com/coder/websocket v1.8.15
+	github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.0
 	entgo.io/ent v0.14.6
 	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/envoyproxy/protoc-gen-validate v1.3.3

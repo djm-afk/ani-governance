@@ -1556,3 +1556,12 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 同轮前缀调整复验 **pass**：Fedora 完整 `make api`，仅生成平台 HTTP/Proto 路由描述及 OpenAPI 路径变更；27 路由的 Proto、生成 HTTP、鉴权策略与权限 SQL 一致，OpenAPI 语义差异只有前缀。`go test -mod=readonly -count=1 -run "TestPlatformNetwork|TestNetwork" ./pkg/middleware/auth` 与 `scripts/network-joint-integration -run "^TestNetworkJointHTTP$/^platform_network$"` 均退出 0，新前缀的 27 平台方法及现有负向、分页和响应检查通过，任务自有 PG/Redis 已清理。沿用同一 Resource 夹具二进制与外部边界替身，不扩大为共享整批 Network 回归或真实数据面通过；前述 LB 未解失败保留。本轮命令、源码哈希、生成和复验日志在既有工件目录的 `gov/admin-prefix/`；该复验快照未提交、推送或部署，后续 main 发布不代表部署。
 
 main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依赖固定为 `v0.0.0-20261012083359-e7b5a8a34359`。Fedora 新模块缓存已验证下载内容、模块/go.mod 校验和及 `Origin.Hash` 与发布提交一致，完整 `make api` 复验无生成差异。发布时保留最新 Governance main 的 ModelDev 和鉴权计划更新；源码发布不改变共享部署或此前 LB 回归未解结论。提交前 Resource 完整 `make verify` 已通过，前缀和平台方法的证据沿用上述入口；发布补充日志保留在同一工件目录的 `publication/`。
+## INSTANCE-MVP-V15（2026-10-13，后端接线实施中）
+
+新增固定 `INSTANCE=16`，独立于 INFERENCE/ACCELERATOR 的当前套餐和动作授权。输入、路由及安全查询视图以 `api/protos/instance/service/v1/instance.proto`、`api/protos/admin/service/v1/i_instance.proto` 为准；创建/变更保留 `{data:{...}}`，不允许公共 tenant、namespace、owner、GPU plan 或 charges。`instance_http.go` 严格解码写入，并校验路径和正文 ID 相同；终端响应 `no-store`。
+
+创建先执行当前角色/套餐授权及原公开请求幂等查找，新请求再解析 Image/preset/Namespace。占额、持久投递及全量附件沿用 Quota；启停调用原实例版本，不动原账。删除版本和幂等内容进入持久 DELETE，已接受删除阻止后续新启停/终端。Resource owner 固定 `ani-resource-service`，退额证书映射为 `ANI_QUOTA_RESOURCE_DNS_SAN`；合法 owner 原 GPU 全量累计声明不要求 Gov 持久 DELETE，更不查询 Notebook/Pod。Acc ENDED 保留实际 binding。
+
+列表协议登记为 `page_size/after_id`、`items/next_after_id`：默认 50、1～100、按实例 UUID 升序键集；无过滤/排序参数，查询每页重新当前授权并限定可信租户。不宣称 HMAC cursor、total 或跨页快照。前端本轮由用户指定专人接手。
+
+本批生成、编译与跨服务行为仍在验证，不代表已部署或通过 GPU/终端验收。权威当前状态统一见 Resource `docs/execution/status.md#gpu-container-instance-mvp-v15`；正式消费新 API 版本在发布前仍 not_verified，不使用本地 replace 作为正式依赖证明。`scripts/ops/sql/register-instance-permissions.sql` 只准备已同步的 API/permission 目录，未执行共享环境授权。
