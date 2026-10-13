@@ -20,7 +20,7 @@
 | 租户管理员管理 | 复用 TENANT-06、ACCOUNT-01～ACCOUNT-09、ROLE-01～ROLE-05、AUTH-01/12；AUTH-15～AUTH-18（自助 /me） | 复用用户和租户角色；用户明确不做主管理员移交 | 待指定 |
 | 套餐管理 | PLAN-01～PLAN-14；复用 TENANT-04/08 | 模块限制已接线；配额按 quota_code 核对配置、账本和执行点，GPU 占额见专项合同 | 待指定 |
 | 平台运营账号管理 | 复用 ACCOUNT-01～ACCOUNT-09、ROLE-01～ROLE-05、AUTH-02/12；AUTH-15～AUTH-18；SESSION-01～SESSION-04；PERM-01～PERM-06、PERMGROUP-01～PERMGROUP-05 | 支持多个平台账号；运营/只读角色模板待 API 接入后再加；自助会话与权限点/权限组接口本轮补登，缺口见 MGMT-08～MGMT-15 | 待指定 |
-| API Key / AK-SK | AK-01～AK-07；AK-IDEM-01（创建幂等，2026-10-10） | 签名、角色绑定、加密与可信审计已完成，真实 VPC 闭环 PASS；创建幂等已在 ani-system 真实环境实测（HTTP 20/20 PASS + 8 并发 ALL PASS） | AKSK-VPC-20260922 已完成本批；幂等属即时修复，未并入风格批次 |
+| API Key / AK-SK | AK-01～AK-07；AK-IDEM-01（创建幂等，2026-10-10）；AK-ROLE-INFO-01（响应回填角色名称/描述，2026-10-13） | 签名、角色绑定、加密与可信审计已完成，真实 VPC 闭环 PASS；创建幂等已在 ani-system 真实环境实测（HTTP 20/20 PASS + 8 并发 ALL PASS）；AK-ROLE-INFO-01 已在 ani-system 实测 14/14 PASS 且既有三脚本回归不退化 | AKSK-VPC-20260922 已完成本批；幂等与角色信息回填属向后兼容增强，未并入风格批次 |
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
@@ -714,12 +714,12 @@ const url = `${BASE_URL}/admin/v1/users?${params.toString()}`;
 
 | 编号 | 当前方法和路径 | 当前合同与验证 |
 | --- | --- | --- |
-| AK-01 | `GET /api/v1/auth/api-keys` | 用户 JWT；`items/total`，无 SK；真实 HTTP PASS |
-| AK-02 | `GET /api/v1/auth/api-keys/{key_id}` | 用户 JWT；snake_case Key 信息、数字 id/role_id；跨租户 404，PASS |
-| AK-03 | `POST /api/v1/auth/api-keys` | `{data:{name,role_id,expires_at?,idempotency_key?}}` → **201** `{data,secret_key}`；真实 HTTP PASS；`idempotency_key` 语义见 AK-IDEM-01 |
+| AK-01 | `GET /api/v1/auth/api-keys` | 用户 JWT；`items/total`，无 SK；真实 HTTP PASS；响应含只读 `role_name`/`role_description`（见 AK-ROLE-INFO-01） |
+| AK-02 | `GET /api/v1/auth/api-keys/{key_id}` | 用户 JWT；snake_case Key 信息、数字 id/role_id；跨租户 404，PASS；响应含只读 `role_name`/`role_description`（见 AK-ROLE-INFO-01） |
+| AK-03 | `POST /api/v1/auth/api-keys` | `{data:{name,role_id,expires_at?,idempotency_key?}}` → **201** `{data,secret_key}`；真实 HTTP PASS；`idempotency_key` 语义见 AK-IDEM-01；响应 data 含只读 `role_name`/`role_description`（见 AK-ROLE-INFO-01） |
 | AK-04 | `PUT /api/v1/auth/api-keys/{key_id}` | 仅 name/role_id/is_active/expires_at；外层 update_mask，值为 FieldMask lowerCamel；清空到期、启停、改绑 PASS |
 | AK-05 | `DELETE /api/v1/auth/api-keys/{key_id}` | 200 `{status:"revoked"}`，后续签名 401，PASS |
-| AK-06 | `PUT /api/v1/auth/api-keys/{key_id}/secret` | `{}` → `{data,secret_key}`；AK 不变，旧 SK 立即拒绝、新 SK 成功，PASS |
+| AK-06 | `PUT /api/v1/auth/api-keys/{key_id}/secret` | `{}` → `{data,secret_key}`；AK 不变，旧 SK 立即拒绝、新 SK 成功，PASS；响应 data 含只读 `role_name`/`role_description`（见 AK-ROLE-INFO-01） |
 | AK-07 | 旧 `/admin/v1/access-keys/token` 已移除 | RPC/签发分支/白名单和 secret_hash 删除；旧路径 404，PASS |
 
 Key 绑定同租户启用 TENANT 角色，复用套餐和 Casbin。主密钥文件必填，SK 使用专用 AES-256-GCM 实例加密；仅创建/重置返回一次，列表、详情、日志和审计无 SK/完整签名。每请求查询 Key 和角色状态，主体为独立 `api_key`，不伪造 user_id。首次种子为租户管理员授予六条管理权限；目标专用套餐经 API 开放 DASHBOARD/OPM/SYSTEM/NETWORK。
@@ -732,6 +732,16 @@ Key 绑定同租户启用 TENANT 角色，复用套餐和 Casbin。主密钥文�
 - 存储为**独立表** `sys_access_key_idempotency`（迁移 `20261010131938_access_key_idempotency.sql`），**故意不对 `sys_access_keys` 建外键**：`sys_access_keys` 是物理删除，记录须活得更久，才能把「创建→删除→同键重放」判定为回放而非再建一把。串行化仅依赖唯一索引 `(tenant_id,actor_id,action,idempotency_key)`，未加 tenant 行锁（创建只写一张新行，无共享聚合被改）。
 - 实测（ani-system @ ani-01，PostgreSQL + HTTP，2026-10-10）：先补跑迁移（表原缺失，atlas 由 `20261003152319` 升至 `20261010131938`）→ `verify-idempotency.py` **20/20 PASS**（无键 201 带 SK；同键同意图重放同 `id` 且 SK 空；异意图 409；不同键两把；key>128/name 空/role_id 缺均 400；创建→删除→同键重放 **404 `ACCESS_KEY_NOT_FOUND`** 且库内同名 0 把）→ `verify-idempotency-concurrency.py` 8 并发同键 **ALL PASS**（全部 201、同一 `id`、恰好 1 个带明文 SK、库内仅 1 把）。测试数据已清理。
 - 边界：**前端联调未做**（前端尚未带 `idempotency_key` 调用）；重放拿不到明文 SK 属既定取舍（首次响应丢失需走 `ResetSecret`）。
+
+### 变更：AK 响应回填角色名称/描述（AK-ROLE-INFO-01，2026-10-13）
+
+`AccessKey` 读模型新增两个**只读**字段 `role_name`（字段 8）、`role_description`（字段 9），服务端按 `role_id` 在**请求租户内**回填。属**向后兼容的响应增强**：只增字段，不改路径、方法、权限、套餐关系，不触发 API 目录同步（沿用 AK-IDEM-01 结论）。
+
+- 生效范围：`List`（含游标与非游标两条分页路径）/ `Get` / `Create` / `ResetSecret` 四条 RPC 的 `AccessKey` 输出，以及幂等回放路径，全部一致。
+- 租户边界：角色名称/描述读取走请求上下文的 `TenantPrivacy` 注入谓词，跨租户不可读；未新建平台/系统级读取旁路，未用 `privacy.Allow`。
+- 角色缺失语义：角色被删除/停用导致查不到时**字段缺席**（不下发空串），Key 仍可正常列出与验签判定；前端需容忍可选字段。
+- 只读约束：两字段标注 `read_only`；`update_mask` 白名单保持 `name/role_id/is_active/expires_at`，客户端提交该两字段仍 **400**；不加入 `accessKeyCursorSortColumns`，不参与排序/筛选/游标载荷。
+- 实测（ani-system @ ani-01，2026-10-13）：`verify-api-key-role-info.py` **14/14 PASS**（创建/详情/列表/重置响应带回填、snake_case 无 `roleName`、无 SK、字段形态）；回归 `verify-cursor.py` 24/24、`verify-list-cursor.py` 38/38、`smoke-regression.py` fail=0 均不退化。probe 数据已清理。
 
 | 问题编号 | 本批结论 |
 | --- | --- |

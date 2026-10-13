@@ -9160,6 +9160,14 @@ components:
                 role_id:
                     type: integer
                     format: uint32
+                role_name:
+                    readOnly: true
+                    type: string
+                    description: 绑定角色名称（只读，服务端回填）
+                role_description:
+                    readOnly: true
+                    type: string
+                    description: 绑定角色描述（只读，服务端回填）
                 created_at:
                     type: string
                     format: date-time
