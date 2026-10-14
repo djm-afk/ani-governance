@@ -39,11 +39,12 @@ ID 规则：`execution_id`、`preset_id`、`input_version_id`、`artifact_id` �
 
 ### 分页约定
 
-- 列表类接口统一使用 `page_size` + `page_token`（游标分页）。
-- `page_size` 上限 **100**；`page_token` 上限 **2048 字节**。
-- 返回 `next_page_token`；为空表示没有下一页。
-- **当前列表接口不返回** **`total`** **总数**（只能翻页直到 token 为空）。
-- `page_size` 要么**不传**（用后端默认值），要么传 **1\~100 的规范十进制正整数**；显式传 `0`、超上限或非规范写法（如前导零）会返回 `400`。
+- 列表类接口统一使用 `limit` + `cursor`（游标分页，与 users/VPC 一致）。
+- `limit` 上限 **100**；`cursor` 上限 **2048 字节**。
+- 返回 `next_cursor`；为空表示没有下一页。首次不传 `cursor`，后续原样回传上一页的 `next_cursor`。
+- 列表一起返回 `total`（uint64，**JSON 中是十进制字符串**）：同租户、同权限、同筛选条件下的匹配总数，不受窗口影响（不是本页条数）。
+- `limit` 要么**不传**（用后端默认值），要么传 **1\~100 的规范十进制正整数**；显式传 `0`、超上限或非规范写法（如前导零）会返回 `400`。
+- `cursor` 可直接透传，无需解析；换筛选或换排序时请从首页重新取数。
 
 ***
 
@@ -68,13 +69,13 @@ ModelDev 的查询、创建与停止都**要求租户具备** **`ALL`** **数据
 
 ### 4.1 训练预设 `GET /admin/v1/modeldev/presets`
 
-Query：`page_size`、`page_token`。
+Query：`limit`、`cursor`。
 
 响应：
 
 ```json
 {
-  "presets": [
+  "items": [
     {
       "preset_id": "uuid",
       "name": "general-cpu",
@@ -96,7 +97,8 @@ Query：`page_size`、`page_token`。
       "new_submissions_enabled": true
     }
   ],
-  "next_page_token": ""
+  "next_cursor": "",
+  "total": "1"
 }
 ```
 
@@ -109,7 +111,7 @@ Query：`page_size`、`page_token`。
 
 ### 4.2 输入数据集 `GET /admin/v1/modeldev/input-versions`
 
-Query：`page_size`、`page_token`、`state`（可选）。
+Query：`limit`、`cursor`、`state`（可选）。
 
 - `state` 只接受：`FIXING` | `VALIDATING` | `READY` | `FAILED`。
 - **发起训练只能选** **`state=READY`** **的数据集**，建议前端直接传 `?state=READY`。
@@ -118,7 +120,7 @@ Query：`page_size`、`page_token`、`state`（可选）。
 
 ```json
 {
-  "input_versions": [
+  "items": [
     {
       "input_version_id": "uuid",
       "state": "READY",
@@ -130,7 +132,8 @@ Query：`page_size`、`page_token`、`state`（可选）。
       "created_at": "2026-10-10T08:00:00Z"
     }
   ],
-  "next_page_token": ""
+  "next_cursor": "",
+  "total": "1"
 }
 ```
 
@@ -285,13 +288,13 @@ Authorization: Bearer <access-token>
 
 ### 4.7 产物列表 `GET /admin/v1/modeldev/executions/{execution_id}/artifacts`
 
-Query：`page_size`、`page_token`。先等 `delivery_state=PUBLISHED` 再拉取才有内容。
+Query：`limit`、`cursor`。先等 `delivery_state=PUBLISHED` 再拉取才有内容。
 
 响应：
 
 ```json
 {
-  "artifacts": [
+  "items": [
     {
       "artifact_id": "uuid",
       "execution_id": "uuid",
@@ -303,7 +306,8 @@ Query：`page_size`、`page_token`。先等 `delivery_state=PUBLISHED` 再拉取
       "verified_at": "2026-10-10T08:20:00Z"
     }
   ],
-  "next_page_token": ""
+  "next_cursor": "",
+  "total": "4"
 }
 ```
 
@@ -364,7 +368,7 @@ Query：`page_size`、`page_token`。先等 `delivery_state=PUBLISHED` 再拉取
 
 | HTTP | 场景                                                                                                | 前端建议                           |
 | ---- | ------------------------------------------------------------------------------------------------- | ------------------------------ |
-| 400  | 参数非法 / 未知或重复 query / 显式传 `page_size=0`                                                            | 表单校验提示                         |
+| 400  | 参数非法 / 未知或重复 query / 显式传 `limit=0`                                                            | 表单校验提示                         |
 | 401  | 未登录 / 凭证无效                                                                                        | 登录或刷新 token                    |
 | 403  | 无权限 / 套餐未含 MODEL / 路由未登记 / 数据范围不是 `ALL` / 传了 `source_execution_id`                                | 提示无权限，勿重试                      |
 | 404  | 资源不可用（含跨租户不可见）                                                                                    | 提示不存在                          |
