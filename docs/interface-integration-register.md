@@ -1603,7 +1603,7 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 
 按用户明确授权，把 `GET /api/v1/modeldev/executions`、`/presets`、`/input-versions`、`/executions/{execution_id}/artifacts` 四个列表由 `page_size`/`page_token`/`next_page_token` 迁移为与 users/VPC 同一对外形状：请求 `limit`（默认 20、1～100）、`cursor`（不透明、上限 2048 字节），响应 `{items, next_cursor, total}`（`total` 为 uint64，HTTP JSON 为十进制字符串）。
 
-对外字段统一为 `items`/`next_cursor`/`total` 与 users 一致。`cursor` 沿用下游 ModelDev 的不透明 ID（同 VPC 的“下游游标”，**不做** Governance c1 HMAC 签名）：换筛选/排序复用旧游标不会 400，客户端应从首页重新取数；这是本次明确接受的行为边界，与 users 的签名绑定语义不同。
+对外字段统一为 `items`/`next_cursor`/`total` 与 users 一致。`cursor` 沿用下游 ModelDev 的游标（**参见 MODELDEV-11**：该游标随后改为下游 ani-modeldev-service 的 HMAC-SHA256 签名游标，绑定资源种类/租户/筛选，换筛选复用会 400；MODELDEV-10 初次迁移时下游仍为裸 ID，故此处措辞以 MODELDEV-11 为准）。
 
 `total` 与筛选一致，由下游在可信租户内计算：`input-versions` 走单表 `SELECT count(*)`（含 state 过滤）；`executions` 因 `compute/delivery/close` 状态是多表应用层投影、无法用普通 SQL count 精确表达，改为复用与取页相同的批量扫描在应用层全量遍历计数；`presets` 取去重后 preset 数；`artifacts` 取该执行的已发布产物数。
 
@@ -1666,3 +1666,13 @@ operation/service → Higress /v1/completions`。导入任务状态可以在版�
 `importing`；`GET /api/v1/model-versions/{id}` 只返回已就绪版本，不能把导入中的
 404 当作导入失败。CPU 验收不需要 GPU 或 Accelerator；GPU 验收必须在有 GPU 节点的
 新集群另行执行。本批不修改旧集群。
+
+## MODELDEV-11：ModelDev 四个列表游标改为下游签名游标（对齐 VPC）
+
+按用户明确授权，把 MODELDEV-10 遗留的“裸下游 ID 游标”改为**与 VPC 一致的下游签名游标**：签名下沉在 `ani-modeldev-service` 内（不是 Governance BFF），BFF 仍只透传。游标格式 `base64url(payload).base64url(mac)`，HMAC-SHA256，载荷绑定 `{版本, 资源种类, 租户, 筛选指纹, 上页边界}`；篡改、跨租户、跨资源种类或换筛选复用一律 400 `INVALID_CURSOR`，不降级为首页。
+
+密钥：下游 `conf.Bootstrap` 新增 `cursor_signing_key`（base64，32～128 字节），`Validate()` 强制校验；装配链（shell `app.go`、`command.go`、`runtime.go`）在启动时解码并注入 `biz.CursorCodec`，缺密钥即 fail-closed。所有副本须使用同一密钥。
+
+代码面（全部在 `ani-modeldev-service`）：新增 `internal/biz/cursor.go`（`CursorCodec`/`CursorBinding`/`CursorFilterKey`）与 `internal/biz/cursor_test.go`；`internal/service/query.go`、`materials.go` 四个列表在 service 层做签名/解签，仓库层与 SQL 不变；`internal/conf/v1/conf.proto` 新增字段并重生成 `conf.pb.go`；`configs/examples/managed-runtime.yaml` 增加 `${CURSOR_SIGNING_KEY}` 占位。Governance 侧无需改动（已确认 BFF 对 modeldev `cursor` 仅校验长度≤2048、纯透传）。
+
+本机（WSL Ubuntu + Go 1.26.9）已执行：下游 `buf generate` 通过，`go build ./...`、`go vet ./internal/... ./cmd/...` 通过，`go test ./internal/biz/... ./internal/conf/... ./internal/service/...` 通过（含签名/绑定/篡改/跨租户拒绝用例）。真实部署验收（密钥注入、mTLS 链路、两个副本同密钥翻页）尚未执行，保留 `not_verified`；下游需发布新模块版本后，Governance `go.mod` 依赖相应升级。
