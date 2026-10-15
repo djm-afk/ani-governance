@@ -53,9 +53,9 @@ service NetworkService {
        ] }
      ]
      summary: "List VPCs in the authenticated tenant"
-     description: "Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Cursor pagination; limit is 1..100. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. System-managed Intranet resources are excluded downstream."
+     description: "Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. System-managed Intranet resources are excluded downstream."
      responses: { response_or_reference: [
-       { name: "400" value: { response: { description: "Invalid cursor, limit or state filter" } } },
+       { name: "400" value: { response: { description: "Invalid page, pageSize, state filter or unsupported legacy window" } } },
        { name: "401" value: { response: { description: "Missing, invalid, expired or revoked credentials" } } },
        { name: "403" value: { response: { description: "Tenant, permission or subscription denied" } } },
        { name: "503" value: { response: { description: "Network dependency or trusted identity unavailable" } } },

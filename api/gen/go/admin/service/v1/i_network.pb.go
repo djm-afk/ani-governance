@@ -27,7 +27,7 @@ var File_admin_service_v1_i_network_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_network_proto_rawDesc = "" +
 	"\n" +
-	" admin/service/v1/i_network.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1ccatalog/service/v1/vpc.proto\x1a$gnostic/openapi/v3/annotations.proto2\xb4\xca\x01\n" +
+	" admin/service/v1/i_network.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1ccatalog/service/v1/vpc.proto\x1a$gnostic/openapi/v3/annotations.proto2\x99\xcd\x01\n" +
 	"\x0eNetworkService\x12\xf6\x03\n" +
 	"\x12ListVPCCIDRPresets\x12-.catalog.service.v1.ListVPCCIDRPresetsRequest\x1a..catalog.service.v1.ListVPCCIDRPresetsResponse\"\x80\x03\xbaG\xd3\x02\x12 Read selectable VPC CIDR presets\x1a\xe1\x01Requires JWT or ANI HMAC-SHA256, NETWORK and network:vpc:presets permission. Resource startup policy is the only list; platform conflicts are filtered and unknown or expired facts fail closed. No private topology is returned.Z\x10\n" +
 	"\x0e\n" +
@@ -73,11 +73,11 @@ const file_admin_service_v1_i_network_proto_rawDesc = "" +
 	"\x11\n" +
 	"\rSignatureAuth\x12\x00\n" +
 	"\x11\n" +
-	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x02%b\x03vpc\x12\x1e/api/v1/networks/vpcs/{vpc_id}\x12\xab\x06\n" +
-	"\bListVPCs\x12#.catalog.service.v1.ListVPCsRequest\x1a$.catalog.service.v1.ListVPCsResponse\"\xd3\x05\xbaG\xb2\x05\x12%List VPCs in the authenticated tenant\x1a\xa7\x02Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Cursor pagination; limit is 1..100. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. System-managed Intranet resources are excluded downstream.B\x91\x02\x120\n" +
-	"\x03400\x12)\n" +
-	"'\n" +
-	"%Invalid cursor, limit or state filter\x12;\n" +
+	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x02%b\x03vpc\x12\x1e/api/v1/networks/vpcs/{vpc_id}\x12\x90\t\n" +
+	"\bListVPCs\x12#.catalog.service.v1.ListVPCsRequest\x1a$.catalog.service.v1.ListVPCsResponse\"\xb8\b\xbaG\x97\b\x12%List VPCs in the authenticated tenant\x1a\xf0\x04Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. System-managed Intranet resources are excluded downstream.B\xad\x02\x12L\n" +
+	"\x03400\x12E\n" +
+	"C\n" +
+	"AInvalid page, pageSize, state filter or unsupported legacy window\x12;\n" +
 	"\x03401\x124\n" +
 	"2\n" +
 	"0Missing, invalid, expired or revoked credentials\x124\n" +

@@ -116,7 +116,7 @@ func resourceState(state string) (networkv1.ResourceState, error) {
 	return 0, fmt.Errorf("invalid state filter")
 }
 
-func (c *NetworkClient) ListVPCs(ctx context.Context, tenant, actor string, name, state string, limit int32, cursor string) (*networkv1.ListVPCsResponse, error) {
+func (c *NetworkClient) ListVPCs(ctx context.Context, tenant, actor string, name, state string, page, pageSize uint32) (*networkv1.ListVPCsResponse, error) {
 	tc, err := c.trusted(tenant, actor)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (c *NetworkClient) ListVPCs(ctx context.Context, tenant, actor string, name
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.ListVPCsResponse, error) {
-		return c.client.ListVPCs(ctx, &networkv1.ListVPCsRequest{TenantId: tc.tenant, Name: name, State: resourceState, Limit: limit, Cursor: cursor})
+		return c.client.ListVPCs(ctx, &networkv1.ListVPCsRequest{TenantId: tc.tenant, Name: name, State: resourceState, Page: &page, PageSize: &pageSize})
 	})
 }
 

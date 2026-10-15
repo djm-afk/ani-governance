@@ -629,12 +629,14 @@ func (x *GetVPCResponse) GetVpc() *VPC {
 	return nil
 }
 
+// Gov public VPC pagination has completed its protocol cutover. Legacy fields
+// remain reserved; downstream Resource alone retains its old RPC adapter.
 type ListVPCsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Page          *uint32                `protobuf:"varint,5,opt,name=page,proto3,oneof" json:"page,omitempty"`
+	PageSize      *uint32                `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -683,24 +685,23 @@ func (x *ListVPCsRequest) GetState() string {
 	return ""
 }
 
-func (x *ListVPCsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
+func (x *ListVPCsRequest) GetPage() uint32 {
+	if x != nil && x.Page != nil {
+		return *x.Page
 	}
 	return 0
 }
 
-func (x *ListVPCsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
+func (x *ListVPCsRequest) GetPageSize() uint32 {
+	if x != nil && x.PageSize != nil {
+		return *x.PageSize
 	}
-	return ""
+	return 0
 }
 
 type ListVPCsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*VPC                 `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,proto3" json:"next_cursor,omitempty"`
 	Total         int64                  `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -741,13 +742,6 @@ func (x *ListVPCsResponse) GetItems() []*VPC {
 		return x.Items
 	}
 	return nil
-}
-
-func (x *ListVPCsResponse) GetNextCursor() string {
-	if x != nil {
-		return x.NextCursor
-	}
-	return ""
 }
 
 func (x *ListVPCsResponse) GetTotal() int64 {
@@ -5021,16 +5015,18 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\x11last_operation_id\x18\f \x01(\tR\x11last_operation_id\x12\"\n" +
 	"\fsubnet_count\x18\r \x01(\x03R\fsubnet_count\";\n" +
 	"\x0eGetVPCResponse\x12)\n" +
-	"\x03vpc\x18\x01 \x01(\v2\x17.catalog.service.v1.VPCR\x03vpc\"i\n" +
+	"\x03vpc\x18\x01 \x01(\v2\x17.catalog.service.v1.VPCR\x03vpc\"\xa8\x01\n" +
 	"\x0fListVPCsRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\tR\x05state\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"y\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\x12\x17\n" +
+	"\x04page\x18\x05 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
+	"\tpage_size\x18\x06 \x01(\rH\x01R\bpageSize\x88\x01\x01B\a\n" +
+	"\x05_pageB\f\n" +
+	"\n" +
+	"_page_sizeJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05limitR\x06cursor\"j\n" +
 	"\x10ListVPCsResponse\x12-\n" +
-	"\x05items\x18\x01 \x03(\v2\x17.catalog.service.v1.VPCR\x05items\x12 \n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\vnext_cursor\x12\x14\n" +
-	"\x05total\x18\x03 \x01(\x03R\x05total\"\x86\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x17.catalog.service.v1.VPCR\x05items\x12\x14\n" +
+	"\x05total\x18\x03 \x01(\x03R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\x86\x01\n" +
 	"\x10CreateVPCRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04cidr\x18\x02 \x01(\tR\x04cidr\x12 \n" +
@@ -5633,6 +5629,7 @@ func file_catalog_service_v1_vpc_proto_init() {
 	if File_catalog_service_v1_vpc_proto != nil {
 		return
 	}
+	file_catalog_service_v1_vpc_proto_msgTypes[3].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[23].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[27].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[28].OneofWrappers = []any{}

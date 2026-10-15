@@ -17,17 +17,18 @@ import (
 )
 
 type vpcProbe struct {
-	actor         string
-	calls         int
-	wrong         bool
-	err           error
-	subnetGateway *string
-	lbCreate      *networkv1.CreateLoadBalancerRequest
-	lbUpdate      *networkv1.UpdateLoadBalancerRequest
-	lbList        *networkv1.ListLoadBalancersRequest
-	snatEnabled   bool
-	snatVersion   int64
-	snatKey       string
+	actor                string
+	calls                int
+	wrong                bool
+	err                  error
+	subnetGateway        *string
+	lbCreate             *networkv1.CreateLoadBalancerRequest
+	lbUpdate             *networkv1.UpdateLoadBalancerRequest
+	lbList               *networkv1.ListLoadBalancersRequest
+	snatEnabled          bool
+	snatVersion          int64
+	snatKey              string
+	vpcPage, vpcPageSize uint32
 }
 
 func (p *vpcProbe) GetVPC(_ context.Context, tenant string, actor string, id string) (*networkv1.GetVPCResponse, error) {
@@ -56,9 +57,10 @@ func panicTenant(tenant, actor string) {
 	}
 }
 
-func (p *vpcProbe) ListVPCs(_ context.Context, tenant, actor string, _ string, _ string, _ int32, _ string) (*networkv1.ListVPCsResponse, error) {
+func (p *vpcProbe) ListVPCs(_ context.Context, tenant, actor string, _ string, _ string, page uint32, pageSize uint32) (*networkv1.ListVPCsResponse, error) {
 	p.calls++
 	panicTenant(tenant, actor)
+	p.vpcPage, p.vpcPageSize = page, pageSize
 	return &networkv1.ListVPCsResponse{Total: 37, Items: []*networkv1.VPC{{Id: "vpc_11111111111111111111111111111111", TenantId: tenant, State: networkv1.ResourceState_RESOURCE_STATE_AVAILABLE}}}, p.err
 }
 
@@ -181,7 +183,7 @@ func TestNetworkTrustedKeyPrincipal(t *testing.T) {
 func TestNetworkListTotalsPassThroughTrustedScope(t *testing.T) {
 	ctx := auth.NewContext(context.Background(), &authv1.UserTokenPayload{TenantId: trans.Ptr(uint32(5)), UserId: 7})
 	s := NewNetworkService(&vpcProbe{}, &tenantProbe{})
-	vpcs, err := s.ListVPCs(ctx, &catalogv1.ListVPCsRequest{Limit: 1})
+	vpcs, err := s.ListVPCs(ctx, &catalogv1.ListVPCsRequest{PageSize: proto.Uint32(1)})
 	if err != nil || vpcs.GetTotal() != 37 || len(vpcs.GetItems()) != 1 {
 		t.Fatalf("VPC total lost: %v %v", vpcs, err)
 	}
@@ -439,4 +441,31 @@ func TestNetworkDomainErrorReasons(t *testing.T) {
 func (p *vpcProbe) ListVPCCIDRPresets(_ context.Context, tenant, actor string) (*networkv1.ListVPCCIDRPresetsResponse, error) {
 	p.calls++
 	return &networkv1.ListVPCCIDRPresetsResponse{Cidrs: []string{"10.61.0.0/16"}}, p.err
+}
+
+func TestVPCPageDefaultsAndValidationBeforeCall(t *testing.T) {
+	ctx := auth.NewContext(context.Background(), &authv1.UserTokenPayload{TenantId: trans.Ptr(uint32(5)), UserId: 7})
+	for _, tc := range []struct {
+		req        *catalogv1.ListVPCsRequest
+		page, size uint32
+	}{
+		{&catalogv1.ListVPCsRequest{}, 1, 20},
+		{&catalogv1.ListVPCsRequest{Page: proto.Uint32(3)}, 3, 20},
+		{&catalogv1.ListVPCsRequest{PageSize: proto.Uint32(2)}, 1, 2},
+	} {
+		p := &vpcProbe{}
+		s := NewNetworkService(p, &tenantProbe{})
+		_, err := s.ListVPCs(ctx, tc.req)
+		if err != nil || p.vpcPage != tc.page || p.vpcPageSize != tc.size {
+			t.Fatalf("downstream page=%d size=%d err=%v", p.vpcPage, p.vpcPageSize, err)
+		}
+	}
+	for _, req := range []*catalogv1.ListVPCsRequest{nil, {Page: proto.Uint32(0)}, {PageSize: proto.Uint32(0)}, {PageSize: proto.Uint32(101)}} {
+		p := &vpcProbe{}
+		s := NewNetworkService(p, &tenantProbe{})
+		_, err := s.ListVPCs(ctx, req)
+		if errors.Code(err) != 400 || p.calls != 0 {
+			t.Fatalf("invalid window reached downstream: %v calls=%d", err, p.calls)
+		}
+	}
 }

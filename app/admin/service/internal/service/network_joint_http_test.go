@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -177,16 +178,19 @@ func TestNetworkJointHTTP(t *testing.T) {
 		platformPermissions = append(platformPermissions, op.Permission)
 	}
 	require.NoError(t, policy.ResetPolicies(ctx))
-	token := func(r *ent.Role, uid uint32) string {
-		v, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: uid, TenantId: r.TenantID, Roles: []string{*r.Code}})
+	token := func(r *ent.Role, uid uint32, permissions ...string) string {
+		application := authv1.ApplicationType_console
+		if r.TenantID == nil || *r.TenantID == 0 {
+			application = authv1.ApplicationType_boss
+		}
+		sid := fmt.Sprintf("network-fixture-%d", uid)
+		v, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: uid, TenantId: r.TenantID, Roles: []string{*r.Code}, Permissions: permissions, Application: application.Enum(), Sid: &sid})
 		require.NoError(t, err)
 		return v
 	}
 	readerToken, publisherToken, otherToken := token(reader, 1), token(publisher, 2), token(other, 3)
-	platformToken, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: 9, TenantId: platformRole.TenantID, Roles: []string{*platformRole.Code}, Permissions: platformPermissions})
-	require.NoError(t, err)
-	deniedPlatformToken, _, err := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: 10, TenantId: deniedPlatformRole.TenantID, Roles: []string{*deniedPlatformRole.Code}, Permissions: platformPermissions})
-	require.NoError(t, err)
+	platformToken := token(platformRole, 9, platformPermissions...)
+	deniedPlatformToken := token(deniedPlatformRole, 10, platformPermissions...)
 	cipher, err := appcrypto.NewAccessKeyCipher(hex.EncodeToString(randomKey))
 	require.NoError(t, err)
 	keys := data.NewAccessKeyRepo(bctx, ec, cipher)
@@ -404,6 +408,85 @@ func TestNetworkJointHTTP(t *testing.T) {
 		return count
 	}
 	const base = "/api/v1/networks"
+	t.Run("vpc_pages", func(t *testing.T) {
+		ids := []string{}
+		for i := 0; i < 7; i++ {
+			body := fmt.Sprintf(`{"name":"page-reference","cidr":"10.61.0.0/16","idempotency_key":"page-reference-%d"}`, i)
+			v := request(t, jwtIdentity, "POST", base+"/vpcs", body, nil, 200)
+			id := v["id"].(string)
+			ids = append(ids, id)
+			detail := poll(t, jwtIdentity, base+"/vpcs/"+id, state("available"))
+			require.Equal(t, id, detail["id"])
+			require.NotContains(t, detail, "vpc")
+		}
+		// Test equal primary sort values; all resources were admitted through HTTP.
+		_, err := peer.DB.ExecContext(ctx, `UPDATE network_vpcs SET created_at='2026-10-01T00:00:00Z' WHERE tenant_id=$1 AND name='page-reference'`, peer.TenantID)
+		require.NoError(t, err)
+		sort.Sort(sort.Reverse(sort.StringSlice(ids)))
+		foreign := identity{bearer: otherToken}
+		foreignVPC := request(t, foreign, "POST", base+"/vpcs", `{"name":"page-reference","cidr":"10.61.0.0/16","idempotency_key":"page-foreign"}`, nil, 200)
+		foreignID := foreignVPC["id"].(string)
+		poll(t, foreign, base+"/vpcs/"+foreignID, state("available"))
+		for _, caller := range []identity{jwtIdentity, akIdentity} {
+			// First list request goes straight to page 3.
+			third := get(t, caller, base+"/vpcs?name=page-reference&page=3&pageSize=2")
+			require.Equal(t, "7", third["total"])
+			require.NotContains(t, third, "next_cursor")
+			items := third["items"].([]any)
+			require.Len(t, items, 2)
+			require.Equal(t, ids[4], items[0].(map[string]any)["id"])
+			require.Equal(t, ids[5], items[1].(map[string]any)["id"])
+			for _, q := range []string{"", "&page=1", "&pageSize=2", "&page=1&pageSize=2", "&page=4&pageSize=2", "&page=5&pageSize=2"} {
+				page := get(t, caller, base+"/vpcs?name=page-reference"+q)
+				require.Equal(t, "7", page["total"])
+				rows := page["items"].([]any)
+				switch q {
+				case "&page=4&pageSize=2":
+					require.Len(t, rows, 1)
+					require.Equal(t, ids[6], rows[0].(map[string]any)["id"])
+				case "&page=5&pageSize=2":
+					require.Empty(t, rows)
+				case "&pageSize=2", "&page=1&pageSize=2":
+					require.Len(t, rows, 2)
+					require.Equal(t, ids[0], rows[0].(map[string]any)["id"])
+				default:
+					require.Len(t, rows, 7)
+				}
+			}
+			for _, q := range []string{"name=missing", "name=page-reference&state=deleted"} {
+				page := get(t, caller, base+"/vpcs?"+q)
+				require.Equal(t, "0", page["total"])
+				require.Equal(t, []any{}, page["items"])
+			}
+			for _, q := range []string{"page=0", "pageSize=0", "page=-1", "pageSize=101", "page=01", "page=1.5", "page=", "page=4294967296", "page=18446744073709551616", "page=1&page=2", "pageSize=1&pageSize=2", "limit=1", "cursor=x", "page=1&cursor=x", "pageSize=2&limit=1", "offset=0", "page_size=2", "page_token=x", "token=x", "noPaging=true"} {
+				request(t, caller, "GET", base+"/vpcs?"+q, "", nil, 400)
+			}
+			request(t, caller, "GET", base+"/vpcs/"+foreignID, "", nil, 404)
+		}
+		otherPage := get(t, foreign, base+"/vpcs?name=page-reference&pageSize=2")
+		require.Equal(t, "1", otherPage["total"])
+		require.Equal(t, foreignID, otherPage["items"].([]any)[0].(map[string]any)["id"])
+		request(t, identity{}, "GET", base+"/vpcs?page=3&pageSize=2", "", nil, 401)
+		request(t, akIdentity, "GET", base+"/vpcs?page=3&pageSize=2", "", func(r *http.Request) { r.URL.RawQuery = "page=2&pageSize=2" }, 401)
+		// Real role revocation must deny the entire response, including count.
+		_, err = client.RolePermission.Update().Where(rolepermission.RoleIDEQ(reader.ID)).SetStatus(rolepermission.StatusOff).Save(sys)
+		require.NoError(t, err)
+		require.NoError(t, policy.ResetPolicies(ctx))
+		for _, caller := range []identity{{bearer: readerToken}, {key: readerAK, secret: readerSK}} {
+			denied := request(t, caller, "GET", base+"/vpcs?page=3&pageSize=2", "", nil, 403)
+			require.NotContains(t, denied, "total")
+			require.NotContains(t, denied, "items")
+		}
+		_, err = client.RolePermission.Update().Where(rolepermission.RoleIDEQ(reader.ID)).SetStatus(rolepermission.StatusOn).Save(sys)
+		require.NoError(t, err)
+		require.NoError(t, policy.ResetPolicies(ctx))
+		for _, id := range ids {
+			request(t, jwtIdentity, "DELETE", base+"/vpcs/"+id, "", nil, 200)
+			poll(t, jwtIdentity, base+"/vpcs/"+id, state("deleted"))
+		}
+		request(t, foreign, "DELETE", base+"/vpcs/"+foreignID, "", nil, 200)
+		poll(t, foreign, base+"/vpcs/"+foreignID, state("deleted"))
+	})
 	t.Run("deferred_load_balancer", func(t *testing.T) {
 		jsonBody := func(v any) string {
 			raw, err := json.Marshal(v)
@@ -1016,7 +1099,7 @@ func TestNetworkJointHTTP(t *testing.T) {
 			poll(t, id, base+"/vpcs/"+vpcID, state("available"))
 			opID := vpc["last_operation_id"].(string)
 			poll(t, id, base+"/operations/"+opID, state("succeeded"))
-			listed := get(t, id, base+"/vpcs?name=joint-"+mode.name+"&limit=1")
+			listed := get(t, id, base+"/vpcs?name=joint-"+mode.name+"&pageSize=1")
 			require.Equal(t, "1", listed["total"])
 			ids := make([]string, 2)
 			for i := range ids {

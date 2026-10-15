@@ -175,7 +175,11 @@ func networkQueryFields(operation string) map[string]bool {
 	}
 	fields := map[string]bool{}
 	switch strings.TrimPrefix(operation, "/admin.service.v1.NetworkService/") {
-	case "ListVPCs", "ListEIPs":
+	case "ListVPCs":
+		for _, field := range []string{"name", "state", "page", "pageSize"} {
+			fields[field] = true
+		}
+	case "ListEIPs":
 		for _, field := range []string{"name", "state", "limit", "cursor"} {
 			fields[field] = true
 		}
@@ -200,6 +204,12 @@ func validateNetworkQuery(operation string, query url.Values) bool {
 		value := values[0]
 		if pattern := networkIDPatterns[field]; pattern != nil && value != "" && !pattern.MatchString(value) {
 			return false
+		}
+		if field == "page" || field == "pageSize" {
+			n, err := strconv.ParseUint(value, 10, 32)
+			if err != nil || n == 0 || strconv.FormatUint(n, 10) != value || (field == "pageSize" && n > 100) {
+				return false
+			}
 		}
 		if field == "limit" {
 			n, err := strconv.Atoi(value)

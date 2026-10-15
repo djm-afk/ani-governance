@@ -8742,7 +8742,7 @@ paths:
             tags:
                 - NetworkService
             summary: List VPCs in the authenticated tenant
-            description: Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Cursor pagination; limit is 1..100. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. System-managed Intranet resources are excluded downstream.
+            description: 'Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator''s tenant and replayed downstream. System-managed Intranet resources are excluded downstream.'
             operationId: NetworkService_ListVPCs
             parameters:
                 - name: name
@@ -8753,15 +8753,16 @@ paths:
                   in: query
                   schema:
                     type: string
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
-                    format: int32
-                - name: cursor
+                    format: uint32
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -8770,7 +8771,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/ListVPCsResponse'
                 "400":
-                    description: Invalid cursor, limit or state filter
+                    description: Invalid page, pageSize, state filter or unsupported legacy window
                 "401":
                     description: Missing, invalid, expired or revoked credentials
                 "403":
@@ -12937,8 +12938,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/VPC'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListVlanNetworksResponse:
