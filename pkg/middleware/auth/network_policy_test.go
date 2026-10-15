@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,7 +26,7 @@ func TestNetworkAllTenantOperationsSignAndReplayBody(t *testing.T) {
 	fixtures := []struct{ operation, method, path, query, body string }{
 		{"CreateVPC", "POST", "/api/v1/networks/vpcs", "", `{"name":"vpc","cidr":"10.0.0.0/16","idempotency_key":"create-vpc"}`},
 		{"GetVPC", "GET", vectorPath, "", ""},
-		{"ListVPCs", "GET", "/api/v1/networks/vpcs", "limit=1&name=demo&state=available", ""},
+		{"ListVPCs", "GET", "/api/v1/networks/vpcs", "name=demo&page=3&pageSize=2&state=available", ""},
 		{"ListVPCCIDRPresets", "GET", "/api/v1/networks/vpc-cidr-presets", "", ""},
 		{"DeleteVPC", "DELETE", vectorPath, "", ""},
 		{"GetOperation", "GET", "/api/v1/networks/operations/" + policyOperationID, "", ""},
@@ -199,5 +200,21 @@ func TestNetworkSignatureRejectsMethodTampering(t *testing.T) {
 	})).ServeHTTP(httptest.NewRecorder(), r)
 	if !called {
 		t.Fatal("signature check did not run")
+	}
+}
+
+func TestVPCPageHTTPParameters(t *testing.T) {
+	op := "/admin.service.v1.NetworkService/ListVPCs"
+	for _, query := range []string{"", "page=3", "pageSize=2", "page=3&pageSize=2", "page=4294967295&pageSize=100"} {
+		values, err := url.ParseQuery(query)
+		if err != nil || !validateNetworkQuery(op, values) {
+			t.Fatalf("valid query rejected: %s", query)
+		}
+	}
+	for _, query := range []string{"page=0", "pageSize=0", "page=-1", "pageSize=101", "page=01", "page=+1", "page=1.0", "page=", "pageSize=", "page=4294967296", "page=18446744073709551616", "page=1&page=2", "pageSize=1&pageSize=2", "limit=1", "cursor=x", "page=1&cursor=x", "pageSize=2&limit=1", "offset=0", "page_size=2", "page_token=x", "token=x", "noPaging=true"} {
+		values, err := url.ParseQuery(query)
+		if err == nil && validateNetworkQuery(op, values) {
+			t.Fatalf("invalid query accepted: %s", query)
+		}
 	}
 }

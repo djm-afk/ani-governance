@@ -33,7 +33,7 @@ type VPCGetter interface {
 type NetworkTenantClient interface {
 	ListVPCCIDRPresets(context.Context, string, string) (*networkv1.ListVPCCIDRPresetsResponse, error)
 	VPCGetter
-	ListVPCs(context.Context, string, string, string, string, int32, string) (*networkv1.ListVPCsResponse, error)
+	ListVPCs(context.Context, string, string, string, string, uint32, uint32) (*networkv1.ListVPCsResponse, error)
 	CreateVPC(context.Context, string, string, string, string, string, string) (*networkv1.CreateVPCResponse, error)
 	DeleteVPC(context.Context, string, string, string) (*networkv1.DeleteVPCResponse, error)
 	GetOperation(context.Context, string, string, string) (*networkv1.GetOperationResponse, error)
@@ -170,6 +170,14 @@ func wireOperation(v *networkv1.Operation) *catalogv1.Operation {
 }
 
 func (s *NetworkService) ListVPCs(ctx context.Context, req *catalogv1.ListVPCsRequest) (*catalogv1.ListVPCsResponse, error) {
+	if req == nil {
+		return nil, errors.BadRequest("INVALID_NETWORK_REQUEST", "request required")
+	}
+	page, pageSize, err := resolveVPCPage(req.Page, req.PageSize)
+	if err != nil {
+		return nil, err
+	}
+
 	_, tenant, err := trustedOperator(ctx, s)
 	if err != nil {
 		return nil, err
@@ -178,14 +186,17 @@ func (s *NetworkService) ListVPCs(ctx context.Context, req *catalogv1.ListVPCsRe
 	if err != nil {
 		return nil, err
 	}
-	reply, err := s.client.ListVPCs(ctx, tenant, actor, req.GetName(), strings.ToUpper(req.GetState()), req.GetLimit(), req.GetCursor())
+	reply, err := s.client.ListVPCs(ctx, tenant, actor, req.GetName(), strings.ToUpper(req.GetState()), page, pageSize)
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
 	if reply == nil {
 		return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network response")
 	}
-	out := &catalogv1.ListVPCsResponse{NextCursor: reply.GetNextCursor(), Total: reply.GetTotal()}
+	if reply.Total < 0 || len(reply.Items) > int(pageSize) || int64(len(reply.Items)) > reply.Total || reply.NextCursor != "" {
+		return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network page")
+	}
+	out := &catalogv1.ListVPCsResponse{Total: reply.GetTotal(), Items: make([]*catalogv1.VPC, 0, len(reply.Items))}
 	for _, v := range reply.GetItems() {
 		if v == nil || v.TenantId != tenant {
 			return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network response")

@@ -22,15 +22,20 @@ message VPC {
 }
 message GetVPCResponse { VPC vpc = 1 [json_name = "vpc"]; }
 
+// Gov public VPC pagination has completed its protocol cutover. Legacy fields
+// remain reserved; downstream Resource alone retains its old RPC adapter.
 message ListVPCsRequest {
  string name = 1 [json_name = "name"];
  string state = 2 [json_name = "state"];
- int32 limit = 3 [json_name = "limit"];
- string cursor = 4 [json_name = "cursor"];
+ reserved 3, 4;
+ reserved "limit", "cursor";
+ optional uint32 page = 5 [json_name = "page"];
+ optional uint32 page_size = 6 [json_name = "pageSize"];
 }
 message ListVPCsResponse {
  repeated VPC items = 1 [json_name = "items"];
- string next_cursor = 2 [json_name = "next_cursor"];
+ reserved 2;
+ reserved "next_cursor";
  int64 total = 3 [json_name = "total"];
 }
 

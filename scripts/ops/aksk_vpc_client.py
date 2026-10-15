@@ -45,7 +45,7 @@ _NETWORK_ROUTES = [
     ("GET", r"/api/v1/networks/load-balancers/operations/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "GetLoadBalancerOperation"),
 ]
 _LIST_FIELDS = {
-    "ListVPCs": {"name", "state", "limit", "cursor"},
+    "ListVPCs": {"name", "state", "page", "pageSize"},
     "ListEIPs": {"name", "state", "limit", "cursor"},
     "ListSubnets": {"vpc_id", "name", "state", "limit", "cursor"},
     "ListLoadBalancers": {"name", "vpc_id", "subnet_id", "exposure", "state", "limit", "cursor"},
@@ -92,6 +92,10 @@ def sign_network(access_key, secret_key, method, path, query=None, body=b"", tim
             raise ValueError("query value too long")
         if key in ("vpc_id", "subnet_id") and value and not re.fullmatch(key[:-3] + r"_[0-9a-f]{32}", value):
             raise ValueError("invalid query ID")
+        if key in {"page", "pageSize"}:
+            maximum = 100 if key == "pageSize" else 4294967295
+            if not re.fullmatch(r"[1-9][0-9]*", value) or int(value) > maximum:
+                raise ValueError(key + " is out of range")
         if key == "limit" and (not re.fullmatch(r"[1-9][0-9]*", value) or int(value) > 100):
             raise ValueError("limit must be 1..100")
     canonical_query = urllib.parse.urlencode(sorted(query.items()))

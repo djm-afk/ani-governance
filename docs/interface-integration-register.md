@@ -33,6 +33,38 @@
 
 历史 **GOV-RESOURCE-20260922** 对接了 NET-01～NET-11 共 11 个租户接口；“17/17”是该批场景数，不是 Resource 租户 RPC 全量覆盖。该批 AK 实际只支持 GetVPC，其余接口的机器访问在 2026-10-09 增补。历史计划、证据及部署保持各自时点；当前覆盖与响应合同以下方本轮小节和源码为准。
 
+<a id="vpc-page-r01"></a>
+
+## 2026-10-15：VPC R01 页码参考实现
+
+范围仅 NET-01/NET-02 的 VPC 详情与列表及必要调用链；其他服务/资源未迁移。规范为 [前端 HTTP 接口规范](contracts/frontend-http-api.md)，存量游标规则移至[独立合同](contracts/cursor-pagination-legacy.md)，LIST-CURSOR-01/02 的历史记录保留。
+
+基线为 Resource 远端默认分支 main `c826b2b4d3ce7746b3caa49548e104e07d6e3b8e`、Gov 远端 main `686547543339bff4926505d3c7829415d404786f`；两仓任务分支均为 `codex/vpc-page-r01-20261015`，原 Resource Image dirty 工作区及 Gov 原 main 保留。两份忽略目录草稿显式携带，SHA256 分别为 `38c4437bdc3fbc0cfe2713a80fdf1ffafb058529f4a695e352391a912ce8f67d`（frontend-api-contract）和 `8f1ad640f658bca34ef317b7872413ad512291d6e4dfc8d322345e8bc1141f98`（pagination-page-unification）。
+
+Resource 已先推送任务提交 `98a534804231c7842acaa080fe1ebec066d921b2`；Fedora 使用全新模块缓存从正式源下载 `v0.0.0-20261015073834-98a534804231`，核实 `Origin.Hash` 等于该 SHA，模块 Sum=`h1:3XeKt6k05ix9XYq37yItZDnLW/6ppvMRLuQFDDv5OTI=`、GoModSum=`h1:DXqtxWJ+IEu9gZIgGVHTbFONYQc9hcuaeXOUzmY5Yjw=`。Gov 固定此正式依赖，无 replace；下载内容的 Proto、SQL、业务和测试文件与已测 Resource 快照逐字节相同。
+
+本批 `controlled_complete`：真实 Gov HTTP → JWT/AK + Redis 会话 + Casbin/租户/套餐 → mTLS Resource → PostgreSQL 已贯通。首次列表请求即 page=3/pageSize=2，按相同 created_at 的唯一 ID 兜底取正确两条记录，total="7"；独立租户仅见自己的 1 条。默认/单字段缺省、name/state、空数组/字符串 total、末页/越界、非法/重复/溢出/旧参数、AK 参数篡改、跨租户详情和撤权 403 均有实际断言。7 条目标 VPC 与另一租户 VPC 均经 HTTP 创建、查询、产品删除；未绕过业务查询、权限或持久化。只有 KC/Envoy/实例 owner 等外部 Provider 边界使用既有 fixture。
+
+执行主机仅 SSH Fedora，Go 1.26.9、Buf 1.60.0、sqlc 1.31.1，任务根目录 `/home/chabking/workspace/ani-resource-service-runs/vpc-page-r01-01a13e73`：
+
+| 必要验证 | 结果与具名范围 |
+| --- | --- |
+| Resource 正式生成、来源/边界与定向 vet | pass/0：`make config sql`、`scripts/verify-source`、`scripts/verify-boundaries`，`go vet ./internal/biz/network ./internal/service/network ./internal/data/network` |
+| Resource 窗口与真实 PG | pass/0：`TestResolvePage`，`TestVPCPageRandomAccessAndScope`、`TestVPCPageCountAndListShareSnapshot`、`TestVPCListTotalAcrossPagesAndFilters`；命令详见该模块 docs/execution/status.md |
+| Gov 完整生成与 AK 脚本 | pass/0：`make api`（11 模板及工作树保护），`python3 -m unittest scripts/tests/test_aksk_vpc_client.py`（9 项） |
+| Gov 参数/签名 | pass/0：`TestVPCPageHTTPParameters`、`TestNetworkAllTenantOperationsSignAndReplayBody`、`TestNetworkHTTPRejectsAmbiguityBeforeHandler`、`TestNetworkSignatureBindsMethodPathQueryAndBody`、`TestNetworkSignatureRejectsMethodTampering` |
+| Gov 映射、可信 Client 与详情 | pass/0：`TestVPCPageDefaultsAndValidationBeforeCall`、`TestNetworkListTotalsPassThroughTrustedScope`、`TestNetworkTrustedScope`、`TestNetworkTrustedKeyPrincipal`、`TestNetworkClient*`、`TestDetailHTTPResponsesReturnResourceObjects/VPC` |
+| 模块与交付静态检查 | pass/0：`go mod verify`；最终 2269 个非文档输入文件与已测快照逐项相同，变更合同的相对链接/锚点检查通过 |
+| 真实跨仓 HTTP | pass/0：`RESOURCE_NETWORK_TEST_BINARY=<固定二进制> NETWORK_JOINT_TEST_RUN='^TestNetworkJointHTTP/vpc_pages$' ./scripts/network-joint-integration`；子用例 35.87s、总用例 49.91s，Resource helper exit 0，产品与基础设施清理 pass |
+
+定向 Go 检查统一 `-mod=readonly -count=1`，具名命令/退出码见任务目录 `resource-s02.log`、`resource-vet.log`、`gov-generate-s03-cacheproxy.log`、`gov-checks-02.sh` / `gov-checks-s03.log`、`gov-joint-s04.sh` / `gov-joint-s04.log`，原始日志不提交。按用户要求未运行全量测试、全仓 race、压测、合并或部署。
+
+Resource 验证源码归档 SHA256 为 `53614b8a7ad143fada142fc98df198311efc2724050d18bde8725b2ae6507c2d`（input/resource-s02.tar.gz）；Gov 定向输入为 `535487614198580fe031c1f186695b207ea8e78b4a40c059d15b124908002173`（input/governance-s03.tar.gz），生成/模块固定后的正式模块及生成物逐项回传核验；最终联调输入为 `e4111f8300c485562936811e661fbb3f854371e9e2266192e871df0c46e9d4fb`（input/governance-s04.tar.gz）。s04 除联调 fixture 和文档外与已通过检查的 s03 逐文件相同，fixture gofmt 回传后检查本地未漂移；最终文档补充不改变已测代码。Resource 二进制 SHA256=`9194e6e454606152756623cb43ad8466689d0d208ab8ccbb8b8661ad30916200`。
+
+保留失败边界：初次 Gov 生成因缺已固定 Inference 模块停止；下载后通过。再次生成遇 Go 代理 EOF，离线模式也不支持生成器的版本查询；改用已下载官方模块缓存的 file proxy 后完整入口通过，未改模板/版本/保护检查。第一次 HTTP 联调在最新认证合同要求 sid/application 的 fixture 初始化处失败（exit 1，未进入分页），修正测试令牌为真实 Authenticator/Redis 会话后只重跑 VPC HTTP；此前通过的单位检查未重复。
+
+Gov VPC 无参数现为 page=1/pageSize=20，旧窗口一律 400；Resource 旧 RPC 单独保留；详情继续直接返回 VPC 对象，操作组合结果未削减。前端、消费者实际升级、生产部署和真实 Provider/数据面验收 `not_verified`，没有自动合并或部署。
+
 <a id="s2s-res-01"></a>
 
 ## 2026-10-11：Gov → Resource 调用规范收敛（S2S-RES-01）
@@ -113,7 +145,7 @@ NET-01～NET-11 沿用历史编号；NET-12～NET-24 为本轮新增。下表的
 | 编号 | RPC | HTTP 方法与路径 | 权限码 | HTTP 响应 |
 | --- | --- | --- | --- | --- |
 | NET-01 | GetVPC | `GET /api/v1/networks/vpcs/{vpc_id}` | `network:vpc:get` | VPC |
-| NET-02 | ListVPCs | `GET /api/v1/networks/vpcs` | `network:vpc:list` | items / next_cursor / total |
+| NET-02 | ListVPCs | `GET /api/v1/networks/vpcs` | `network:vpc:list` | items / total；page/pageSize，见 VPC R01 |
 | NET-03 | CreateVPC | `POST /api/v1/networks/vpcs` | `network:vpc:create` | VPC |
 | NET-04 | DeleteVPC | `DELETE /api/v1/networks/vpcs/{vpc_id}` | `network:vpc:delete` | VPC |
 | NET-05 | GetOperation | `GET /api/v1/networks/operations/{operation_id}` | `network:operation:get` | Operation |
@@ -512,7 +544,7 @@ Cookie 现状：`refresh_token` 为 HttpOnly，Path=`/api/v1/auth/refresh`、Sam
 
 ### 3. 列表、筛选与分页
 
-`GET /api/v1/admin/users` 默认使用 `limit` + `cursor`，响应为 `{items,next_cursor,total}`；首次不传 cursor，后续原样回传上一页的 next_cursor。参数边界、签名绑定、稳定排序和旧页码兼容的唯一正文见 [分页规范](contracts/pagination.md)，历史验收见 [LIST-CURSOR-01](#list-cursor-01)。租户、角色、套餐等其余 admin 列表仍使用 `page`、`pageSize`，从第 1 页开始，不具备 users 的游标语义。
+`GET /api/v1/admin/users` 默认使用 `limit` + `cursor`，响应为 `{items,next_cursor,total}`；首次不传 cursor，后续原样回传上一页的 next_cursor。参数边界、签名绑定、稳定排序和旧页码兼容见 [存量游标合同](contracts/cursor-pagination-legacy.md)，历史验收见 [LIST-CURSOR-01](#list-cursor-01)。租户、角色、套餐等其余 admin 列表仍使用 `page`、`pageSize`，从第 1 页开始，不具备 users 的游标语义。
 
 各列表的 `query` 是 **JSON 字符串**，通过 URL 参数编码发送；筛选字段采用数据库 snake_case，与 JSON body 的 camelCase 分开。
 
@@ -1437,7 +1469,7 @@ Resource 仅提供内部 gRPC，本批同步公开 JSON 规格和 SBOM，已发�
 
 ## LIST-CURSOR-01：`GET /api/v1/admin/users` 改为 limit + cursor 游标分页（2026-10-10）
 
-本批仅将 `GET /api/v1/admin/users` 接入 `limit/cursor`，保留显式页码兼容；其余 admin 列表不因共享请求消息增加 cursor 而完成迁移。参数、响应、签名绑定、排序、过滤、身份与密钥规则的唯一正文见 [分页规范](contracts/pagination.md)。
+本批仅将 `GET /api/v1/admin/users` 接入 `limit/cursor`，保留显式页码兼容；其余 admin 列表不因共享请求消息增加 cursor 而完成迁移。参数、响应、签名绑定、排序、过滤、身份与密钥规则见 [存量游标合同](contracts/cursor-pagination-legacy.md)。
 
 以下保留 2026-10-10 的历史执行与验收记录，不表示本次文档修订重新运行了这些检查；当前源码差异和后续迁移范围见该规范。
 

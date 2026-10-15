@@ -497,9 +497,13 @@ func (m *ListVPCsRequest) validate(all bool) error {
 
 	// no validation rules for State
 
-	// no validation rules for Limit
+	if m.Page != nil {
+		// no validation rules for Page
+	}
 
-	// no validation rules for Cursor
+	if m.PageSize != nil {
+		// no validation rules for PageSize
+	}
 
 	if len(errors) > 0 {
 		return ListVPCsRequestMultiError(errors)
@@ -634,8 +638,6 @@ func (m *ListVPCsResponse) validate(all bool) error {
 		}
 
 	}
-
-	// no validation rules for NextCursor
 
 	// no validation rules for Total
 

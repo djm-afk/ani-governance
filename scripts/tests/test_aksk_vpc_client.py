@@ -96,6 +96,15 @@ class SigningClientTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     client.sign_network('ak-example', 'sk-example', method, path, query, body, 1700000000)
 
+    def test_page_signature_and_validation(self):
+        target, headers = client.sign_network('ak-example', 'sk-example', 'GET', '/api/v1/networks/vpcs', {'pageSize': 2, 'page': 3}, timestamp=1700000000)
+        self.assertEqual(target, '/api/v1/networks/vpcs?page=3&pageSize=2')
+        changed = client.sign_network('ak-example', 'sk-example', 'GET', '/api/v1/networks/vpcs', {'pageSize': 2, 'page': 2}, timestamp=1700000000)[1]
+        self.assertNotEqual(headers['X-Signature'], changed['X-Signature'])
+        for query in ({'page': 0}, {'page': '01'}, {'page': 4294967296}, {'pageSize': 101}, {'page': 1, 'cursor': 'old'}, {'limit': 1}):
+            with self.assertRaises(ValueError):
+                client.sign_network('ak-example', 'sk-example', 'GET', '/api/v1/networks/vpcs', query, timestamp=1700000000)
+
     def test_direct_get_response(self):
         from unittest.mock import patch
         vpc_id = 'vpc_'+'a'*32
