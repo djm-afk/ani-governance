@@ -37,7 +37,7 @@
 
 ## 2026-10-15：VPC R01 页码参考实现
 
-范围仅 NET-01/NET-02 的 VPC 详情与列表及必要调用链；其他服务/资源未迁移。规范为 [HTTP 分页与 VPC 参考实现](contracts/pagination.md)，存量游标规则移至[独立合同](contracts/cursor-pagination-legacy.md)，LIST-CURSOR-01/02 的历史记录保留。
+范围仅 NET-01/NET-02 的 VPC 详情与列表及必要调用链；其他服务/资源未迁移。规范为 [前端 HTTP 接口规范](contracts/frontend-http-api.md)，存量游标规则移至[独立合同](contracts/cursor-pagination-legacy.md)，LIST-CURSOR-01/02 的历史记录保留。
 
 基线为 Resource 远端默认分支 main `c826b2b4d3ce7746b3caa49548e104e07d6e3b8e`、Gov 远端 main `686547543339bff4926505d3c7829415d404786f`；两仓任务分支均为 `codex/vpc-page-r01-20261015`，原 Resource Image dirty 工作区及 Gov 原 main 保留。两份忽略目录草稿显式携带，SHA256 分别为 `38c4437bdc3fbc0cfe2713a80fdf1ffafb058529f4a695e352391a912ce8f67d`（frontend-api-contract）和 `8f1ad640f658bca34ef317b7872413ad512291d6e4dfc8d322345e8bc1141f98`（pagination-page-unification）。
 

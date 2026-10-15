@@ -1,6 +1,6 @@
 # 存量游标协议
 
-本文件保留尚未迁移接口的游标合同。VPC R01 已由[页码规范](pagination.md)替代；其他接口的迁移状态和历史验收只在[接口登记](../interface-integration-register.md#list-cursor-01)维护。本文件不新增迁移范围或改变任何运行行为。
+本文件保留尚未迁移接口的游标合同。VPC R01 已由[前端 HTTP 接口规范](frontend-http-api.md)替代；其他接口的迁移状态和历史验收只在[接口登记](../interface-integration-register.md#list-cursor-01)维护。本文件不新增迁移范围或改变任何运行行为。
 
 ### 请求与响应
 

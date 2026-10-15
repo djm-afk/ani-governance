@@ -19,7 +19,7 @@ Go 基准来自 `go.mod`。`gow` 是本仓维护副本，用 `make gow` 构建�
 
 ## 按任务读取
 
-- 修改列表、筛选或排序前，先读 [分页规范](docs/contracts/pagination.md)，核对对应 Proto、真实实现与接口登记。新增或修改接口遵守合同中的参数、过滤、排序和租户边界；存量窗口与响应格式按明确迁移范围处理，不把共享消息中的 cursor 字段当成已迁移。
+- 修改前端 HTTP 接口、列表、筛选或排序前，先读 [前端 HTTP 接口规范](docs/contracts/frontend-http-api.md)，核对对应 Proto、真实实现与接口登记。新增或修改接口遵守合同中的请求、响应、分页、过滤、排序和租户边界；存量窗口与响应格式按明确迁移范围处理，不把共享消息中的 cursor 字段当成已迁移。
 - 新增或修改服务间调用前，先读 [服务间调用规范](docs/contracts/service-to-service-calls.md)，再按 [业务服务接入指南](docs/service-integration.md) 定位具体客户端与专项合同。统一规范是新接入和修改的要求；[存量差异](docs/contracts/service-to-service-calls.md#current-differences) 须独立迁移，不因文档入仓就视为已改运行逻辑。
 - 修改 Repository、DTO 映射或关联更新前，先读 [Repository 合同](docs/development.md#repository-contracts)，核对当前 `api_repo.go`、`RoleRepo.Update` 与本地依赖实现。
 - 新接入或修改接口合同前，在 [接口集成登记](docs/interface-integration-register.md) 维护报文、鉴权条件和问题，复用已有编号。接口风格统一调整只按用户指定批次与格式实施；即时修复单独记录，整体登记由用户确认结项。

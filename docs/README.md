@@ -7,7 +7,7 @@
 | [执行规则](../AGENTS.md) | 授权、改动与安全边界 |
 | [部署与初始化](deployment.md) | Atlas、初始化、运行配置 |
 | [平台网络接入](contracts/platform-network.md) | 平台用户的地址池、二层网络与依赖接口、委托和响应合同 |
-| [分页规范](contracts/pagination.md) | 页码行为合同、VPC 参考链路、存量游标与迁移边界 |
+| [前端 HTTP 接口规范](contracts/frontend-http-api.md) | 请求、详情和列表响应、公共分页与错误规则、VPC 参考实现 |
 | [服务间调用规范](contracts/service-to-service-calls.md) | 三种方向的统一调用要求、存量差异与迁移边界 |
 | [权限码规范](contracts/permission-code.md) | 权限码业务语义、命名、接口映射与目录校验；附[业务能力映射表](contracts/permission-code-capability-map.tsv)（六域+Quota 94 条）与[管理面权限映射表](contracts/permission-code-management-map.tsv)（管理接口 180 条） |
 | [业务服务接入](service-integration.md) | 当前客户端配置、手工装配与 API 登记 |
