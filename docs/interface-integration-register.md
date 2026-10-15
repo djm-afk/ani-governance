@@ -33,8 +33,6 @@
 
 历史 **GOV-RESOURCE-20260922** 对接了 NET-01～NET-11 共 11 个租户接口；“17/17”是该批场景数，不是 Resource 租户 RPC 全量覆盖。该批 AK 实际只支持 GetVPC，其余接口的机器访问在 2026-10-09 增补。历史计划、证据及部署保持各自时点；当前覆盖与响应合同以下方本轮小节和源码为准。
 
-<a id="s2s-res-01"></a>
-
 <a id="vpc-page-r01"></a>
 
 ## 2026-10-15：VPC R01 页码参考实现
@@ -66,6 +64,8 @@ Resource 验证源码归档 SHA256 为 `53614b8a7ad143fada142fc98df198311efc2724
 保留失败边界：初次 Gov 生成因缺已固定 Inference 模块停止；下载后通过。再次生成遇 Go 代理 EOF，离线模式也不支持生成器的版本查询；改用已下载官方模块缓存的 file proxy 后完整入口通过，未改模板/版本/保护检查。第一次 HTTP 联调在最新认证合同要求 sid/application 的 fixture 初始化处失败（exit 1，未进入分页），修正测试令牌为真实 Authenticator/Redis 会话后只重跑 VPC HTTP；此前通过的单位检查未重复。
 
 Gov VPC 无参数现为 page=1/pageSize=20，旧窗口一律 400；Resource 旧 RPC 单独保留；详情继续直接返回 VPC 对象，操作组合结果未削减。前端、消费者实际升级、生产部署和真实 Provider/数据面验收 `not_verified`，没有自动合并或部署。
+
+<a id="s2s-res-01"></a>
 
 ## 2026-10-11：Gov → Resource 调用规范收敛（S2S-RES-01）
 
