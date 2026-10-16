@@ -3,6 +3,7 @@ package inference.service.v1;
 
 import "inference/v1/inference.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 import "gnostic/openapi/v3/annotations.proto";
 
 // Public user intent. Trusted attachments, charges, identity and destination
@@ -83,3 +84,42 @@ message ListInferenceResponse {
   string next_page_token = 2 [json_name = "next_page_token"];
 }
 message GetInferenceOperationRequest { string operation_id = 1 [json_name = "operation_id"]; }
+
+// UpdateInferenceRequest is the tenant-facing partial update. Fields named by
+// update_mask are forwarded as supplied; Governance never derives or edits an
+// engine command.
+message UpdateInferenceRequest { UpdateInferenceData data = 1; }
+message UpdateInferenceData {
+  string idempotency_key = 1 [json_name = "idempotency_key"];
+  string resource_id = 2 [json_name = "resource_id"];
+  int64 expected_generation = 3 [json_name = "expected_generation"];
+  google.protobuf.FieldMask update_mask = 4 [json_name = "update_mask"];
+  string model_version_id = 5 [json_name = "model_version_id"];
+  string served_model_name = 6 [json_name = "served_model_name"];
+  string engine_image = 7 [json_name = "engine_image"];
+  string engine_type = 8 [json_name = "engine_type"];
+  string command = 9;
+  string cpu = 10;
+  string memory = 11;
+  int32 replicas = 12;
+  GpuSelection gpu = 13;
+  inference.v1.RuntimeMode runtime_mode = 14 [json_name = "runtime_mode"];
+  int32 worker_replicas = 15 [json_name = "worker_replicas"];
+}
+
+message InferenceServiceCommandRequest { InferenceServiceCommandData data = 1; }
+message InferenceServiceCommandData {
+  string idempotency_key = 1 [json_name = "idempotency_key"];
+  string resource_id = 2 [json_name = "resource_id"];
+  int64 expected_generation = 3 [json_name = "expected_generation"];
+}
+
+message ListInferenceOperationsRequest {
+  string resource_id = 1 [json_name = "resource_id"];
+  int32 page_size = 2 [json_name = "page_size"];
+  string page_token = 3 [json_name = "page_token"];
+}
+message ListInferenceOperationsResponse {
+  repeated inference.v1.Operation operations = 1;
+  string next_page_token = 2 [json_name = "next_page_token"];
+}

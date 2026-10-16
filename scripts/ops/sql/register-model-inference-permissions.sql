@@ -16,18 +16,28 @@ BEGIN
     SELECT * FROM (VALUES
       ('GET',  '/api/v1/models',                                      'model:service:read',   'MODEL'),
       ('GET',  '/api/v1/models/{model_id}',                           'model:service:read',   'MODEL'),
+      ('GET',  '/api/v1/models:search',                               'model:service:read',   'MODEL'),
       ('GET',  '/api/v1/models/{model_id}/versions',                  'model:service:read',   'MODEL'),
       ('GET',  '/api/v1/model-versions/{model_version_id}',           'model:service:read',   'MODEL'),
+      ('GET',  '/api/v1/model-versions/{model_version_id}/download-url','model:service:read',   'MODEL'),
       ('GET',  '/api/v1/models/import-tasks/{task_id}',               'model:service:read',   'MODEL'),
       ('POST', '/api/v1/models',                                      'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/model-versions',                              'model:service:manage', 'MODEL'),
+      ('POST', '/api/v1/models/{model_id}/upload-url',                'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models:import',                               'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models/import-tasks/{task_id}:retry',         'model:service:manage', 'MODEL'),
+      ('DELETE','/api/v1/models/{model_id}',                          'model:service:manage', 'MODEL'),
+      ('DELETE','/api/v1/model-versions/{model_version_id}',           'model:service:manage', 'MODEL'),
       ('GET',  '/api/v1/inference/services',                          'inference:service:read',   'INFERENCE'),
       ('GET',  '/api/v1/inference/services/{resource_id}',            'inference:service:read',   'INFERENCE'),
       ('GET',  '/api/v1/inference/operations/{operation_id}',         'inference:service:read',   'INFERENCE'),
       ('POST', '/api/v1/inference/services',                          'inference:service:create', 'INFERENCE'),
-      ('POST', '/api/v1/inference/services/{data.resource_id}:delete','inference:service:delete', 'INFERENCE')
+      ('POST', '/api/v1/inference/services/{data.resource_id}:delete','inference:service:delete', 'INFERENCE'),
+      ('POST', '/api/v1/inference/services/{data.resource_id}:update','inference:service:update', 'INFERENCE'),
+      ('POST', '/api/v1/inference/services/{data.resource_id}:start', 'inference:service:start',  'INFERENCE'),
+      ('POST', '/api/v1/inference/services/{data.resource_id}:stop',  'inference:service:stop',   'INFERENCE'),
+      ('POST', '/api/v1/inference/services/{data.resource_id}:restart','inference:service:restart','INFERENCE'),
+      ('GET',  '/api/v1/inference/services/{resource_id}/operations', 'inference:service:read',   'INFERENCE')
     ) AS routes(method, path, permission_code, business_module)
   LOOP
     SELECT a.id INTO STRICT v_api_id

@@ -21,11 +21,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InferenceService_CreateInference_FullMethodName       = "/admin.service.v1.InferenceService/CreateInference"
-	InferenceService_DeleteInference_FullMethodName       = "/admin.service.v1.InferenceService/DeleteInference"
-	InferenceService_GetInference_FullMethodName          = "/admin.service.v1.InferenceService/GetInference"
-	InferenceService_ListInference_FullMethodName         = "/admin.service.v1.InferenceService/ListInference"
-	InferenceService_GetInferenceOperation_FullMethodName = "/admin.service.v1.InferenceService/GetInferenceOperation"
+	InferenceService_CreateInference_FullMethodName         = "/admin.service.v1.InferenceService/CreateInference"
+	InferenceService_DeleteInference_FullMethodName         = "/admin.service.v1.InferenceService/DeleteInference"
+	InferenceService_GetInference_FullMethodName            = "/admin.service.v1.InferenceService/GetInference"
+	InferenceService_ListInference_FullMethodName           = "/admin.service.v1.InferenceService/ListInference"
+	InferenceService_GetInferenceOperation_FullMethodName   = "/admin.service.v1.InferenceService/GetInferenceOperation"
+	InferenceService_UpdateInference_FullMethodName         = "/admin.service.v1.InferenceService/UpdateInference"
+	InferenceService_StartInference_FullMethodName          = "/admin.service.v1.InferenceService/StartInference"
+	InferenceService_StopInference_FullMethodName           = "/admin.service.v1.InferenceService/StopInference"
+	InferenceService_RestartInference_FullMethodName        = "/admin.service.v1.InferenceService/RestartInference"
+	InferenceService_ListInferenceOperations_FullMethodName = "/admin.service.v1.InferenceService/ListInferenceOperations"
 )
 
 // InferenceServiceClient is the client API for InferenceService service.
@@ -41,6 +46,11 @@ type InferenceServiceClient interface {
 	GetInference(ctx context.Context, in *v1.GetInferenceRequest, opts ...grpc.CallOption) (*v1.InferenceView, error)
 	ListInference(ctx context.Context, in *v1.ListInferenceRequest, opts ...grpc.CallOption) (*v1.ListInferenceResponse, error)
 	GetInferenceOperation(ctx context.Context, in *v1.GetInferenceOperationRequest, opts ...grpc.CallOption) (*v11.Operation, error)
+	UpdateInference(ctx context.Context, in *v1.UpdateInferenceRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error)
+	StartInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error)
+	StopInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error)
+	RestartInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error)
+	ListInferenceOperations(ctx context.Context, in *v1.ListInferenceOperationsRequest, opts ...grpc.CallOption) (*v1.ListInferenceOperationsResponse, error)
 }
 
 type inferenceServiceClient struct {
@@ -101,6 +111,56 @@ func (c *inferenceServiceClient) GetInferenceOperation(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *inferenceServiceClient) UpdateInference(ctx context.Context, in *v1.UpdateInferenceRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InferenceAcceptance)
+	err := c.cc.Invoke(ctx, InferenceService_UpdateInference_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inferenceServiceClient) StartInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InferenceAcceptance)
+	err := c.cc.Invoke(ctx, InferenceService_StartInference_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inferenceServiceClient) StopInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InferenceAcceptance)
+	err := c.cc.Invoke(ctx, InferenceService_StopInference_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inferenceServiceClient) RestartInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...grpc.CallOption) (*v1.InferenceAcceptance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InferenceAcceptance)
+	err := c.cc.Invoke(ctx, InferenceService_RestartInference_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inferenceServiceClient) ListInferenceOperations(ctx context.Context, in *v1.ListInferenceOperationsRequest, opts ...grpc.CallOption) (*v1.ListInferenceOperationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListInferenceOperationsResponse)
+	err := c.cc.Invoke(ctx, InferenceService_ListInferenceOperations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InferenceServiceServer is the server API for InferenceService service.
 // All implementations must embed UnimplementedInferenceServiceServer
 // for forward compatibility.
@@ -114,6 +174,11 @@ type InferenceServiceServer interface {
 	GetInference(context.Context, *v1.GetInferenceRequest) (*v1.InferenceView, error)
 	ListInference(context.Context, *v1.ListInferenceRequest) (*v1.ListInferenceResponse, error)
 	GetInferenceOperation(context.Context, *v1.GetInferenceOperationRequest) (*v11.Operation, error)
+	UpdateInference(context.Context, *v1.UpdateInferenceRequest) (*v1.InferenceAcceptance, error)
+	StartInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error)
+	StopInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error)
+	RestartInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error)
+	ListInferenceOperations(context.Context, *v1.ListInferenceOperationsRequest) (*v1.ListInferenceOperationsResponse, error)
 	mustEmbedUnimplementedInferenceServiceServer()
 }
 
@@ -138,6 +203,21 @@ func (UnimplementedInferenceServiceServer) ListInference(context.Context, *v1.Li
 }
 func (UnimplementedInferenceServiceServer) GetInferenceOperation(context.Context, *v1.GetInferenceOperationRequest) (*v11.Operation, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInferenceOperation not implemented")
+}
+func (UnimplementedInferenceServiceServer) UpdateInference(context.Context, *v1.UpdateInferenceRequest) (*v1.InferenceAcceptance, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateInference not implemented")
+}
+func (UnimplementedInferenceServiceServer) StartInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartInference not implemented")
+}
+func (UnimplementedInferenceServiceServer) StopInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopInference not implemented")
+}
+func (UnimplementedInferenceServiceServer) RestartInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestartInference not implemented")
+}
+func (UnimplementedInferenceServiceServer) ListInferenceOperations(context.Context, *v1.ListInferenceOperationsRequest) (*v1.ListInferenceOperationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInferenceOperations not implemented")
 }
 func (UnimplementedInferenceServiceServer) mustEmbedUnimplementedInferenceServiceServer() {}
 func (UnimplementedInferenceServiceServer) testEmbeddedByValue()                          {}
@@ -250,6 +330,96 @@ func _InferenceService_GetInferenceOperation_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InferenceService_UpdateInference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.UpdateInferenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InferenceServiceServer).UpdateInference(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InferenceService_UpdateInference_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InferenceServiceServer).UpdateInference(ctx, req.(*v1.UpdateInferenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InferenceService_StartInference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.InferenceServiceCommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InferenceServiceServer).StartInference(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InferenceService_StartInference_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InferenceServiceServer).StartInference(ctx, req.(*v1.InferenceServiceCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InferenceService_StopInference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.InferenceServiceCommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InferenceServiceServer).StopInference(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InferenceService_StopInference_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InferenceServiceServer).StopInference(ctx, req.(*v1.InferenceServiceCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InferenceService_RestartInference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.InferenceServiceCommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InferenceServiceServer).RestartInference(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InferenceService_RestartInference_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InferenceServiceServer).RestartInference(ctx, req.(*v1.InferenceServiceCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InferenceService_ListInferenceOperations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListInferenceOperationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InferenceServiceServer).ListInferenceOperations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InferenceService_ListInferenceOperations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InferenceServiceServer).ListInferenceOperations(ctx, req.(*v1.ListInferenceOperationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // InferenceService_ServiceDesc is the grpc.ServiceDesc for InferenceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -276,6 +446,26 @@ var InferenceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInferenceOperation",
 			Handler:    _InferenceService_GetInferenceOperation_Handler,
+		},
+		{
+			MethodName: "UpdateInference",
+			Handler:    _InferenceService_UpdateInference_Handler,
+		},
+		{
+			MethodName: "StartInference",
+			Handler:    _InferenceService_StartInference_Handler,
+		},
+		{
+			MethodName: "StopInference",
+			Handler:    _InferenceService_StopInference_Handler,
+		},
+		{
+			MethodName: "RestartInference",
+			Handler:    _InferenceService_RestartInference_Handler,
+		},
+		{
+			MethodName: "ListInferenceOperations",
+			Handler:    _InferenceService_ListInferenceOperations_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -7308,6 +7308,102 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{data.resource_id}:restart:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_RestartInference
+            parameters:
+                - name: data.resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{data.resource_id}:start:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_StartInference
+            parameters:
+                - name: data.resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{data.resource_id}:stop:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_StopInference
+            parameters:
+                - name: data.resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{data.resource_id}:update:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_UpdateInference
+            parameters:
+                - name: data.resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateInferenceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
     /api/v1/inference/services/{resource_id}:
         get:
             tags:
@@ -7326,6 +7422,33 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InferenceView'
+    /api/v1/inference/services/{resource_id}/operations:
+        get:
+            tags:
+                - InferenceService
+            operationId: InferenceService_ListInferenceOperations
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page_size
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: page_token
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListInferenceOperationsResponse'
     /api/v1/instance-operations/{operation_id}:
         get:
             tags:
@@ -7565,6 +7688,42 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetModelVersionResponse'
+        delete:
+            tags:
+                - ModelService
+            operationId: ModelService_DeleteModelVersion
+            parameters:
+                - name: model_version_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /api/v1/model-versions/{model_version_id}/download-url:
+        get:
+            tags:
+                - ModelService
+            operationId: ModelService_GetModelDownloadURL
+            parameters:
+                - name: model_version_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: file_path
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetModelDownloadURLResponse'
     /api/v1/modeldev/artifacts/{artifact_id}/content:
         get:
             tags:
@@ -7898,6 +8057,44 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetModelResponse'
+        delete:
+            tags:
+                - ModelService
+            operationId: ModelService_DeleteModel
+            parameters:
+                - name: model_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /api/v1/models/{model_id}/upload-url:
+        post:
+            tags:
+                - ModelService
+            operationId: ModelService_GetUploadURL
+            parameters:
+                - name: model_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/GetUploadURLRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetUploadURLResponse'
     /api/v1/models/{model_id}/versions:
         get:
             tags:
@@ -7943,6 +8140,48 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ImportModelResponse'
+    /api/v1/models:search:
+        get:
+            tags:
+                - ModelService
+            operationId: ModelService_SearchExternalModels
+            parameters:
+                - name: source
+                  in: query
+                  schema:
+                    type: string
+                - name: keyword
+                  in: query
+                  schema:
+                    type: string
+                - name: owner
+                  in: query
+                  schema:
+                    type: string
+                - name: task
+                  in: query
+                  schema:
+                    type: string
+                - name: library
+                  in: query
+                  schema:
+                    type: string
+                - name: page.limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: page.cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchExternalModelsResponse'
     /api/v1/networks/eips:
         get:
             tags:
@@ -11395,6 +11634,30 @@ components:
                     items:
                         $ref: '#/components/schemas/NamedAny'
             description: Allows referencing an external resource for extended documentation.
+        ExternalModelCandidate:
+            type: object
+            properties:
+                source:
+                    type: string
+                repo_id:
+                    type: string
+                name:
+                    type: string
+                display_name:
+                    type: string
+                description:
+                    type: string
+                revision:
+                    type: string
+                size_bytes:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+                updated_at:
+                    type: string
+                    format: date-time
         ForceLogoutSessionRequest:
             type: object
             properties:
@@ -11523,6 +11786,22 @@ components:
                         - MFA_REQUIRED
                     type: string
                     format: enum
+        GetModelDownloadURLResponse:
+            type: object
+            properties:
+                download_url:
+                    type: string
+                storage_path:
+                    type: string
+                is_encrypted:
+                    type: boolean
+                encrypt_algo:
+                    type: string
+                encrypt_hint:
+                    type: string
+                expires_at:
+                    type: string
+                    format: date-time
         GetModelResponse:
             type: object
             properties:
@@ -11570,6 +11849,44 @@ components:
             properties:
                 subnet:
                     $ref: '#/components/schemas/Subnet'
+        GetUploadURLData:
+            type: object
+            properties:
+                version:
+                    type: string
+                file_name:
+                    type: string
+                size_bytes:
+                    type: string
+                idempotency_key:
+                    type: string
+                checksum_sha256:
+                    type: string
+        GetUploadURLRequest:
+            type: object
+            properties:
+                model_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/GetUploadURLData'
+        GetUploadURLResponse:
+            type: object
+            properties:
+                upload_url:
+                    type: string
+                storage_path:
+                    type: string
+                doc_id:
+                    type: string
+                expires_at:
+                    type: string
+                    format: date-time
+                upload_headers:
+                    type: object
+                    additionalProperties:
+                        type: string
+                model_version_id:
+                    type: string
         GetVPCResponse:
             type: object
             properties:
@@ -11862,6 +12179,20 @@ components:
                     description: Durable Governance admission; this is not model readiness.
                 dispatch_operation_id:
                     type: string
+        InferenceServiceCommandData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                resource_id:
+                    type: string
+                expected_generation:
+                    type: string
+        InferenceServiceCommandRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InferenceServiceCommandData'
         InferenceView:
             type: object
             properties:
@@ -12532,6 +12863,15 @@ components:
                 nextCursor:
                     type: string
                 total:
+                    type: string
+        ListInferenceOperationsResponse:
+            type: object
+            properties:
+                operations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Operation'
+                next_page_token:
                     type: string
         ListInferenceResponse:
             type: object
@@ -15867,6 +16207,15 @@ components:
                     $ref: '#/components/schemas/Schema'
                 reference:
                     $ref: '#/components/schemas/Reference'
+        SearchExternalModelsResponse:
+            type: object
+            properties:
+                candidates:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalModelCandidate'
+                meta:
+                    $ref: '#/components/schemas/CursorPageMeta'
         SecurityRequirement:
             type: object
             properties:
@@ -16648,6 +16997,56 @@ components:
             properties:
                 image:
                     $ref: '#/components/schemas/ImageRegistration'
+        UpdateInferenceData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                resource_id:
+                    type: string
+                expected_generation:
+                    type: string
+                update_mask:
+                    type: string
+                    format: field-mask
+                model_version_id:
+                    type: string
+                served_model_name:
+                    type: string
+                engine_image:
+                    type: string
+                engine_type:
+                    type: string
+                command:
+                    type: string
+                cpu:
+                    type: string
+                memory:
+                    type: string
+                replicas:
+                    type: integer
+                    format: int32
+                gpu:
+                    $ref: '#/components/schemas/GpuSelection'
+                runtime_mode:
+                    enum:
+                        - RUNTIME_MODE_UNSPECIFIED
+                        - RUNTIME_MODE_DEPLOYMENT
+                        - RUNTIME_MODE_LEADER_WORKER_SET
+                    type: string
+                    format: enum
+                worker_replicas:
+                    type: integer
+                    format: int32
+        UpdateInferenceRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/UpdateInferenceData'
+            description: |-
+                UpdateInferenceRequest is the tenant-facing partial update. Fields named by
+                 update_mask are forwarded as supplied; Governance never derives or edits an
+                 engine command.
         UpdateInternalMessageCategoryRequest:
             type: object
             properties:

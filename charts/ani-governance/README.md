@@ -157,7 +157,15 @@ Helm 会按以下顺序执行：
 
 1. pre-install/pre-upgrade 的 Atlas Job 应用 `migrations/`，服务配置始终保持
    `data.database.migrate=false`。
-2. Gov BFF Deployment 启动 REST `7788` 和 SSE `7789`，连接独立 Redis。
+2. Gov BFF Deployment 启动 REST `7788` 和 SSE `7789`，Service 默认类型为 NodePort，连接独立 Redis。
+
+安装后查看 Kubernetes 自动分配的外部端口：
+
+```bash
+kubectl -n ani-system get svc ani-governance
+```
+
+业务 API 使用 REST NodePort；事件流使用 SSE NodePort，路径为 `/api/v1/events`。
 3. pre-install/pre-upgrade 的 admin Job 执行 `admin init`，再创建/更新服务 Deployment；已初始化的数据库保持
    原管理员和原数据不变。
 

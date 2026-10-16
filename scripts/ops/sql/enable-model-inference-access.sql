@@ -42,7 +42,9 @@ BEGIN
   FOREACH permission_code IN ARRAY ARRAY[
     'model:service:read', 'model:service:manage',
     'inference:service:read', 'inference:service:create',
-    'inference:service:delete'
+    'inference:service:delete', 'inference:service:update',
+    'inference:service:start', 'inference:service:stop',
+    'inference:service:restart'
   ] LOOP
     SELECT id INTO STRICT v_permission_id
       FROM sys_permissions

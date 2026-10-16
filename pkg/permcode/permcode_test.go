@@ -75,8 +75,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 94 {
-		t.Errorf("CapabilityCount() = %d, want 94", CapabilityCount())
+	if CapabilityCount() != 116 {
+		t.Errorf("CapabilityCount() = %d, want 116", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {

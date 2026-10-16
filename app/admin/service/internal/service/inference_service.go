@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -616,4 +617,132 @@ func (s *InferenceService) GetInferenceOperation(ctx context.Context, in *view.G
 		return nil, status.Error(codes.Unavailable, "INVALID_INFERENCE_RESPONSE")
 	}
 	return result, nil
+}
+
+type inferenceLifecycleOwner interface {
+	UpdateTrusted(context.Context, string, string, *inferencev1.UpdateInferenceServiceRequest) (*inferencev1.OperationResponse, error)
+	StartTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error)
+	StopTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error)
+	RestartTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error)
+	ListOperationsTrusted(context.Context, string, string, *inferencev1.ListOperationsRequest) (*inferencev1.ListOperationsResponse, error)
+}
+
+func (s *InferenceService) UpdateInference(ctx context.Context, in *view.UpdateInferenceRequest) (*view.InferenceAcceptance, error) {
+	if in == nil || in.Data == nil {
+		return nil, status.Error(codes.InvalidArgument, "inference data is required")
+	}
+	d := in.Data
+	if strings.TrimSpace(d.ResourceId) == "" || strings.TrimSpace(d.IdempotencyKey) == "" || d.ExpectedGeneration < 1 {
+		return nil, status.Error(codes.InvalidArgument, "idempotency_key, resource_id and positive expected_generation are required")
+	}
+	// The owner update contract requires a complete resource/runtime snapshot
+	// for an atomic generation. Keep all engine fields caller supplied and do
+	// not derive or rewrite the startup command.
+	createData := &view.CreateInferenceData{
+		IdempotencyKey: d.IdempotencyKey, Name: "update", ModelVersionId: d.ModelVersionId,
+		ServedModelName: d.ServedModelName, EngineImage: d.EngineImage, EngineType: d.EngineType,
+		Command: d.Command, Cpu: d.Cpu, Memory: d.Memory, Replicas: d.Replicas, Gpu: d.Gpu,
+		RuntimeMode: d.RuntimeMode, WorkerReplicas: d.WorkerReplicas,
+	}
+	createRequest, err := s.buildCreateRequest(createData)
+	if err != nil {
+		return nil, err
+	}
+	mask := d.UpdateMask
+	if mask == nil || len(mask.Paths) == 0 {
+		mask = &fieldmaskpb.FieldMask{Paths: []string{"resource", "replicas", "runtime", "engine", "served_model_name", "model_version_id"}}
+	}
+	requestID := d.IdempotencyKey
+	request := &inferencev1.UpdateInferenceServiceRequest{
+		RequestId: requestID, ResourceId: d.ResourceId, ExpectedGeneration: d.ExpectedGeneration,
+		UpdateMask: mask, Resource: createRequest.Resource, Replicas: createRequest.Replicas, Runtime: createRequest.Runtime,
+		Engine: createRequest.Engine, ServedModelName: createRequest.ServedModelName, ModelVersionId: createRequest.ModelVersionId,
+	}
+	trusted, ok := s.owner.(inferenceLifecycleOwner)
+	if !ok {
+		return nil, status.Error(codes.Unavailable, "INFERENCE_ADAPTER_UNAVAILABLE")
+	}
+	tenant, actor, err := s.trustedInferenceOperator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := trusted.UpdateTrusted(ctx, tenant, actor, request)
+	if err != nil {
+		return nil, mapInferenceOwnerError(err)
+	}
+	return inferenceAcceptance(result, d.ResourceId)
+}
+
+func (s *InferenceService) StartInference(ctx context.Context, in *view.InferenceServiceCommandRequest) (*view.InferenceAcceptance, error) {
+	return s.commandInference(ctx, in, "start")
+}
+
+func (s *InferenceService) StopInference(ctx context.Context, in *view.InferenceServiceCommandRequest) (*view.InferenceAcceptance, error) {
+	return s.commandInference(ctx, in, "stop")
+}
+
+func (s *InferenceService) RestartInference(ctx context.Context, in *view.InferenceServiceCommandRequest) (*view.InferenceAcceptance, error) {
+	return s.commandInference(ctx, in, "restart")
+}
+
+func (s *InferenceService) commandInference(ctx context.Context, in *view.InferenceServiceCommandRequest, kind string) (*view.InferenceAcceptance, error) {
+	if in == nil || in.Data == nil || strings.TrimSpace(in.Data.ResourceId) == "" || strings.TrimSpace(in.Data.IdempotencyKey) == "" || in.Data.ExpectedGeneration < 1 {
+		return nil, status.Error(codes.InvalidArgument, "idempotency_key, resource_id and positive expected_generation are required")
+	}
+	trusted, ok := s.owner.(inferenceLifecycleOwner)
+	if !ok {
+		return nil, status.Error(codes.Unavailable, "INFERENCE_ADAPTER_UNAVAILABLE")
+	}
+	tenant, actor, err := s.trustedInferenceOperator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	request := &inferencev1.ServiceCommandRequest{RequestId: in.Data.IdempotencyKey, ResourceId: in.Data.ResourceId, ExpectedGeneration: in.Data.ExpectedGeneration}
+	var result *inferencev1.OperationResponse
+	switch kind {
+	case "start":
+		result, err = trusted.StartTrusted(ctx, tenant, actor, request)
+	case "stop":
+		result, err = trusted.StopTrusted(ctx, tenant, actor, request)
+	case "restart":
+		result, err = trusted.RestartTrusted(ctx, tenant, actor, request)
+	default:
+		return nil, status.Error(codes.InvalidArgument, "unsupported inference command")
+	}
+	if err != nil {
+		return nil, mapInferenceOwnerError(err)
+	}
+	return inferenceAcceptance(result, in.Data.ResourceId)
+}
+
+func inferenceAcceptance(result *inferencev1.OperationResponse, resourceID string) (*view.InferenceAcceptance, error) {
+	if result == nil || result.Operation == nil || strings.TrimSpace(result.Operation.Id) == "" {
+		return nil, status.Error(codes.Unavailable, "INVALID_INFERENCE_RESPONSE")
+	}
+	if resourceID == "" && result.Resource != nil {
+		resourceID = result.Resource.Id
+	}
+	return &view.InferenceAcceptance{OperationId: result.Operation.Id, ResourceId: resourceID, Result: "ACCEPTED", DispatchOperationId: result.Operation.Id}, nil
+}
+
+func (s *InferenceService) ListInferenceOperations(ctx context.Context, in *view.ListInferenceOperationsRequest) (*view.ListInferenceOperationsResponse, error) {
+	if in == nil || strings.TrimSpace(in.ResourceId) == "" {
+		return nil, status.Error(codes.InvalidArgument, "resource_id is required")
+	}
+	trusted, ok := s.owner.(inferenceLifecycleOwner)
+	if !ok {
+		return nil, status.Error(codes.Unavailable, "INFERENCE_ADAPTER_UNAVAILABLE")
+	}
+	tenant, actor, err := s.trustedInferenceOperator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := trusted.ListOperationsTrusted(ctx, tenant, actor, &inferencev1.ListOperationsRequest{ResourceId: in.ResourceId, PageSize: in.PageSize, PageToken: in.PageToken})
+	if err != nil {
+		return nil, mapInferenceOwnerError(err)
+	}
+	if result == nil || len(result.Operations) > 100 {
+		return nil, status.Error(codes.Unavailable, "INVALID_INFERENCE_RESPONSE")
+	}
+	return &view.ListInferenceOperationsResponse{Operations: result.Operations, NextPageToken: result.NextPageToken}, nil
 }

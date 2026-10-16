@@ -62,6 +62,21 @@ func (p *directInferenceOwnerProbe) ListTrusted(context.Context, string, string,
 func (p *directInferenceOwnerProbe) GetOperationTrusted(context.Context, string, string, *inferencev1.GetOperationRequest) (*inferencev1.Operation, error) {
 	panic("unused")
 }
+func (p *directInferenceOwnerProbe) UpdateTrusted(context.Context, string, string, *inferencev1.UpdateInferenceServiceRequest) (*inferencev1.OperationResponse, error) {
+	return &inferencev1.OperationResponse{Resource: &inferencev1.InferenceService{Id: "svc-1"}, Operation: &inferencev1.Operation{Id: "op-update"}}, nil
+}
+func (p *directInferenceOwnerProbe) StartTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error) {
+	return &inferencev1.OperationResponse{Resource: &inferencev1.InferenceService{Id: "svc-1"}, Operation: &inferencev1.Operation{Id: "op-start"}}, nil
+}
+func (p *directInferenceOwnerProbe) StopTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error) {
+	return &inferencev1.OperationResponse{Resource: &inferencev1.InferenceService{Id: "svc-1"}, Operation: &inferencev1.Operation{Id: "op-stop"}}, nil
+}
+func (p *directInferenceOwnerProbe) RestartTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error) {
+	return &inferencev1.OperationResponse{Resource: &inferencev1.InferenceService{Id: "svc-1"}, Operation: &inferencev1.Operation{Id: "op-restart"}}, nil
+}
+func (p *directInferenceOwnerProbe) ListOperationsTrusted(context.Context, string, string, *inferencev1.ListOperationsRequest) (*inferencev1.ListOperationsResponse, error) {
+	return &inferencev1.ListOperationsResponse{Operations: []*inferencev1.Operation{{Id: "op-1", ServiceId: "svc-1"}}}, nil
+}
 
 type directInferenceTenantProbe struct{}
 
@@ -141,6 +156,38 @@ func TestInferenceServiceChecksModelBeforeDirectCreate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInferenceServiceExposesTrustedLifecycleCommands(t *testing.T) {
+	owner := &directInferenceOwnerProbe{}
+	model := &inferenceModelProbe{response: &modelv1.GetModelVersionResponse{Version: &modelv1.ModelVersion{Id: "version-1", Status: "ready"}}}
+	s := NewInferenceServiceWithOwnerAndModel(nil, owner, directInferenceTenantProbe{}, model)
+	ctx := auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: 7, TenantID: 42})
+	update, err := s.UpdateInference(ctx, &view.UpdateInferenceRequest{Data: &view.UpdateInferenceData{
+		IdempotencyKey: "update-1", ResourceId: "svc-1", ExpectedGeneration: 2, ModelVersionId: "version-1",
+		ServedModelName: "qwen", EngineType: "vllm", EngineImage: "registry/vllm:latest",
+		Command: "vllm serve /models --served-model-name qwen", Cpu: "1", Memory: "2Gi", Replicas: 1,
+	}})
+	require.NoError(t, err)
+	require.Equal(t, "op-update", update.OperationId)
+	for _, tc := range []struct {
+		name string
+		call func(context.Context, *view.InferenceServiceCommandRequest) (*view.InferenceAcceptance, error)
+		want string
+	}{
+		{name: "start", call: s.StartInference, want: "op-start"},
+		{name: "stop", call: s.StopInference, want: "op-stop"},
+		{name: "restart", call: s.RestartInference, want: "op-restart"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := tc.call(ctx, &view.InferenceServiceCommandRequest{Data: &view.InferenceServiceCommandData{IdempotencyKey: tc.name + "-1", ResourceId: "svc-1", ExpectedGeneration: 2}})
+			require.NoError(t, err)
+			require.Equal(t, tc.want, out.OperationId)
+		})
+	}
+	operations, err := s.ListInferenceOperations(ctx, &view.ListInferenceOperationsRequest{ResourceId: "svc-1"})
+	require.NoError(t, err)
+	require.Len(t, operations.Operations, 1)
 }
 
 func TestInferenceServiceDerivesGPUPlacementForDeploymentAndLWS(t *testing.T) {

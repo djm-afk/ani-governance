@@ -22,13 +22,18 @@ BEGIN
   RAISE EXCEPTION 'Selected current tenant:manager role with ALL scope is required';
  END IF;
  FOR r IN SELECT * FROM (VALUES
-  ('inference:service:create','/api/v1/inference/services'),
-  ('inference:service:delete','/api/v1/inference/services/{data.resource_id}:delete')
- ) AS permissions(code,path) LOOP
+  ('inference:service:read','GET','/api/v1/inference/services'),
+  ('inference:service:create','POST','/api/v1/inference/services'),
+  ('inference:service:delete','POST','/api/v1/inference/services/{data.resource_id}:delete'),
+  ('inference:service:update','POST','/api/v1/inference/services/{data.resource_id}:update'),
+  ('inference:service:start','POST','/api/v1/inference/services/{data.resource_id}:start'),
+  ('inference:service:stop','POST','/api/v1/inference/services/{data.resource_id}:stop'),
+  ('inference:service:restart','POST','/api/v1/inference/services/{data.resource_id}:restart')
+ ) AS permissions(code,method,path) LOOP
   SELECT id INTO STRICT pid FROM sys_permissions WHERE code=r.code AND status='ON' AND deleted_at IS NULL;
   IF NOT EXISTS(SELECT 1 FROM sys_permission_apis pa JOIN sys_apis a ON a.id=pa.api_id
     WHERE pa.permission_id=pid AND pa.deleted_at IS NULL AND a.module='InferenceService' AND a.business_module='INFERENCE'
-      AND a.path=r.path AND a.method='POST' AND a.scope='ADMIN' AND a.status='ON' AND a.deleted_at IS NULL) THEN
+      AND a.path=r.path AND a.method=r.method AND a.scope='ADMIN' AND a.status='ON' AND a.deleted_at IS NULL) THEN
    RAISE EXCEPTION 'Register the exact Inference permission/API relationship first';
   END IF;
   IF EXISTS(SELECT 1 FROM sys_role_permissions WHERE tenant_id=tid AND role_id=rid AND permission_id=pid

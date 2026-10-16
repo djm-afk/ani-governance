@@ -100,6 +100,87 @@ func RegisterInferenceHTTPServer(server *http.Server, inference *service.Inferen
 		}
 		return ctx.Result(nethttp.StatusAccepted, out)
 	})
+	server.Route("/").POST(data.InferenceUpdatePath, func(ctx http.Context) error {
+		http.SetOperation(ctx, admin.OperationInferenceServiceUpdateInference)
+		request := new(view.UpdateInferenceRequest)
+		if err := decodeInferenceHTTP(ctx.Request(), request); err != nil {
+			return err
+		}
+		if err := bindInferenceUpdateResourceID(ctx, request); err != nil {
+			return err
+		}
+		out, err := ctx.Middleware(func(call context.Context, in interface{}) (interface{}, error) {
+			return inference.UpdateInference(call, in.(*view.UpdateInferenceRequest))
+		})(ctx, request)
+		if err != nil {
+			return err
+		}
+		return ctx.Result(nethttp.StatusAccepted, out)
+	})
+	registerInferenceCommand := func(path string, operation string, call func(context.Context, *view.InferenceServiceCommandRequest) (*view.InferenceAcceptance, error)) {
+		server.Route("/").POST(path, func(ctx http.Context) error {
+			switch operation {
+			case admin.OperationInferenceServiceStartInference:
+				http.SetOperation(ctx, admin.OperationInferenceServiceStartInference)
+			case admin.OperationInferenceServiceStopInference:
+				http.SetOperation(ctx, admin.OperationInferenceServiceStopInference)
+			case admin.OperationInferenceServiceRestartInference:
+				http.SetOperation(ctx, admin.OperationInferenceServiceRestartInference)
+			}
+			request := new(view.InferenceServiceCommandRequest)
+			if err := decodeInferenceHTTP(ctx.Request(), request); err != nil {
+				return err
+			}
+			if err := bindInferenceCommandResourceID(ctx, request); err != nil {
+				return err
+			}
+			out, err := ctx.Middleware(func(callCtx context.Context, in interface{}) (interface{}, error) {
+				return call(callCtx, in.(*view.InferenceServiceCommandRequest))
+			})(ctx, request)
+			if err != nil {
+				return err
+			}
+			return ctx.Result(nethttp.StatusAccepted, out)
+		})
+	}
+	registerInferenceCommand(data.InferenceStartPath, admin.OperationInferenceServiceStartInference, inference.StartInference)
+	registerInferenceCommand(data.InferenceStopPath, admin.OperationInferenceServiceStopInference, inference.StopInference)
+	registerInferenceCommand(data.InferenceRestartPath, admin.OperationInferenceServiceRestartInference, inference.RestartInference)
+	server.Route("/").GET(data.InferenceListOperationsPath, func(ctx http.Context) error {
+		http.SetOperation(ctx, admin.OperationInferenceServiceListInferenceOperations)
+		request := new(view.ListInferenceOperationsRequest)
+		if err := ctx.BindVars(request); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(request); err != nil {
+			return err
+		}
+		out, err := ctx.Middleware(func(call context.Context, in interface{}) (interface{}, error) {
+			return inference.ListInferenceOperations(call, in.(*view.ListInferenceOperationsRequest))
+		})(ctx, request)
+		if err != nil {
+			return err
+		}
+		return ctx.Result(nethttp.StatusOK, out)
+	})
+}
+
+func bindInferenceUpdateResourceID(ctx http.Context, request *view.UpdateInferenceRequest) error {
+	resourceID := inferenceDeletePathResourceID(ctx.Vars())
+	if resourceID == "" || request == nil || request.Data == nil || (request.Data.ResourceId != "" && request.Data.ResourceId != resourceID) {
+		return errors.BadRequest("INVALID_INFERENCE_REQUEST", "invalid inference resource")
+	}
+	request.Data.ResourceId = resourceID
+	return nil
+}
+
+func bindInferenceCommandResourceID(ctx http.Context, request *view.InferenceServiceCommandRequest) error {
+	resourceID := inferenceDeletePathResourceID(ctx.Vars())
+	if resourceID == "" || request == nil || request.Data == nil || (request.Data.ResourceId != "" && request.Data.ResourceId != resourceID) {
+		return errors.BadRequest("INVALID_INFERENCE_REQUEST", "invalid inference resource")
+	}
+	request.Data.ResourceId = resourceID
+	return nil
 }
 
 func inferenceDeletePathResourceID(vars url.Values) string {

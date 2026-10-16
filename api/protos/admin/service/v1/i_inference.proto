@@ -24,4 +24,19 @@ service InferenceService {
   rpc GetInferenceOperation(inference.service.v1.GetInferenceOperationRequest) returns (inference.v1.Operation) {
     option (google.api.http) = {get: "/api/v1/inference/operations/{operation_id}"};
   }
+  rpc UpdateInference(inference.service.v1.UpdateInferenceRequest) returns (inference.service.v1.InferenceAcceptance) {
+    option (google.api.http) = {post: "/api/v1/inference/services/{data.resource_id}:update" body: "*"};
+  }
+  rpc StartInference(inference.service.v1.InferenceServiceCommandRequest) returns (inference.service.v1.InferenceAcceptance) {
+    option (google.api.http) = {post: "/api/v1/inference/services/{data.resource_id}:start" body: "*"};
+  }
+  rpc StopInference(inference.service.v1.InferenceServiceCommandRequest) returns (inference.service.v1.InferenceAcceptance) {
+    option (google.api.http) = {post: "/api/v1/inference/services/{data.resource_id}:stop" body: "*"};
+  }
+  rpc RestartInference(inference.service.v1.InferenceServiceCommandRequest) returns (inference.service.v1.InferenceAcceptance) {
+    option (google.api.http) = {post: "/api/v1/inference/services/{data.resource_id}:restart" body: "*"};
+  }
+  rpc ListInferenceOperations(inference.service.v1.ListInferenceOperationsRequest) returns (inference.service.v1.ListInferenceOperationsResponse) {
+    option (google.api.http) = {get: "/api/v1/inference/services/{resource_id}/operations"};
+  }
 }

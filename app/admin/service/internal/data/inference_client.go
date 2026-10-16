@@ -102,6 +102,11 @@ type InferenceTrustedOwnerClient interface {
 	GetTrusted(context.Context, string, string, *inferencev1.GetInferenceServiceRequest) (*inferencev1.InferenceService, error)
 	ListTrusted(context.Context, string, string, *inferencev1.ListInferenceServicesRequest) (*inferencev1.ListInferenceServicesResponse, error)
 	GetOperationTrusted(context.Context, string, string, *inferencev1.GetOperationRequest) (*inferencev1.Operation, error)
+	UpdateTrusted(context.Context, string, string, *inferencev1.UpdateInferenceServiceRequest) (*inferencev1.OperationResponse, error)
+	StartTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error)
+	StopTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error)
+	RestartTrusted(context.Context, string, string, *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error)
+	ListOperationsTrusted(context.Context, string, string, *inferencev1.ListOperationsRequest) (*inferencev1.ListOperationsResponse, error)
 }
 
 func validInferenceIdentity(tenant, actor string) bool {
@@ -177,4 +182,49 @@ func (c *InferenceClient) GetOperationTrusted(ctx context.Context, tenant, actor
 	}
 	defer cancel()
 	return c.client.GetOperation(call, request, grpc.WaitForReady(true))
+}
+
+func (c *InferenceClient) UpdateTrusted(ctx context.Context, tenant, actor string, request *inferencev1.UpdateInferenceServiceRequest) (*inferencev1.OperationResponse, error) {
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	defer cancel()
+	return c.client.UpdateInferenceService(call, request, grpc.WaitForReady(true))
+}
+
+func (c *InferenceClient) StartTrusted(ctx context.Context, tenant, actor string, request *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error) {
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	defer cancel()
+	return c.client.StartInferenceService(call, request, grpc.WaitForReady(true))
+}
+
+func (c *InferenceClient) StopTrusted(ctx context.Context, tenant, actor string, request *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error) {
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	defer cancel()
+	return c.client.StopInferenceService(call, request, grpc.WaitForReady(true))
+}
+
+func (c *InferenceClient) RestartTrusted(ctx context.Context, tenant, actor string, request *inferencev1.ServiceCommandRequest) (*inferencev1.OperationResponse, error) {
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	defer cancel()
+	return c.client.RestartInferenceService(call, request, grpc.WaitForReady(true))
+}
+
+func (c *InferenceClient) ListOperationsTrusted(ctx context.Context, tenant, actor string, request *inferencev1.ListOperationsRequest) (*inferencev1.ListOperationsResponse, error) {
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	defer cancel()
+	return c.client.ListOperations(call, request, grpc.WaitForReady(true))
 }

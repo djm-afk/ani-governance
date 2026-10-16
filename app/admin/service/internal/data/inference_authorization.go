@@ -23,8 +23,13 @@ import (
 )
 
 const (
-	InferenceCreatePath = "/api/v1/inference/services"
-	InferenceDeletePath = "/api/v1/inference/services/{data.resource_id}:delete"
+	InferenceCreatePath         = "/api/v1/inference/services"
+	InferenceDeletePath         = "/api/v1/inference/services/{data.resource_id}:delete"
+	InferenceUpdatePath         = "/api/v1/inference/services/{data.resource_id}:update"
+	InferenceStartPath          = "/api/v1/inference/services/{data.resource_id}:start"
+	InferenceStopPath           = "/api/v1/inference/services/{data.resource_id}:stop"
+	InferenceRestartPath        = "/api/v1/inference/services/{data.resource_id}:restart"
+	InferenceListOperationsPath = "/api/v1/inference/services/{resource_id}/operations"
 )
 
 var ErrInferenceAuthorizationDenied = errors.New("inference action authorization denied")
@@ -49,10 +54,19 @@ func InferenceModuleRegistered() bool {
 // Authorize requires the current tenant user's route grant AND the registered
 // Inference plan module in one RR snapshot, before any idempotency read.
 func (r *InferenceAuthorizationRepo) Authorize(ctx context.Context, tenantID, userID uint32, path string) (result error) {
-	if !InferenceModuleRegistered() || (path != InferenceCreatePath && path != InferenceDeletePath) {
+	if !InferenceModuleRegistered() || !isInferenceAuthorizedPath(path) {
 		return ErrInferenceAuthorizationDenied
 	}
 	return r.authorizeRoute(ctx, tenantID, userID, path, "INFERENCE", "POST")
+}
+
+func isInferenceAuthorizedPath(path string) bool {
+	switch path {
+	case InferenceCreatePath, InferenceDeletePath, InferenceUpdatePath, InferenceStartPath, InferenceStopPath, InferenceRestartPath:
+		return true
+	default:
+		return false
+	}
 }
 
 // The two GPU owners share the current tenant/role/plan snapshot checks while
