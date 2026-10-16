@@ -12004,6 +12004,8 @@ components:
                     type: boolean
                 quotaReturned:
                     type: boolean
+                instanceType:
+                    type: string
         InternalMessage:
             type: object
             properties:
@@ -15170,6 +15172,8 @@ components:
                 cpu:
                     type: string
                 memory:
+                    type: string
+                instanceType:
                     type: string
         Properties:
             type: object

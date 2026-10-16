@@ -17,6 +17,8 @@ import (
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	quota "go-wind-admin/api/gen/go/quota/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
+	"go-wind-admin/app/admin/service/internal/data/ent"
+	"go-wind-admin/app/admin/service/internal/data/ent/quotaoperation"
 	"go-wind-admin/pkg/middleware/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -92,7 +94,7 @@ func (b *InstanceGpuBinding) ResolveGpuBusiness(ctx context.Context, p *auth.Pri
 	if e != nil {
 		return nil, nil, e
 	}
-	if resolved == nil || resolved.Data == nil || resolved.Spec == nil || resolved.Gpu == nil || !proto.Equal(in, resolved.Data) {
+	if resolved == nil || resolved.Data == nil || resolved.Spec == nil || !proto.Equal(in, resolved.Data) || (resolved.Spec.InstanceType == "cpu" && resolved.Gpu != nil) || (resolved.Spec.InstanceType != "cpu" && resolved.Gpu == nil) {
 		return nil, nil, quota.ErrorInvalidQuotaRequest("%s", "invalid instance resolution")
 	}
 	return resolved.Gpu, resolved, nil
@@ -123,6 +125,9 @@ func (b *InstanceGpuBinding) ValidateGpuDelete(ctx context.Context, p *auth.Prin
 func (b *InstanceGpuBinding) Dispatch(ctx context.Context, c *QuotaDispatchCommand) ([]byte, error) {
 	if b.client == nil || c == nil {
 		return nil, quota.ErrorQuotaAdapterUnavailable("%s", "instance owner unavailable")
+	}
+	if data.IsInstanceCPUCanonical(c.CanonicalRequest) {
+		return b.dispatchCPU(ctx, c)
 	}
 	create, del, e := BuildGpuOwnerAttachments(InstanceOwner, c)
 	if e != nil {
@@ -320,6 +325,37 @@ func (s *InstanceService) GetInstanceOperation(ctx context.Context, r *view.GetO
 	if e != nil {
 		return nil, e
 	}
+	p, e := gpuPrincipal(ctx)
+	if e != nil {
+		return nil, e
+	}
+	pending, e := s.ledger.GetOperationForUser(ctx, p.TenantID, r.OperationId)
+	if e != nil && !ent.IsNotFound(e) {
+		return nil, e
+	}
+	if pending != nil {
+		if pending.OwnerService != InstanceOwner || pending.ResourceTenantID != tenant {
+			return nil, quota.ErrorQuotaNotFound("%s", "operation not found")
+		}
+		if data.IsInstanceCPUCanonical([]byte(pending.CanonicalRequest)) && pending.DispatchState != quotaoperation.DispatchStateAcked {
+			if !data.AllowsInstanceCPUCommand(pending.OwnerService, pending.Action, pending.CanonicalRequest) {
+				return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid frozen CPU instance command")
+			}
+			action := "create"
+			if pending.CreateOperationID != nil {
+				action = "delete"
+			}
+			reason := "WAITING_FOR_OWNER"
+			if pending.LastErrorCode != nil {
+				reason = *pending.LastErrorCode
+			}
+			if pending.DispatchState == quotaoperation.DispatchStateCanceledUnsent {
+				reason = "CANCELED_BEFORE_DISPATCH"
+			}
+			// No Resource intent version exists before its durable acceptance.
+			return &view.Operation{Id: pending.OperationID, InstanceId: pending.ResourceID, Action: action, State: string(pending.DispatchState), Reason: reason}, nil
+		}
+	}
 	op, e := s.binding.client.Operation(ctx, tenant, actor, r.OperationId)
 	if e != nil {
 		return nil, e
@@ -342,7 +378,7 @@ func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListP
 	}
 	out := new(view.ListPresetsResponse)
 	for _, p := range items.Items {
-		out.Items = append(out.Items, &view.Preset{Id: p.Id, Version: p.Version, Name: p.Name, Cpu: p.Cpu, Memory: p.Memory})
+		out.Items = append(out.Items, &view.Preset{Id: p.Id, Version: p.Version, Name: p.Name, Cpu: p.Cpu, Memory: p.Memory, InstanceType: p.InstanceType})
 	}
 	return out, nil
 }
@@ -371,7 +407,20 @@ func (s *InstanceService) ExecInstance(ctx context.Context, r *view.ExecInstance
 	if t == nil || t.TenantId != tenant || t.InstanceId != d.InstanceId || t.Version != d.ExpectedVersion || t.PodUid == "" || t.NotebookUid == "" || t.Shell == "" || t.ContainerName != "workspace" {
 		return nil, kratoserrors.Conflict("INSTANCE_TERMINAL_NOT_READY", "instance terminal not ready")
 	}
-	reply, e := s.sessions.CreateSession(ctx, &sessionpb.CreateSessionRequest{RequestId: uuid.NewString(), IdempotencyKey: d.IdempotencyKey, Principal: &sessionpb.Principal{TenantId: tenant, SubjectId: actor}, Target: &sessionpb.Target{InstanceId: d.InstanceId, WorkloadName: t.NotebookName, WorkloadKind: sessionpb.WorkloadKind_WORKLOAD_KIND_GPU_CONTAINER, InstanceBinding: &sessionpb.InstanceBinding{Version: t.Version, ClusterId: t.ClusterId, Namespace: t.Namespace, NotebookName: t.NotebookName, NotebookUid: t.NotebookUid, PodName: t.PodName, PodUid: t.PodUid, ContainerName: t.ContainerName, Shell: t.Shell}}, Mode: &sessionpb.CreateSessionRequest_Exec{Exec: &sessionpb.ExecOptions{Container: t.ContainerName, Command: []string{t.Shell}, Tty: true, Rows: d.Rows, Cols: d.Cols}}})
+	current, e := s.binding.client.Get(ctx, tenant, actor, d.InstanceId)
+	if e != nil {
+		return nil, e
+	}
+	if current == nil || current.Id != d.InstanceId || current.Version != d.ExpectedVersion {
+		return nil, kratoserrors.Conflict("INSTANCE_VERSION_CONFLICT", "instance version changed")
+	}
+	kind := sessionpb.WorkloadKind_WORKLOAD_KIND_GPU_CONTAINER
+	if current.InstanceType == "cpu" {
+		kind = sessionpb.WorkloadKind_WORKLOAD_KIND_CONTAINER
+	} else if current.InstanceType != "" && current.InstanceType != "gpu" {
+		return nil, kratoserrors.Conflict("INSTANCE_TERMINAL_NOT_READY", "invalid instance type")
+	}
+	reply, e := s.sessions.CreateSession(ctx, &sessionpb.CreateSessionRequest{RequestId: uuid.NewString(), IdempotencyKey: d.IdempotencyKey, Principal: &sessionpb.Principal{TenantId: tenant, SubjectId: actor}, Target: &sessionpb.Target{InstanceId: d.InstanceId, WorkloadName: t.NotebookName, WorkloadKind: kind, InstanceBinding: &sessionpb.InstanceBinding{Version: t.Version, ClusterId: t.ClusterId, Namespace: t.Namespace, NotebookName: t.NotebookName, NotebookUid: t.NotebookUid, PodName: t.PodName, PodUid: t.PodUid, ContainerName: t.ContainerName, Shell: t.Shell}}, Mode: &sessionpb.CreateSessionRequest_Exec{Exec: &sessionpb.ExecOptions{Container: t.ContainerName, Command: []string{t.Shell}, Tty: true, Rows: d.Rows, Cols: d.Cols}}})
 	if e != nil {
 		return nil, e
 	}

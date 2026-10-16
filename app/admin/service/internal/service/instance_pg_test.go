@@ -14,7 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
+	view "go-wind-admin/api/gen/go/instance/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
+	"go-wind-admin/app/admin/service/internal/data/ent"
 	api "go-wind-admin/app/admin/service/internal/data/ent/api"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
 	"go-wind-admin/app/admin/service/internal/data/ent/planmodule"
@@ -69,6 +71,11 @@ func (p *instancePlanPeer) ResolveGpuRequest(_ context.Context, r *acc.ResolveGp
 }
 
 func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T) {
+	t.Run("gpu", func(t *testing.T) { instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t, false) })
+	t.Run("cpu", func(t *testing.T) { instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t, true) })
+}
+
+func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu bool) {
 	c := testutil.NewQuotaPGClient(t)
 	testutil.ResetQuotaFixture(t, c)
 	sys := appViewer.NewSystemViewerContext(context.Background())
@@ -78,7 +85,9 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 	require.NoError(t, e)
 	tenant, e := c.Client().Tenant.Create().SetName("instance-" + fixture).SetCode("instance-" + fixture).SetPlanID(p.ID).Save(sys)
 	require.NoError(t, e)
-	require.NoError(t, c.Client().PlanQuota.Create().SetPlanID(p.ID).SetQuotaCode(GpuSharedQuotaCode).SetQuotaValue(20000).Exec(sys))
+	if !cpu {
+		require.NoError(t, c.Client().PlanQuota.Create().SetPlanID(p.ID).SetQuotaCode(GpuSharedQuotaCode).SetQuotaValue(20000).Exec(sys))
+	}
 	require.NoError(t, c.Client().PlanModule.Create().SetPlanID(p.ID).SetModule(planmodule.Module("INSTANCE")).Exec(sys))
 	operator, e := c.Client().User.Create().SetTenantID(tenant.ID).SetUsername("instance-" + fixture).SetStatus(user.StatusNormal).Save(sys)
 	require.NoError(t, e)
@@ -88,10 +97,25 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 	require.NoError(t, e)
 	perm, e := c.Client().Permission.Create().SetName("instance create").SetCode("instance:create:" + fixture).SetStatus(permission.StatusOn).Save(sys)
 	require.NoError(t, e)
-	route, e := c.Client().Api.Create().SetModule("InstanceService").SetPath(data.InstanceCreatePath).SetMethod("POST").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModule("INSTANCE")).SetStatus(api.StatusOn).Save(sys)
-	require.NoError(t, e)
+	catalogAPI := func(path, method string) *ent.Api {
+		row, err := c.Client().Api.Query().Where(api.ModuleEQ("InstanceService"), api.PathEQ(path), api.MethodEQ(method), api.ScopeEQ(api.ScopeAdmin)).Only(sys)
+		if ent.IsNotFound(err) {
+			row, err = c.Client().Api.Create().SetModule("InstanceService").SetPath(path).SetMethod(method).SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModule("INSTANCE")).SetStatus(api.StatusOn).Save(sys)
+		}
+		require.NoError(t, err)
+		require.NotNil(t, row.BusinessModule)
+		require.Equal(t, api.BusinessModule("INSTANCE"), *row.BusinessModule)
+		require.NotNil(t, row.Status)
+		require.Equal(t, api.StatusOn, *row.Status)
+		return row
+	}
+	route := catalogAPI(data.InstanceCreatePath, "POST")
 	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(perm.ID).SetAPIID(route.ID).Exec(sys))
 	require.NoError(t, c.Client().RolePermission.Create().SetTenantID(tenant.ID).SetRoleID(r.ID).SetPermissionID(perm.ID).SetStatus(rolepermission.StatusOn).SetEffect(rolepermission.EffectAllow).Exec(sys))
+	deleteRoute := catalogAPI(data.InstanceDeletePath, "DELETE")
+	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(perm.ID).SetAPIID(deleteRoute.ID).Exec(sys))
+	operationRoute := catalogAPI(data.InstanceOperationPath, "GET")
+	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(perm.ID).SetAPIID(operationRoute.ID).Exec(sys))
 	requestCtx := viewer.WithContext(context.Background(), appViewer.NewUserViewer(uint64(operator.ID), uint64(tenant.ID), 0, "", []viewer.DataScope{{ScopeType: viewer.ScopeTypeAll}}))
 	requestCtx = auth.NewPrincipalContext(requestCtx, &auth.Principal{Type: auth.SubjectUser, ID: operator.ID, TenantID: tenant.ID})
 	plan, _, _ := gpuVector(t)
@@ -101,22 +125,38 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 	plan.Totals.SharedMemoryMib = plan.Profile.Spec.SharedMemoryMib
 	plan.ResolutionDigest, e = GpuPlanDigest(plan)
 	require.NoError(t, e)
-	owner := instanceResourceProcess(t, plan.Request)
+	gpu, expectedPlanCalls, preset := plan.Request, 1, "shared"
+	if cpu {
+		gpu, expectedPlanCalls, preset = nil, 0, "cpu"
+	}
+	owner := instanceResourceProcess(t, gpu)
 	resource := &instanceResolutionPeer{InstanceOwnerClient: owner, plan: plan}
 	plans := &instancePlanPeer{plan: plan}
 	binding := NewInstanceGpuBinding(resource, data.NewInstanceAuthorizationRepo(c))
 	registry := NewQuotaAdapterRegistry()
 	require.NoError(t, registry.Register(binding))
 	ledger := data.NewQuotaLedgerRepo(bctx, c)
-	acceptance, e := NewGpuAcceptance(ledger, registry, data.NewTenantRepo(bctx, c), plans, binding, nil)
+	var planResolver GpuPlanResolver = plans
+	if cpu {
+		planResolver = nil
+	}
+	acceptance, e := NewGpuAcceptance(ledger, registry, data.NewTenantRepo(bctx, c), planResolver, binding, nil)
 	require.NoError(t, e)
 	key := uuid.NewString()
-	public := &res.CreateInstanceData{Name: "workspace", ImageId: "img_" + strings.ReplaceAll(uuid.NewString(), "-", ""), ImageScope: "platform", PresetId: "shared", PresetVersion: 1}
+	public := &res.CreateInstanceData{Name: "workspace", ImageId: "img_" + strings.ReplaceAll(uuid.NewString(), "-", ""), ImageScope: "platform", PresetId: preset, PresetVersion: 1}
 	first, e := acceptance.AcceptGpuCreate(requestCtx, key, nil, public)
 	require.NoError(t, e)
 	require.False(t, first.Replayed)
 	require.Equal(t, 1, resource.calls)
-	require.Equal(t, 1, plans.calls)
+	require.Equal(t, expectedPlanCalls, plans.calls)
+	service := NewInstanceService(acceptance, binding, data.NewTenantRepo(bctx, c), ledger, nil)
+	if cpu {
+		pending, e := service.GetInstanceOperation(requestCtx, &view.GetOperationRequest{OperationId: first.OperationID})
+		require.NoError(t, e, "frontend can poll immediately after Gov durable admission")
+		require.Equal(t, "QUEUED", pending.State)
+		require.Equal(t, first.ResourceID, pending.InstanceId)
+		require.Zero(t, pending.IntentVersion)
+	}
 	claimed, e := ledger.ClaimDispatchable(context.Background(), "instance-wire-worker", time.Minute, 1)
 	require.NoError(t, e)
 	require.Len(t, claimed, 1)
@@ -137,7 +177,7 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 	require.Equal(t, first.OperationID, replay.OperationID)
 	require.Equal(t, first.ChargeIDs, replay.ChargeIDs)
 	require.Equal(t, 1, resource.calls)
-	require.Equal(t, 1, plans.calls)
+	require.Equal(t, expectedPlanCalls, plans.calls)
 	changed := proto.Clone(public).(*res.CreateInstanceData)
 	changed.Name = "different"
 	_, e = acceptance.AcceptGpuCreate(requestCtx, key, nil, changed)
@@ -149,6 +189,51 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 	require.Equal(t, 1, resource.calls)
 	charges, e := ledger.GetChargesForOperation(requestCtx, tenant.ID, first.OperationID)
 	require.NoError(t, e)
+	if cpu {
+		require.Empty(t, charges, "CPU creates no GPU ledger charge")
+		candidates, e := ledger.ScanGpuCreatePage(context.Background(), 0, 100)
+		require.NoError(t, e)
+		require.Empty(t, candidates, "CPU must never enter Acc usage projection")
+		require.NoError(t, c.Client().UserRole.UpdateOneID(membership.ID).SetStatus(userrole.StatusActive).Exec(sys))
+		deleteKey := uuid.NewString()
+		accepted, e := acceptance.AcceptGpuDeleteVersion(requestCtx, deleteKey, first.ResourceID, instance.Version)
+		require.NoError(t, e)
+		require.Equal(t, "QUEUED_FOR_OWNER", accepted.Result)
+		repeated, e := acceptance.AcceptGpuDeleteVersion(requestCtx, deleteKey, first.ResourceID, instance.Version)
+		require.NoError(t, e)
+		require.Equal(t, accepted.DeleteOperationId, repeated.DeleteOperationId)
+		pending, e := service.GetInstanceOperation(requestCtx, &view.GetOperationRequest{OperationId: accepted.DeleteOperationId})
+		require.NoError(t, e)
+		require.Equal(t, "QUEUED", pending.State)
+		require.Equal(t, "delete", pending.Action)
+		require.Error(t, service.canOperate(requestCtx, first.ResourceID), "durable delete blocks new start/stop/exec")
+		claimed, e = ledger.ClaimDispatchable(context.Background(), "cpu-delete-worker", time.Minute, 1)
+		require.NoError(t, e)
+		require.Len(t, claimed, 1)
+		require.Empty(t, claimed[0].Charges)
+		require.Equal(t, first.OperationID, claimed[0].CreateOperationID)
+		worker.dispatchOne(context.Background(), &claimed[0])
+		deletion, e := ledger.GetOperationForUser(requestCtx, tenant.ID, accepted.DeleteOperationId)
+		require.NoError(t, e)
+		require.Equal(t, quotaoperation.DispatchStateAcked, deletion.DispatchState, "real Resource CPU delete durable ACK required")
+		owned, e := service.GetInstanceOperation(requestCtx, &view.GetOperationRequest{OperationId: accepted.DeleteOperationId})
+		require.NoError(t, e)
+		require.Equal(t, "delete", owned.Action)
+		require.NotEqual(t, "QUEUED", owned.State, "ACKED reads Resource operation progress")
+		resource.unavailable = false
+		unsent, e := acceptance.AcceptGpuCreate(requestCtx, uuid.NewString(), nil, public)
+		require.NoError(t, e)
+		canceled, e := acceptance.AcceptGpuDeleteVersion(requestCtx, uuid.NewString(), unsent.ResourceID, 1)
+		require.NoError(t, e)
+		require.Equal(t, "CANCELED_BEFORE_DISPATCH", canceled.Result)
+		for _, id := range []string{unsent.OperationID, canceled.DeleteOperationId} {
+			local, e := service.GetInstanceOperation(requestCtx, &view.GetOperationRequest{OperationId: id})
+			require.NoError(t, e, "locally canceled commands never existed in Resource")
+			require.Equal(t, "CANCELED_UNSENT", local.State)
+			require.Equal(t, "CANCELED_BEFORE_DISPATCH", local.Reason)
+		}
+		return
+	}
 	require.Len(t, charges, 1)
 	release := &data.QuotaReleaseInput{OwnerService: InstanceOwner, ReleaseEventID: uuid.NewString(), OperationID: first.OperationID, Reason: "RESOURCE_RELEASED", PayloadHash: "original-event", PayloadJSON: `{"scope":"owner-release"}`, Items: []data.QuotaReleaseItemInput{{ChargeID: charges[0].ChargeID, QuotaCode: charges[0].QuotaCode, ReleasedTotal: charges[0].OriginalUnits}}}
 	wrong := *release

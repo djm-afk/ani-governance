@@ -24,10 +24,11 @@ message Instance {
  string image_id = 7; string image_digest = 8; string preset_id = 9; int64 preset_version = 10;
  string create_operation_id = 11; string last_operation_id = 12;
  bool compute_cleaned = 13; bool workspace_cleaned = 14; bool quota_returned = 15;
+ string instance_type = 16;
 }
 message ListInstancesResponse { repeated Instance items = 1; string next_after_id = 2; }
 message Acceptance { string operation_id = 1; string resource_id = 2; bool replayed = 3; string result = 4; }
 message Operation { string id = 1; string instance_id = 2; string action = 3; int64 intent_version = 4; string state = 5; string reason = 6; }
-message Preset { string id = 1; int64 version = 2; string name = 3; string cpu = 4; string memory = 5; }
+message Preset { string id = 1; int64 version = 2; string name = 3; string cpu = 4; string memory = 5; string instance_type = 6; }
 message ListPresetsResponse { repeated Preset items = 1; }
 message ExecInstanceResponse { string session_id = 1; string ws_url = 2; string expires_at = 3; }

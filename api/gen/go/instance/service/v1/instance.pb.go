@@ -566,6 +566,7 @@ type Instance struct {
 	ComputeCleaned    bool                   `protobuf:"varint,13,opt,name=compute_cleaned,json=computeCleaned,proto3" json:"compute_cleaned,omitempty"`
 	WorkspaceCleaned  bool                   `protobuf:"varint,14,opt,name=workspace_cleaned,json=workspaceCleaned,proto3" json:"workspace_cleaned,omitempty"`
 	QuotaReturned     bool                   `protobuf:"varint,15,opt,name=quota_returned,json=quotaReturned,proto3" json:"quota_returned,omitempty"`
+	InstanceType      string                 `protobuf:"bytes,16,opt,name=instance_type,json=instanceType,proto3" json:"instance_type,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -703,6 +704,13 @@ func (x *Instance) GetQuotaReturned() bool {
 		return x.QuotaReturned
 	}
 	return false
+}
+
+func (x *Instance) GetInstanceType() string {
+	if x != nil {
+		return x.InstanceType
+	}
+	return ""
 }
 
 type ListInstancesResponse struct {
@@ -916,6 +924,7 @@ type Preset struct {
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	Cpu           string                 `protobuf:"bytes,4,opt,name=cpu,proto3" json:"cpu,omitempty"`
 	Memory        string                 `protobuf:"bytes,5,opt,name=memory,proto3" json:"memory,omitempty"`
+	InstanceType  string                 `protobuf:"bytes,6,opt,name=instance_type,json=instanceType,proto3" json:"instance_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -981,6 +990,13 @@ func (x *Preset) GetCpu() string {
 func (x *Preset) GetMemory() string {
 	if x != nil {
 		return x.Memory
+	}
+	return ""
+}
+
+func (x *Preset) GetInstanceType() string {
+	if x != nil {
+		return x.InstanceType
 	}
 	return ""
 }
@@ -1127,7 +1143,7 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x04rows\x18\x04 \x01(\x05R\x04rows\x12\x12\n" +
 	"\x04cols\x18\x05 \x01(\x05R\x04cols\"P\n" +
 	"\x13ExecInstanceRequest\x129\n" +
-	"\x04data\x18\x01 \x01(\v2%.instance.service.v1.ExecInstanceDataR\x04data\"\x87\x04\n" +
+	"\x04data\x18\x01 \x01(\v2%.instance.service.v1.ExecInstanceDataR\x04data\"\xac\x04\n" +
 	"\bInstance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -1144,7 +1160,8 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x11last_operation_id\x18\f \x01(\tR\x0flastOperationId\x12'\n" +
 	"\x0fcompute_cleaned\x18\r \x01(\bR\x0ecomputeCleaned\x12+\n" +
 	"\x11workspace_cleaned\x18\x0e \x01(\bR\x10workspaceCleaned\x12%\n" +
-	"\x0equota_returned\x18\x0f \x01(\bR\rquotaReturned\"p\n" +
+	"\x0equota_returned\x18\x0f \x01(\bR\rquotaReturned\x12#\n" +
+	"\rinstance_type\x18\x10 \x01(\tR\finstanceType\"p\n" +
 	"\x15ListInstancesResponse\x123\n" +
 	"\x05items\x18\x01 \x03(\v2\x1d.instance.service.v1.InstanceR\x05items\x12\"\n" +
 	"\rnext_after_id\x18\x02 \x01(\tR\vnextAfterId\"\x84\x01\n" +
@@ -1162,13 +1179,14 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x06action\x18\x03 \x01(\tR\x06action\x12%\n" +
 	"\x0eintent_version\x18\x04 \x01(\x03R\rintentVersion\x12\x14\n" +
 	"\x05state\x18\x05 \x01(\tR\x05state\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\"p\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\x95\x01\n" +
 	"\x06Preset\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x03R\aversion\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x10\n" +
 	"\x03cpu\x18\x04 \x01(\tR\x03cpu\x12\x16\n" +
-	"\x06memory\x18\x05 \x01(\tR\x06memory\"H\n" +
+	"\x06memory\x18\x05 \x01(\tR\x06memory\x12#\n" +
+	"\rinstance_type\x18\x06 \x01(\tR\finstanceType\"H\n" +
 	"\x13ListPresetsResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.instance.service.v1.PresetR\x05items\"k\n" +
 	"\x14ExecInstanceResponse\x12\x1d\n" +

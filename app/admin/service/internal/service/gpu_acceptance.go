@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	attachment "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/integration/v1"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
@@ -179,6 +180,12 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 		if e != nil {
 			return nil, e
 		}
+		if data.IsInstanceCPUCanonical([]byte(old.CanonicalRequest)) {
+			if s.binding.OwnerService() != InstanceOwner || !data.AllowsInstanceCPUCommand(old.OwnerService, old.Action, old.CanonicalRequest) || len(charges) != 0 {
+				return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid original CPU instance command")
+			}
+			return &data.QuotaOccupyResult{OperationID: old.OperationID, ResourceID: old.ResourceID, ChargeIDs: []string{}, Replayed: true}, nil
+		}
 		c, e := DecodeGpuCanonical([]byte(old.CanonicalRequest))
 		if e != nil {
 			return nil, e
@@ -194,7 +201,7 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 		}
 		return &data.QuotaOccupyResult{OperationID: old.OperationID, ResourceID: old.ResourceID, ChargeIDs: ids, Replayed: true}, nil
 	}
-	if !s.registry.GPUExecutionEnabled(s.binding.OwnerService()) || s.registry.Lookup(s.binding.OwnerService(), s.binding.CreateAction()) == nil || s.plans == nil {
+	if !s.registry.GPUExecutionEnabled(s.binding.OwnerService()) || s.registry.Lookup(s.binding.OwnerService(), s.binding.CreateAction()) == nil {
 		return nil, quotapb.ErrorQuotaAdapterUnavailable("%s", "GPU business owner is not enabled")
 	}
 	if resolvesBusiness {
@@ -202,7 +209,7 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 		if err != nil {
 			return nil, err
 		}
-		if gpu == nil || business == nil || !business.ProtoReflect().IsValid() {
+		if business == nil || !business.ProtoReflect().IsValid() {
 			return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid resolved GPU business")
 		}
 		if canonical, ok := s.binding.(interface {
@@ -218,6 +225,12 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 		if err != nil {
 			return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid resolved business payload")
 		}
+	}
+	if instance, ok := business.(*res.CreateBusiness); ok && instance != nil && instance.Spec != nil && instance.Spec.InstanceType == "cpu" {
+		return s.acceptInstanceCPUCreate(ctx, p, tenant, actorID, key, requestHash, instance, businessBytes)
+	}
+	if gpu == nil || s.plans == nil {
+		return nil, quotapb.ErrorQuotaAdapterUnavailable("%s", "GPU plan resolution unavailable")
 	}
 	extra, err := s.binding.ValidateGpuBusiness(ctx, business)
 	if err != nil {
@@ -310,6 +323,9 @@ func (s *GpuAcceptance) acceptGpuDelete(ctx context.Context, key, resource strin
 			return nil, quotapb.ErrorQuotaNotFound("%s", "resource not found")
 		}
 		return nil, err
+	}
+	if data.IsInstanceCPUCanonical([]byte(old.CanonicalRequest)) {
+		return s.acceptInstanceCPUDelete(ctx, p, key, resource, version, old)
 	}
 	c, err := DecodeGpuCanonical([]byte(old.CanonicalRequest))
 	if err != nil {

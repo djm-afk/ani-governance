@@ -24,8 +24,12 @@ func StartInstanceResourcePeer(t *testing.T, gpu *acc.GpuRequest) *InstanceResou
 	binary := os.Getenv("RESOURCE_INSTANCE_TEST_BINARY")
 	require.True(t, filepath.IsAbs(binary), "fixed Resource subprocess binary required")
 	dir := t.TempDir()
-	raw, e := protojson.Marshal(gpu)
-	require.NoError(t, e)
+	raw := []byte("null")
+	var e error
+	if gpu != nil {
+		raw, e = protojson.Marshal(gpu)
+		require.NoError(t, e)
+	}
 	cmd := exec.Command(binary, "-test.run=^TestInstanceGovernanceFixture$", "-test.timeout=5m", "-test.v")
 	cmd.Env = append(os.Environ(), "INSTANCE_JOINT_FIXTURE_DIR="+dir, "INSTANCE_JOINT_GPU_JSON="+string(raw))
 	input, e := cmd.StdinPipe()

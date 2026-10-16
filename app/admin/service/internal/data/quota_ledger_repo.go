@@ -151,8 +151,12 @@ func validateFrozenCharges(canonical string, charges []*ent.QuotaCharge) error {
 }
 
 func (r *QuotaLedgerRepo) Occupy(ctx context.Context, in *QuotaOccupyInput) (out *QuotaOccupyResult, err error) {
-	if in == nil || in.TenantID == 0 || len(in.Items) == 0 || in.IdempotencyKey == "" || in.RequestHash == "" || in.CanonicalRequest == "" || in.ResourceTenantID == "" || in.ResourceID == "" || in.OwnerService == "" || in.Action == "" || in.ActorType == "" || in.ActorID == "" {
+	if in == nil || in.TenantID == 0 || in.IdempotencyKey == "" || in.RequestHash == "" || in.CanonicalRequest == "" || in.ResourceTenantID == "" || in.ResourceID == "" || in.OwnerService == "" || in.Action == "" || in.ActorType == "" || in.ActorID == "" {
 		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "incomplete quota input")
+	}
+	cpu := in.Action == instanceCPUCreateAction && AllowsInstanceCPUCommand(in.OwnerService, in.Action, in.CanonicalRequest)
+	if (len(in.Items) == 0 && !cpu) || (cpu && len(in.Items) != 0) || (IsInstanceCPUCanonical([]byte(in.CanonicalRequest)) && !cpu) {
+		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid original charge vector")
 	}
 	items := append([]QuotaOccupyItem(nil), in.Items...)
 	sort.Slice(items, func(i, j int) bool { return items[i].QuotaCode < items[j].QuotaCode })
@@ -184,7 +188,7 @@ func (r *QuotaLedgerRepo) Occupy(ctx context.Context, in *QuotaOccupyInput) (out
 			if e != nil {
 				return e
 			}
-			if e = validateFrozenCharges(op.CanonicalRequest, charges); e != nil {
+			if e = validateOperationCharges(op, charges); e != nil {
 				return e
 			}
 			out = &QuotaOccupyResult{op.OperationID, op.ResourceID, chargeIDs(charges), true}
@@ -246,7 +250,7 @@ func (r *QuotaLedgerRepo) Occupy(ctx context.Context, in *QuotaOccupyInput) (out
 				return e
 			}
 		}
-		if err = validateFrozenCharges(op.CanonicalRequest, charges); err != nil {
+		if err = validateOperationCharges(op, charges); err != nil {
 			return err
 		}
 		ids := make([]string, len(in.Items))
@@ -316,7 +320,7 @@ func (r *QuotaLedgerRepo) Release(ctx context.Context, in *QuotaReleaseInput) (o
 		if e != nil {
 			return e
 		}
-		if e = validateFrozenCharges(op.CanonicalRequest, charges); e != nil {
+		if e = validateOperationCharges(op, charges); e != nil {
 			return quotaerrors.ReleaseConflict("invalid original charge vector")
 		}
 		byID := map[string]*ent.QuotaCharge{}
@@ -399,10 +403,10 @@ func cancelLocked(ctx context.Context, tx *ent.Tx, op *ent.QuotaOperation, charg
 		return clockErr
 	}
 	if op.DispatchState == "CANCELED_UNSENT" {
-		if op.AttemptCount != 0 || len(charges) == 0 {
+		if op.AttemptCount != 0 {
 			return quotapb.ErrorInvalidQuotaRequest("%s", "inconsistent local cancellation")
 		}
-		if e := validateFrozenCharges(op.CanonicalRequest, charges); e != nil {
+		if e := validateOperationCharges(op, charges); e != nil {
 			return e
 		}
 		for _, charge := range charges {
@@ -415,10 +419,7 @@ func cancelLocked(ctx context.Context, tx *ent.Tx, op *ent.QuotaOperation, charg
 	if op.DispatchState != "QUEUED" || op.AttemptCount != 0 {
 		return quotapb.ErrorInvalidQuotaRequest("%s", "owner closure required after a send attempt")
 	}
-	if len(charges) == 0 {
-		return quotapb.ErrorInvalidQuotaRequest("%s", "missing original charges")
-	}
-	if e := validateFrozenCharges(op.CanonicalRequest, charges); e != nil {
+	if e := validateOperationCharges(op, charges); e != nil {
 		return e
 	}
 	for _, c := range charges {
@@ -499,10 +500,7 @@ func (r *QuotaLedgerRepo) CreateDeleteOperation(ctx context.Context, in *QuotaDe
 		if e != nil {
 			return e
 		}
-		if len(charges) == 0 {
-			return quotapb.ErrorInvalidQuotaRequest("%s", "missing original charge vector")
-		}
-		if e = validateFrozenCharges(original.CanonicalRequest, charges); e != nil {
+		if e = validateOperationCharges(original, charges); e != nil {
 			return e
 		}
 		gpu := false
@@ -650,7 +648,17 @@ func (r *QuotaLedgerRepo) GetChargesForOperation(ctx context.Context, tid uint32
 			return e
 		}
 		if len(v) == 0 {
-			return &ent.NotFoundError{}
+			original, err := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OperationIDEQ(id)).Only(ctx)
+			if err != nil {
+				return err
+			}
+			// Only an existing, tenant-scoped CPU command may have no charges.
+			// Missing/corrupt GPU vectors still fail instead of masquerading as CPU.
+			if err = validateOperationCharges(original, nil); err != nil {
+				return err
+			}
+			out = []*ent.QuotaCharge{}
+			return nil
 		}
 		for _, c := range v {
 			out = append(out, c.Unwrap())
@@ -752,7 +760,7 @@ func (r *QuotaLedgerRepo) ClaimDispatchable(ctx context.Context, worker string, 
 			if e != nil {
 				return e
 			}
-			if len(charges) == 0 || validateFrozenCharges(op.CanonicalRequest, charges) != nil {
+			if validateOperationCharges(op, charges) != nil {
 				// Keep the failed claim and its diagnostic durable. Rolling this
 				// transaction back would repeatedly select the same broken vector
 				// without recording an attempt and could starve healthy operations.

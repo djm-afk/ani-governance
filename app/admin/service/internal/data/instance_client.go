@@ -52,17 +52,39 @@ func (c *InstanceClient) Resolve(ctx context.Context, t, a string, r *pb.CreateI
 	})
 }
 func (c *InstanceClient) Create(ctx context.Context, r *pb.AcceptCreateRequest) (*pb.OperationResponse, error) {
-	if r == nil || r.GpuOwnerAttachment == nil || r.GpuOwnerAttachment.Actor == nil {
+	if r == nil || (r.GpuOwnerAttachment == nil) == (r.CpuOwnerAttachment == nil) {
 		return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_COMMAND")
 	}
-	actor := "governance:" + r.GpuOwnerAttachment.Actor.Type + ":" + r.GpuOwnerAttachment.Actor.Id
+	actor := ""
+	if r.CpuOwnerAttachment != nil {
+		if len(r.OriginalCharges) != 0 {
+			return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_COMMAND")
+		}
+		actor = r.CpuOwnerAttachment.Actor
+	} else {
+		if r.GpuOwnerAttachment.Actor == nil {
+			return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_COMMAND")
+		}
+		actor = "governance:" + r.GpuOwnerAttachment.Actor.Type + ":" + r.GpuOwnerAttachment.Actor.Id
+	}
 	return instanceCall(c, ctx, r.TenantId, actor, func(ctx context.Context) (*pb.OperationResponse, error) { return c.client.AcceptCreate(ctx, r) })
 }
 func (c *InstanceClient) Delete(ctx context.Context, r *pb.AcceptDeleteRequest) (*pb.OperationResponse, error) {
-	if r == nil || r.GpuOwnerAttachment == nil || r.GpuOwnerAttachment.Actor == nil {
+	if r == nil || (r.GpuOwnerAttachment == nil) == (r.CpuOwnerAttachment == nil) {
 		return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_COMMAND")
 	}
-	actor := "governance:" + r.GpuOwnerAttachment.Actor.Type + ":" + r.GpuOwnerAttachment.Actor.Id
+	actor := ""
+	if r.CpuOwnerAttachment != nil {
+		if len(r.OriginalCharges) != 0 {
+			return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_COMMAND")
+		}
+		actor = r.CpuOwnerAttachment.Actor
+	} else {
+		if r.GpuOwnerAttachment.Actor == nil {
+			return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_COMMAND")
+		}
+		actor = "governance:" + r.GpuOwnerAttachment.Actor.Type + ":" + r.GpuOwnerAttachment.Actor.Id
+	}
 	return instanceCall(c, ctx, r.TenantId, actor, func(ctx context.Context) (*pb.OperationResponse, error) { return c.client.AcceptDelete(ctx, r) })
 }
 func (c *InstanceClient) Change(ctx context.Context, t, a string, r *pb.ChangeInstanceRequest, start bool) (*pb.OperationResponse, error) {
