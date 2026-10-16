@@ -1613,6 +1613,12 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依赖固定为 `v0.0.0-20261012083359-e7b5a8a34359`。Fedora 新模块缓存已验证下载内容、模块/go.mod 校验和及 `Origin.Hash` 与发布提交一致，完整 `make api` 复验无生成差异。发布时保留最新 Governance main 的 ModelDev 和鉴权计划更新；源码发布不改变共享部署或此前 LB 回归未解结论。提交前 Resource 完整 `make verify` 已通过，前缀和平台方法的证据沿用上述入口；发布补充日志保留在同一工件目录的 `publication/`。
 ## INSTANCE-MVP-V15（2026-10-13，后端接线实施中）
 
+2026-10-16 联合批次的当前合同见 [容器实例 HTTP 合同](contracts/container-instances.md)。该批次将实例公开/内部类型统一为 `instance_kind=container` 与可信 `compute_type`，删除外层规格版本和旧实例分页；新增 Res 数据库规格的 Gov 平台 CRUD、可选 scheduling、平台调度配置、只读 runtime/events 和受保护 SSE 日志。新增/改造列表统一 page/pageSize 与 items/total，授权/筛选先于计数和分页。以下 10-13～10-16 发布记录说明此前交付，不能作为本批验收证据。
+
+本批身份条件：平台规格及调度管理要求 tenant=0 的平台用户和独立权限；租户创建/读取沿当前 INSTANCE 角色/套餐，GPU 候选另取当前 ACC 目录权限交集。ConfigMap 使用编辑时 resourceVersion 条件写入并保持其他键及 metadata；现场基线未对齐时写闸门关闭。日志通过专用 SSE 等 READY 后发送头，使用原请求取消，不套普通 REST/unary 总期限；fetch 示例及运行安全字段见上述合同。
+
+本批实际验证由任务独占 evidence/EXECUTION-STATUS.md 关联具名原始结果：CPU 公开受理至真实 Pod Running/Ready、规格/defaults 冻结重试、正常启停/删除；Whole1/Shared1/Whole2 的实际控制器 Pod 字段（Pending，仅字段）；ConfigMap 条件更新/冲突恢复、平台互斥权限，以及 runtime/events 和真实 SSE 长连接、期限及故障回收。按 Profile 上限通用化的数量增量使用真实 builder、软件与 PG 边界定向验证，未扩 3/4 卡现场矩阵。正式依赖版本由本仓 go.mod/go.sum 固定，使用正常 Go 模块下载核对 Origin.Hash 与校验和；源码发布不表示合并或共享部署，不授权旧实验数据清理，硬件与浏览器边界保持未验证。
+
 新增固定 `INSTANCE=16`，独立于 INFERENCE/ACCELERATOR 的当前套餐和动作授权。输入、路由及安全查询视图以 `api/protos/instance/service/v1/instance.proto`、`api/protos/admin/service/v1/i_instance.proto` 为准；创建/变更保留 `{data:{...}}`，不允许公共 tenant、namespace、owner、GPU plan 或 charges。`instance_http.go` 严格解码写入，并校验路径和正文 ID 相同；终端响应 `no-store`。
 
 创建先执行当前角色/套餐授权及原公开请求幂等查找，新请求再解析 Image/preset/Namespace。占额、持久投递及全量附件沿用 Quota；启停调用原实例版本，不动原账。删除版本和幂等内容进入持久 DELETE，已接受删除阻止后续新启停/终端。Resource owner 固定 `ani-resource-service`，退额证书映射为 `ANI_QUOTA_RESOURCE_DNS_SAN`；合法 owner 原 GPU 全量累计声明不要求 Gov 持久 DELETE，更不查询 Notebook/Pod。Acc ENDED 保留实际 binding。
@@ -1621,7 +1627,7 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 
 2026-10-16 按用户授权发布本次全部实例后端代码到 main。Resource provider 为 `921a22a85758d42986d271406cafdd74ca421d1d`，Gov 固定正式模块 `v0.0.0-20261016021904-921a22a85758`；Fedora `GOWORK=off` 下载已核对 `Origin.Hash`、Sum `h1:SCUfArA8dAHTZXs1N3ZpLjd5Y3n77OWQtYDQ12zha3I=` 和 GoModSum `h1:DXqtxWJ+IEu9gZIgGVHTbFONYQc9hcuaeXOUzmY5Yjw=`。两仓目标独立构建通过，未提交 workspace 或 sibling replace。实现/生成物与已通过定向及 CPU 真实业务验收的代码清单一致，复用原证据；本次发布不重复业务场景、不等待 CI、不更新共享部署，GPU 实机与浏览器验收边界保持。准确 Gov 发布提交以远端 main 为准，命令及模块回执在原 Fedora 任务根 `publication-20261016/`。
 
-列表协议登记为 `page_size/after_id`、`items/next_after_id`：默认 50、1～100、按实例 UUID 升序键集；无过滤/排序参数，查询每页重新当前授权并限定可信租户。不宣称 HMAC cursor、total 或跨页快照。前端本轮由用户指定专人接手。
+此前 `page_size/after_id` 列表协议已由本批替换；当前接口不接旧分页参数，不提供双轨兼容。前端按上方当前合同接入。
 
 早期定向联调已使用真实授权、PG/Redis/mTLS 和生产业务代码，GPU/Kubernetes/exec 边界受控；真实 GPU 产品验收仍未完成。2026-10-13 用户授权先推送 main，剩余门禁由后续任务处理：已固定正式 Resource/Acc/SG API 版本并核对下载 SHA/sums，但新版 main 合入后的最终独立构建、定向组合用例及 CI 尚未完成，不声明通过。权威当前状态统一见 Resource `docs/execution/status.md#gpu-container-instance-mvp-v15`。`scripts/ops/sql/register-instance-permissions.sql` 只准备已同步的 API/permission 目录，未执行共享环境授权；本轮没有部署。
 
@@ -1681,7 +1687,7 @@ Governance 原 CREATE，再执行原本地取消或持久 DELETE 流程；未投
 完整的单字符串 `command` 和 `served_model_name`；不再有 `engine.command[]` 或
 `engine.args[]` 数组。Governance、Model 和 Inference 都不会解析、拼接、替换或
 写死引擎启动参数；请求中的完整 command 原样保存并转发。未传 `gpu` 表示不使用
-GPU；传入 GPU 才进入配额/Accelerator 受理路径。
+GPU；传入 GPU 才进入配额/Accelerator 受理路径。推理数量改动按用户要求退出本批正式交付，保留当前单卡公开合同和已发布依赖。
 运行时网络端点由适配器固定为 TCP `containerPort=8000`、`servicePort=80`、
 `targetPort=8000`；调用方提供的完整 command 必须让引擎监听容器端口 8000。
 适配器不解析 command，也不向其中追加端口或其他启动参数。

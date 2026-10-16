@@ -186,7 +186,7 @@ func GpuPlanQuota(p *acc.ResolvedGpuPlan) (data.QuotaOccupyItem, error) {
 		return bad()
 	}
 	r, s, e, t, rt := p.Request, p.Profile.Spec, p.Encoding, p.Totals, p.Runtime
-	if r.Replicas < 1 || r.Replicas > 16 || r.DevicesPerReplica != 1 || r.ContainerName == "" || r.ProfileVersion == 0 || r.ProfileId != p.Profile.ProfileId || r.ProfileVersion != p.Profile.ProfileVersion || s.MaxDevicesPerReplica != 1 || e.MemoryBlockMib == 0 || e.MemoryBlockMib > math.MaxInt32 || e.Policy != "EXACT" {
+	if r.Replicas < 1 || r.Replicas > 16 || r.DevicesPerReplica < 1 || r.ContainerName == "" || r.ProfileVersion == 0 || r.ProfileId != p.Profile.ProfileId || r.ProfileVersion != p.Profile.ProfileVersion || s.MaxDevicesPerReplica < 1 || r.DevicesPerReplica > s.MaxDevicesPerReplica || e.MemoryBlockMib == 0 || e.MemoryBlockMib > math.MaxInt32 || e.Policy != "EXACT" {
 		return bad()
 	}
 	d, err := GpuPlanDigest(p)
@@ -202,18 +202,18 @@ func GpuPlanQuota(p *acc.ResolvedGpuPlan) (data.QuotaOccupyItem, error) {
 	}
 	labels := map[string]string{"accelerator.ani.io/supply-group": s.GroupId, "accelerator.ani.io/model-key": s.ModelKey, "accelerator.ani.io/baseline-id": p.Profile.BaselineId}
 	annotations := map[string]string{"volcano.sh/vgpu-mode": "hami-core"}
-	limits := map[string]string{"volcano.sh/vgpu-number": "1", "volcano.sh/vgpu-cores": strconv.FormatUint(uint64(s.CoreLimitPercent), 10)}
+	limits := map[string]string{"volcano.sh/vgpu-number": strconv.FormatUint(uint64(r.DevicesPerReplica), 10), "volcano.sh/vgpu-cores": strconv.FormatUint(uint64(s.CoreLimitPercent), 10)}
 	item := data.QuotaOccupyItem{}
 	switch s.Mode {
 	case acc.SupplyMode_SHARED_FIXED:
 		m, f := s.SharedMemoryMib, int64(e.MemoryBlockMib)
-		if m <= 0 || m > math.MaxInt32 || m%f != 0 || m/f > math.MaxInt32 || m > math.MaxInt64/int64(r.Replicas) || s.CoreLimitPercent < 1 || s.CoreLimitPercent > 99 || s.IsolationClass != "SOFTWARE_COOPERATIVE" || e.MemoryBlocksPerDevice != m/f || e.SharedMemoryMib != m || e.MemoryPercentage != 0 || t.ExclusiveDeviceCount != 0 || t.LogicalDeviceCount != int64(r.Replicas) || t.SharedMemoryMib != m*int64(r.Replicas) {
+		if r.DevicesPerReplica != 1 || s.MaxDevicesPerReplica != 1 || m <= 0 || m > math.MaxInt32 || m%f != 0 || m/f > math.MaxInt32 || m > math.MaxInt64/int64(r.Replicas) || s.CoreLimitPercent < 1 || s.CoreLimitPercent > 99 || s.IsolationClass != "SOFTWARE_COOPERATIVE" || e.MemoryBlocksPerDevice != m/f || e.SharedMemoryMib != m || e.MemoryPercentage != 0 || t.ExclusiveDeviceCount != 0 || t.LogicalDeviceCount != int64(r.Replicas) || t.SharedMemoryMib != m*int64(r.Replicas) {
 			return bad()
 		}
 		item = data.QuotaOccupyItem{QuotaCode: GpuSharedQuotaCode, Units: t.SharedMemoryMib}
 		limits["volcano.sh/vgpu-memory"] = strconv.FormatInt(m/f, 10)
 	case acc.SupplyMode_WHOLE_EXCLUSIVE:
-		if s.SharedMemoryMib != 0 || s.CoreLimitPercent != 100 || s.IsolationClass != "WHOLE_DEVICE_EXCLUSIVE" || e.MemoryBlocksPerDevice != 0 || e.SharedMemoryMib != 0 || e.MemoryPercentage != 100 || t.SharedMemoryMib != 0 || t.LogicalDeviceCount != 0 || t.ExclusiveDeviceCount != int64(r.Replicas) {
+		if int64(r.DevicesPerReplica) > math.MaxInt64/int64(r.Replicas) || s.SharedMemoryMib != 0 || s.CoreLimitPercent != 100 || s.IsolationClass != "WHOLE_DEVICE_EXCLUSIVE" || e.MemoryBlocksPerDevice != 0 || e.SharedMemoryMib != 0 || e.MemoryPercentage != 100 || t.SharedMemoryMib != 0 || t.LogicalDeviceCount != 0 || t.ExclusiveDeviceCount != int64(r.Replicas)*int64(r.DevicesPerReplica) {
 			return bad()
 		}
 		item = data.QuotaOccupyItem{QuotaCode: GpuPhysicalQuotaCode, Units: t.ExclusiveDeviceCount}

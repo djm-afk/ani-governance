@@ -226,7 +226,7 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 			return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid resolved business payload")
 		}
 	}
-	if instance, ok := business.(*res.CreateBusiness); ok && instance != nil && instance.Spec != nil && instance.Spec.InstanceType == "cpu" {
+	if instance, ok := business.(*res.CreateBusiness); ok && instance != nil && instance.Spec != nil && instance.Spec.InstanceKind == "container" && instance.Spec.ComputeType == "cpu" {
 		return s.acceptInstanceCPUCreate(ctx, p, tenant, actorID, key, requestHash, instance, businessBytes)
 	}
 	if gpu == nil || s.plans == nil {
@@ -243,6 +243,18 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 	item, err := GpuPlanQuota(plan)
 	if err != nil {
 		return nil, err
+	}
+	if instance, ok := business.(*res.CreateBusiness); ok {
+		if err := res.ValidateGpuBusinessPlan(instance, plan); err != nil {
+			return nil, instanceBusinessError(err)
+		}
+		if check, ok := s.binding.(interface {
+			ValidateResolvedInstancePlan(context.Context, *res.CreateBusiness, *acc.ResolvedGpuPlan) error
+		}); ok {
+			if err := check.ValidateResolvedInstancePlan(ctx, instance, plan); err != nil {
+				return nil, err
+			}
+		}
 	}
 	supported := false
 	for _, code := range s.binding.GpuQuotaCodes() {

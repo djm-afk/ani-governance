@@ -15,6 +15,9 @@ const InstanceGetPath = "/api/v1/instances/{instance_id}"
 const InstanceOperationPath = "/api/v1/instance-operations/{operation_id}"
 const InstancePresetPath = "/api/v1/instance-presets"
 const InstanceExecPath = "/api/v1/instances/{data.instance_id}/exec"
+const InstanceRuntimePath = "/api/v1/instances/{instance_id}/runtime"
+const InstanceEventsPath = "/api/v1/instances/{instance_id}/events"
+const InstanceLogsPath = "/api/v1/instances/{instance_id}/logs"
 
 func InstanceModuleRegistered() bool {
 	id, ok := identity.Module_value["INSTANCE"]
@@ -38,11 +41,20 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 		allowed = method == "DELETE"
 	case InstanceStartPath, InstanceStopPath, InstanceExecPath:
 		allowed = method == "POST"
-	case InstanceGetPath, InstanceOperationPath, InstancePresetPath:
+	case InstanceGetPath, InstanceOperationPath, InstancePresetPath, InstanceRuntimePath, InstanceEventsPath, InstanceLogsPath:
 		allowed = method == "GET"
 	}
 	if !allowed || r == nil || r.current == nil {
 		return ErrInferenceAuthorizationDenied
 	}
 	return r.current.authorizeRoute(ctx, tenant, user, path, "INSTANCE", method)
+}
+
+// The GPU catalog intersection uses the caller's current ACC permission and
+// entitlement as well as the independent INSTANCE entry gate.
+func (r *InstanceAuthorizationRepo) AuthorizeCatalog(ctx context.Context, tenant, user uint32) error {
+	if r == nil || r.current == nil {
+		return ErrInferenceAuthorizationDenied
+	}
+	return r.current.authorizeRoute(ctx, tenant, user, "/api/v1/accelerator/profiles", "ACCELERATOR", "GET")
 }

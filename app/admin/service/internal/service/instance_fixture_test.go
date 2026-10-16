@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-func instanceResourceProcess(t *testing.T, gpu *acc.GpuRequest) *data.InstanceClient {
-	testutil.StartInstanceResourcePeer(t, gpu)
+func instanceResourceProcess(t *testing.T, plan *acc.ResolvedGpuPlan) (*data.InstanceClient, *testutil.InstanceResourcePeer) {
+	peer := testutil.StartInstanceResourcePeer(t, plan)
 	client, closeClient, e := data.NewInstanceClientFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeClient)
-	return client
+	return client, peer
 }

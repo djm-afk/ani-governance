@@ -1,0 +1,334 @@
+{
+  "Whole1": {
+    "schema_version": 1,
+    "request": {
+      "cluster_id": "10000000-0000-4000-8000-000000000001",
+      "pool_id": "10000000-0000-4000-8000-000000000001",
+      "profile_id": "10000000-0000-4000-8000-000000000001",
+      "profile_version": 1,
+      "replicas": 1,
+      "devices_per_replica": 1,
+      "container_name": "workspace"
+    },
+    "profile": {
+      "profile_id": "10000000-0000-4000-8000-000000000001",
+      "profile_version": 1,
+      "display_name": "quantity contract",
+      "spec": {
+        "group_id": "10000000-0000-4000-8000-000000000001",
+        "mode": 1,
+        "model_key": "nvidia-test",
+        "shared_memory_mib": 0,
+        "core_limit_percent": 100,
+        "max_devices_per_replica": 2,
+        "isolation_class": "WHOLE_DEVICE_EXCLUSIVE"
+      },
+      "baseline_id": "10000000-0000-4000-8000-000000000001",
+      "spec_digest": "193a648385cec19cf4d9dc3143a3cf39d9a6cb5621780f85d45bf85d59e344aa",
+      "published": true
+    },
+    "encoding": {
+      "memory_block_mib": 1024,
+      "memory_blocks_per_device": 0,
+      "shared_memory_mib": 0,
+      "memory_percentage": 100,
+      "policy": "EXACT"
+    },
+    "totals": {
+      "logical_device_count": 0,
+      "exclusive_device_count": 1,
+      "shared_memory_mib": 0
+    },
+    "runtime": {
+      "scheduler_name": "volcano",
+      "queue_name": "gpu",
+      "node_labels": [
+        {
+          "key": "accelerator.ani.io/baseline-id",
+          "value": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "key": "accelerator.ani.io/model-key",
+          "value": "nvidia-test"
+        },
+        {
+          "key": "accelerator.ani.io/supply-group",
+          "value": "10000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "pod_annotations": [
+        {
+          "key": "volcano.sh/vgpu-mode",
+          "value": "hami-core"
+        }
+      ],
+      "limits_per_container": [
+        {
+          "key": "volcano.sh/vgpu-cores",
+          "value": "100"
+        },
+        {
+          "key": "volcano.sh/vgpu-memory-percentage",
+          "value": "100"
+        },
+        {
+          "key": "volcano.sh/vgpu-number",
+          "value": "1"
+        }
+      ],
+      "runtime_class_name": "",
+      "recipe_version": "volcano-hami-v1"
+    },
+    "baseline_digest": "71356a80cb4792eb68b4bef515724500ce2c541e1939150420d6215b43769f91",
+    "resolution_digest": "71b10f144e3f470ac4aacd9a15cc4610c21ab0dd2a1612ee182e04a35dc55718"
+  },
+  "Whole2": {
+    "schema_version": 1,
+    "request": {
+      "cluster_id": "10000000-0000-4000-8000-000000000001",
+      "pool_id": "10000000-0000-4000-8000-000000000001",
+      "profile_id": "10000000-0000-4000-8000-000000000001",
+      "profile_version": 1,
+      "replicas": 1,
+      "devices_per_replica": 2,
+      "container_name": "workspace"
+    },
+    "profile": {
+      "profile_id": "10000000-0000-4000-8000-000000000001",
+      "profile_version": 1,
+      "display_name": "quantity contract",
+      "spec": {
+        "group_id": "10000000-0000-4000-8000-000000000001",
+        "mode": 1,
+        "model_key": "nvidia-test",
+        "shared_memory_mib": 0,
+        "core_limit_percent": 100,
+        "max_devices_per_replica": 2,
+        "isolation_class": "WHOLE_DEVICE_EXCLUSIVE"
+      },
+      "baseline_id": "10000000-0000-4000-8000-000000000001",
+      "spec_digest": "193a648385cec19cf4d9dc3143a3cf39d9a6cb5621780f85d45bf85d59e344aa",
+      "published": true
+    },
+    "encoding": {
+      "memory_block_mib": 1024,
+      "memory_blocks_per_device": 0,
+      "shared_memory_mib": 0,
+      "memory_percentage": 100,
+      "policy": "EXACT"
+    },
+    "totals": {
+      "logical_device_count": 0,
+      "exclusive_device_count": 2,
+      "shared_memory_mib": 0
+    },
+    "runtime": {
+      "scheduler_name": "volcano",
+      "queue_name": "gpu",
+      "node_labels": [
+        {
+          "key": "accelerator.ani.io/baseline-id",
+          "value": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "key": "accelerator.ani.io/model-key",
+          "value": "nvidia-test"
+        },
+        {
+          "key": "accelerator.ani.io/supply-group",
+          "value": "10000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "pod_annotations": [
+        {
+          "key": "volcano.sh/vgpu-mode",
+          "value": "hami-core"
+        }
+      ],
+      "limits_per_container": [
+        {
+          "key": "volcano.sh/vgpu-cores",
+          "value": "100"
+        },
+        {
+          "key": "volcano.sh/vgpu-memory-percentage",
+          "value": "100"
+        },
+        {
+          "key": "volcano.sh/vgpu-number",
+          "value": "2"
+        }
+      ],
+      "runtime_class_name": "",
+      "recipe_version": "volcano-hami-v1"
+    },
+    "baseline_digest": "71356a80cb4792eb68b4bef515724500ce2c541e1939150420d6215b43769f91",
+    "resolution_digest": "ac3b6f0fbb23b7e83f3a8e60dffa81ca0f4f0efbf5d921164c1d6cfd40963ba8"
+  },
+  "Shared1": {
+    "schema_version": 1,
+    "request": {
+      "cluster_id": "10000000-0000-4000-8000-000000000001",
+      "pool_id": "10000000-0000-4000-8000-000000000001",
+      "profile_id": "10000000-0000-4000-8000-000000000001",
+      "profile_version": 1,
+      "replicas": 1,
+      "devices_per_replica": 1,
+      "container_name": "workspace"
+    },
+    "profile": {
+      "profile_id": "10000000-0000-4000-8000-000000000001",
+      "profile_version": 1,
+      "display_name": "quantity contract",
+      "spec": {
+        "group_id": "10000000-0000-4000-8000-000000000001",
+        "mode": 2,
+        "model_key": "nvidia-test",
+        "shared_memory_mib": 6144,
+        "core_limit_percent": 25,
+        "max_devices_per_replica": 1,
+        "isolation_class": "SOFTWARE_COOPERATIVE"
+      },
+      "baseline_id": "10000000-0000-4000-8000-000000000001",
+      "spec_digest": "a10a605b164c85aec29cfa13c5e870759da9833825c8a9af089540fbc708add9",
+      "published": true
+    },
+    "encoding": {
+      "memory_block_mib": 1024,
+      "memory_blocks_per_device": 6,
+      "shared_memory_mib": 6144,
+      "memory_percentage": 0,
+      "policy": "EXACT"
+    },
+    "totals": {
+      "logical_device_count": 1,
+      "exclusive_device_count": 0,
+      "shared_memory_mib": 6144
+    },
+    "runtime": {
+      "scheduler_name": "volcano",
+      "queue_name": "gpu",
+      "node_labels": [
+        {
+          "key": "accelerator.ani.io/baseline-id",
+          "value": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "key": "accelerator.ani.io/model-key",
+          "value": "nvidia-test"
+        },
+        {
+          "key": "accelerator.ani.io/supply-group",
+          "value": "10000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "pod_annotations": [
+        {
+          "key": "volcano.sh/vgpu-mode",
+          "value": "hami-core"
+        }
+      ],
+      "limits_per_container": [
+        {
+          "key": "volcano.sh/vgpu-cores",
+          "value": "25"
+        },
+        {
+          "key": "volcano.sh/vgpu-memory",
+          "value": "6"
+        },
+        {
+          "key": "volcano.sh/vgpu-number",
+          "value": "1"
+        }
+      ],
+      "runtime_class_name": "",
+      "recipe_version": "volcano-hami-v1"
+    },
+    "baseline_digest": "52245607efe2656462e8aba6b9660b2e5eb9abb55bc381892952fd77ff71a70a",
+    "resolution_digest": "f5a26dfa4ab11c379ec8ef6efa56056d22f05d4196a977d2e6b231edb10897d2"
+  },
+  "WholeProfileMax": {
+    "schema_version": 1,
+    "request": {
+      "cluster_id": "10000000-0000-4000-8000-000000000001",
+      "pool_id": "10000000-0000-4000-8000-000000000001",
+      "profile_id": "10000000-0000-4000-8000-000000000004",
+      "profile_version": 1,
+      "replicas": 1,
+      "devices_per_replica": 4,
+      "container_name": "workspace"
+    },
+    "profile": {
+      "profile_id": "10000000-0000-4000-8000-000000000004",
+      "profile_version": 1,
+      "display_name": "quantity contract",
+      "spec": {
+        "group_id": "10000000-0000-4000-8000-000000000001",
+        "mode": 1,
+        "model_key": "nvidia-test",
+        "shared_memory_mib": 0,
+        "core_limit_percent": 100,
+        "max_devices_per_replica": 4,
+        "isolation_class": "WHOLE_DEVICE_EXCLUSIVE"
+      },
+      "baseline_id": "10000000-0000-4000-8000-000000000001",
+      "spec_digest": "771f349d5b6e0cc0ea497f928c51e7e01f7290df71f9c9a7b76dc47849910699",
+      "published": true
+    },
+    "encoding": {
+      "memory_block_mib": 1024,
+      "memory_blocks_per_device": 0,
+      "shared_memory_mib": 0,
+      "memory_percentage": 100,
+      "policy": "EXACT"
+    },
+    "totals": {
+      "logical_device_count": 0,
+      "exclusive_device_count": 4,
+      "shared_memory_mib": 0
+    },
+    "runtime": {
+      "scheduler_name": "volcano",
+      "queue_name": "gpu",
+      "node_labels": [
+        {
+          "key": "accelerator.ani.io/baseline-id",
+          "value": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "key": "accelerator.ani.io/model-key",
+          "value": "nvidia-test"
+        },
+        {
+          "key": "accelerator.ani.io/supply-group",
+          "value": "10000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "pod_annotations": [
+        {
+          "key": "volcano.sh/vgpu-mode",
+          "value": "hami-core"
+        }
+      ],
+      "limits_per_container": [
+        {
+          "key": "volcano.sh/vgpu-cores",
+          "value": "100"
+        },
+        {
+          "key": "volcano.sh/vgpu-memory-percentage",
+          "value": "100"
+        },
+        {
+          "key": "volcano.sh/vgpu-number",
+          "value": "4"
+        }
+      ],
+      "runtime_class_name": "",
+      "recipe_version": "volcano-hami-v1"
+    },
+    "baseline_digest": "71356a80cb4792eb68b4bef515724500ce2c541e1939150420d6215b43769f91",
+    "resolution_digest": "4c7709806c8bbb80363f36795713b0b45657e9ec455699880e8c027a9b6a35f5"
+  }
+}

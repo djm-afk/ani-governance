@@ -44,7 +44,7 @@ func DecodeInstanceCPUCanonical(raw []byte) (*InstanceCPUCanonical, error) {
 		return nil, invalid
 	}
 	business, e := res.DecodeBusinessPayload(c.BusinessPayload)
-	if e != nil || business == nil || business.Data == nil || business.Spec == nil || business.Gpu != nil || business.Spec.InstanceType != "cpu" {
+	if e != nil || business == nil || business.Data == nil || business.Spec == nil || business.Gpu != nil || business.Spec.InstanceKind != "container" || business.Spec.ComputeType != "cpu" {
 		return nil, invalid
 	}
 	s := business.Spec

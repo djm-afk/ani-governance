@@ -23,6 +23,7 @@ import (
 	"go-wind-admin/app/admin/service/internal/data/ent/quotaoperation"
 	"go-wind-admin/app/admin/service/internal/data/ent/role"
 	"go-wind-admin/app/admin/service/internal/data/ent/rolepermission"
+	"go-wind-admin/app/admin/service/internal/data/ent/sysconfig"
 	"go-wind-admin/app/admin/service/internal/data/ent/user"
 	"go-wind-admin/app/admin/service/internal/data/ent/userrole"
 	"go-wind-admin/app/admin/service/tests/testutil"
@@ -31,6 +32,7 @@ import (
 	"go-wind-admin/pkg/middleware/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 // These two doubles are only the Resource resolution and Acc RPC boundaries.
@@ -42,15 +44,15 @@ type instanceResolutionPeer struct {
 	unavailable bool
 }
 
-func (p *instanceResolutionPeer) Resolve(ctx context.Context, tenant, actor string, d *res.CreateInstanceData) (*res.CreateBusiness, error) {
+func (p *instanceResolutionPeer) Resolve(ctx context.Context, tenant, actor string, d *res.CreateInstanceData, defaults *res.SchedulingOptions) (*res.CreateBusiness, error) {
 	p.calls++
 	if p.unavailable {
 		return nil, errors.New("external image/preset unavailable")
 	}
 	if p.InstanceOwnerClient != nil {
-		return p.InstanceOwnerClient.Resolve(ctx, tenant, actor, d)
+		return p.InstanceOwnerClient.Resolve(ctx, tenant, actor, d, defaults)
 	}
-	return &res.CreateBusiness{Data: proto.Clone(d).(*res.CreateInstanceData), Gpu: proto.Clone(p.plan.Request).(*acc.GpuRequest), Spec: &res.FrozenSpec{ImageReference: "registry.invalid/work@sha256:" + strings.Repeat("a", 64), ImageDigest: "sha256:" + strings.Repeat("a", 64), Cpu: "1", Memory: "2Gi", ClusterId: p.plan.Request.ClusterId, Namespace: "tenant-" + tenant, ServiceAccount: "workload", StorageClass: "ani-block", WorkspaceSize: "1Gi", Shell: "/bin/sh", Uid: 1000, Gid: 1000}}, nil
+	return nil, errors.New("Resource resolution peer required")
 }
 
 type instancePlanPeer struct {
@@ -75,7 +77,7 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 	t.Run("cpu", func(t *testing.T) { instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t, true) })
 }
 
-func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu bool) {
+func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu bool, schedulingScenario ...bool) {
 	c := testutil.NewQuotaPGClient(t)
 	testutil.ResetQuotaFixture(t, c)
 	sys := appViewer.NewSystemViewerContext(context.Background())
@@ -125,14 +127,29 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 	plan.Totals.SharedMemoryMib = plan.Profile.Spec.SharedMemoryMib
 	plan.ResolutionDigest, e = GpuPlanDigest(plan)
 	require.NoError(t, e)
-	gpu, expectedPlanCalls, preset := plan.Request, 1, "shared"
+	fixturePlan, expectedPlanCalls := plan, 1
 	if cpu {
-		gpu, expectedPlanCalls, preset = nil, 0, "cpu"
+		fixturePlan, expectedPlanCalls = nil, 0
 	}
-	owner := instanceResourceProcess(t, gpu)
+	owner, peer := instanceResourceProcess(t, fixturePlan)
 	resource := &instanceResolutionPeer{InstanceOwnerClient: owner, plan: plan}
 	plans := &instancePlanPeer{plan: plan}
-	binding := NewInstanceGpuBinding(resource, data.NewInstanceAuthorizationRepo(c))
+	var schedulingStore *instanceSchedulingReplayStore
+	var settingsRepo *data.ConfigRepo
+	var schedulingPolicy *InstanceSchedulingPolicy
+	if len(schedulingScenario) > 0 && schedulingScenario[0] {
+		require.True(t, cpu)
+		settingsRepo = data.NewConfigRepo(bctx, c, nil)
+		t.Cleanup(settingsRepo.Close)
+		t.Cleanup(func() {
+			_, err := c.Client().SysConfig.Delete().Where(sysconfig.KeyEQ("instance.scheduling." + peer.ClusterID)).Exec(sys)
+			require.NoError(t, err)
+		})
+		require.NoError(t, settingsRepo.SaveInstanceSchedulingSettings(sys, peer.ClusterID, operator.ID, []byte(`{"defaults":{"pod_placement":"SPREAD_PREFERRED"},"priority_class_allowlists":[]}`)))
+		schedulingStore = &instanceSchedulingReplayStore{InstanceSchedulingStore: settingsRepo}
+		schedulingPolicy = NewInstanceSchedulingPolicy(schedulingStore, data.NewTenantRepo(bctx, c), &instanceSettingsClusterProbe{}, peer.ClusterID)
+	}
+	binding := NewInstanceGpuBinding(resource, data.NewInstanceAuthorizationRepo(c), peer.ClusterID, schedulingPolicy)
 	registry := NewQuotaAdapterRegistry()
 	require.NoError(t, registry.Register(binding))
 	ledger := data.NewQuotaLedgerRepo(bctx, c)
@@ -143,7 +160,7 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 	acceptance, e := NewGpuAcceptance(ledger, registry, data.NewTenantRepo(bctx, c), planResolver, binding, nil)
 	require.NoError(t, e)
 	key := uuid.NewString()
-	public := &res.CreateInstanceData{Name: "workspace", ImageId: "img_" + strings.ReplaceAll(uuid.NewString(), "-", ""), ImageScope: "platform", PresetId: preset, PresetVersion: 1}
+	public := &res.CreateInstanceData{Name: "workspace", ImageId: "img_" + strings.ReplaceAll(uuid.NewString(), "-", ""), ImageScope: "platform", PresetId: peer.PresetID}
 	first, e := acceptance.AcceptGpuCreate(requestCtx, key, nil, public)
 	require.NoError(t, e)
 	require.False(t, first.Replayed)
@@ -169,6 +186,32 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 	require.NoError(t, e)
 	require.Equal(t, first.OperationID, instance.CreateOperationId)
 	require.EqualValues(t, 1, instance.Version)
+	require.Equal(t, "container", instance.InstanceKind)
+	require.Equal(t, peer.PresetID, instance.PresetId)
+	require.Equal(t, "1000m", instance.Cpu)
+	require.Equal(t, "2048Mi", instance.Memory)
+	require.NotNil(t, instance.Scheduling)
+	expectedPlacement := res.SchedulingOptions_NONE
+	if schedulingStore != nil {
+		expectedPlacement = res.SchedulingOptions_SPREAD_PREFERRED
+		require.Equal(t, 1, schedulingStore.reads)
+	}
+	require.Equal(t, expectedPlacement, instance.Scheduling.GetPodPlacement())
+	if cpu {
+		require.Equal(t, "cpu", instance.ComputeType)
+		require.Nil(t, instance.GpuSummary)
+	} else {
+		require.Equal(t, "gpu", instance.ComputeType)
+		require.NotNil(t, instance.GpuSummary)
+		require.Equal(t, plan.Request.ProfileId, instance.GpuSummary.ProfileId)
+		require.Equal(t, plan.Request.DevicesPerReplica, instance.GpuSummary.DevicesPerInstance)
+	}
+	if schedulingStore != nil {
+		require.NoError(t, settingsRepo.SaveInstanceSchedulingSettings(sys, peer.ClusterID, operator.ID, []byte(`{"defaults":{"pod_placement":"COLOCATE_PREFERRED"},"priority_class_allowlists":[]}`)))
+		_, err := owner.AdminUpdatePreset(sys, "governance:user:1", &res.AdminUpdatePresetRequest{Id: peer.PresetID, Data: &res.PresetData{CpuMillis: 2000, MemoryMib: 4096}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"cpu_millis", "memory_mib"}}})
+		require.NoError(t, err)
+		schedulingStore.fail = true
+	}
 	resource.unavailable = true
 	plans.unavailable = true
 	replay, e := acceptance.AcceptGpuCreate(requestCtx, key, nil, public)
@@ -178,6 +221,20 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 	require.Equal(t, first.ChargeIDs, replay.ChargeIDs)
 	require.Equal(t, 1, resource.calls)
 	require.Equal(t, expectedPlanCalls, plans.calls)
+	if schedulingStore != nil {
+		require.Equal(t, 1, schedulingStore.reads, "original replay must not query today's changed or unavailable settings")
+		frozen, err := owner.Get(requestCtx, tenant.ResourceTenantID, "governance:user:"+strconv.FormatUint(uint64(operator.ID), 10), first.ResourceID)
+		require.NoError(t, err)
+		require.Equal(t, "1000m", frozen.Cpu)
+		require.Equal(t, "2048Mi", frozen.Memory)
+		require.Equal(t, res.SchedulingOptions_SPREAD_PREFERRED, frozen.Scheduling.GetPodPlacement())
+	}
+	explicitNone := proto.Clone(public).(*res.CreateInstanceData)
+	explicitNone.Scheduling = &res.SchedulingOptions{PodPlacement: res.SchedulingOptions_NONE.Enum()}
+	_, e = acceptance.AcceptGpuCreate(requestCtx, key, nil, explicitNone)
+	require.Error(t, e, "omitted scheduling and explicit NONE are different original requests")
+	require.Equal(t, 1, resource.calls, "idempotency conflict must not resolve current defaults")
+	require.Equal(t, expectedPlanCalls, plans.calls, "idempotency conflict must not resolve another GPU plan")
 	changed := proto.Clone(public).(*res.CreateInstanceData)
 	changed.Name = "different"
 	_, e = acceptance.AcceptGpuCreate(requestCtx, key, nil, changed)
@@ -221,8 +278,23 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 		require.Equal(t, "delete", owned.Action)
 		require.NotEqual(t, "QUEUED", owned.State, "ACKED reads Resource operation progress")
 		resource.unavailable = false
+		if schedulingStore != nil {
+			schedulingStore.fail = false
+		}
 		unsent, e := acceptance.AcceptGpuCreate(requestCtx, uuid.NewString(), nil, public)
 		require.NoError(t, e)
+		if schedulingStore != nil {
+			require.Equal(t, 2, schedulingStore.reads)
+			operation, err := ledger.GetOperationForUser(requestCtx, tenant.ID, unsent.OperationID)
+			require.NoError(t, err)
+			command, err := data.DecodeInstanceCPUCanonical([]byte(operation.CanonicalRequest))
+			require.NoError(t, err)
+			business, err := res.DecodeBusinessPayload(command.BusinessPayload)
+			require.NoError(t, err)
+			require.Equal(t, "2000m", business.Spec.Cpu)
+			require.Equal(t, "4096Mi", business.Spec.Memory)
+			require.Equal(t, res.SchedulingOptions_COLOCATE_PREFERRED, business.Spec.Scheduling.GetPodPlacement())
+		}
 		canceled, e := acceptance.AcceptGpuDeleteVersion(requestCtx, uuid.NewString(), unsent.ResourceID, 1)
 		require.NoError(t, e)
 		require.Equal(t, "CANCELED_BEFORE_DISPATCH", canceled.Result)

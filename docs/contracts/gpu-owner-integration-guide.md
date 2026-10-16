@@ -1,6 +1,6 @@
 # GPU owner 接入、关闭与释放指南
 
-本文面向 Inference 和后续 GPU 业务服务，描述 Governance 的创建接线与累计退额合同。`GOV-ACC-INF-V12-WIRING-01` 新增正式 Inference BFF、编译注册 adapter、公开退额 API 和固定 owner 身份装配；具体软件验收与发布版本以本批结果索引为准。未配置 Inference 客户端或缺少当前套餐/动作授权时继续拒绝新创建。持久 ACK 与受控注入退额不证明模型运行、物理释放或生产验收。
+本文面向 Inference 和后续 GPU 业务服务，描述 Governance 的创建接线与累计退额合同。基础接线源自 `GOV-ACC-INF-V12-WIRING-01` 的 Inference BFF、编译注册 adapter、公开退额 API 和固定 owner 身份装配；当前容器实例批次增加按 Profile 上限通用化的整卡数量合同，实际消费版本以本仓 go.mod/go.sum 为准。未配置 Inference 客户端或缺少当前套餐/动作授权时继续拒绝新创建。持久 ACK 与受控注入退额不证明模型运行、物理释放或生产验收。
 
 独立持久化测试 owner 只存在于 `app/admin/service/tests/contracts/gpu/*_test.go`。它运行真实 PostgreSQL 命令、墓碑和通知事务，但不创建 Kubernetes 工作负载，不实现 Inference，不证明物理 GPU 清理。软件、真实 owner、硬件和生产部署的结论必须分别记录。
 
@@ -9,14 +9,14 @@
 | 层 | 本文所需能力及版本门槛 | 当前边界 |
 |---|---|---|
 | Governance | 最低实现版本为 **`bd9ad1a33bbe8ce28f4faeb19bfc9ee494ae8a84`**：`GpuAcceptance`、schema 2 canonical、`gpu-metering-v1`、完整配额账本（当前已恢复 Ent；下列 SHA 为历史交付版本）、DELETE acceptance、独立 usage sync、严格 ACK/GPU release 校验 | 源码 manifest、版本对和后续证据提交写入[交付记录](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/evidence/gov-acc-v12-01/release/closeout.md)。任务起点 `0fbe1a69e49cc23dc7a1696b62f68c34a7c6a48a` 不包含这些能力 |
-| Accelerator | 最低固定交付 SHA `1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3`；`accelerator.v1`、`accelerator.integration.v1`、22 RPC、公开附件及本批运行时整改 | 已发布的任务分支提交；这不表示生产部署、真实 owner 或硬件已经通过 |
-| 跨仓依赖 | 本仓 [go.mod](../../go.mod) / [go.sum](../../go.sum) 固定 `v0.0.0-20260924030150-1d32dd9a9173`，对应上行 Acc SHA | 上述 Gov 实现与该模块已完成 Fedora 软件验收；精确CI状态和用户接受不等待Gov CI的边界见交付记录。旧API基线联调不能认证新模块 |
+| Accelerator | 当前数量与配置摘要合同固定交付 SHA `c1242866d9877d4fd5dee934ddc80e8ec8b23ad9`；`accelerator.v1`、`accelerator.integration.v1`、公开附件及单一配置保护摘要 | 已发布的任务分支提交；这不表示生产部署、真实 owner 或硬件已经通过 |
+| 跨仓依赖 | 本仓 [go.mod](../../go.mod) / [go.sum](../../go.sum) 固定 `v0.0.0-20261016163330-c1242866d987`，对应上行 Acc SHA | 通过正常 Go 模块下载核对 Origin.Hash、Sum 与 GoModSum；本批定向检查与原实际 CPU/Pod 字段证据分别记录，不表示共享部署或硬件验收 |
 | 当前 owner | `ani-inference`，固定单 owner 的 ref、身份、公钥和查询约束 | 正式 Inference adapter 源码已接入；实际环境启用仍需受管连接、当前授权、额度和身份；第二 owner 未实现 |
-| 未开放能力 | 任意 owner、自报 URL/RPC 转发、在线 GPU 扩缩、额外 GPU 容器/滚动副本、多设备容器 | 均不能仅改配置或更换名称启用 |
+| 未开放能力 | 任意 owner、自报 URL/RPC 转发、在线 GPU 扩缩、额外 GPU 容器/滚动副本 | 均不能仅改配置或更换名称启用 |
 
 接入评审必须先填写最低 Gov SHA、最低 Acc SHA、实际 Go 模块版本与 sum、数据库迁移版本和两仓受测版本对；未锁定前只可做接口开发，不能据本文宣布接入验收完成。使用 `GOWORK=off` 正式消费模块，不使用兄弟目录 `replace`、复制 Proto 或跨仓 `internal` 导入。
 
-字段权威来源是上述固定版本 Acc 的 [Proto](https://github.com/zhangzhe-ctrl/ani-accelerator-service/tree/1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3/api/protos/accelerator)、[消费合同](https://github.com/zhangzhe-ctrl/ani-accelerator-service/blob/1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3/docs/contracts/accelerator-consumer-contract.md)和[固定向量](https://github.com/zhangzhe-ctrl/ani-accelerator-service/blob/1d32dd9a9173b8869fa0ef2ae64e20b88f2ca0a3/docs/contracts/accelerator-vectors.json)。Governance 保留了用于逐字回归的[固定向量](../../app/admin/service/internal/service/testdata/accelerator-vectors.json)；它是测试输入，不是另一个 API 定义。本文的实现索引如下：
+字段权威来源是上述固定版本 Acc 的 [Proto](https://github.com/zhangzhe-ctrl/ani-accelerator-service/tree/c1242866d9877d4fd5dee934ddc80e8ec8b23ad9/api/protos/accelerator)、[消费合同](https://github.com/zhangzhe-ctrl/ani-accelerator-service/blob/c1242866d9877d4fd5dee934ddc80e8ec8b23ad9/docs/contracts/accelerator-consumer-contract.md)和[固定向量](https://github.com/zhangzhe-ctrl/ani-accelerator-service/blob/c1242866d9877d4fd5dee934ddc80e8ec8b23ad9/docs/contracts/accelerator-vectors.json)。Governance 保留了用于逐字回归的[固定向量](../../app/admin/service/internal/service/testdata/accelerator-vectors.json)；它是测试输入，不是另一个 API 定义；[数量向量](../../app/admin/service/internal/service/testdata/accelerator-quantity-vectors.json)包含同一规则下的单卡/两卡/共享与较高 Profile 上限，源自真实 BuildPlan。本文的实现索引如下：
 
 | 接缝 | Governance 权威实现 |
 |---|---|
@@ -108,7 +108,9 @@ Gov→Inference 配置为 `ANI_INFERENCE_ADDR`、`ANI_INFERENCE_CA_FILE`、`ANI_
 
 ## 5. 请求、规范摘要与计量
 
-首期固定 `replicas=1..16`、`devices_per_replica=1`，每 Pod 一个指定 GPU 容器。profile ID 和 version 必须具体；零枚举、负数量、浮点、溢出、未知字段和不支持的形态必须拒绝。
+`replicas=1..16`，每 Pod 一个指定 GPU 容器。整卡数量 `devices_per_replica` 为正整数且不超过选定 Profile 的 `max_devices_per_replica`，共享 Profile 仍要求单卡；副本数与每副本卡数分别传递，总卡数按两者乘积校验溢出。profile ID 和 version 必须具体；零枚举、负数量、浮点、溢出、未知字段和不支持的形态必须拒绝。数量合同通用化不代表多卡容量探测或真实模型运行已验收，也不解禁 GPU LWS。
+
+本批通用数量交付用于容器实例。按用户收口范围，Inference 保留既有正式模块及单卡公开入口，不接入本次未发布的推理数量改动；Gov 推理 HTTP 仍使用四个 Profile 选择字段，不新增数量字段。
 
 `GpuRequest` 的字段/tag 是 `cluster_id=1`、`pool_id=2`、`profile_id=3`、`profile_version=4`、`replicas=5`、`devices_per_replica=6`、`container_name=7`。三个目录 ID 必须一致归属，容器名须是合法实际 GPU 容器名。固定版本的公开 Proto、当前运行时和 owner 合同均按首期 1..16；真实 owner 仍须验收其实际支持的副本上限。
 

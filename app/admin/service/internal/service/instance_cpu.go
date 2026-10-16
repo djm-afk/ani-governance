@@ -15,7 +15,7 @@ import (
 )
 
 func (s *GpuAcceptance) acceptInstanceCPUCreate(ctx context.Context, p *auth.Principal, tenant, actorID, key, requestHash string, business *res.CreateBusiness, raw []byte) (*data.QuotaOccupyResult, error) {
-	if _, ok := s.binding.(*InstanceGpuBinding); !ok || business.Gpu != nil || business.Spec.InstanceType != "cpu" {
+	if _, ok := s.binding.(*InstanceGpuBinding); !ok || business.Gpu != nil || business.Spec.InstanceKind != "container" || business.Spec.ComputeType != "cpu" {
 		return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid CPU instance resolution")
 	}
 	digest, e := res.BusinessPayloadDigest(business)
