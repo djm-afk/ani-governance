@@ -105,12 +105,12 @@ func instanceSchedulingDefaults(settings *view.InstanceSchedulingSettings) *res.
 	}
 	return out
 }
-func (p *InstanceSchedulingPolicy) authorizePriority(ctx context.Context, principal *auth.Principal, resourceTenant string, settings *view.InstanceSchedulingSettings, business *res.CreateBusiness) error {
+func (p *InstanceSchedulingPolicy) authorizePriority(ctx context.Context, principal *auth.Principal, resourceTenant string, settings *view.InstanceSchedulingSettings, business *res.CreateSpec) error {
 	// No reference means no tenant allowlist/mapping/cluster read dependency.
-	if business == nil || business.Spec == nil || business.Spec.Scheduling == nil {
+	if business == nil || business.Scheduling == nil {
 		return errors.BadRequest("INVALID_SCHEDULING_OPTIONS", "effective scheduling is required")
 	}
-	name := business.Spec.Scheduling.PriorityClassName
+	name := business.Scheduling.PriorityClassName
 	if name == nil {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (p *InstanceSchedulingPolicy) authorizePriority(ctx context.Context, princi
 	if mapped != resourceTenant {
 		return errors.Forbidden("SCHEDULING_OPTION_DENIED", "priority class reference denied")
 	}
-	if business.Spec.ClusterId != p.clusterID {
+	if business.ClusterId != p.clusterID {
 		return errors.BadRequest("SCHEDULING_FIELD_CONFLICT", "instance cluster differs from configured cluster")
 	}
 	return p.cluster.PriorityClassExists(ctx, *name)
@@ -198,19 +198,19 @@ func (s *InstanceService) UpdateInstanceSchedulingSettings(ctx context.Context, 
 	return out, nil
 }
 
-func (b *InstanceGpuBinding) ValidateResolvedInstancePlan(ctx context.Context, business *res.CreateBusiness, plan *acc.ResolvedGpuPlan) error {
-	if business == nil || business.Spec == nil || business.Spec.Scheduling == nil {
+func (b *InstanceGpuBinding) ValidateResolvedInstancePlan(ctx context.Context, business *res.CreateSpec, plan *acc.ResolvedGpuRequest) error {
+	if business == nil || business.Scheduling == nil {
 		return errors.BadRequest("INVALID_SCHEDULING_OPTIONS", "effective scheduling required")
 	}
-	name := business.Spec.Scheduling.PriorityClassName
+	name := business.Scheduling.PriorityClassName
 	if name == nil {
 		return nil
 	}
-	if plan == nil || plan.Runtime == nil || plan.Runtime.SchedulerName != "volcano" {
+	if plan == nil || plan.Execution == nil || plan.Execution.SchedulerName != "volcano" {
 		return errors.BadRequest("SCHEDULING_OPTION_UNSUPPORTED", "GPU runtime does not support the priority reference")
 	}
-	for _, annotation := range plan.Runtime.PodAnnotations {
-		if annotation == nil || annotation.Key != "scheduling.k8s.io/group-name" || annotation.Value == "" {
+	for key, value := range plan.Execution.PodAnnotations {
+		if key != "scheduling.k8s.io/group-name" || value == "" {
 			continue
 		}
 		if b == nil || b.scheduling == nil {
@@ -222,7 +222,7 @@ func (b *InstanceGpuBinding) ValidateResolvedInstancePlan(ctx context.Context, b
 		if !ok {
 			return errors.BadRequest("SCHEDULING_OPTION_UNSUPPORTED", "GPU runtime priority path is unavailable")
 		}
-		if err := checker.PriorityClassRuntimeCompatible(ctx, business.Spec.Namespace, annotation.Value, *name); err != nil {
+		if err := checker.PriorityClassRuntimeCompatible(ctx, business.Namespace, value, *name); err != nil {
 			return err
 		}
 	}

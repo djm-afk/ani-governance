@@ -1224,17 +1224,17 @@ func (x *Operation) GetReason() string {
 }
 
 type GpuSummary struct {
-	state                    protoimpl.MessageState `protogen:"open.v1"`
-	ProfileId                string                 `protobuf:"bytes,1,opt,name=profile_id,proto3" json:"profile_id,omitempty"`
-	ProfileVersion           uint64                 `protobuf:"varint,2,opt,name=profile_version,proto3" json:"profile_version,omitempty"`
-	Mode                     string                 `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
-	ModelKey                 string                 `protobuf:"bytes,4,opt,name=model_key,proto3" json:"model_key,omitempty"`
-	DevicesPerInstance       uint32                 `protobuf:"varint,5,opt,name=devices_per_instance,proto3" json:"devices_per_instance,omitempty"`
-	SharedMemoryMibPerDevice *wrapperspb.Int64Value `protobuf:"bytes,6,opt,name=shared_memory_mib_per_device,proto3" json:"shared_memory_mib_per_device,omitempty"`
-	SharedMemoryMibTotal     *wrapperspb.Int64Value `protobuf:"bytes,7,opt,name=shared_memory_mib_total,proto3" json:"shared_memory_mib_total,omitempty"`
-	CoreLimitPercent         uint32                 `protobuf:"varint,8,opt,name=core_limit_percent,proto3" json:"core_limit_percent,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ProfileId          string                 `protobuf:"bytes,1,opt,name=profile_id,proto3" json:"profile_id,omitempty"`
+	ProfileVersion     uint64                 `protobuf:"varint,2,opt,name=profile_version,proto3" json:"profile_version,omitempty"`
+	Mode               string                 `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
+	ModelKey           string                 `protobuf:"bytes,4,opt,name=model_key,proto3" json:"model_key,omitempty"`
+	DevicesPerInstance uint32                 `protobuf:"varint,5,opt,name=devices_per_instance,proto3" json:"devices_per_instance,omitempty"`
+	MemoryMibPerDevice int64                  `protobuf:"varint,9,opt,name=memory_mib_per_device,proto3" json:"memory_mib_per_device,omitempty"`
+	MemoryMibTotal     int64                  `protobuf:"varint,10,opt,name=memory_mib_total,proto3" json:"memory_mib_total,omitempty"`
+	CoreLimitPercent   uint32                 `protobuf:"varint,8,opt,name=core_limit_percent,proto3" json:"core_limit_percent,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GpuSummary) Reset() {
@@ -1302,18 +1302,18 @@ func (x *GpuSummary) GetDevicesPerInstance() uint32 {
 	return 0
 }
 
-func (x *GpuSummary) GetSharedMemoryMibPerDevice() *wrapperspb.Int64Value {
+func (x *GpuSummary) GetMemoryMibPerDevice() int64 {
 	if x != nil {
-		return x.SharedMemoryMibPerDevice
+		return x.MemoryMibPerDevice
 	}
-	return nil
+	return 0
 }
 
-func (x *GpuSummary) GetSharedMemoryMibTotal() *wrapperspb.Int64Value {
+func (x *GpuSummary) GetMemoryMibTotal() int64 {
 	if x != nil {
-		return x.SharedMemoryMibTotal
+		return x.MemoryMibTotal
 	}
-	return nil
+	return 0
 }
 
 func (x *GpuSummary) GetCoreLimitPercent() uint32 {
@@ -1324,20 +1324,22 @@ func (x *GpuSummary) GetCoreLimitPercent() uint32 {
 }
 
 type Preset struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Code          string                 `protobuf:"bytes,7,opt,name=code,proto3" json:"code,omitempty"`
-	Description   string                 `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
-	ComputeType   string                 `protobuf:"bytes,9,opt,name=compute_type,proto3" json:"compute_type,omitempty"`
-	CpuMillis     int64                  `protobuf:"varint,10,opt,name=cpu_millis,proto3" json:"cpu_millis,omitempty"`
-	MemoryMib     int64                  `protobuf:"varint,11,opt,name=memory_mib,proto3" json:"memory_mib,omitempty"`
-	Enabled       bool                   `protobuf:"varint,12,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Gpu           *GpuSummary            `protobuf:"bytes,13,opt,name=gpu,proto3" json:"gpu,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,14,opt,name=created_at,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,15,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Code              string                 `protobuf:"bytes,7,opt,name=code,proto3" json:"code,omitempty"`
+	Description       string                 `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
+	ComputeType       string                 `protobuf:"bytes,9,opt,name=compute_type,proto3" json:"compute_type,omitempty"`
+	CpuMillis         int64                  `protobuf:"varint,10,opt,name=cpu_millis,proto3" json:"cpu_millis,omitempty"`
+	MemoryMib         int64                  `protobuf:"varint,11,opt,name=memory_mib,proto3" json:"memory_mib,omitempty"`
+	Enabled           bool                   `protobuf:"varint,12,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Gpu               *GpuSummary            `protobuf:"bytes,13,opt,name=gpu,proto3" json:"gpu,omitempty"`
+	CreatedAt         string                 `protobuf:"bytes,14,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	UpdatedAt         string                 `protobuf:"bytes,15,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
+	Selectable        bool                   `protobuf:"varint,16,opt,name=selectable,proto3" json:"selectable,omitempty"`
+	UnavailableReason string                 `protobuf:"bytes,17,opt,name=unavailable_reason,proto3" json:"unavailable_reason,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Preset) Reset() {
@@ -1443,6 +1445,20 @@ func (x *Preset) GetCreatedAt() string {
 func (x *Preset) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *Preset) GetSelectable() bool {
+	if x != nil {
+		return x.Selectable
+	}
+	return false
+}
+
+func (x *Preset) GetUnavailableReason() string {
+	if x != nil {
+		return x.UnavailableReason
 	}
 	return ""
 }
@@ -3269,7 +3285,7 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x06action\x18\x03 \x01(\tR\x06action\x12%\n" +
 	"\x0eintent_version\x18\x04 \x01(\x03R\rintentVersion\x12\x14\n" +
 	"\x05state\x18\x05 \x01(\tR\x05state\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xa4\x03\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\x91\x03\n" +
 	"\n" +
 	"GpuSummary\x12\x1e\n" +
 	"\n" +
@@ -3278,10 +3294,11 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x0fprofile_version\x18\x02 \x01(\x04R\x0fprofile_version\x12\x12\n" +
 	"\x04mode\x18\x03 \x01(\tR\x04mode\x12\x1c\n" +
 	"\tmodel_key\x18\x04 \x01(\tR\tmodel_key\x122\n" +
-	"\x14devices_per_instance\x18\x05 \x01(\rR\x14devices_per_instance\x12_\n" +
-	"\x1cshared_memory_mib_per_device\x18\x06 \x01(\v2\x1b.google.protobuf.Int64ValueR\x1cshared_memory_mib_per_device\x12U\n" +
-	"\x17shared_memory_mib_total\x18\a \x01(\v2\x1b.google.protobuf.Int64ValueR\x17shared_memory_mib_total\x12.\n" +
-	"\x12core_limit_percent\x18\b \x01(\rR\x12core_limit_percent\"\x90\x03\n" +
+	"\x14devices_per_instance\x18\x05 \x01(\rR\x14devices_per_instance\x124\n" +
+	"\x15memory_mib_per_device\x18\t \x01(\x03R\x15memory_mib_per_device\x12*\n" +
+	"\x10memory_mib_total\x18\n" +
+	" \x01(\x03R\x10memory_mib_total\x12.\n" +
+	"\x12core_limit_percent\x18\b \x01(\rR\x12core_limit_percentJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x1cshared_memory_mib_per_deviceR\x17shared_memory_mib_total\"\xe0\x03\n" +
 	"\x06Preset\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
@@ -3302,7 +3319,11 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"created_at\x12\x1e\n" +
 	"\n" +
 	"updated_at\x18\x0f \x01(\tR\n" +
-	"updated_atJ\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\aversionR\x03cpuR\x06memoryR\rinstance_type\"\xbe\x01\n" +
+	"updated_at\x12\x1e\n" +
+	"\n" +
+	"selectable\x18\x10 \x01(\bR\n" +
+	"selectable\x12.\n" +
+	"\x12unavailable_reason\x18\x11 \x01(\tR\x12unavailable_reasonJ\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\aversionR\x03cpuR\x06memoryR\rinstance_type\"\xbe\x01\n" +
 	"\x13ListPresetsResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.instance.service.v1.PresetR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\x12.\n" +
@@ -3514,10 +3535,10 @@ var file_instance_service_v1_instance_proto_goTypes = []any{
 	(*InstanceSchedulingSettings)(nil),              // 45: instance.service.v1.InstanceSchedulingSettings
 	(*InstanceSchedulingSettingsRequest)(nil),       // 46: instance.service.v1.InstanceSchedulingSettingsRequest
 	(*UpdateInstanceSchedulingSettingsRequest)(nil), // 47: instance.service.v1.UpdateInstanceSchedulingSettingsRequest
-	(*wrapperspb.Int64Value)(nil),                   // 48: google.protobuf.Int64Value
-	(*fieldmaskpb.FieldMask)(nil),                   // 49: google.protobuf.FieldMask
-	(*wrapperspb.Int32Value)(nil),                   // 50: google.protobuf.Int32Value
-	(*timestamppb.Timestamp)(nil),                   // 51: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),                   // 48: google.protobuf.FieldMask
+	(*wrapperspb.Int32Value)(nil),                   // 49: google.protobuf.Int32Value
+	(*timestamppb.Timestamp)(nil),                   // 50: google.protobuf.Timestamp
+	(*wrapperspb.Int64Value)(nil),                   // 51: google.protobuf.Int64Value
 	(*wrapperspb.StringValue)(nil),                  // 52: google.protobuf.StringValue
 }
 var file_instance_service_v1_instance_proto_depIdxs = []int32{
@@ -3529,38 +3550,36 @@ var file_instance_service_v1_instance_proto_depIdxs = []int32{
 	17, // 5: instance.service.v1.Instance.gpu_summary:type_name -> instance.service.v1.GpuSummary
 	2,  // 6: instance.service.v1.Instance.scheduling:type_name -> instance.service.v1.SchedulingOptions
 	13, // 7: instance.service.v1.ListInstancesResponse.items:type_name -> instance.service.v1.Instance
-	48, // 8: instance.service.v1.GpuSummary.shared_memory_mib_per_device:type_name -> google.protobuf.Int64Value
-	48, // 9: instance.service.v1.GpuSummary.shared_memory_mib_total:type_name -> google.protobuf.Int64Value
-	17, // 10: instance.service.v1.Preset.gpu:type_name -> instance.service.v1.GpuSummary
-	18, // 11: instance.service.v1.ListPresetsResponse.items:type_name -> instance.service.v1.Preset
-	20, // 12: instance.service.v1.PresetData.gpu:type_name -> instance.service.v1.PresetGpuInput
-	18, // 13: instance.service.v1.AdminListPresetsResponse.items:type_name -> instance.service.v1.Preset
-	21, // 14: instance.service.v1.CreatePresetRequest.data:type_name -> instance.service.v1.PresetData
-	21, // 15: instance.service.v1.UpdatePresetRequest.data:type_name -> instance.service.v1.PresetData
-	49, // 16: instance.service.v1.UpdatePresetRequest.update_mask:type_name -> google.protobuf.FieldMask
-	27, // 17: instance.service.v1.SetPresetEnabledRequest.data:type_name -> instance.service.v1.SetPresetEnabledData
-	30, // 18: instance.service.v1.RuntimePod.environment_sources:type_name -> instance.service.v1.EnvironmentSource
-	31, // 19: instance.service.v1.RuntimePod.mounts:type_name -> instance.service.v1.RuntimeMount
-	50, // 20: instance.service.v1.RuntimeStatefulSet.desired_replicas:type_name -> google.protobuf.Int32Value
-	50, // 21: instance.service.v1.RuntimeStatefulSet.ready_replicas:type_name -> google.protobuf.Int32Value
-	51, // 22: instance.service.v1.InstanceRuntime.observed_at:type_name -> google.protobuf.Timestamp
-	32, // 23: instance.service.v1.InstanceRuntime.pod:type_name -> instance.service.v1.RuntimePod
-	33, // 24: instance.service.v1.InstanceRuntime.stateful_set:type_name -> instance.service.v1.RuntimeStatefulSet
-	51, // 25: instance.service.v1.InstanceEvent.last_occurred_at:type_name -> google.protobuf.Timestamp
-	48, // 26: instance.service.v1.InstanceEvent.count:type_name -> google.protobuf.Int64Value
-	52, // 27: instance.service.v1.InstanceEvents.pod_uid:type_name -> google.protobuf.StringValue
-	51, // 28: instance.service.v1.InstanceEvents.observed_at:type_name -> google.protobuf.Timestamp
-	35, // 29: instance.service.v1.InstanceEvents.events:type_name -> instance.service.v1.InstanceEvent
-	1,  // 30: instance.service.v1.InstanceLogFrame.kind:type_name -> instance.service.v1.InstanceLogFrame.Kind
-	42, // 31: instance.service.v1.UpdateSchedulerConfigRequest.data:type_name -> instance.service.v1.SchedulerConfigData
-	2,  // 32: instance.service.v1.InstanceSchedulingSettings.defaults:type_name -> instance.service.v1.SchedulingOptions
-	44, // 33: instance.service.v1.InstanceSchedulingSettings.priority_class_allowlists:type_name -> instance.service.v1.PriorityClassAllowlist
-	45, // 34: instance.service.v1.UpdateInstanceSchedulingSettingsRequest.data:type_name -> instance.service.v1.InstanceSchedulingSettings
-	35, // [35:35] is the sub-list for method output_type
-	35, // [35:35] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	17, // 8: instance.service.v1.Preset.gpu:type_name -> instance.service.v1.GpuSummary
+	18, // 9: instance.service.v1.ListPresetsResponse.items:type_name -> instance.service.v1.Preset
+	20, // 10: instance.service.v1.PresetData.gpu:type_name -> instance.service.v1.PresetGpuInput
+	18, // 11: instance.service.v1.AdminListPresetsResponse.items:type_name -> instance.service.v1.Preset
+	21, // 12: instance.service.v1.CreatePresetRequest.data:type_name -> instance.service.v1.PresetData
+	21, // 13: instance.service.v1.UpdatePresetRequest.data:type_name -> instance.service.v1.PresetData
+	48, // 14: instance.service.v1.UpdatePresetRequest.update_mask:type_name -> google.protobuf.FieldMask
+	27, // 15: instance.service.v1.SetPresetEnabledRequest.data:type_name -> instance.service.v1.SetPresetEnabledData
+	30, // 16: instance.service.v1.RuntimePod.environment_sources:type_name -> instance.service.v1.EnvironmentSource
+	31, // 17: instance.service.v1.RuntimePod.mounts:type_name -> instance.service.v1.RuntimeMount
+	49, // 18: instance.service.v1.RuntimeStatefulSet.desired_replicas:type_name -> google.protobuf.Int32Value
+	49, // 19: instance.service.v1.RuntimeStatefulSet.ready_replicas:type_name -> google.protobuf.Int32Value
+	50, // 20: instance.service.v1.InstanceRuntime.observed_at:type_name -> google.protobuf.Timestamp
+	32, // 21: instance.service.v1.InstanceRuntime.pod:type_name -> instance.service.v1.RuntimePod
+	33, // 22: instance.service.v1.InstanceRuntime.stateful_set:type_name -> instance.service.v1.RuntimeStatefulSet
+	50, // 23: instance.service.v1.InstanceEvent.last_occurred_at:type_name -> google.protobuf.Timestamp
+	51, // 24: instance.service.v1.InstanceEvent.count:type_name -> google.protobuf.Int64Value
+	52, // 25: instance.service.v1.InstanceEvents.pod_uid:type_name -> google.protobuf.StringValue
+	50, // 26: instance.service.v1.InstanceEvents.observed_at:type_name -> google.protobuf.Timestamp
+	35, // 27: instance.service.v1.InstanceEvents.events:type_name -> instance.service.v1.InstanceEvent
+	1,  // 28: instance.service.v1.InstanceLogFrame.kind:type_name -> instance.service.v1.InstanceLogFrame.Kind
+	42, // 29: instance.service.v1.UpdateSchedulerConfigRequest.data:type_name -> instance.service.v1.SchedulerConfigData
+	2,  // 30: instance.service.v1.InstanceSchedulingSettings.defaults:type_name -> instance.service.v1.SchedulingOptions
+	44, // 31: instance.service.v1.InstanceSchedulingSettings.priority_class_allowlists:type_name -> instance.service.v1.PriorityClassAllowlist
+	45, // 32: instance.service.v1.UpdateInstanceSchedulingSettingsRequest.data:type_name -> instance.service.v1.InstanceSchedulingSettings
+	33, // [33:33] is the sub-list for method output_type
+	33, // [33:33] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_instance_service_v1_instance_proto_init() }

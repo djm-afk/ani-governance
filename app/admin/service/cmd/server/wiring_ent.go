@@ -241,14 +241,8 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 			return nil, nil, err
 		}
 	}
-	// A client configuration cannot invent the authoritative module registry.
-	// Historical replay still performs current authorization before reading.
-	if inferenceClient != nil && data.InferenceModuleRegistered() {
-		if err := quotaRegistry.Register(inferenceBinding); err != nil {
-			rollback()
-			return nil, nil, err
-		}
-	}
+	// Inference GPU execution awaits its new-contract implementation and stays disabled.
+
 	quotaAdminRepo.SetExecutionCapabilities(quotaRegistry)
 	quotaWorker := service.NewQuotaDispatchWorker(ctx, quotaLedgerRepo, quotaRegistry)
 

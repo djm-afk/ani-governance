@@ -2,9 +2,8 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"os"
+	"strings"
 	"testing"
 
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
@@ -79,12 +78,12 @@ func (p *instanceSettingsClusterProbe) PriorityClassRuntimeCompatible(_ context.
 
 type instanceSettingsResolveProbe struct {
 	InstanceOwnerClient
-	template *res.CreateBusiness
+	template *res.CreateSpec
 	defaults *res.SchedulingOptions
 	calls    int
 }
 
-func (p *instanceSettingsResolveProbe) Resolve(_ context.Context, tenant, actor string, in *res.CreateInstanceData, defaults *res.SchedulingOptions) (*res.CreateBusiness, error) {
+func (p *instanceSettingsResolveProbe) Resolve(_ context.Context, tenant, actor string, in *res.CreateInstanceData, defaults *res.SchedulingOptions) (*res.CreateSpec, error) {
 	p.calls++
 	if tenant != presetTenant || actor != "governance:user:9" {
 		return nil, errors.New("untrusted resolution scope")
@@ -98,28 +97,20 @@ func (p *instanceSettingsResolveProbe) Resolve(_ context.Context, tenant, actor 
 	if err != nil {
 		return nil, err
 	}
-	out := proto.Clone(p.template).(*res.CreateBusiness)
-	out.Data = proto.Clone(in).(*res.CreateInstanceData)
-	out.Spec.Scheduling = actual
+	out := proto.Clone(p.template).(*res.CreateSpec)
+	out.Name = in.Name
+	out.ImageId = in.ImageId
+	out.ImageScope = in.ImageScope
+	out.PresetId = in.PresetId
+	out.Scheduling = actual
 	return out, nil
 }
-func instanceSettingsBusiness(t *testing.T) *res.CreateBusiness {
+func instanceSettingsBusiness(t *testing.T) *res.CreateSpec {
 	t.Helper()
-	raw, err := os.ReadFile("testdata/instance-canonical.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var vector struct {
-		Business json.RawMessage `json:"canonical_business"`
-	}
-	if err = json.Unmarshal(raw, &vector); err != nil {
-		t.Fatal(err)
-	}
-	business, err := res.DecodeBusinessPayload(vector.Business)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return business
+	return &res.CreateSpec{Name: "workspace", ImageId: "img_10000000000040008000000000000001", ImageScope: "platform", PresetId: "10000000-0000-4000-8000-000000000002", ImageReference: "registry.invalid/image@sha256:" + strings.Repeat("a", 64), Cpu: "1000m", Memory: "2048Mi", ClusterId: "10000000-0000-4000-8000-000000000001", Namespace: "workspaces", ServiceAccount: "workspace", StorageClass: "cephfs", WorkspaceSize: "1Gi", Shell: "/bin/sh", Uid: 1000, Gid: 1000, InstanceKind: "container", ComputeType: "cpu", Scheduling: &res.SchedulingOptions{PodPlacement: res.SchedulingOptions_NONE.Enum()}}
+}
+func instanceSettingsData(s *res.CreateSpec) *res.CreateInstanceData {
+	return &res.CreateInstanceData{Name: s.Name, ImageId: s.ImageId, ImageScope: s.ImageScope, PresetId: s.PresetId}
 }
 func instanceSettingsRaw(t *testing.T, settings *view.InstanceSchedulingSettings) []byte {
 	t.Helper()
@@ -153,21 +144,21 @@ func TestInstanceSchedulingDefaultsRespectOriginalPresence(t *testing.T) {
 			store := &instanceSettingsStoreProbe{raw: instanceSettingsRaw(t, &view.InstanceSchedulingSettings{Defaults: tc.defaults})}
 			tenants := &instanceSettingsTenantsProbe{mapErr: errors.New("unused mapping dependency")}
 			cluster := &instanceSettingsClusterProbe{priorityErr: errors.New("unused cluster dependency")}
-			policy := NewInstanceSchedulingPolicy(store, tenants, cluster, business.Spec.ClusterId)
+			policy := NewInstanceSchedulingPolicy(store, tenants, cluster, business.ClusterId)
 			owner := &instanceSettingsResolveProbe{template: business}
-			binding := NewInstanceGpuBinding(owner, nil, business.Spec.ClusterId, policy)
-			original := proto.Clone(business.Data).(*res.CreateInstanceData)
+			binding := NewInstanceGpuBinding(owner, nil, business.ClusterId, policy)
+			original := proto.Clone(instanceSettingsData(business)).(*res.CreateInstanceData)
 			original.Scheduling = tc.original
 			principal := &auth.Principal{Type: auth.SubjectUser, ID: 9, TenantID: 7}
 			_, resolved, err := binding.ResolveGpuBusiness(instancePresetContext(7), principal, presetTenant, original)
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := resolved.(*res.CreateBusiness)
-			if got.Spec.Scheduling == nil || got.Spec.Scheduling.PodPlacement == nil || got.Spec.Scheduling.GetPodPlacement() != tc.expected || !proto.Equal(got.Data, original) {
+			got := resolved.(*res.CreateSpec)
+			if got.Scheduling == nil || got.Scheduling.PodPlacement == nil || got.Scheduling.GetPodPlacement() != tc.expected {
 				t.Fatalf("raw/effective presence lost: %v", got)
 			}
-			if (got.Data.Scheduling == nil) != (tc.original == nil) {
+			if (original.Scheduling == nil) != (tc.original == nil) {
 				t.Fatal("original object presence changed")
 			}
 			if tenants.mapCalls != 0 || len(cluster.names) != 0 || tenants.existCalls != 0 {
@@ -207,10 +198,10 @@ func TestInstanceSchedulingAuthorizesOnlyEffectivePriority(t *testing.T) {
 			store := &instanceSettingsStoreProbe{raw: instanceSettingsRaw(t, &view.InstanceSchedulingSettings{Defaults: &view.SchedulingOptions{PriorityClassName: tc.defaultName}, PriorityClassAllowlists: tc.allowlists})}
 			tenants := &instanceSettingsTenantsProbe{resource: tc.mapped, mapErr: tc.mapErr}
 			cluster := &instanceSettingsClusterProbe{priorityErr: tc.clusterErr}
-			policy := NewInstanceSchedulingPolicy(store, tenants, cluster, business.Spec.ClusterId)
+			policy := NewInstanceSchedulingPolicy(store, tenants, cluster, business.ClusterId)
 			owner := &instanceSettingsResolveProbe{template: business}
-			binding := NewInstanceGpuBinding(owner, nil, business.Spec.ClusterId, policy)
-			input := proto.Clone(business.Data).(*res.CreateInstanceData)
+			binding := NewInstanceGpuBinding(owner, nil, business.ClusterId, policy)
+			input := proto.Clone(instanceSettingsData(business)).(*res.CreateInstanceData)
 			if tc.raw != nil {
 				input.Scheduling = &res.SchedulingOptions{PriorityClassName: tc.raw}
 			}
@@ -219,7 +210,7 @@ func TestInstanceSchedulingAuthorizesOnlyEffectivePriority(t *testing.T) {
 				if kratoserrors.Code(err) != tc.code {
 					t.Fatalf("priority failure: %v", err)
 				}
-			} else if err != nil || resolved.(*res.CreateBusiness).Spec.Scheduling.GetPriorityClassName() != normal {
+			} else if err != nil || resolved.(*res.CreateSpec).Scheduling.GetPriorityClassName() != normal {
 				t.Fatalf("effective priority: %v %v", resolved, err)
 			}
 			if tenants.mapCalls != tc.wantMapping || len(cluster.names) != len(tc.wantChecks) {
@@ -238,9 +229,9 @@ func TestInstanceSchedulingSettingsReadFailuresAre503(t *testing.T) {
 	business := instanceSettingsBusiness(t)
 	for _, store := range []*instanceSettingsStoreProbe{{readErr: errors.New("private database address")}, {raw: []byte(`{"defaults":{"pod_placement":"UNSPECIFIED"}}`)}, {raw: []byte(`{"undeclared":true}`)}} {
 		owner := &instanceSettingsResolveProbe{template: business}
-		policy := NewInstanceSchedulingPolicy(store, nil, nil, business.Spec.ClusterId)
-		binding := NewInstanceGpuBinding(owner, nil, business.Spec.ClusterId, policy)
-		if _, _, err := binding.ResolveGpuBusiness(instancePresetContext(7), &auth.Principal{Type: auth.SubjectUser, ID: 9, TenantID: 7}, presetTenant, business.Data); kratoserrors.Code(err) != 503 || owner.calls != 0 {
+		policy := NewInstanceSchedulingPolicy(store, nil, nil, business.ClusterId)
+		binding := NewInstanceGpuBinding(owner, nil, business.ClusterId, policy)
+		if _, _, err := binding.ResolveGpuBusiness(instancePresetContext(7), &auth.Principal{Type: auth.SubjectUser, ID: 9, TenantID: 7}, presetTenant, instanceSettingsData(business)); kratoserrors.Code(err) != 503 || owner.calls != 0 {
 			t.Fatalf("settings failure reached resolution: %v", err)
 		}
 	}
@@ -250,8 +241,8 @@ func TestInstanceSchedulingSettingsPlatformPermissionsAndAtomicValidation(t *tes
 	business := instanceSettingsBusiness(t)
 	store := &instanceSettingsStoreProbe{}
 	tenants := &instanceSettingsTenantsProbe{exists: map[uint32]bool{7: true}, resource: presetTenant}
-	policy := NewInstanceSchedulingPolicy(store, tenants, &instanceSettingsClusterProbe{}, business.Spec.ClusterId)
-	s := NewInstanceService(nil, NewInstanceGpuBinding(nil, nil, business.Spec.ClusterId, policy), tenants, nil, nil, InstanceCatalogConfig{Settings: policy})
+	policy := NewInstanceSchedulingPolicy(store, tenants, &instanceSettingsClusterProbe{}, business.ClusterId)
+	s := NewInstanceService(nil, NewInstanceGpuBinding(nil, nil, business.ClusterId, policy), tenants, nil, nil, InstanceCatalogConfig{Settings: policy})
 	read := "instance:scheduling:read"
 	defaults := "instance:scheduling:defaults:update"
 	allowlists := "instance:scheduling:allowlists:update"
@@ -285,7 +276,7 @@ func TestInstanceSchedulingSettingsPlatformPermissionsAndAtomicValidation(t *tes
 		t.Fatalf("failed tenant lookup caused save: %v", err)
 	}
 	tenants.existErr = nil
-	if result, err = s.UpdateInstanceSchedulingSettings(writer, update); err != nil || result.Defaults == nil || store.saves != 1 || store.actor != 9 || store.cluster != business.Spec.ClusterId {
+	if result, err = s.UpdateInstanceSchedulingSettings(writer, update); err != nil || result.Defaults == nil || store.saves != 1 || store.actor != 9 || store.cluster != business.ClusterId {
 		t.Fatalf("managed save: %v %v", result, err)
 	}
 	stored := new(view.InstanceSchedulingSettings)
@@ -300,25 +291,25 @@ func TestInstanceSchedulingSettingsPlatformPermissionsAndAtomicValidation(t *tes
 func TestInstanceSchedulingFixedPodGroupConflictGuard(t *testing.T) {
 	business := instanceSettingsBusiness(t)
 	priority := "normal"
-	business.Spec.Scheduling.PriorityClassName = &priority
+	business.Scheduling.PriorityClassName = &priority
 	cluster := &instanceSettingsClusterProbe{compatibilityErr: kratoserrors.Conflict("SCHEDULING_FIELD_CONFLICT", "fixed group priority conflicts")}
-	policy := NewInstanceSchedulingPolicy(&instanceSettingsStoreProbe{}, nil, cluster, business.Spec.ClusterId)
-	binding := NewInstanceGpuBinding(nil, nil, business.Spec.ClusterId, policy)
+	policy := NewInstanceSchedulingPolicy(&instanceSettingsStoreProbe{}, nil, cluster, business.ClusterId)
+	binding := NewInstanceGpuBinding(nil, nil, business.ClusterId, policy)
 	// This targets only the fixed-group compatibility guard. Complete ACC plan
 	// validation precedes it in admission and has independent builder vectors.
-	plan := &acc.ResolvedGpuPlan{Runtime: &acc.RuntimeFragment{SchedulerName: "volcano", PodAnnotations: []*acc.KeyValue{{Key: "scheduling.k8s.io/group-name", Value: "fixed-group"}}}}
-	if err := binding.ValidateResolvedInstancePlan(context.Background(), business, plan); kratoserrors.Code(err) != 409 || len(cluster.compatibility) != 1 || cluster.compatibility[0] != [3]string{business.Spec.Namespace, "fixed-group", priority} {
+	plan := &acc.ResolvedGpuRequest{Execution: &acc.GpuExecution{SchedulerName: "volcano", PodAnnotations: map[string]string{"scheduling.k8s.io/group-name": "fixed-group"}}}
+	if err := binding.ValidateResolvedInstancePlan(context.Background(), business, plan); kratoserrors.Code(err) != 409 || len(cluster.compatibility) != 1 || cluster.compatibility[0] != [3]string{business.Namespace, "fixed-group", priority} {
 		t.Fatalf("fixed group conflict: %v", err)
 	}
 	cluster.compatibilityErr = nil
 	if err := binding.ValidateResolvedInstancePlan(context.Background(), business, plan); err != nil {
 		t.Fatal(err)
 	}
-	plan.Runtime.SchedulerName = "unsupported"
+	plan.Execution.SchedulerName = "unsupported"
 	if err := binding.ValidateResolvedInstancePlan(context.Background(), business, plan); kratoserrors.Reason(err) != "SCHEDULING_OPTION_UNSUPPORTED" {
 		t.Fatalf("unsupported runtime silently accepted: %v", err)
 	}
-	business.Spec.Scheduling.PriorityClassName = nil
+	business.Scheduling.PriorityClassName = nil
 	if err := binding.ValidateResolvedInstancePlan(context.Background(), business, nil); err != nil {
 		t.Fatalf("no priority changed original runtime path: %v", err)
 	}

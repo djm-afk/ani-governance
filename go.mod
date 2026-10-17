@@ -16,7 +16,6 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/jinzhu/inflection v1.0.0
-	github.com/liangzai006/ani-inference-service v0.0.0-20261015020740-ceacc4063742
 	github.com/liangzai006/ani-model-service v0.0.0-20261015020710-37fe22076832
 	github.com/lib/pq v1.12.3
 	github.com/mileusna/useragent v1.3.5
@@ -24,9 +23,10 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.12.1
 	github.com/xiaoqidun/entps v1.50.1
-	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261017035933-b161c30a2fc2
+	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261017194326-24820240a6b0
+	github.com/zhangzhe-ctrl/ani-inference-service/api v0.0.0-20261017190858-cf3b944ea479
 	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261014073039-acd8a5cb2b25
-	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261017040528-4e7ef74fd177
+	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261017195047-4f341a0ae98d
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
 	github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261013075651-d889f9490b84
 	go.opentelemetry.io/otel/trace v1.46.0
@@ -174,7 +174,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
-	github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261009133356-1ab461604c74
+	github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88
 	go.einride.tech/aip v0.86.3
 	go.mongodb.org/mongo-driver/v2 v2.9.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

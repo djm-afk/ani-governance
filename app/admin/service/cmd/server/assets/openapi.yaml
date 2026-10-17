@@ -527,12 +527,12 @@ paths:
         post:
             tags:
                 - AcceleratorAdminService
-            operationId: AcceleratorAdminService_PublishProfile
+            operationId: AcceleratorAdminService_CreateProfile
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/PublishAcceleratorProfileRequest'
+                            $ref: '#/components/schemas/CreateAcceleratorProfileRequest'
                 required: true
             responses:
                 "200":
@@ -541,6 +541,76 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles/{profile_id}:delete:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_DeleteProfile
+            parameters:
+                - name: profile_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteAcceleratorProfileRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles/{profile_id}:set-state:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_SetProfileState
+            parameters:
+                - name: profile_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetAcceleratorProfileStateRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles:preview:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_PreviewProfile
+            parameters:
+                - name: group_id
+                  in: query
+                  schema:
+                    type: string
+                - name: parts
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfilePreview'
     /api/v1/admin/accelerator/supply-groups:
         get:
             tags:
@@ -9616,8 +9686,6 @@ components:
                 memory_block_mib:
                     type: integer
                     format: uint32
-                factor_evidence_ref:
-                    type: string
                 memory_encoding:
                     type: string
                 split_count:
@@ -9638,6 +9706,8 @@ components:
                 recipe_version:
                     type: string
                 baseline_digest:
+                    type: string
+                runtime_class_name:
                     type: string
         AcceleratorBinding:
             type: object
@@ -9865,8 +9935,20 @@ components:
                     type: string
                 spec:
                     $ref: '#/components/schemas/AcceleratorProfileSpec'
-                published:
-                    type: boolean
+                state:
+                    type: string
+                revision:
+                    type: string
+        AcceleratorProfilePreview:
+            type: object
+            properties:
+                spec:
+                    $ref: '#/components/schemas/AcceleratorProfileSpec'
+                unused_memory_mib:
+                    type: string
+                unused_core_units:
+                    type: integer
+                    format: uint32
         AcceleratorProfileSpec:
             type: object
             properties:
@@ -9876,7 +9958,7 @@ components:
                     type: string
                 model_key:
                     type: string
-                shared_memory_mib:
+                memory_mib_per_device:
                     type: string
                 core_limit_percent:
                     type: integer
@@ -9932,8 +10014,6 @@ components:
                 version:
                     type: string
                 adopted_at:
-                    type: string
-                verification_state:
                     type: string
         AcceleratorUsage:
             type: object
@@ -10551,6 +10631,22 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/CreateAcceleratorPoolData'
+        CreateAcceleratorProfileData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                display_name:
+                    type: string
+                spec:
+                    $ref: '#/components/schemas/AcceleratorProfileSpec'
+                expected_group_version:
+                    type: string
+        CreateAcceleratorProfileRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateAcceleratorProfileData'
         CreateAccessKeyData:
             type: object
             properties:
@@ -11337,6 +11433,20 @@ components:
                     type: boolean
                 string:
                     type: string
+        DeleteAcceleratorProfileData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                expected_revision:
+                    type: string
+        DeleteAcceleratorProfileRequest:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/DeleteAcceleratorProfileData'
         DeleteAccessKeyResponse:
             type: object
             properties:
@@ -12340,9 +12450,9 @@ components:
                 devices_per_instance:
                     type: integer
                     format: uint32
-                shared_memory_mib_per_device:
+                memory_mib_per_device:
                     type: string
-                shared_memory_mib_total:
+                memory_mib_total:
                     type: string
                 core_limit_percent:
                     type: integer
@@ -15971,6 +16081,10 @@ components:
                     type: string
                 updated_at:
                     type: string
+                selectable:
+                    type: boolean
+                unavailable_reason:
+                    type: string
         PresetData:
             type: object
             properties:
@@ -16073,24 +16187,6 @@ components:
                 expires_at:
                     type: string
                     format: date-time
-        PublishAcceleratorProfileData:
-            type: object
-            properties:
-                idempotency_key:
-                    type: string
-                display_name:
-                    type: string
-                spec:
-                    $ref: '#/components/schemas/AcceleratorProfileSpec'
-                expected_group_version:
-                    type: string
-                verification_ref:
-                    type: string
-        PublishAcceleratorProfileRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/PublishAcceleratorProfileData'
         PublisherCredential:
             type: object
             properties:
@@ -16918,6 +17014,22 @@ components:
                     type: string
                 data:
                     $ref: '#/components/schemas/SetAcceleratorAdmissionData'
+        SetAcceleratorProfileStateData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                expected_revision:
+                    type: string
+                desired:
+                    type: string
+        SetAcceleratorProfileStateRequest:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetAcceleratorProfileStateData'
         SetDefaultIntranetPoolData:
             type: object
             properties:

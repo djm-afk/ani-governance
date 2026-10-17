@@ -10,7 +10,7 @@ import (
 	context "context"
 	http "github.com/go-kratos/kratos/v2/transport/http"
 	binding "github.com/go-kratos/kratos/v2/transport/http/binding"
-	v11 "github.com/liangzai006/ani-inference-service/api/inference/v1"
+	v11 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	v1 "go-wind-admin/api/gen/go/inference/service/v1"
 )
 

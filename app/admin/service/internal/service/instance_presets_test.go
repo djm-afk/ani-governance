@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
@@ -14,10 +12,10 @@ import (
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/pkg/middleware/auth"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -79,6 +77,7 @@ type instancePresetCatalogProbe struct {
 	cluster, tenant string
 	requests        []*acc.ListProfilesRequest
 	reply           func(int, *acc.ListProfilesRequest) (*acc.ListProfilesResponse, error)
+	fitReply        func(*acc.CheckGpuFitRequest) (*acc.GpuFit, error)
 }
 
 func (p *instancePresetCatalogProbe) ListProfiles(_ context.Context, r *acc.ListProfilesRequest, _ ...grpc.CallOption) (*acc.ListProfilesResponse, error) {
@@ -92,29 +91,35 @@ func (p *instancePresetCatalogProbe) ListProfiles(_ context.Context, r *acc.List
 	p.requests = append(p.requests, proto.Clone(r).(*acc.ListProfilesRequest))
 	return p.reply(len(p.requests), r)
 }
+func (p *instancePresetCatalogProbe) CheckGpuFit(_ context.Context, r *acc.CheckGpuFitRequest, _ ...grpc.CallOption) (*acc.GpuFit, error) {
+	if p.fitReply != nil {
+		return p.fitReply(r)
+	}
+	return &acc.GpuFit{Status: acc.FitStatus_FIT_ESTIMATE, EstimateKnown: true, EstimatedReplicas: 1, Observation: &acc.Observation{Complete: true}}, nil
+}
+func (p *instancePresetCatalogProbe) GetCapacity(context.Context, *acc.GetCapacityRequest, ...grpc.CallOption) (*acc.CapacityView, error) {
+	p.t.Fatal("unexpected multi-device capacity request")
+	return nil, nil
+}
 func instancePresetContext(tenant uint32) context.Context {
 	return auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, TenantID: tenant, ID: 9})
 }
 func instancePresetService(owner *instancePresetOwnerProbe, a InstanceActionAuthorizer, catalog InstanceGPUCatalog, cluster string) *InstanceService {
 	return NewInstanceService(nil, NewInstanceGpuBinding(owner, a, cluster), instancePresetTenantResolver{}, nil, nil, InstanceCatalogConfig{ClusterID: cluster, Catalog: catalog})
 }
-func instancePresetBuilder(t *testing.T) *acc.ResolvedGpuPlan {
+func instancePresetBuilder(t *testing.T) *gpuPlanFixture {
 	t.Helper()
-	raw, err := os.ReadFile("testdata/accelerator-quantity-vectors.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var entries map[string]json.RawMessage
-	if err = json.Unmarshal(raw, &entries); err != nil {
-		t.Fatal(err)
-	}
-	plan := new(acc.ResolvedGpuPlan)
-	if err = protojson.Unmarshal(entries["Whole1"], plan); err != nil {
-		t.Fatal(err)
-	}
+	plan, _, _ := gpuVector(t)
+	plan.Profile.Spec.Mode = acc.SupplyMode_WHOLE_EXCLUSIVE
+	plan.Profile.Spec.MemoryMibPerDevice = 15360
+	plan.Profile.Spec.CoreLimitPercent = 100
+	plan.Profile.Spec.MaxDevicesPerReplica = 2
+	plan.Profile.Spec.IsolationClass = "WHOLE_DEVICE_EXCLUSIVE"
+	plan.Profile.SpecDigest, _ = gpuSpecDigest(plan.Profile)
+
 	return plan
 }
-func instancePresetCatalogPage(plan *acc.ResolvedGpuPlan) *acc.ListProfilesResponse {
+func instancePresetCatalogPage(plan *gpuPlanFixture) *acc.ListProfilesResponse {
 	return &acc.ListProfilesResponse{Items: []*acc.GpuProfile{proto.Clone(plan.Profile).(*acc.GpuProfile)}, Scopes: []*acc.ProfileScope{{ProfileId: plan.Profile.ProfileId, ProfileVersion: plan.Profile.ProfileVersion, SpecDigest: plan.Profile.SpecDigest, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId}}}
 }
 func instancePresetCPU() *res.Preset {
@@ -207,7 +212,7 @@ func TestInstancePresetCatalogFaultsPreserveSafeCPUPage(t *testing.T) {
 			r.Scopes[0].SpecDigest = "invalid"
 			r.Items[0].SpecDigest = "invalid"
 		}, status: "UNAVAILABLE", catalogCalls: 1},
-		{name: "unpublished profile", mutate: func(r *acc.ListProfilesResponse) { r.Items[0].Published = false }, status: "UNAVAILABLE", catalogCalls: 1},
+		{name: "invalid profile state", mutate: func(r *acc.ListProfilesResponse) { r.Items[0].State = acc.ProfileState_PROFILE_STATE_UNSPECIFIED }, status: "UNAVAILABLE", catalogCalls: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reply := instancePresetCatalogPage(plan)
@@ -347,5 +352,67 @@ func TestInstancePresetCatalogRequiresInstancePermission(t *testing.T) {
 	}
 	if _, err := s.ListInstancePresets(context.Background(), &view.ListPresetsRequest{}); err == nil {
 		t.Fatal("unauthenticated caller accepted")
+	}
+}
+
+func TestInstancePresetCatalogKeepsAuthorizedInactiveProfilesVisible(t *testing.T) {
+	for state, reason := range map[acc.ProfileState]string{acc.ProfileState_PROFILE_DISABLED: "GPU_PROFILE_DISABLED", acc.ProfileState_PROFILE_DELETED: "GPU_PROFILE_DELETED"} {
+		t.Run(state.String(), func(t *testing.T) {
+			plan := instancePresetBuilder(t)
+			plan.Profile.State = state
+			catalog := &instancePresetCatalogProbe{t: t, cluster: plan.Request.ClusterId, tenant: presetTenant, reply: func(int, *acc.ListProfilesRequest) (*acc.ListProfilesResponse, error) {
+				return instancePresetCatalogPage(plan), nil
+			}}
+			owner := &instancePresetOwnerProbe{t: t, tenant: presetTenant, reply: func(n int, r *res.ListPresetsRequest) (*res.ListPresetsResponse, error) {
+				if n == 1 {
+					return &res.ListPresetsResponse{Items: []*res.Preset{instancePresetCPU()}, Total: 1, HasGpuCandidates: true}, nil
+				}
+				if len(r.AllowedGpuProfiles) != 1 {
+					t.Fatal("authorized scope lost because profile is inactive")
+				}
+				return &res.ListPresetsResponse{Items: []*res.Preset{{Id: "60000000-0000-4000-8000-000000000006", Code: "gpu-visible", ComputeType: "gpu", Enabled: true, Selectable: true, Gpu: &res.GpuPresetReference{ProfileId: plan.Profile.ProfileId, ProfileVersion: plan.Profile.ProfileVersion}}}, Total: 1, HasGpuCandidates: true}, nil
+			}}
+			result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{})
+			if err != nil || len(result.Items) != 1 || result.Items[0].Selectable || result.Items[0].UnavailableReason != reason {
+				t.Fatalf("inactive profile reason: %v %v", result, err)
+			}
+		})
+	}
+}
+
+func TestInstancePresetAvailabilityReasons(t *testing.T) {
+	accError := func(reason string) error {
+		st, e := status.New(codes.FailedPrecondition, "managed source precondition").WithDetails(&errdetails.ErrorInfo{Reason: reason})
+		if e != nil {
+			t.Fatal(e)
+		}
+		return st.Err()
+	}
+	for _, test := range []struct {
+		name, want string
+		fit        *acc.GpuFit
+		err        error
+	}{
+		{name: "unknown", want: "GPU_CAPACITY_UNKNOWN", fit: &acc.GpuFit{Status: acc.FitStatus_FIT_UNKNOWN, Observation: &acc.Observation{}}},
+		{name: "full", want: "GPU_TEMPORARILY_FULL", fit: &acc.GpuFit{Status: acc.FitStatus_WAIT_FOR_CAPACITY, EstimateKnown: true, Observation: &acc.Observation{Complete: true}}},
+		{name: "catalog", want: "GPU_CATALOG_UNAVAILABLE", err: status.Error(codes.Unavailable, "offline")},
+		{name: "paused", want: "GPU_SUPPLY_PAUSED", err: accError("ADMISSION_CLOSED")},
+		{name: "source unknown", want: "GPU_CAPACITY_UNKNOWN", err: accError("DEVICE_CAPACITY_UNKNOWN")},
+		{name: "configuration drift", want: "GPU_SUPPLY_CONFIG_MISMATCH", err: accError("CONFIG_DRIFT")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			plan := instancePresetBuilder(t)
+			catalog := &instancePresetCatalogProbe{t: t, cluster: plan.Request.ClusterId, tenant: presetTenant, fitReply: func(r *acc.CheckGpuFitRequest) (*acc.GpuFit, error) {
+				if r.Context.TenantId != presetTenant || r.Context.Actor.Id != "9" || r.Gpu.ProfileId != plan.Profile.ProfileId || r.Gpu.DevicesPerReplica != 1 {
+					t.Fatal("availability lost authorized identity")
+				}
+				return test.fit, test.err
+			}}
+			svc := instancePresetService(nil, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId)
+			got := svc.presetGPUAvailability(instancePresetContext(7), presetTenant, &res.GpuPresetReference{ProfileId: plan.Profile.ProfileId, ProfileVersion: 1, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId, DevicesPerInstance: 1})
+			if got != test.want {
+				t.Fatalf("reason %s want %s", got, test.want)
+			}
+		})
 	}
 }

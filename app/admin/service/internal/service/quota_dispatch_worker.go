@@ -202,7 +202,8 @@ func (w *QuotaDispatchWorker) dispatchOne(ctx context.Context, op *data.ClaimedO
 		Charges:           charges,
 	}
 	if isGpuCanonical(cmd.CanonicalRequest) {
-		if _, _, err := BuildGpuOwnerAttachments(op.OwnerService, cmd); err != nil {
+		frozen, err := DecodeGpuCanonical(cmd.CanonicalRequest)
+		if err != nil || ValidateGpuCharges(frozen, cmd.Charges) != nil || op.OwnerService != InstanceOwner {
 			w.deferInvalidCommand(ctx, op, "ORIGINAL_GPU_COMMAND_INVALID")
 			return
 		}

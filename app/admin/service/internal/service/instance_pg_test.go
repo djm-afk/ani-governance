@@ -39,12 +39,12 @@ import (
 // Current authorization and original-request admission execute real PG code.
 type instanceResolutionPeer struct {
 	InstanceOwnerClient
-	plan        *acc.ResolvedGpuPlan
+	plan        *gpuPlanFixture
 	calls       int
 	unavailable bool
 }
 
-func (p *instanceResolutionPeer) Resolve(ctx context.Context, tenant, actor string, d *res.CreateInstanceData, defaults *res.SchedulingOptions) (*res.CreateBusiness, error) {
+func (p *instanceResolutionPeer) Resolve(ctx context.Context, tenant, actor string, d *res.CreateInstanceData, defaults *res.SchedulingOptions) (*res.CreateSpec, error) {
 	p.calls++
 	if p.unavailable {
 		return nil, errors.New("external image/preset unavailable")
@@ -56,12 +56,12 @@ func (p *instanceResolutionPeer) Resolve(ctx context.Context, tenant, actor stri
 }
 
 type instancePlanPeer struct {
-	plan        *acc.ResolvedGpuPlan
+	plan        *gpuPlanFixture
 	calls       int
 	unavailable bool
 }
 
-func (p *instancePlanPeer) ResolveGpuRequest(_ context.Context, r *acc.ResolveGpuRequestRequest, _ ...grpc.CallOption) (*acc.ResolvedGpuPlan, error) {
+func (p *instancePlanPeer) ResolveGpuRequest(_ context.Context, r *acc.ResolveGpuRequestRequest, _ ...grpc.CallOption) (*acc.ResolvedGpuRequest, error) {
 	p.calls++
 	if p.unavailable {
 		return nil, errors.New("external Acc unavailable")
@@ -69,7 +69,7 @@ func (p *instancePlanPeer) ResolveGpuRequest(_ context.Context, r *acc.ResolveGp
 	if !proto.Equal(r.Gpu, p.plan.Request) {
 		return nil, errors.New("request mismatch")
 	}
-	return proto.Clone(p.plan).(*acc.ResolvedGpuPlan), nil
+	return proto.Clone(p.plan.Resolved).(*acc.ResolvedGpuRequest), nil
 }
 
 func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T) {
@@ -123,10 +123,6 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 	plan, _, _ := gpuVector(t)
 	plan.Request.Replicas = 1
 	plan.Request.ContainerName = "workspace"
-	plan.Totals.LogicalDeviceCount = 1
-	plan.Totals.SharedMemoryMib = plan.Profile.Spec.SharedMemoryMib
-	plan.ResolutionDigest, e = GpuPlanDigest(plan)
-	require.NoError(t, e)
 	fixturePlan, expectedPlanCalls := plan, 1
 	if cpu {
 		fixturePlan, expectedPlanCalls = nil, 0
@@ -291,9 +287,9 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 			require.NoError(t, err)
 			business, err := res.DecodeBusinessPayload(command.BusinessPayload)
 			require.NoError(t, err)
-			require.Equal(t, "2000m", business.Spec.Cpu)
-			require.Equal(t, "4096Mi", business.Spec.Memory)
-			require.Equal(t, res.SchedulingOptions_COLOCATE_PREFERRED, business.Spec.Scheduling.GetPodPlacement())
+			require.Equal(t, "2000m", business.Cpu)
+			require.Equal(t, "4096Mi", business.Memory)
+			require.Equal(t, res.SchedulingOptions_COLOCATE_PREFERRED, business.Scheduling.GetPodPlacement())
 		}
 		canceled, e := acceptance.AcceptGpuDeleteVersion(requestCtx, uuid.NewString(), unsent.ResourceID, 1)
 		require.NoError(t, e)
@@ -307,7 +303,7 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 		return
 	}
 	require.Len(t, charges, 1)
-	release := &data.QuotaReleaseInput{OwnerService: InstanceOwner, ReleaseEventID: uuid.NewString(), OperationID: first.OperationID, Reason: "RESOURCE_RELEASED", PayloadHash: "original-event", PayloadJSON: `{"scope":"owner-release"}`, Items: []data.QuotaReleaseItemInput{{ChargeID: charges[0].ChargeID, QuotaCode: charges[0].QuotaCode, ReleasedTotal: charges[0].OriginalUnits}}}
+	release := &data.QuotaReleaseInput{OwnerService: InstanceOwner, ReleaseEventID: uuid.NewString(), OperationID: first.OperationID, Reason: "RESOURCE_RELEASED", PayloadHash: "original-event", PayloadJSON: `{"scope":"owner-release"}`, ResourceID: first.ResourceID, Complete: true}
 	wrong := *release
 	wrong.OwnerService = "ani-inference"
 	_, e = ledger.Release(context.Background(), &wrong)
@@ -339,4 +335,18 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 		require.True(t, balance.Balanced)
 		require.Zero(t, balance.OccupiedUnits)
 	}
+	// Terminal acceptance reads only immutable references/hash and original receipts.
+	// An offline audit payload is deliberately not a runnable new-contract snapshot.
+	updated, e := c.DB().ExecContext(sys, "UPDATE sys_quota_operations SET canonical_request=$1 WHERE tenant_id=$2 AND operation_id=$3", `{"offline_audit":true}`, tenant.ID, first.OperationID)
+	require.NoError(t, e)
+	auditRows, e := updated.RowsAffected()
+	require.NoError(t, e)
+	require.EqualValues(t, 1, auditRows)
+	require.NoError(t, c.Client().UserRole.UpdateOneID(membership.ID).SetStatus(userrole.StatusActive).Exec(sys))
+	terminal, e := acceptance.AcceptGpuCreate(requestCtx, key, nil, public)
+	require.NoError(t, e)
+	require.True(t, terminal.Replayed)
+	require.Equal(t, first.OperationID, terminal.OperationID)
+	require.Equal(t, first.ResourceID, terminal.ResourceID)
+
 }

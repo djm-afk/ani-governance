@@ -20,7 +20,7 @@ import (
 
 type InstanceResourcePeer struct{ Address, CAFile, CertFile, KeyFile, TerminalAddress, SGClientCertFile, SGClientKeyFile, SGServerCertFile, SGServerKeyFile, GovControlCertFile, GovControlKeyFile, PresetID, ClusterID string }
 
-func StartInstanceResourcePeer(t *testing.T, plan *acc.ResolvedGpuPlan) *InstanceResourcePeer {
+func StartInstanceResourcePeer(t *testing.T, gpu *acc.GpuRequest, profile *acc.GpuProfile) *InstanceResourcePeer {
 	t.Helper()
 	binary := os.Getenv("RESOURCE_INSTANCE_TEST_BINARY")
 	require.True(t, filepath.IsAbs(binary), "fixed Resource subprocess binary required")
@@ -28,16 +28,11 @@ func StartInstanceResourcePeer(t *testing.T, plan *acc.ResolvedGpuPlan) *Instanc
 	raw := []byte("null")
 	referenceJSON := []byte("null")
 	var e error
-	if plan != nil {
-		require.NotNil(t, plan.Request)
-		require.NotNil(t, plan.Profile)
-		require.NotNil(t, plan.Profile.Spec)
-		gpu, profile, spec := plan.Request, plan.Profile, plan.Profile.Spec
-		reference := &res.GpuPresetReference{ProfileId: gpu.ProfileId, ProfileVersion: gpu.ProfileVersion, SpecDigest: profile.SpecDigest, DevicesPerInstance: gpu.DevicesPerReplica, ClusterId: gpu.ClusterId, PoolId: gpu.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, CoreLimitPercent: spec.CoreLimitPercent}
-		if spec.Mode == acc.SupplyMode_SHARED_FIXED {
-			memory := spec.SharedMemoryMib
-			reference.SharedMemoryMibPerDevice = &memory
-		}
+	if gpu != nil {
+		require.NotNil(t, profile)
+		require.NotNil(t, profile.Spec)
+		spec := profile.Spec
+		reference := &res.GpuPresetReference{ProfileId: gpu.ProfileId, ProfileVersion: gpu.ProfileVersion, SpecDigest: profile.SpecDigest, DevicesPerInstance: gpu.DevicesPerReplica, ClusterId: gpu.ClusterId, PoolId: gpu.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, CoreLimitPercent: spec.CoreLimitPercent, MemoryMibPerDevice: spec.MemoryMibPerDevice}
 		raw, e = protojson.Marshal(gpu)
 		require.NoError(t, e)
 		referenceJSON, e = protojson.Marshal(reference)

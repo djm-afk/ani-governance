@@ -10,10 +10,8 @@ import (
 	"testing"
 	"time"
 
-	inferencev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
-	integrationv1 "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/integration/v1"
-	acceleratorv1 "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	inferencev1 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -65,7 +63,7 @@ func TestModelInferenceProductionReceiverIdentityInterop(t *testing.T) {
 		_, err = client.CreateModel(ctx, tenant, actor, &modelv1.CreateModelRequest{TenantId: "forged-body-tenant"})
 		assertValidation(t, err, "invalid model name")
 	})
-	for _, receiver := range []string{"ordinary", "managed"} {
+	for _, receiver := range []string{"ordinary"} {
 		t.Run("Inference/"+receiver, func(t *testing.T) {
 			client, closeClient, err := NewInferenceClient(InferenceClientConfig{
 				Address: inferenceConfig[receiver+"_endpoint"], ServerName: inferenceConfig["server_name"],
@@ -76,9 +74,6 @@ func TestModelInferenceProductionReceiverIdentityInterop(t *testing.T) {
 			}
 			t.Cleanup(closeClient)
 			request := &inferencev1.CreateInferenceServiceRequest{}
-			if receiver == "managed" {
-				request.GpuOwnerAttachment = &integrationv1.GpuOwnerCreateAttachment{Ref: &acceleratorv1.GpuUsageRef{TenantId: tenant}}
-			}
 			_, err = client.CreateTrusted(ctx, tenant, actor, request)
 			assertValidation(t, err, "request_id, name and model_version_id are required")
 			_, err = client.GetTrusted(ctx, tenant, actor, &inferencev1.GetInferenceServiceRequest{})

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	inferencev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	"github.com/stretchr/testify/require"
+	inferencev1 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	view "go-wind-admin/api/gen/go/inference/service/v1"
 	"go-wind-admin/pkg/middleware/auth"
 	"google.golang.org/protobuf/reflect/protoreflect"

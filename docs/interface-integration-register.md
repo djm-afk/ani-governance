@@ -24,7 +24,7 @@
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
-| 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 正式 Accelerator 目录与 Inference 创建/删除 BFF、账本和受控 owner 装配已接入；旧本地模拟入口已退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
+| 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | ACC 目录与 Resource 实例的新执行/释放合同实施；Inference 本期仅同步静态 API，GPU 投递关闭；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
 | ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08；服务间调用登记 S2S-MODELDEV-CPUP01-01 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证；Gov→ModelDev 传输/身份/白名单三个差异收敛已实施并在 ani-system 真实环境完成正/负向验证 | CPU-P01，进行中 |
 
 ## 风格改动批次
@@ -1714,3 +1714,12 @@ operation/service → Higress /v1/completions`。导入任务状态可以在版�
 `importing`；`GET /api/v1/model-versions/{id}` 只返回已就绪版本，不能把导入中的
 404 当作导入失败。CPU 验收不需要 GPU 或 Accelerator；GPU 验收必须在有 GPU 节点的
 新集群另行执行。本批不修改旧集群。
+
+
+### GOV-ACC-INF-V12-WIRING-01：2026-10-18 显存值合同替换
+
+本轮移除 GPU 旧大附件、百分比与证明准入，使用单执行快照和 `QuotaReleaseService/ReportResourceReleased` 四字段完整释放。内部 mTLS owner → 原 CREATE → resource → 原账事务全退；非 GPU 的独立累计释放接口保持原范围。当前正式合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)。
+
+管理 Profile 创建仍为 `POST /api/v1/admin/accelerator/profiles`，正式 RPC 改为 `CreateProfile`；新增 `GET .../profiles:preview`、`POST .../profiles/{profile_id}:set-state` 和 `POST .../profiles/{profile_id}:delete`。写请求保持 `{data:{...}}`，平台 JWT、当前权限与 ACC 对应 action/cluster grant 必须齐全。API 目录同步只登记接口，不自动授予权限。
+
+用户 Preset 返回每卡显存值、selectable 与 unavailable_reason；CPU 查询不依赖 ACC，GPU 仍须通过租户目录授权过滤。Inference 只有静态 API 依赖同步，本期不注册 GPU 投递能力。编码、软件回归和真实 GPU 验收分别记证，不能沿用旧结果宣称新合同已验收。

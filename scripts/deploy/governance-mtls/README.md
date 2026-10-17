@@ -4,7 +4,7 @@ Governance 为已接入的租户业务验证登录、租户、套餐和接口权
 再用自己的服务身份调用对应领域服务。本目录是现有 Network DNS 客户端身份的
 证书申请与部署挂载参考，接入步骤见 [业务服务接入指南](../../../docs/service-integration.md)。
 其他当前调用链的身份与证书要求以各自合同为准；GPU 链的 URI/DNS 差异见
-[GPU owner 接入指南](../../../docs/contracts/gpu-owner-integration-guide.md#4-身份与不可变字段)，
+[GPU owner 接入指南](../../../docs/contracts/gpu-owner-integration-guide.md#4-删除与完整释放)，
 不能把此 DNS 示例直接用于 Gov → Accelerator 或受管 Inference。
 
 > **Model 已于 2026-09-21 暂摘**：`ANI_MODEL_*` 环境变量与 `model-trust` 卷已从

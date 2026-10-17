@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"strconv"
 	"time"
@@ -31,7 +32,7 @@ const InstanceDeleteAction = "/instance.v1.InstanceService/AcceptDelete"
 const InstanceOwner = "ani-resource-service"
 
 type InstanceOwnerClient interface {
-	Resolve(context.Context, string, string, *res.CreateInstanceData, *res.SchedulingOptions) (*res.CreateBusiness, error)
+	Resolve(context.Context, string, string, *res.CreateInstanceData, *res.SchedulingOptions) (*res.CreateSpec, error)
 	Create(context.Context, *res.AcceptCreateRequest) (*res.OperationResponse, error)
 	Delete(context.Context, *res.AcceptDeleteRequest) (*res.OperationResponse, error)
 	Change(context.Context, string, string, *res.ChangeInstanceRequest, bool) (*res.OperationResponse, error)
@@ -113,26 +114,31 @@ func (b *InstanceGpuBinding) ResolveGpuBusiness(ctx context.Context, p *auth.Pri
 	if e != nil {
 		return nil, nil, e
 	}
-	if resolved == nil || resolved.Data == nil || resolved.Spec == nil || resolved.Spec.InstanceKind != "container" || !proto.Equal(in, resolved.Data) || (resolved.Spec.ComputeType == "cpu" && resolved.Gpu != nil) || (resolved.Spec.ComputeType == "gpu" && resolved.Gpu == nil) || (resolved.Spec.ComputeType != "cpu" && resolved.Spec.ComputeType != "gpu") {
+	if resolved == nil || resolved.InstanceKind != "container" || resolved.Name != in.Name || resolved.ImageId != in.ImageId || resolved.ImageScope != in.ImageScope || resolved.PresetId != in.PresetId || (resolved.ComputeType == "cpu" && resolved.GpuSelection != nil) || (resolved.ComputeType == "gpu" && resolved.GpuSelection == nil) || (resolved.ComputeType != "cpu" && resolved.ComputeType != "gpu") {
 		return nil, nil, quota.ErrorInvalidQuotaRequest("%s", "invalid instance resolution")
 	}
-	if resolved.Spec.ClusterId != b.clusterID {
+	if resolved.ClusterId != b.clusterID {
 		return nil, nil, kratoserrors.BadRequest("SCHEDULING_FIELD_CONFLICT", "resolved cluster differs from configured instance cluster")
 	}
-	if e = res.ValidateCreateBusiness(resolved); e != nil {
+	if e = res.ValidateCreateSpec(resolved, false); e != nil {
 		return nil, nil, instanceBusinessError(e)
 	}
 	if e = b.scheduling.authorizePriority(ctx, p, tenant, settings, resolved); e != nil {
 		return nil, nil, e
 	}
-	return resolved.Gpu, resolved, nil
+	var gpu *acc.GpuRequest
+	if g := resolved.GpuSelection; g != nil {
+		gpu = &acc.GpuRequest{ClusterId: g.ClusterId, PoolId: g.PoolId, ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion, Replicas: 1, DevicesPerReplica: g.DevicesPerInstance, ContainerName: "workspace"}
+	}
+
+	return gpu, resolved, nil
 }
 func (*InstanceGpuBinding) ValidateGpuBusiness(_ context.Context, m proto.Message) ([]data.QuotaOccupyItem, error) {
-	b, ok := m.(*res.CreateBusiness)
-	if !ok || b == nil || b.Data == nil || b.Spec == nil || b.Spec.InstanceKind != "container" || b.Spec.ComputeType != "gpu" || b.Gpu == nil || b.Gpu.Replicas != 1 || b.Gpu.DevicesPerReplica < 1 || b.Gpu.ContainerName != "workspace" || b.Spec.ClusterId != b.Gpu.ClusterId || b.Spec.Namespace == "" || b.Spec.ImageDigest == "" || b.Spec.ImageReference == "" {
-		return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid frozen instance business")
+	b, ok := m.(*res.CreateSpec)
+	if !ok || b == nil || b.ComputeType != "gpu" || b.GpuSelection == nil || b.GpuSelection.DevicesPerInstance < 1 || b.ClusterId != b.GpuSelection.ClusterId || b.ImageReference == "" {
+		return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid resolved instance business")
 	}
-	if err := res.ValidateCreateBusiness(b); err != nil {
+	if err := res.ValidateCreateSpec(b, false); err != nil {
 		return nil, instanceBusinessError(err)
 	}
 	return nil, nil
@@ -160,47 +166,50 @@ func (b *InstanceGpuBinding) Dispatch(ctx context.Context, c *QuotaDispatchComma
 	if data.IsInstanceCPUCanonical(c.CanonicalRequest) {
 		return b.dispatchCPU(ctx, c)
 	}
-	create, del, e := BuildGpuOwnerAttachments(InstanceOwner, c)
-	if e != nil {
-		return nil, e
-	}
 	frozen, e := DecodeGpuCanonical(c.CanonicalRequest)
 	if e != nil {
 		return nil, e
 	}
-	charges := []*res.OriginalQuotaCharge{}
-	for _, q := range c.Charges {
-		charges = append(charges, &res.OriginalQuotaCharge{ChargeId: q.ChargeID, QuotaCode: q.QuotaCode, OriginalUnits: q.ChargedUnits})
+	if e = ValidateGpuCharges(frozen, c.Charges); e != nil {
+		return nil, e
 	}
+	business, e := res.DecodeBusinessPayload(frozen.BusinessPayload)
+	if e != nil {
+		return nil, e
+	}
+	if e = res.ValidateCreateSpec(business, true); e != nil {
+		return nil, instanceBusinessError(e)
+	}
+	commandContext := &res.CommandContext{TenantId: c.ResourceTenantID, OperationId: c.OperationID, ResourceId: c.ResourceID}
+	ctx = data.WithInstanceCommandActor(ctx, "governance:"+c.Actor.Type+":"+c.Actor.ID)
 	var reply *res.OperationResponse
 	switch c.Action {
 	case InstanceCreateAction:
-		business, e := res.DecodeBusinessPayload(frozen.BusinessPayload)
+		if c.CreateOperationID != "" {
+			return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid create origin")
+		}
+		commandContext.RequestDigest, e = res.CommandDigest(commandContext, business)
 		if e != nil {
 			return nil, e
 		}
-		digest, e := res.BusinessPayloadDigest(business)
-		if e != nil || digest != frozen.BusinessPayloadDigest || create == nil || del != nil || !proto.Equal(business.Gpu, frozen.GpuRequest) {
-			return nil, quota.ErrorInvalidQuotaRequest("%s", "instance frozen payload mismatch")
-		}
-		if e = res.ValidateGpuBusinessPlan(business, frozen.GpuPlan); e != nil {
-			return nil, instanceBusinessError(e)
-		}
-		reply, e = b.client.Create(ctx, &res.AcceptCreateRequest{TenantId: c.ResourceTenantID, OperationId: c.OperationID, Business: business, GpuOwnerAttachment: create, OriginalCharges: charges})
-		if e != nil {
-			return nil, e
-		}
+		reply, e = b.client.Create(ctx, &res.AcceptCreateRequest{Context: commandContext, Spec: business})
 	case InstanceDeleteAction:
-		if del == nil || create != nil || frozen.DeleteExpectedVersion < 1 {
+		if c.CreateOperationID == "" || frozen.DeleteExpectedVersion < 1 {
 			return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid instance delete")
 		}
-		reply, e = b.client.Delete(ctx, &res.AcceptDeleteRequest{TenantId: c.ResourceTenantID, OperationId: c.OperationID, GpuOwnerAttachment: del, OriginalCharges: charges, ExpectedVersion: frozen.DeleteExpectedVersion})
+		request := &res.AcceptDeleteRequest{Context: commandContext, CreateOperationId: c.CreateOperationID, ExpectedVersion: frozen.DeleteExpectedVersion, InstanceKind: business.InstanceKind, ComputeType: business.ComputeType}
+		commandContext.RequestDigest, e = res.DeleteCommandDigest(request)
 		if e != nil {
 			return nil, e
 		}
+		reply, e = b.client.Delete(ctx, request)
 	default:
 		return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid instance action")
 	}
+	if e != nil {
+		return nil, e
+	}
+
 	if reply == nil || reply.DurableOwnerAck == nil || reply.DurableOwnerAck.OperationId != c.OperationID || reply.DurableOwnerAck.ResourceId != c.ResourceID || !reply.DurableOwnerAck.Accepted {
 		return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid instance durable ACK")
 	}
@@ -438,8 +447,10 @@ func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListP
 		return nil, kratoserrors.ServiceUnavailable("INSTANCE_INVALID_RESPONSE", "invalid owner response")
 	}
 	catalogStatus, reason := "OK", ""
+	var profileStates map[string]acc.ProfileState
 	if items.HasGpuCandidates && r.ComputeType != "cpu" {
-		allowed, err := s.allowedPresetGPU(ctx, tenant)
+		allowed, states, err := s.allowedPresetGPU(ctx, tenant)
+		profileStates = states
 		if err != nil {
 			catalogStatus, reason = "UNAVAILABLE", "GPU_CATALOG_UNAVAILABLE"
 			if errors.Is(err, data.ErrInferenceAuthorizationDenied) || codes.PermissionDenied == status.Code(err) || codes.Unauthenticated == status.Code(err) {
@@ -457,7 +468,21 @@ func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListP
 	}
 	out := &view.ListPresetsResponse{Items: []*view.Preset{}, Total: items.Total, GpuCatalogStatus: catalogStatus, GpuCatalogReason: reason}
 	for _, p := range items.Items {
-		out.Items = append(out.Items, wireInstancePreset(p))
+		item := wireInstancePreset(p)
+		if item != nil && p.ComputeType == "gpu" && p.Gpu != nil && item.Enabled {
+			switch profileStates[fmt.Sprintf("%s/%d", p.Gpu.ProfileId, p.Gpu.ProfileVersion)] {
+			case acc.ProfileState_PROFILE_DISABLED:
+				item.Selectable = false
+				item.UnavailableReason = "GPU_PROFILE_DISABLED"
+			case acc.ProfileState_PROFILE_DELETED:
+				item.Selectable = false
+				item.UnavailableReason = "GPU_PROFILE_DELETED"
+			case acc.ProfileState_PROFILE_ACTIVE:
+				item.UnavailableReason = s.presetGPUAvailability(ctx, tenant, p.Gpu)
+				item.Selectable = item.UnavailableReason == ""
+			}
+		}
+		out.Items = append(out.Items, item)
 	}
 	return out, nil
 }

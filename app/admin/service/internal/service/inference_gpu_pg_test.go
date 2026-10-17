@@ -6,11 +6,10 @@ import (
 	"context"
 	"testing"
 
-	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
-	inferencev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
 	"github.com/stretchr/testify/require"
+	inferencev1 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	view "go-wind-admin/api/gen/go/inference/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/internal/data/ent"
@@ -28,7 +27,6 @@ import (
 	"go-wind-admin/pkg/middleware/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
 // Only Model, Accelerator and Inference RPCs are boundary substitutes. The BFF,
@@ -114,15 +112,13 @@ func newInferenceGPUFixture(t *testing.T) *inferenceGPUFixture {
 	requestCtx = auth.NewPrincipalContext(requestCtx, &auth.Principal{Type: auth.SubjectUser, ID: operator.ID, TenantID: tenant.ID})
 	plan, _, _ := gpuVector(t)
 	plan.Request.ContainerName = "kserve-container"
-	plan.ResolutionDigest, err = GpuPlanDigest(plan)
-	require.NoError(t, err)
 	modelVersionID := uuid.NewString()
 	model := &inferenceModelProbe{response: &modelv1.GetModelVersionResponse{Model: &modelv1.Model{TenantId: tenant.ResourceTenantID}, Version: &modelv1.ModelVersion{Id: modelVersionID, Status: "ready"}}}
 	owner := &inferenceMissingOwner{}
 	plans := &instancePlanPeer{plan: plan}
 	binding := NewInferenceGpuBindingWithModel(owner, data.NewInferenceAuthorizationRepo(c), model)
 	registry := NewQuotaAdapterRegistry()
-	require.NoError(t, registry.Register(binding))
+	// The Inference owner has no new-contract execution capability.
 	ledger := data.NewQuotaLedgerRepo(bctx, c)
 	acceptance, err := NewGpuAcceptance(ledger, registry, data.NewTenantRepo(bctx, c), plans, binding, nil)
 	require.NoError(t, err)
@@ -152,93 +148,28 @@ func (f *inferenceGPUFixture) otherAuthorizedTenant(t *testing.T) (context.Conte
 	return auth.NewPrincipalContext(ctx, &auth.Principal{Type: auth.SubjectUser, ID: operator.ID, TenantID: tenant.ID}), tenant.ResourceTenantID
 }
 
-func TestInferenceGPUReplayWhileModelUnavailable(t *testing.T) {
+func TestInferenceGPUDisabledBeforeModelResolution(t *testing.T) {
 	f := newInferenceGPUFixture(t)
-	first, err := f.service.CreateInference(f.ctx, f.request)
+	_, err := f.service.CreateInference(f.ctx, f.request)
+	require.Error(t, err)
+	require.Zero(t, f.model.calls)
+	require.Zero(t, f.plans.calls)
+	charges, err := f.client.QuotaCharge.Query().All(appViewer.NewSystemViewerContext(context.Background()))
 	require.NoError(t, err)
-	require.False(t, first.Replayed)
-	f.model.err = status.Error(codes.Unavailable, "Model unavailable")
-	f.plans.unavailable = true
-	replay, err := f.service.CreateInference(f.ctx, f.request)
-	require.NoError(t, err, "original durable acceptance remains replayable without Model or Accelerator")
-	require.True(t, replay.Replayed)
-	require.Equal(t, first.OperationId, replay.OperationId)
-	require.Equal(t, first.ResourceId, replay.ResourceId)
-	require.Equal(t, 1, f.model.calls)
-	newRequest := proto.Clone(f.request).(*view.CreateInferenceRequest)
-	newRequest.Data.IdempotencyKey = uuid.NewString()
-	_, err = f.service.CreateInference(f.ctx, newRequest)
-	require.Equal(t, codes.Unavailable, status.Code(err), "new admission still requires Model readiness")
-	require.Equal(t, 2, f.model.calls)
-	sys := appViewer.NewSystemViewerContext(context.Background())
-	require.NoError(t, f.client.UserRole.UpdateOneID(f.membership.ID).SetStatus(userrole.StatusDisabled).Exec(sys))
-	_, err = f.service.CreateInference(f.ctx, f.request)
-	require.Equal(t, 403, kratoserrors.Code(err), "current authorization precedes original-key replay")
-	require.Equal(t, 2, f.model.calls)
-	rows, err := f.ledger.RecomputeInvariants(context.Background(), f.tenantID)
-	require.NoError(t, err)
-	require.Len(t, rows, 1)
-	require.True(t, rows[0].Balanced)
-	require.EqualValues(t, 12288, rows[0].OccupiedUnits)
+	require.Empty(t, charges, "disabled owner cannot occupy quota")
 }
-
-func TestInferenceGPUCancelBeforeOwnerReceivesCreate(t *testing.T) {
+func TestInferenceCPUActorsRemainTrusted(t *testing.T) {
 	f := newInferenceGPUFixture(t)
-	created, err := f.service.CreateInference(f.ctx, f.request)
-	require.NoError(t, err)
-	request := &view.DeleteInferenceRequest{Data: &view.DeleteInferenceData{IdempotencyKey: uuid.NewString(), ResourceId: created.ResourceId}}
-	otherCtx, otherTenant := f.otherAuthorizedTenant(t)
-	_, err = f.service.DeleteInference(otherCtx, request)
-	require.Equal(t, codes.NotFound, status.Code(err), "another authorized tenant cannot cancel this CREATE")
-	require.Equal(t, otherTenant, f.owner.getTenant)
-	before, err := f.ledger.RecomputeInvariants(context.Background(), f.tenantID)
-	require.NoError(t, err)
-	require.Len(t, before, 1)
-	require.EqualValues(t, 12288, before[0].OccupiedUnits)
-	sys := appViewer.NewSystemViewerContext(context.Background())
-	require.NoError(t, f.client.UserRole.UpdateOneID(f.membership.ID).SetStatus(userrole.StatusDisabled).Exec(sys))
-	_, err = f.service.DeleteInference(f.ctx, request)
-	require.Equal(t, 403, kratoserrors.Code(err), "a revoked actor cannot cancel the original CREATE")
-	require.Equal(t, 1, f.owner.gets, "revoked authorization cannot reach the owner")
-	require.NoError(t, f.client.UserRole.UpdateOneID(f.membership.ID).SetStatus(userrole.StatusActive).Exec(sys))
-	canceled, err := f.service.DeleteInference(f.ctx, request)
-	require.NoError(t, err, "a queued GPU CREATE can be canceled before the owner receives it")
-	require.Equal(t, "CANCELED_BEFORE_DISPATCH", canceled.Result)
-	require.Empty(t, canceled.DispatchOperationId)
-	require.Equal(t, 1, f.owner.gets, "local cancellation does not require an owner query")
-	replay, err := f.service.DeleteInference(f.ctx, request)
-	require.NoError(t, err)
-	require.Equal(t, canceled, replay)
-	charges, err := f.ledger.GetChargesForOperation(f.ctx, f.tenantID, created.OperationId)
-	require.NoError(t, err)
-	require.Len(t, charges, 1)
-	for _, charge := range charges {
-		require.EqualValues(t, 12288, charge.OriginalUnits)
-		require.Equal(t, charge.OriginalUnits, charge.ReleasedUnits, "the complete original charge is refunded once")
-	}
-	rows, err := f.ledger.RecomputeInvariants(context.Background(), f.tenantID)
-	require.NoError(t, err)
-	require.Len(t, rows, 1)
-	require.True(t, rows[0].Balanced)
-	require.Zero(t, rows[0].OccupiedUnits)
-	// Configured GPU acceptance must preserve both existing CPU actor types.
 	principal, err := auth.PrincipalFromContext(f.ctx)
 	require.NoError(t, err)
 	for _, subject := range []auth.SubjectType{auth.SubjectUser, auth.SubjectAPIKey} {
 		ctx := auth.NewPrincipalContext(f.ctx, &auth.Principal{Type: subject, ID: principal.ID, TenantID: principal.TenantID})
 		f.owner.service = &inferencev1.InferenceService{Id: "cpu-" + uuid.NewString(), Generation: 7}
-		cpuRequest := &view.DeleteInferenceRequest{Data: &view.DeleteInferenceData{IdempotencyKey: uuid.NewString(), ResourceId: f.owner.service.Id}}
-		_, err := f.service.DeleteInference(ctx, cpuRequest)
-		require.NoError(t, err, "CPU deletion retains trusted JWT and API Key support")
+		_, err := f.service.DeleteInference(ctx, &view.DeleteInferenceRequest{Data: &view.DeleteInferenceData{IdempotencyKey: uuid.NewString(), ResourceId: f.owner.service.Id}})
+		require.NoError(t, err)
 		actor, err := (&auth.Principal{Type: subject, ID: principal.ID, TenantID: principal.TenantID}).Actor()
 		require.NoError(t, err)
 		require.Equal(t, actor, f.owner.actor)
 		require.EqualValues(t, 7, f.owner.delete.ExpectedGeneration)
 	}
-	apiKeyCtx := auth.NewPrincipalContext(f.ctx, &auth.Principal{Type: auth.SubjectAPIKey, ID: principal.ID, TenantID: principal.TenantID})
-	f.owner.service = &inferencev1.InferenceService{Id: created.ResourceId, Generation: 1, Resource: &inferencev1.ResourceSpec{Gpu: &inferencev1.GpuRequest{}}}
-	deletes := f.owner.deletes
-	_, err = f.service.DeleteInference(apiKeyCtx, request)
-	require.Error(t, err, "API Keys cannot bypass GPU tenant-user admission")
-	require.Equal(t, deletes, f.owner.deletes)
 }

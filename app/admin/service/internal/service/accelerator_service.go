@@ -330,7 +330,7 @@ func (s *AcceleratorService) SetAdmission(ctx context.Context, r *view.SetAccele
 	}
 	return wireAcceleratorSupply(v), nil
 }
-func (s *AcceleratorService) PublishProfile(ctx context.Context, r *view.PublishAcceleratorProfileRequest) (*view.AcceleratorProfile, error) {
+func (s *AcceleratorService) CreateProfile(ctx context.Context, r *view.CreateAcceleratorProfileRequest) (*view.AcceleratorProfile, error) {
 	c, e := s.adminContext(ctx)
 	if e != nil {
 		return nil, e
@@ -347,7 +347,7 @@ func (s *AcceleratorService) PublishProfile(ctx context.Context, r *view.Publish
 	if e != nil {
 		return nil, e
 	}
-	v, e := s.client.Admin.PublishProfile(ctx, &acc.PublishProfileRequest{Mutation: m, DisplayName: d.DisplayName, Spec: spec, ExpectedGroupVersion: d.ExpectedGroupVersion, VerificationRef: d.VerificationRef})
+	v, e := s.client.Admin.CreateProfile(ctx, &acc.CreateProfileRequest{Mutation: m, DisplayName: d.DisplayName, Spec: spec, ExpectedGroupVersion: d.ExpectedGroupVersion})
 	if e != nil {
 		return nil, mapAcceleratorError(e)
 	}
@@ -501,7 +501,7 @@ func (s *AcceleratorService) AdmissionPreview(ctx context.Context, r *view.Accel
 	if e != nil {
 		return nil, mapAcceleratorError(e)
 	}
-	item, e := GpuPlanQuota(plan)
+	item, e := GpuResolvedQuota(plan, gpu)
 	if e != nil {
 		return nil, e
 	}
@@ -644,4 +644,68 @@ func (s *AcceleratorService) GetMyQuotaAccounts(ctx context.Context, _ *emptypb.
 
 func sameAcceleratorRef(a, b *acc.GpuUsageRef) bool {
 	return a != nil && b != nil && a.TenantId == b.TenantId && a.OwnerService == b.OwnerService && a.ResourceId == b.ResourceId && a.CreateOperationId == b.CreateOperationId
+}
+
+func (s *AcceleratorService) PreviewProfile(ctx context.Context, r *view.PreviewAcceleratorProfileRequest) (*view.AcceleratorProfilePreview, error) {
+	c, e := s.adminContext(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if r == nil {
+		return nil, acceleratorInvalid()
+	}
+	v, e := s.client.Admin.PreviewProfile(ctx, &acc.PreviewProfileRequest{Context: c, GroupId: r.GroupId, Parts: r.Parts})
+	if e != nil {
+		return nil, mapAcceleratorError(e)
+	}
+	if v == nil {
+		return nil, acceleratorInvalidResponse()
+	}
+	return &view.AcceleratorProfilePreview{Spec: wireAcceleratorSpec(v.Spec), UnusedMemoryMib: v.UnusedMemoryMib, UnusedCoreUnits: v.UnusedCoreUnits}, nil
+}
+func (s *AcceleratorService) SetProfileState(ctx context.Context, r *view.SetAcceleratorProfileStateRequest) (*view.AcceleratorProfile, error) {
+	c, e := s.adminContext(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if r == nil || r.Data == nil {
+		return nil, acceleratorInvalid()
+	}
+	m, e := acceleratorMutation(c, r.Data.IdempotencyKey)
+	if e != nil {
+		return nil, e
+	}
+	desired, ok := acc.ProfileState_value[r.Data.Desired]
+	if !ok || (acc.ProfileState(desired) != acc.ProfileState_PROFILE_ACTIVE && acc.ProfileState(desired) != acc.ProfileState_PROFILE_DISABLED) {
+		return nil, acceleratorInvalid()
+	}
+	v, e := s.client.Admin.SetProfileState(ctx, &acc.SetProfileStateRequest{Mutation: m, ProfileId: r.ProfileId, ExpectedRevision: r.Data.ExpectedRevision, Desired: acc.ProfileState(desired)})
+	if e != nil {
+		return nil, mapAcceleratorError(e)
+	}
+	if v == nil {
+		return nil, acceleratorInvalidResponse()
+	}
+	return wireAcceleratorProfile(v), nil
+}
+func (s *AcceleratorService) DeleteProfile(ctx context.Context, r *view.DeleteAcceleratorProfileRequest) (*view.AcceleratorProfile, error) {
+	c, e := s.adminContext(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if r == nil || r.Data == nil {
+		return nil, acceleratorInvalid()
+	}
+	m, e := acceleratorMutation(c, r.Data.IdempotencyKey)
+	if e != nil {
+		return nil, e
+	}
+	v, e := s.client.Admin.DeleteProfile(ctx, &acc.DeleteProfileRequest{Mutation: m, ProfileId: r.ProfileId, ExpectedRevision: r.Data.ExpectedRevision})
+	if e != nil {
+		return nil, mapAcceleratorError(e)
+	}
+	if v == nil {
+		return nil, acceleratorInvalidResponse()
+	}
+	return wireAcceleratorProfile(v), nil
 }

@@ -8,7 +8,7 @@ package servicev1
 
 import (
 	_ "github.com/google/gnostic/openapiv3"
-	v1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
+	v1 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"

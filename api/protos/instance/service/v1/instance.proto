@@ -70,8 +70,10 @@ message GpuSummary {
  string mode = 3;
  string model_key = 4 [json_name = "model_key"];
  uint32 devices_per_instance = 5 [json_name = "devices_per_instance"];
- google.protobuf.Int64Value shared_memory_mib_per_device = 6 [json_name = "shared_memory_mib_per_device"];
- google.protobuf.Int64Value shared_memory_mib_total = 7 [json_name = "shared_memory_mib_total"];
+ reserved 6, 7; reserved "shared_memory_mib_per_device", "shared_memory_mib_total";
+ int64 memory_mib_per_device = 9 [json_name = "memory_mib_per_device"];
+ int64 memory_mib_total = 10 [json_name = "memory_mib_total"];
+
  uint32 core_limit_percent = 8 [json_name = "core_limit_percent"];
 }
 message Preset {
@@ -84,6 +86,7 @@ message Preset {
  bool enabled = 12; GpuSummary gpu = 13;
  string created_at = 14 [json_name = "created_at"];
  string updated_at = 15 [json_name = "updated_at"];
+ bool selectable = 16; string unavailable_reason = 17 [json_name = "unavailable_reason"];
 }
 message ListPresetsResponse { repeated Preset items = 1; int64 total = 2; string gpu_catalog_status = 3 [json_name = "gpu_catalog_status"]; string gpu_catalog_reason = 4 [json_name = "gpu_catalog_reason"]; }
 message PresetGpuInput {

@@ -64,6 +64,9 @@ type QuotaOccupyResult struct {
 type QuotaReleaseInput struct {
 	OwnerService, ReleaseEventID, OperationID, Reason, PayloadHash, PayloadJSON string
 	Items                                                                       []QuotaReleaseItemInput
+	// Complete resource release derives every quantity from the original ledger.
+	ResourceID string
+	Complete   bool
 }
 type QuotaReleaseItemInput struct {
 	ChargeID, QuotaCode string
@@ -112,7 +115,7 @@ func isGPUCode(code string) bool {
 }
 
 // validateFrozenCharges checks the entire immutable business vector for GPU
-// operations. Legacy operations retain their historical non-GPU semantics.
+// operations; non-GPU operations retain their independent accounting semantics.
 func validateFrozenCharges(canonical string, charges []*ent.QuotaCharge) error {
 	gpu := false
 	for _, c := range charges {
@@ -120,7 +123,6 @@ func validateFrozenCharges(canonical string, charges []*ent.QuotaCharge) error {
 	}
 	var frozen struct {
 		SchemaVersion int               `json:"schema_version"`
-		GpuPlan       json.RawMessage   `json:"gpu_plan"`
 		QuotaItems    []QuotaOccupyItem `json:"quota_items"`
 	}
 	if err := json.Unmarshal([]byte(canonical), &frozen); err != nil {
@@ -129,7 +131,7 @@ func validateFrozenCharges(canonical string, charges []*ent.QuotaCharge) error {
 	for _, item := range frozen.QuotaItems {
 		gpu = gpu || isGPUCode(item.QuotaCode)
 	}
-	if !gpu && frozen.SchemaVersion != 2 && len(frozen.GpuPlan) == 0 {
+	if !gpu && frozen.SchemaVersion != 3 {
 		return nil
 	}
 	if len(frozen.QuotaItems) != len(charges) || len(charges) == 0 {
@@ -291,9 +293,16 @@ func (r *QuotaLedgerRepo) storageError(ctx context.Context, err error) error {
 }
 
 func (r *QuotaLedgerRepo) Release(ctx context.Context, in *QuotaReleaseInput) (out []QuotaReleaseResult, err error) {
-	if in == nil || len(in.Items) == 0 || in.OwnerService == "" || in.OperationID == "" || in.ReleaseEventID == "" || in.PayloadHash == "" {
+	if in == nil || (!in.Complete && len(in.Items) == 0) || (in.Complete && (in.ResourceID == "" || len(in.Items) != 0)) || in.OwnerService == "" || in.OperationID == "" || in.ReleaseEventID == "" || in.PayloadHash == "" {
 		return nil, quotaerrors.ReleaseInvalid("incomplete release")
 	}
+	for _, item := range in.Items {
+		if isGPUCode(item.QuotaCode) {
+			return nil, quotaerrors.ReleaseInvalid("GPU release requires a complete resource fact")
+		}
+	}
+	copyInput := *in
+	in = &copyInput
 	err = r.transaction(ctx, func(tx *ent.Tx) error {
 		databaseNow, clockErr := quotaDatabaseNow(ctx, tx)
 		if clockErr != nil {
@@ -322,6 +331,15 @@ func (r *QuotaLedgerRepo) Release(ctx context.Context, in *QuotaReleaseInput) (o
 		}
 		if e = validateOperationCharges(op, charges); e != nil {
 			return quotaerrors.ReleaseConflict("invalid original charge vector")
+		}
+		if in.Complete {
+			if op.ResourceID != in.ResourceID || op.OwnerService != in.OwnerService || (in.Reason != "RESOURCE_RELEASED" && in.Reason != "ABORTED_CLEANED") {
+				return quotaerrors.ReleasePermissionDenied("resource release ownership mismatch")
+			}
+			in.Items = make([]QuotaReleaseItemInput, 0, len(charges))
+			for _, c := range charges {
+				in.Items = append(in.Items, QuotaReleaseItemInput{ChargeID: c.ChargeID, QuotaCode: c.QuotaCode, ReleasedTotal: c.OriginalUnits})
+			}
 		}
 		byID := map[string]*ent.QuotaCharge{}
 		for _, c := range charges {
@@ -392,7 +410,17 @@ func (r *QuotaLedgerRepo) Release(ctx context.Context, in *QuotaReleaseInput) (o
 		if replayed {
 			return nil
 		}
-		return tx.QuotaReleaseReceipt.Create().SetCreatedAt(databaseNow).SetReceiptID(generateUUID()).SetTenantID(tid).SetOwnerService(in.OwnerService).SetReleaseEventID(in.ReleaseEventID).SetPayloadHash(in.PayloadHash).SetPayloadJSON(in.PayloadJSON).Exec(ctx)
+		// The existing globally unique receipt_id also fences a complete event
+		// across tenant ledgers. A reused event cannot refund another tenant or owner.
+		receiptID := generateUUID()
+		if in.Complete {
+			receiptID = uuid.NewSHA1(uuid.NameSpaceOID, []byte("resource-release-v1\n"+in.ReleaseEventID)).String()
+		}
+		e = tx.QuotaReleaseReceipt.Create().SetCreatedAt(databaseNow).SetReceiptID(receiptID).SetTenantID(tid).SetOwnerService(in.OwnerService).SetReleaseEventID(in.ReleaseEventID).SetPayloadHash(in.PayloadHash).SetPayloadJSON(in.PayloadJSON).Exec(ctx)
+		if ent.IsConstraintError(e) {
+			return quotaerrors.ReleaseConflict("release event is already associated with another resource")
+		}
+		return e
 	})
 	return out, err
 }

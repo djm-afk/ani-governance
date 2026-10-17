@@ -54,24 +54,25 @@ import (
 )
 
 type instancePlanEndpoint struct {
-	plan        *acc.ResolvedGpuPlan
+	plan        *acc.ResolvedGpuRequest
+	request     *acc.GpuRequest
 	client      acc.AcceleratorCatalogServiceClient
 	unavailable bool
 	calls       int
 }
 
-func (p *instancePlanEndpoint) ResolveGpuRequest(ctx context.Context, r *acc.ResolveGpuRequestRequest, _ ...grpc.CallOption) (*acc.ResolvedGpuPlan, error) {
+func (p *instancePlanEndpoint) ResolveGpuRequest(ctx context.Context, r *acc.ResolveGpuRequestRequest, _ ...grpc.CallOption) (*acc.ResolvedGpuRequest, error) {
 	p.calls++
 	if p.unavailable {
 		return nil, io.EOF
 	}
-	if !proto.Equal(p.plan.Request, r.Gpu) {
+	if !proto.Equal(p.request, r.Gpu) {
 		return nil, io.ErrUnexpectedEOF
 	}
 	if p.client != nil {
 		return p.client.ResolveGpuRequest(ctx, r)
 	}
-	return proto.Clone(p.plan).(*acc.ResolvedGpuPlan), nil
+	return proto.Clone(p.plan).(*acc.ResolvedGpuRequest), nil
 }
 
 // Real JWT/token-cache, tenant module gate, Casbin/current role snapshot, public
@@ -145,7 +146,9 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	}
 	require.NoError(t, e)
 	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(grant.ID).SetAPIID(catalogRoute.ID).Exec(sys))
-	var gpu *acc.ResolvedGpuPlan
+	var gpu *acc.ResolvedGpuRequest
+	var gpuRequest *acc.GpuRequest
+	var gpuProfile *acc.GpuProfile
 	lifecycle := os.Getenv("INSTANCE_JOINT_LIFECYCLE") == "1"
 	ledger := data.NewQuotaLedgerRepo(bctx, c)
 	var accelerator *data.AcceleratorClient
@@ -156,9 +159,13 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		accelerator, closeAcc, e = data.NewAcceleratorClient(data.AcceleratorClientConfig{Address: peer.Address, ServerName: peer.ServerName, CAFile: peer.CAFile, CertFile: peer.CertFile, KeyFile: peer.KeyFile, Timeout: 3 * time.Second})
 		require.NoError(t, e)
 		t.Cleanup(closeAcc)
+		gpuRequest = peer.Request
 		gpu, e = accelerator.Catalog.ResolveGpuRequest(ctx, &acc.ResolveGpuRequestRequest{Context: &acc.TenantContext{RequestId: uuid.NewString(), TenantId: tenant.ResourceTenantID, Actor: &acc.Actor{Type: "user", Id: actorID}}, Gpu: peer.Request})
 		require.NoError(t, e)
 	}
+	gpuProfile, e = accelerator.Catalog.GetProfile(ctx, &acc.GetProfileRequest{Context: &acc.TenantContext{RequestId: uuid.NewString(), TenantId: tenant.ResourceTenantID, Actor: &acc.Actor{Type: "user", Id: actorID}}, ProfileId: gpuRequest.ProfileId, ProfileVersion: gpuRequest.ProfileVersion})
+	require.NoError(t, e)
+
 	if lifecycle {
 		dir, _ := quotaTLSFixture(t)
 		quotaServer, e := NewQuotaInternalServer(QuotaInternalServerConfig{Enabled: true, Address: "127.0.0.1:0", CAFile: filepath.Join(dir, "ca.pem"), CertFile: filepath.Join(dir, "server.pem"), KeyFile: filepath.Join(dir, "server.key"), CertOwnerMap: map[string]string{"ani-resource-service": service.InstanceOwner}}, ledger)
@@ -172,7 +179,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, config, 0600))
 		t.Setenv("INSTANCE_JOINT_QUOTA_FILE", path)
 	}
-	resourcePeer := testutil.StartInstanceResourcePeer(t, gpu)
+	resourcePeer := testutil.StartInstanceResourcePeer(t, gpuRequest, gpuProfile)
 	owner, closeOwner, e := data.NewInstanceClientFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeOwner)
@@ -182,7 +189,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	worker := service.NewQuotaDispatchWorker(bctx, ledger, registry)
 	require.NoError(t, worker.Start(ctx))
 	t.Cleanup(func() { require.NoError(t, worker.Stop(ctx)) })
-	plans := &instancePlanEndpoint{plan: gpu}
+	plans := &instancePlanEndpoint{plan: gpu, request: gpuRequest}
 	if accelerator != nil {
 		plans.client = accelerator.Catalog
 	}
@@ -192,7 +199,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	var sessions service.InstanceSessionClient
 	terminalEnabled := lifecycle && os.Getenv("SG_INSTANCE_TEST_BINARY") != ""
 	if terminalEnabled {
-		testutil.StartInstanceSessionPeer(t, resourcePeer, gpu.Request.ClusterId)
+		testutil.StartInstanceSessionPeer(t, resourcePeer, gpuRequest.ClusterId)
 		client, close, e := data.NewInstanceSessionClientFromEnv()
 		require.NoError(t, e)
 		t.Cleanup(close)
@@ -212,7 +219,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	roles := data.NewRoleRepo(bctx, c, data.NewRolePermissionRepo(bctx, c), data.NewRoleOrgUnitRepo(bctx, c), data.NewPermissionRepo(bctx, c, data.NewPermissionApiRepo(bctx, c), data.NewPermissionMenuRepo(bctx, c)), data.NewRoleMetadataRepo(bctx, c), data.NewRoleFieldPermissionRepo(bctx, c))
 	policy := authorizer.NewAuthorizer(bctx, data.NewAuthorizerProvider(bctx, roles, data.NewApiRepo(bctx, c)))
 	require.NoError(t, policy.ResetPolicies(ctx))
-	token, _, e := tokens.CreateUserToken(ctx, authpb.ClientType_admin, &authpb.UserTokenPayload{UserId: operator.ID, TenantId: trans.Ptr(tenant.ID), Roles: []string{*currentRole.Code}, DataScopes: []identity.DataScope{identity.DataScope_ALL}})
+	token, _, e := tokens.CreateUserToken(ctx, authpb.ClientType_admin, &authpb.UserTokenPayload{UserId: operator.ID, TenantId: trans.Ptr(tenant.ID), Roles: []string{*currentRole.Code}, DataScopes: []identity.DataScope{identity.DataScope_ALL}, Application: authpb.ApplicationType_console.Enum(), Sid: trans.Ptr(uuid.NewString())})
 	require.NoError(t, e)
 	server := khttp.NewServer(khttp.Middleware(auth.CredentialHeaders(), auth.Server(auth.WithAccessTokenChecker(checker), auth.WithTenantAccessChecker(data.NewTenantAccessCheckerImpl(bctx, c)), auth.WithInjectMetadata(false), auth.WithInjectEnt(true)), authz.Server(policy.Engine())))
 	RegisterInstanceHTTPServer(server, handler)
@@ -270,7 +277,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	require.NotEmpty(t, instance.Memory)
 	require.NotEmpty(t, instance.CreatedAt)
 	require.NotNil(t, instance.GpuSummary)
-	require.Equal(t, gpu.Request.ProfileId, instance.GpuSummary.ProfileId)
+	require.Equal(t, gpuRequest.ProfileId, instance.GpuSummary.ProfileId)
 	require.NotNil(t, instance.Scheduling)
 	require.Equal(t, view.SchedulingOptions_NONE, instance.Scheduling.GetPodPlacement())
 	if lifecycle {
@@ -411,7 +418,13 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 			if lifecycle {
 				require.Zero(t, balance.OccupiedUnits)
 			} else {
-				require.EqualValues(t, 6144, balance.OccupiedUnits, "intake-only test cannot manufacture cleanup/return")
+				expected := int64(0)
+				for _, item := range gpu.QuotaItems {
+					if item.QuotaCode == balance.QuotaCode {
+						expected += item.Units
+					}
+				}
+				require.EqualValues(t, expected, balance.OccupiedUnits, "intake-only test cannot manufacture cleanup/return")
 			}
 		}
 	}

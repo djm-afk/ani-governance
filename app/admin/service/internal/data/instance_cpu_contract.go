@@ -44,11 +44,11 @@ func DecodeInstanceCPUCanonical(raw []byte) (*InstanceCPUCanonical, error) {
 		return nil, invalid
 	}
 	business, e := res.DecodeBusinessPayload(c.BusinessPayload)
-	if e != nil || business == nil || business.Data == nil || business.Spec == nil || business.Gpu != nil || business.Spec.InstanceKind != "container" || business.Spec.ComputeType != "cpu" {
+	if e != nil || business == nil || business.GpuSelection != nil || business.GpuExecution != nil || business.InstanceKind != "container" || business.ComputeType != "cpu" {
 		return nil, invalid
 	}
-	s := business.Spec
-	if s.ClusterId == "" || s.Namespace == "" || s.ImageDigest == "" || s.ImageReference == "" || s.Cpu == "" || s.Memory == "" || s.ServiceAccount == "" || s.StorageClass == "" || s.WorkspaceSize == "" || s.Shell == "" {
+	s := business
+	if s.ClusterId == "" || s.Namespace == "" || s.ImageReference == "" || s.Cpu == "" || s.Memory == "" || s.ServiceAccount == "" || s.StorageClass == "" || s.WorkspaceSize == "" || s.Shell == "" {
 		return nil, invalid
 	}
 	digest, e := res.BusinessPayloadDigest(business)
