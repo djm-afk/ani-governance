@@ -19,7 +19,6 @@ func TestResolveAuthoritativeCodes(t *testing.T) {
 		{"GET", "/api/v1/networks/vpcs/{vpc_id}", "network:vpc:get", SourceCapability},
 		{"POST", "/api/v1/instances/{data.instance_id}:start", "instance:start", SourceCapability},
 		{"POST", "/api/v1/instances/{data.instance_id}:stop", "instance:stop", SourceCapability},
-		{"POST", "/api/v1/inference/services/{data.resource_id}:delete", "inference:service:delete", SourceCapability},
 		{"GET", "/api/v1/me/quota-accounts", "quota:account:self-read", SourceCapability},
 		{"GET", "/api/v1/admin/accelerator/profiles:preview", "accelerator:profile:preview", SourceCapability},
 		{"POST", "/api/v1/admin/accelerator/profiles/{profile_id}:set-state", "accelerator:profile:set-state", SourceCapability},
@@ -78,8 +77,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 119 {
-		t.Errorf("CapabilityCount() = %d, want 119", CapabilityCount())
+	if CapabilityCount() != 109 {
+		t.Errorf("CapabilityCount() = %d, want 109", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
@@ -95,6 +94,14 @@ func TestCountsAndKeys(t *testing.T) {
 func TestLookup(t *testing.T) {
 	if code, ok := Lookup("GET", "/api/v1/admin/roles"); !ok || code != "role:view" {
 		t.Errorf("Lookup(roles) = (%q,%v), want (role:view,true)", code, ok)
+	}
+	for _, route := range []struct{ method, path string }{
+		{"GET", "/api/v1/inference/services"},
+		{"POST", "/api/v1/inference/services/{data.resource_id}:delete"},
+	} {
+		if _, ok := Lookup(route.method, route.path); ok {
+			t.Errorf("Lookup(%s %s) should miss after Inference management retirement", route.method, route.path)
+		}
 	}
 	if _, ok := Lookup("GET", "/api/v1/nope"); ok {
 		t.Error("Lookup unregistered route should miss")

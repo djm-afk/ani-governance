@@ -1,8 +1,8 @@
--- Register the Model and Inference BFF permissions after the API catalog has
+-- Register the Model BFF permissions after the API catalog has
 -- been reviewed and synchronised with `admin sync-apis`.
 --
 -- This file deliberately does not grant a role, enable a plan, create a
--- tenant, or change quotas. Use enable-model-inference-access.sql for one
+-- tenant, or change quotas. Use enable-model-access.sql for one
 -- explicitly selected tenant role and plan.
 BEGIN;
 
@@ -27,27 +27,14 @@ BEGIN
       ('POST', '/api/v1/models:import',                               'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models/import-tasks/{task_id}:retry',         'model:service:manage', 'MODEL'),
       ('DELETE','/api/v1/models/{model_id}',                          'model:service:manage', 'MODEL'),
-      ('DELETE','/api/v1/model-versions/{model_version_id}',           'model:service:manage', 'MODEL'),
-      ('GET',  '/api/v1/inference/services',                          'inference:service:read',   'INFERENCE'),
-      ('GET',  '/api/v1/inference/services/{resource_id}',            'inference:service:read',   'INFERENCE'),
-      ('GET',  '/api/v1/inference/operations/{operation_id}',         'inference:service:read',   'INFERENCE'),
-      ('POST', '/api/v1/inference/services',                          'inference:service:create', 'INFERENCE'),
-      ('POST', '/api/v1/inference/services/{data.resource_id}:delete','inference:service:delete', 'INFERENCE'),
-      ('POST', '/api/v1/inference/services/{data.resource_id}:update','inference:service:update', 'INFERENCE'),
-      ('POST', '/api/v1/inference/services/{data.resource_id}:start', 'inference:service:start',  'INFERENCE'),
-      ('POST', '/api/v1/inference/services/{data.resource_id}:stop',  'inference:service:stop',   'INFERENCE'),
-      ('POST', '/api/v1/inference/services/{data.resource_id}:restart','inference:service:restart','INFERENCE'),
-      ('GET',  '/api/v1/inference/services/{resource_id}/operations', 'inference:service:read',   'INFERENCE')
+      ('DELETE','/api/v1/model-versions/{model_version_id}',           'model:service:manage', 'MODEL')
     ) AS routes(method, path, permission_code, business_module)
   LOOP
     SELECT a.id INTO STRICT v_api_id
       FROM sys_apis a
      WHERE a.method = route.method
        AND a.path = route.path
-       AND a.module = CASE route.business_module
-                        WHEN 'MODEL' THEN 'ModelService'
-                        WHEN 'INFERENCE' THEN 'InferenceService'
-                      END
+       AND a.module = 'ModelService'
        AND a.business_module = route.business_module
        AND a.scope = 'ADMIN'
        AND a.status = 'ON'

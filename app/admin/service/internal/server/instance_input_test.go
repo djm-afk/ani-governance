@@ -82,6 +82,33 @@ func TestInstanceHTTPRejectsInvalidSchedulingAndInternalFields(t *testing.T) {
 	}
 }
 
+func TestInstanceHTTPRejectsAmbiguousJSONAndCallerIdentity(t *testing.T) {
+	for _, body := range []string{
+		`{"data":{"name":"a","name":"b"}}`,
+		`{"data":{}} {"data":{}}`,
+		`{"data":{"tenant_id":"forged"}}`,
+		`{"data":{"gpu_owner_attachment":{}}}`,
+	} {
+		request := httptest.NewRequest("POST", "/api/v1/instances", strings.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		require.Error(t, decodeInstanceHTTP(request, new(view.CreateInstanceRequest)), body)
+	}
+	for _, header := range []string{"X-Ani-Tenant-Id", "X-Tenant-Id", "X-Ani-Actor", "X-Ani-Operator", "X-Resource-Tenant-Id"} {
+		request := httptest.NewRequest("POST", "/api/v1/instances", strings.NewReader(`{"data":{"name":"workspace"}}`))
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set(header, "forged")
+		require.Error(t, decodeInstanceHTTP(request, new(view.CreateInstanceRequest)), header)
+	}
+	request := httptest.NewRequest("POST", "/api/v1/instances?tenant_id=forged", strings.NewReader(`{"data":{}}`))
+	request.Header.Set("Content-Type", "application/json")
+	require.Error(t, decodeInstanceHTTP(request, new(view.CreateInstanceRequest)))
+
+	request = httptest.NewRequest("POST", "/api/v1/instances", strings.NewReader(`{"data":{}}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.URL.RawPath = request.URL.Path
+	require.NoError(t, decodeInstanceHTTP(request, new(view.CreateInstanceRequest)), "canonical RawPath must remain accepted")
+}
+
 func TestInstanceHTTPPresetPatchPreservesGPUClearAndFalse(t *testing.T) {
 	request := httptest.NewRequest("PATCH", "/api/v1/admin/compute-presets/20000000-0000-4000-8000-000000000001", strings.NewReader(`{"data":{"gpu":null,"enabled":false},"update_mask":"gpu,enabled"}`))
 	request.Header.Set("Content-Type", "application/json")

@@ -39,7 +39,7 @@ type diagnosticAuthorization struct {
 func (a *diagnosticAuthorization) Authorize(_ context.Context, tenant, actor uint32, path, method string) error {
 	a.calls.Add(1)
 	if a.deny || tenant != 7 || actor != 9 || method != "GET" || (path != data.InstanceLogsPath && path != data.InstanceRuntimePath && path != data.InstanceEventsPath) {
-		return data.ErrInferenceAuthorizationDenied
+		return data.ErrActionAuthorizationDenied
 	}
 	return nil
 }

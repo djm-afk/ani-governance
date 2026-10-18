@@ -88,7 +88,7 @@ func decodeInstanceHTTP(r *http.Request, message proto.Message) error {
 		}
 	}
 	r.Body = io.NopCloser(bytes.NewReader(raw))
-	if decodeInferenceHTTP(r, message) != nil {
+	if decodeStrictJSONHTTP(r, message) != nil {
 		return invalid
 	}
 	return nil

@@ -47,14 +47,14 @@ type instancePresetAuthorization struct {
 func (a *instancePresetAuthorization) Authorize(_ context.Context, tenant, actor uint32, path, method string) error {
 	a.instanceCalls++
 	if (tenant != 7 && tenant != 8) || actor != 9 || path != data.InstancePresetPath || method != "GET" {
-		return data.ErrInferenceAuthorizationDenied
+		return data.ErrActionAuthorizationDenied
 	}
 	return a.instanceErr
 }
 func (a *instancePresetAuthorization) AuthorizeCatalog(_ context.Context, tenant, actor uint32) error {
 	a.catalogCalls++
 	if (tenant != 7 && tenant != 8) || actor != 9 {
-		return data.ErrInferenceAuthorizationDenied
+		return data.ErrActionAuthorizationDenied
 	}
 	return a.catalogErr
 }
@@ -68,7 +68,7 @@ func (instancePresetTenantResolver) ResourceTenantID(_ context.Context, id uint3
 	case 8:
 		return presetOtherTenant, nil
 	default:
-		return "", data.ErrInferenceAuthorizationDenied
+		return "", data.ErrActionAuthorizationDenied
 	}
 }
 
@@ -201,8 +201,8 @@ func TestInstancePresetCatalogFaultsPreserveSafeCPUPage(t *testing.T) {
 		{name: "catalog denied", rpcErr: status.Error(codes.PermissionDenied, "private ACC tenant message"), status: "NO_PERMISSION", catalogCalls: 1},
 		{name: "catalog unauthenticated", rpcErr: status.Error(codes.Unauthenticated, "private service identity"), status: "NO_PERMISSION", catalogCalls: 1},
 		{name: "catalog timeout", rpcErr: status.Error(codes.DeadlineExceeded, "10.0.0.1 credential"), status: "UNAVAILABLE", catalogCalls: 1},
-		{name: "gate denied", gateErr: data.ErrInferenceAuthorizationDenied, status: "NO_PERMISSION"},
-		{name: "gate unavailable", gateErr: data.ErrInferenceAuthorizationUnavailable, status: "UNAVAILABLE"},
+		{name: "gate denied", gateErr: data.ErrActionAuthorizationDenied, status: "NO_PERMISSION"},
+		{name: "gate unavailable", gateErr: data.ErrActionAuthorizationUnavailable, status: "UNAVAILABLE"},
 		{name: "missing scope", mutate: func(r *acc.ListProfilesResponse) { r.Scopes = nil }, status: "UNAVAILABLE", catalogCalls: 1},
 		{name: "mismatched scope digest", mutate: func(r *acc.ListProfilesResponse) { r.Scopes[0].SpecDigest = strings.Repeat("f", 64) }, status: "UNAVAILABLE", catalogCalls: 1},
 		{name: "scope wrong cluster", mutate: func(r *acc.ListProfilesResponse) { r.Scopes[0].ClusterId = uuid.NewString() }, status: "UNAVAILABLE", catalogCalls: 1},
@@ -342,7 +342,7 @@ func TestInstancePresetCatalogRequiresInstancePermission(t *testing.T) {
 		t.Fatal("permission bypass called Resource")
 		return nil, nil
 	}}
-	authorization := &instancePresetAuthorization{instanceErr: data.ErrInferenceAuthorizationDenied}
+	authorization := &instancePresetAuthorization{instanceErr: data.ErrActionAuthorizationDenied}
 	s := instancePresetService(owner, authorization, nil, "cluster")
 	if _, err := s.ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{}); kratoserrors.Code(err) != 403 {
 		t.Fatalf("instance permission: %v", err)

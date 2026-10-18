@@ -103,9 +103,9 @@ func (r *QuotaAdapterRegistry) EnforcesQuota(code string) bool {
 	return false
 }
 
-// Only the two explicitly integrated owners can enable GPU business admission.
+// Only the explicitly integrated instance owner can enable GPU business admission.
 func supportedGpuOwner(owner string) bool {
-	return owner == "ani-inference" || owner == "ani-resource-service"
+	return owner == InstanceOwner
 }
 
 func gpuPrincipal(ctx context.Context) (*auth.Principal, error) {

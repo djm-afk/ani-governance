@@ -24,7 +24,7 @@
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
-| 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | ACC 目录与 Resource 实例的新执行/释放合同实施；Inference 本期仅同步静态 API，GPU 投递关闭；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
+| 通用配额与 GPU 实例接入 | QUOTA-01～03；历史 INF-01/02、QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 保留 ACC 目录与 Resource 实例的新执行/释放合同；Inference 管理接口、API 依赖和配置本期移除，后续重新对接；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)；源码、部署与真实 GPU 验收分别记录 |
 | ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08；服务间调用登记 S2S-MODELDEV-CPUP01-01 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证；Gov→ModelDev 传输/身份/白名单三个差异收敛已实施并在 ani-system 真实环境完成正/负向验证 | CPU-P01，进行中 |
 
 ## 风格改动批次
@@ -1574,6 +1574,8 @@ roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采�
 
 ## GOV-ACC-INF-V12-WIRING-01：推理创建与删除接线（2026-10-09）
 
+本节为历史接线记录。2026-10-18 起 INF-01/02 及普通推理管理接口均已撤下，不是当前可调用合同；Inference API 模块与出站配置也不保留。以下旧权限登记、启用及退款映射步骤不再适用，后续重新对接另行登记。
+
 用户明确批准本仓登记 `INFERENCE=15`。新增推理模块和两项独立动作；当前源码登记与实际授权/部署分别验收，不据此向基础套餐、所有角色或生产环境自动开放。
 
 | 编号 | 入口 | 报文与可靠受理 | 当前授权条件 |
@@ -1587,7 +1589,7 @@ ledger adapter action固定为权威 Inference RPC full method `CreateInferenceS
 
 当前受管GPU的LWS输入在共享业务校验中、Occupy之前明确拒绝；锁定KServe的LWS模板无法可靠投影GPU annotations与Queue。本批不把typed渲染接口或接受后补丁当C02可运行路径，实际LWS投影仍为not_verified。
 
-模块资格 `PlanModule`、上限 `PlanQuota` 与当前用户动作授权各自独立。API先dry-run/显式sync后执行 [权限目录登记](../scripts/ops/sql/register-inference-permissions.sql)，再仅为显式选定tenant:manager角色和选定套餐执行 [启用脚本](../scripts/ops/sql/enable-inference-access.sql)，传tenant_id/role_id/plan_id；不修改基础FREE、模板、所有角色或用户配额。Gov内部退款listener仅编译注册固定ani-inference，生产精确客户端DNS SAN必须明确配置，不猜测。
+模块资格 `PlanModule`、上限 `PlanQuota` 与当前用户动作授权各自独立。API先dry-run/显式sync后执行 旧权限目录登记脚本（已退役），再仅为显式选定tenant:manager角色和选定套餐执行 旧启用脚本（已退役），传tenant_id/role_id/plan_id；不修改基础FREE、模板、所有角色或用户配额。Gov内部退款listener仅编译注册固定ani-inference，生产精确客户端DNS SAN必须明确配置，不猜测。
 
 软件测试使用实际Gov受理/账本/当前权限、真实Acc解析和真实Inference RPC/PG；只有外部provider证据可用明确替身，外部模型/Kubernetes执行暂停。完成通知在持久DELETE后显式注入，通过真实Inference退款客户端调用真实Gov mTLS/PG。源码实现、发布依赖、运行结果、CI及生产/真实GPU验收由本批结果索引分别记录；本文不回填未执行PASS，也不将本批之外的接口风格整体登记结项。
 
@@ -1655,15 +1657,12 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 
 ## GOV-MODEL-INF-20261012：Model / Inference BFF 接入
 
-本批把模型目录、模型导入和推理生命周期接入 Governance BFF。调用方只面向
-Governance HTTP；Governance 根据已认证的租户用户建立下游 mTLS gRPC 请求，Model
-和 Inference 不读取客户端提交的租户或 actor 字段。ModelScope 导入仍由 Model
-Service 创建一次性 Kubernetes Job 完成，模型文件写入当前 Model Service 配置的
-S3-compatible 存储；Inference 新创建必须引用已就绪的 `model_version_id`。
-GPU 同键重放先做当前授权并读取原受理记录，不再查询 Model readiness；Model 或
-投递适配器暂不可用时仍返回原 operation/resource。GPU 删除先按当前租户查询
-Governance 原 CREATE，再执行原本地取消或持久 DELETE 流程；未投递创建的取消退款
-不依赖 Inference 资源已经存在。
+本登记当前只保留 Model 模型目录、版本和导入 BFF。Inference 管理接入已整体撤下，
+包括普通及 GPU 推理的创建、查询、操作查询、更新、启停/重启和删除；本仓不再依赖
+Inference Go API 模块，后续重新对接另行登记。调用方通过 Governance HTTP 管理模型，
+Governance 根据已认证的租户用户建立下游 Model mTLS gRPC 请求，不信任客户端提交的
+租户或 actor。ModelScope 导入仍由 Model Service 创建一次性 Kubernetes Job 完成，
+文件写入当前 Model Service 配置的 S3-compatible 存储。
 
 ### HTTP 入口
 
@@ -1676,44 +1675,26 @@ Governance 原 CREATE，再执行原本地取消或持久 DELETE 流程；未投
 | 模型下载地址 | `GET /api/v1/model-versions/{model_version_id}/download-url` | `model:service:read`（由 Governance 通过受信任的 Model gRPC 调用） |
 | 创建模型/版本、上传地址、发起导入、重试 | `POST /api/v1/models`、`POST /api/v1/model-versions`、`POST /api/v1/models/{model_id}/upload-url`、`POST /api/v1/models:import`、`POST /api/v1/models/import-tasks/{task_id}:retry` | `model:service:manage` |
 | 删除模型/版本 | `DELETE /api/v1/models/{model_id}`、`DELETE /api/v1/model-versions/{model_version_id}` | `model:service:manage` |
-| 创建推理 | `POST /api/v1/inference/services` | `inference:service:create` |
-| 推理查询 | `GET /api/v1/inference/services`、`GET /api/v1/inference/services/{resource_id}`、`GET /api/v1/inference/operations/{operation_id}` | `inference:service:read` |
-| 删除推理 | `POST /api/v1/inference/services/{data.resource_id}:delete` | `inference:service:delete` |
-| 更新推理 | `POST /api/v1/inference/services/{data.resource_id}:update` | `inference:service:update` |
-| 启停/重启推理 | `POST /api/v1/inference/services/{data.resource_id}:start`、`:stop`、`:restart` | 对应 `inference:service:start`、`inference:service:stop`、`inference:service:restart` |
-| 推理操作记录 | `GET /api/v1/inference/services/{resource_id}/operations` | `inference:service:read` |
-
-请求体沿用各自 `data` 公开报文。推理创建使用 `engine_type`、`engine_image`、
-完整的单字符串 `command` 和 `served_model_name`；不再有 `engine.command[]` 或
-`engine.args[]` 数组。Governance、Model 和 Inference 都不会解析、拼接、替换或
-写死引擎启动参数；请求中的完整 command 原样保存并转发。未传 `gpu` 表示不使用
-GPU；传入 GPU 才进入配额/Accelerator 受理路径。推理数量改动按用户要求退出本批正式交付，保留当前单卡公开合同和已发布依赖。
-运行时网络端点由适配器固定为 TCP `containerPort=8000`、`servicePort=80`、
-`targetPort=8000`；调用方提供的完整 command 必须让引擎监听容器端口 8000。
-适配器不解析 command，也不向其中追加端口或其他启动参数。
-
 ### 新环境启用步骤
 
 1. 先对本版本 OpenAPI 执行 `admin sync-apis --dry-run`，人工确认后执行
    `admin sync-apis`。
-2. 执行 [Model/Inference 权限目录登记](../scripts/ops/sql/register-model-inference-permissions.sql)。
+2. 执行 [Model 权限目录登记](../scripts/ops/sql/register-model-permissions.sql)。
    该文件只登记权限与 API 关联，不自动给任何角色授权。
 3. 对明确的租户、当前 `tenant:manager` 角色和套餐执行
-   [Model/Inference 启用脚本](../scripts/ops/sql/enable-model-inference-access.sql)。
-   它只增加所选租户角色的权限和所选套餐的 `MODEL`、`INFERENCE` 模块，不修改其他租户、
+   [Model 启用脚本](../scripts/ops/sql/enable-model-access.sql)。
+   它只增加所选租户角色的权限和所选套餐的 `MODEL` 模块，不修改其他租户、
    模板角色或配额。
-4. 配置 Governance → Model/Inference 的证书、精确服务 DNS 和地址；调用者证书只含
+4. 配置 Governance → Model 的证书、精确服务 DNS 和地址；调用者证书只含
    DNS SAN `ani-governance`，不混入其他 DNS、URI、IP 或 email。重启 Governance
    使 Casbin 策略重新加载；配置缺失时 BFF 应返回下游不可用，不退化为直连或明文。
 
 ### 业务链路验收
 
 `登录 → POST /api/v1/models → POST /api/v1/model-versions → POST /api/v1/models:import
-→ 轮询导入任务 → 读取已就绪版本 → POST /api/v1/inference/services → 轮询
-operation/service → Higress /v1/completions`。导入任务状态可以在版本就绪前为
+→ 轮询导入任务 → 读取已就绪版本`。导入任务状态可以在版本就绪前为
 `importing`；`GET /api/v1/model-versions/{id}` 只返回已就绪版本，不能把导入中的
-404 当作导入失败。CPU 验收不需要 GPU 或 Accelerator；GPU 验收必须在有 GPU 节点的
-新集群另行执行。本批不修改旧集群。
+404 当作导入失败。该链路不包含推理服务管理或推理数据面验收；Model 当前功能范围保持不变。
 
 
 ### GOV-ACC-INF-V12-WIRING-01：2026-10-18 显存值合同替换
@@ -1722,4 +1703,4 @@ operation/service → Higress /v1/completions`。导入任务状态可以在版�
 
 管理 Profile 创建仍为 `POST /api/v1/admin/accelerator/profiles`，正式 RPC 改为 `CreateProfile`；新增 `GET .../profiles:preview`、`POST .../profiles/{profile_id}:set-state` 和 `POST .../profiles/{profile_id}:delete`。写请求保持 `{data:{...}}`，平台 JWT、当前权限与 ACC 对应 action/cluster grant 必须齐全。API 目录同步只登记接口，不自动授予权限。
 
-用户 Preset 返回每卡显存值、selectable 与 unavailable_reason；CPU 查询不依赖 ACC，GPU 仍须通过租户目录授权过滤。Inference 只有静态 API 依赖同步，本期不注册 GPU 投递能力。编码、软件回归和真实 GPU 验收分别记证，不能沿用旧结果宣称新合同已验收。
+用户 Preset 返回每卡显存值、selectable 与 unavailable_reason；CPU 查询不依赖 ACC，GPU 仍须通过租户目录授权过滤。Inference 的普通及 GPU 管理接口、API 依赖和出站配置均移除，后续重新对接。编码、软件回归和真实 GPU 验收分别记证，不能沿用旧结果宣称新合同已验收。

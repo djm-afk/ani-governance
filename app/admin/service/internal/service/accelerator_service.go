@@ -521,7 +521,7 @@ func (s *AcceleratorService) AdmissionPreview(ctx context.Context, r *view.Accel
 		return nil, e
 	}
 	readiness := "NOT_ENABLED"
-	if s.registry != nil && s.registry.GPUExecutionEnabled("ani-inference") {
+	if s.registry != nil && s.registry.GPUExecutionEnabled(InstanceOwner) {
 		readiness = "ENFORCED"
 	}
 	reasons, reasonsValid := acceleratorPublicReasons(fit.Reasons)
@@ -561,7 +561,7 @@ func (s *AcceleratorService) ListGpuUsages(ctx context.Context, r *view.Accelera
 	return out, nil
 }
 func (s *AcceleratorService) usageRef(ctx context.Context, c *acc.TenantContext, p *auth.Principal, r *view.AcceleratorUsageRequest) (*acc.GpuUsageRef, error) {
-	if r == nil || r.OwnerService != "ani-inference" {
+	if r == nil || r.OwnerService != InstanceOwner {
 		return nil, errors.NotFound("GPU_USAGE_NOT_FOUND", "resource not found")
 	}
 	id, e := uuid.Parse(r.ResourceId)

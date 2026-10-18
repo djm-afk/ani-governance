@@ -81,10 +81,10 @@ func (b *InstanceGpuBinding) AuthorizeGpu(ctx context.Context, p *auth.Principal
 	return instanceAuthorizationError(b.authorization.Authorize(ctx, p.TenantID, p.ID, path, method))
 }
 func instanceAuthorizationError(e error) error {
-	if errors.Is(e, data.ErrInferenceAuthorizationDenied) {
+	if errors.Is(e, data.ErrActionAuthorizationDenied) {
 		return kratoserrors.Forbidden("FORBIDDEN", "instance action denied")
 	}
-	if errors.Is(e, data.ErrInferenceAuthorizationUnavailable) {
+	if errors.Is(e, data.ErrActionAuthorizationUnavailable) {
 		return kratoserrors.ServiceUnavailable("INSTANCE_AUTHORIZATION_UNAVAILABLE", "instance authorization unavailable")
 	}
 	return e
@@ -453,7 +453,7 @@ func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListP
 		profileStates = states
 		if err != nil {
 			catalogStatus, reason = "UNAVAILABLE", "GPU_CATALOG_UNAVAILABLE"
-			if errors.Is(err, data.ErrInferenceAuthorizationDenied) || codes.PermissionDenied == status.Code(err) || codes.Unauthenticated == status.Code(err) {
+			if errors.Is(err, data.ErrActionAuthorizationDenied) || codes.PermissionDenied == status.Code(err) || codes.Unauthenticated == status.Code(err) {
 				catalogStatus, reason = "NO_PERMISSION", "GPU_CATALOG_NO_PERMISSION"
 			}
 		} else {

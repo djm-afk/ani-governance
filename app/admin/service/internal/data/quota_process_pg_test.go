@@ -179,7 +179,7 @@ func TestQuotaProcessCommitRecovery(t *testing.T) {
 					original, e := repo.Occupy(ctx, in)
 					require.NoError(t, e)
 					s.OperationID = original.OperationID
-					s.Delete = gpuDelete(in)
+					s.Delete = gpuDelete(t, in)
 					if action == "delete" || action == "release" {
 						rows, e := repo.ClaimDispatchable(ctx, "setup", time.Minute, 1)
 						require.NoError(t, e)
@@ -336,7 +336,7 @@ func TestQuotaProcessDeleteClaimRace(t *testing.T) {
 		require.NoError(t, e)
 		dir := t.TempDir()
 		gate := filepath.Join(dir, "go")
-		del := gpuDelete(in)
+		del := gpuDelete(t, in)
 		a := quotaFaultSpec{Action: "cancel", Input: in, Delete: del, Ready: filepath.Join(dir, "delete-ready"), Go: gate}
 		b := quotaFaultSpec{Action: "claim", Input: in, Ready: filepath.Join(dir, "claim-ready"), Go: gate}
 		ca, ra := quotaFaultStart(t, a)
