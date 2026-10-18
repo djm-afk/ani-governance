@@ -4,6 +4,7 @@ import (
 	dbbootstrap "go-wind-admin/sql/bootstrap"
 
 	"fmt"
+	"os"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/transport"
@@ -227,21 +228,21 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	if instanceOwner != nil {
 		instanceClient = instanceOwner
 	}
-	instanceBinding := service.NewInstanceGpuBinding(instanceClient, data.NewInstanceAuthorizationRepo(entClient))
+	instanceCluster, err := data.NewInstanceSchedulingClusterFromEnv()
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	instanceScheduling := service.NewInstanceSchedulingPolicy(configRepo, tenantRepo, instanceCluster, os.Getenv("ANI_INSTANCE_CLUSTER_ID"))
+	instanceBinding := service.NewInstanceGpuBinding(instanceClient, data.NewInstanceAuthorizationRepo(entClient), os.Getenv("ANI_INSTANCE_CLUSTER_ID"), instanceScheduling)
 	if instanceClient != nil && data.InstanceModuleRegistered() {
 		if err = quotaRegistry.Register(instanceBinding); err != nil {
 			rollback()
 			return nil, nil, err
 		}
 	}
-	// A client configuration cannot invent the authoritative module registry.
-	// Historical replay still performs current authorization before reading.
-	if inferenceClient != nil && data.InferenceModuleRegistered() {
-		if err := quotaRegistry.Register(inferenceBinding); err != nil {
-			rollback()
-			return nil, nil, err
-		}
-	}
+	// Inference GPU execution awaits its new-contract implementation and stays disabled.
+
 	quotaAdminRepo.SetExecutionCapabilities(quotaRegistry)
 	quotaWorker := service.NewQuotaDispatchWorker(ctx, quotaLedgerRepo, quotaRegistry)
 
@@ -388,7 +389,12 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	if instanceSession != nil {
 		instanceSessions = instanceSession
 	}
-	instanceService := service.NewInstanceService(instanceAcceptance, instanceBinding, tenantRepo, quotaLedgerRepo, instanceSessions)
+	instanceCatalog := service.InstanceCatalogConfig{ClusterID: os.Getenv("ANI_INSTANCE_CLUSTER_ID"), Cluster: instanceCluster, Settings: instanceScheduling}
+	if acceleratorClient != nil {
+		instanceCatalog.Admin = acceleratorClient.Admin
+		instanceCatalog.Catalog = acceleratorClient.Catalog
+	}
+	instanceService := service.NewInstanceService(instanceAcceptance, instanceBinding, tenantRepo, quotaLedgerRepo, instanceSessions, instanceCatalog)
 	modeldevService := service.NewModelDevService(modeldevAuthorizationRepo, tenantRepo, modeldevAcceptanceRepo, modeldevBindingRepo, modeldevClient)
 
 	// ═══════════════════════ 五、传输层(internal/server) ═══════════════════════

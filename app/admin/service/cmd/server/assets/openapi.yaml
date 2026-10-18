@@ -527,12 +527,12 @@ paths:
         post:
             tags:
                 - AcceleratorAdminService
-            operationId: AcceleratorAdminService_PublishProfile
+            operationId: AcceleratorAdminService_CreateProfile
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/PublishAcceleratorProfileRequest'
+                            $ref: '#/components/schemas/CreateAcceleratorProfileRequest'
                 required: true
             responses:
                 "200":
@@ -541,6 +541,76 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles/{profile_id}:delete:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_DeleteProfile
+            parameters:
+                - name: profile_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteAcceleratorProfileRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles/{profile_id}:set-state:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_SetProfileState
+            parameters:
+                - name: profile_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetAcceleratorProfileStateRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles:preview:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_PreviewProfile
+            parameters:
+                - name: group_id
+                  in: query
+                  schema:
+                    type: string
+                - name: parts
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfilePreview'
     /api/v1/admin/accelerator/supply-groups:
         get:
             tags:
@@ -935,6 +1005,144 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/admin/compute-presets:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AdminListPresets
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: code
+                  in: query
+                  schema:
+                    type: string
+                - name: compute_type
+                  in: query
+                  schema:
+                    type: string
+                - name: gpu_mode
+                  in: query
+                  schema:
+                    type: string
+                - name: enabled
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AdminListPresetsResponse'
+        post:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AdminCreatePreset
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreatePresetRequest'
+                required: true
+            responses:
+                "201":
+                    description: Created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Preset'
+    /api/v1/admin/compute-presets/{id}:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AdminGetPreset
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Preset'
+        delete:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AdminDeletePreset
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "204":
+                    description: Deleted
+        patch:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AdminUpdatePreset
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdatePresetRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Preset'
+    /api/v1/admin/compute-presets/{id}:set-enabled:
+        post:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AdminSetPresetEnabled
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetPresetEnabledRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Preset'
     /api/v1/admin/configs:
         get:
             tags:
@@ -1825,6 +2033,35 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InitialContextResponse'
+    /api/v1/admin/instance-scheduling-settings:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_GetInstanceSchedulingSettings
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InstanceSchedulingSettings'
+        put:
+            tags:
+                - InstanceService
+            operationId: InstanceService_UpdateInstanceSchedulingSettings
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateInstanceSchedulingSettingsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InstanceSchedulingSettings'
     /api/v1/admin/internal-message/categories:
         get:
             tags:
@@ -5672,6 +5909,35 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ListRouteResponse'
+    /api/v1/admin/scheduler-config:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_GetSchedulerConfig
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SchedulerConfig'
+        put:
+            tags:
+                - InstanceService
+            operationId: InstanceService_UpdateSchedulerConfig
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateSchedulerConfigRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SchedulerConfig'
     /api/v1/admin/server-monitor:
         get:
             tags:
@@ -7472,6 +7738,33 @@ paths:
             tags:
                 - InstanceService
             operationId: InstanceService_ListInstancePresets
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: code
+                  in: query
+                  schema:
+                    type: string
+                - name: compute_type
+                  in: query
+                  schema:
+                    type: string
+                - name: gpu_mode
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -7485,12 +7778,29 @@ paths:
                 - InstanceService
             operationId: InstanceService_ListInstances
             parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
                 - name: pageSize
                   in: query
                   schema:
                     type: integer
-                    format: int32
-                - name: afterId
+                    format: uint32
+                - name: instance_kind
+                  in: query
+                  schema:
+                    type: string
+                - name: compute_type
+                  in: query
+                  schema:
+                    type: string
+                - name: observedState
+                  in: query
+                  schema:
+                    type: string
+                - name: name
                   in: query
                   schema:
                     type: string
@@ -7512,8 +7822,8 @@ paths:
                             $ref: '#/components/schemas/CreateInstanceRequest'
                 required: true
             responses:
-                "200":
-                    description: OK
+                "202":
+                    description: Accepted
                     content:
                         application/json:
                             schema:
@@ -7536,8 +7846,8 @@ paths:
                             $ref: '#/components/schemas/ChangeInstanceRequest'
                 required: true
             responses:
-                "200":
-                    description: OK
+                "202":
+                    description: Accepted
                     content:
                         application/json:
                             schema:
@@ -7560,8 +7870,8 @@ paths:
                             $ref: '#/components/schemas/ExecInstanceRequest'
                 required: true
             responses:
-                "200":
-                    description: OK
+                "202":
+                    description: Accepted
                     content:
                         application/json:
                             schema:
@@ -7584,8 +7894,8 @@ paths:
                             $ref: '#/components/schemas/ChangeInstanceRequest'
                 required: true
             responses:
-                "200":
-                    description: OK
+                "202":
+                    description: Accepted
                     content:
                         application/json:
                             schema:
@@ -7608,8 +7918,8 @@ paths:
                             $ref: '#/components/schemas/ChangeInstanceRequest'
                 required: true
             responses:
-                "200":
-                    description: OK
+                "202":
+                    description: Accepted
                     content:
                         application/json:
                             schema:
@@ -7632,6 +7942,42 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Instance'
+    /api/v1/instances/{instance_id}/events:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_ListInstanceEvents
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InstanceEvents'
+    /api/v1/instances/{instance_id}/runtime:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_GetInstanceRuntime
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InstanceRuntime'
     /api/v1/me/quota-accounts:
         get:
             tags:
@@ -9211,6 +9557,50 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/instances/{instance_id}/logs:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_StreamInstanceLogs
+            description: Read current workspace stdout/stderr. READY is verified before HTTP headers; subsequent errors are SSE events. No resume cursor.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+                - name: tailLines
+                  in: query
+                  schema:
+                    type: integer
+                    minimum: 1
+                    maximum: 1000
+                    default: 100
+                - name: follow
+                  in: query
+                  schema:
+                    type: boolean
+                    default: true
+            responses:
+                "200":
+                    description: SSE log/end/error JSON events with comment heartbeats; no-store and proxy buffering disabled.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                "400":
+                    description: Invalid query
+                "403":
+                    description: Instance access denied
+                "404":
+                    description: Instance or current workspace Pod absent
+                "429":
+                    description: Connection limit reached
+                "503":
+                    description: Diagnostic target or upstream unavailable before READY
 components:
     schemas:
         NetworkOperation:
@@ -9296,8 +9686,6 @@ components:
                 memory_block_mib:
                     type: integer
                     format: uint32
-                factor_evidence_ref:
-                    type: string
                 memory_encoding:
                     type: string
                 split_count:
@@ -9318,6 +9706,8 @@ components:
                 recipe_version:
                     type: string
                 baseline_digest:
+                    type: string
+                runtime_class_name:
                     type: string
         AcceleratorBinding:
             type: object
@@ -9545,8 +9935,20 @@ components:
                     type: string
                 spec:
                     $ref: '#/components/schemas/AcceleratorProfileSpec'
-                published:
-                    type: boolean
+                state:
+                    type: string
+                revision:
+                    type: string
+        AcceleratorProfilePreview:
+            type: object
+            properties:
+                spec:
+                    $ref: '#/components/schemas/AcceleratorProfileSpec'
+                unused_memory_mib:
+                    type: string
+                unused_core_units:
+                    type: integer
+                    format: uint32
         AcceleratorProfileSpec:
             type: object
             properties:
@@ -9556,7 +9958,7 @@ components:
                     type: string
                 model_key:
                     type: string
-                shared_memory_mib:
+                memory_mib_per_device:
                     type: string
                 core_limit_percent:
                     type: integer
@@ -9612,8 +10014,6 @@ components:
                 version:
                     type: string
                 adopted_at:
-                    type: string
-                verification_state:
                     type: string
         AcceleratorUsage:
             type: object
@@ -9712,6 +10112,15 @@ components:
                     $ref: '#/components/schemas/SchemaOrReference'
                 boolean:
                     type: boolean
+        AdminListPresetsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Preset'
+                total:
+                    type: string
         AdoptAcceleratorSupplyData:
             type: object
             properties:
@@ -10222,6 +10631,22 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/CreateAcceleratorPoolData'
+        CreateAcceleratorProfileData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                display_name:
+                    type: string
+                spec:
+                    $ref: '#/components/schemas/AcceleratorProfileSpec'
+                expected_group_version:
+                    type: string
+        CreateAcceleratorProfileRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateAcceleratorProfileData'
         CreateAccessKeyData:
             type: object
             properties:
@@ -10432,8 +10857,8 @@ components:
                     type: string
                 presetId:
                     type: string
-                presetVersion:
-                    type: string
+                scheduling:
+                    $ref: '#/components/schemas/SchedulingOptions'
         CreateInstanceRequest:
             type: object
             properties:
@@ -10659,6 +11084,11 @@ components:
                 data:
                     $ref: '#/components/schemas/Position'
             description: 创建职位 - 请求
+        CreatePresetRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/PresetData'
         CreatePublicAddressPoolData:
             type: object
             properties:
@@ -11003,6 +11433,20 @@ components:
                     type: boolean
                 string:
                     type: string
+        DeleteAcceleratorProfileData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                expected_revision:
+                    type: string
+        DeleteAcceleratorProfileRequest:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/DeleteAcceleratorProfileData'
         DeleteAccessKeyResponse:
             type: object
             properties:
@@ -11447,6 +11891,17 @@ components:
                     type: string
                     description: 邮箱验证码
             description: 邮箱验证
+        Empty:
+            type: object
+            properties: {}
+            description: |-
+                A generic empty message that you can re-use to avoid defining duplicated
+                 empty messages in your APIs. A typical example is to use it as the request
+                 or the response type of an API method. For instance:
+
+                     service Foo {
+                       rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);
+                     }
         Encoding:
             type: object
             properties:
@@ -11511,6 +11966,13 @@ components:
             properties:
                 space:
                     $ref: '#/components/schemas/ImageSpace'
+        EnvironmentSource:
+            type: object
+            properties:
+                name:
+                    type: string
+                sourceType:
+                    type: string
         Example:
             type: object
             properties:
@@ -11974,6 +12436,27 @@ components:
                     type: string
                 profile_version:
                     type: string
+        GpuSummary:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                profile_version:
+                    type: string
+                mode:
+                    type: string
+                model_key:
+                    type: string
+                devices_per_instance:
+                    type: integer
+                    format: uint32
+                memory_mib_per_device:
+                    type: string
+                memory_mib_total:
+                    type: string
+                core_limit_percent:
+                    type: integer
+                    format: uint32
         Header:
             type: object
             properties:
@@ -12323,8 +12806,6 @@ components:
                     type: string
                 presetId:
                     type: string
-                presetVersion:
-                    type: string
                 createOperationId:
                     type: string
                 lastOperationId:
@@ -12335,8 +12816,77 @@ components:
                     type: boolean
                 quotaReturned:
                     type: boolean
-                instanceType:
+                instance_kind:
                     type: string
+                compute_type:
+                    type: string
+                cpu:
+                    type: string
+                memory:
+                    type: string
+                createdAt:
+                    type: string
+                workspaceSize:
+                    type: string
+                preset_name:
+                    type: string
+                preset_code:
+                    type: string
+                gpu_summary:
+                    $ref: '#/components/schemas/GpuSummary'
+                scheduling:
+                    $ref: '#/components/schemas/SchedulingOptions'
+        InstanceEvent:
+            type: object
+            properties:
+                type:
+                    type: string
+                reason:
+                    type: string
+                message:
+                    type: string
+                lastOccurredAt:
+                    type: string
+                    format: date-time
+                count:
+                    type: string
+        InstanceEvents:
+            type: object
+            properties:
+                podUid:
+                    type: string
+                observedAt:
+                    type: string
+                    format: date-time
+                events:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InstanceEvent'
+                truncated:
+                    type: boolean
+        InstanceRuntime:
+            type: object
+            properties:
+                instance_id:
+                    type: string
+                version:
+                    type: string
+                observedAt:
+                    type: string
+                    format: date-time
+                pod:
+                    $ref: '#/components/schemas/RuntimePod'
+                statefulSet:
+                    $ref: '#/components/schemas/RuntimeStatefulSet'
+        InstanceSchedulingSettings:
+            type: object
+            properties:
+                defaults:
+                    $ref: '#/components/schemas/SchedulingOptions'
+                priority_class_allowlists:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PriorityClassAllowlist'
         InternalMessage:
             type: object
             properties:
@@ -12900,7 +13450,7 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Instance'
-                nextAfterId:
+                total:
                     type: string
         ListInternalMessageCategoryResponse:
             type: object
@@ -13152,6 +13702,12 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Preset'
+                total:
+                    type: string
+                gpu_catalog_status:
+                    type: string
+                gpu_catalog_reason:
+                    type: string
         ListPublicAddressPoolsResponse:
             type: object
             properties:
@@ -15505,16 +16061,69 @@ components:
             properties:
                 id:
                     type: string
-                version:
+                name:
+                    type: string
+                code:
+                    type: string
+                description:
+                    type: string
+                compute_type:
+                    type: string
+                cpu_millis:
+                    type: string
+                memory_mib:
+                    type: string
+                enabled:
+                    type: boolean
+                gpu:
+                    $ref: '#/components/schemas/GpuSummary'
+                created_at:
+                    type: string
+                updated_at:
+                    type: string
+                selectable:
+                    type: boolean
+                unavailable_reason:
+                    type: string
+        PresetData:
+            type: object
+            properties:
+                code:
                     type: string
                 name:
                     type: string
-                cpu:
+                description:
                     type: string
-                memory:
+                compute_type:
                     type: string
-                instanceType:
+                cpu_millis:
                     type: string
+                memory_mib:
+                    type: string
+                enabled:
+                    type: boolean
+                gpu:
+                    $ref: '#/components/schemas/PresetGpuInput'
+        PresetGpuInput:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                profile_version:
+                    type: string
+                devices_per_instance:
+                    type: integer
+                    format: uint32
+        PriorityClassAllowlist:
+            type: object
+            properties:
+                tenant_id:
+                    type: integer
+                    format: uint32
+                priority_class_names:
+                    type: array
+                    items:
+                        type: string
         Properties:
             type: object
             properties:
@@ -15578,24 +16187,6 @@ components:
                 expires_at:
                     type: string
                     format: date-time
-        PublishAcceleratorProfileData:
-            type: object
-            properties:
-                idempotency_key:
-                    type: string
-                display_name:
-                    type: string
-                spec:
-                    $ref: '#/components/schemas/AcceleratorProfileSpec'
-                expected_group_version:
-                    type: string
-                verification_ref:
-                    type: string
-        PublishAcceleratorProfileRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/PublishAcceleratorProfileData'
         PublisherCredential:
             type: object
             properties:
@@ -16093,6 +16684,53 @@ components:
                         type: string
                     description: 隐藏字段列表（proto 字段 json_name，如 email）
             description: 角色字段权限条目：角色在某资源上隐藏的字段集（黑名单语义）
+        RuntimeMount:
+            type: object
+            properties:
+                name:
+                    type: string
+                volumeType:
+                    type: string
+                mountPath:
+                    type: string
+                readOnly:
+                    type: boolean
+        RuntimePod:
+            type: object
+            properties:
+                name:
+                    type: string
+                uid:
+                    type: string
+                nodeName:
+                    type: string
+                podIp:
+                    type: string
+                phase:
+                    type: string
+                ready:
+                    type: boolean
+                reason:
+                    type: string
+                message:
+                    type: string
+                environmentSources:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/EnvironmentSource'
+                mounts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RuntimeMount'
+        RuntimeStatefulSet:
+            type: object
+            properties:
+                desiredReplicas:
+                    type: integer
+                    format: int32
+                readyReplicas:
+                    type: integer
+                    format: int32
         SMSResult:
             type: object
             properties:
@@ -16108,6 +16746,33 @@ components:
                 verificationId:
                     type: string
                 code:
+                    type: string
+        SchedulerConfig:
+            type: object
+            properties:
+                config:
+                    type: string
+                resource_version:
+                    type: string
+        SchedulerConfigData:
+            type: object
+            properties:
+                config:
+                    type: string
+                expected_resource_version:
+                    type: string
+        SchedulingOptions:
+            type: object
+            properties:
+                pod_placement:
+                    enum:
+                        - POD_PLACEMENT_UNSPECIFIED
+                        - NONE
+                        - COLOCATE_PREFERRED
+                        - SPREAD_PREFERRED
+                    type: string
+                    format: enum
+                priority_class_name:
                     type: string
         Schema:
             type: object
@@ -16349,6 +17014,22 @@ components:
                     type: string
                 data:
                     $ref: '#/components/schemas/SetAcceleratorAdmissionData'
+        SetAcceleratorProfileStateData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                expected_revision:
+                    type: string
+                desired:
+                    type: string
+        SetAcceleratorProfileStateRequest:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetAcceleratorProfileStateData'
         SetDefaultIntranetPoolData:
             type: object
             properties:
@@ -16408,6 +17089,18 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        SetPresetEnabledData:
+            type: object
+            properties:
+                enabled:
+                    type: boolean
+        SetPresetEnabledRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetPresetEnabledData'
         SetPublicPoolAllocationEnabledData:
             type: object
             properties:
@@ -17047,6 +17740,11 @@ components:
                 UpdateInferenceRequest is the tenant-facing partial update. Fields named by
                  update_mask are forwarded as supplied; Governance never derives or edits an
                  engine command.
+        UpdateInstanceSchedulingSettingsRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InstanceSchedulingSettings'
         UpdateInternalMessageCategoryRequest:
             type: object
             properties:
@@ -17299,6 +17997,16 @@ components:
                     type: boolean
                     description: 如果设置为true的时候，资源不存在则会新增(插入)，并且在这种情况下`updateMask`字段将会被忽略。
             description: 更新职位 - 请求
+        UpdatePresetRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/PresetData'
+                update_mask:
+                    type: string
+                    format: field-mask
         UpdateRoleRequest:
             type: object
             properties:
@@ -17316,6 +18024,11 @@ components:
                     type: boolean
                     description: 如果设置为true的时候，资源不存在则会新增(插入)，并且在这种情况下`updateMask`字段将会被忽略。
             description: 更新角色 - 请求
+        UpdateSchedulerConfigRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/SchedulerConfigData'
         UpdateTaskRequest:
             type: object
             properties:

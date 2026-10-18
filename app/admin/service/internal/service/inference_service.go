@@ -2,15 +2,14 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
-	inferencev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
-	attachment "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/integration/v1"
+	commandv1 "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/command/v1"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	inferencev1 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
 	view "go-wind-admin/api/gen/go/inference/service/v1"
 	quotapb "go-wind-admin/api/gen/go/quota/service/v1"
@@ -42,7 +41,7 @@ type InferenceModelClient interface {
 
 type InferenceGpuAcceptance interface {
 	AcceptGpuCreate(context.Context, string, *acc.GpuRequest, proto.Message) (*data.QuotaOccupyResult, error)
-	AcceptGpuDelete(context.Context, string, string) (*attachment.GpuDeleteAcceptance, error)
+	AcceptGpuDelete(context.Context, string, string) (*commandv1.GpuDeleteAcceptance, error)
 	HasGpuCreate(context.Context, string) (bool, error)
 }
 
@@ -101,7 +100,7 @@ func (b *InferenceGpuBinding) AuthorizeGpu(ctx context.Context, p *auth.Principa
 // attachments and immediate command IDs never enter the original business hash.
 func (*InferenceGpuBinding) CanonicalGpuBusiness(message proto.Message) ([]byte, error) {
 	request, ok := message.(*inferencev1.CreateInferenceServiceRequest)
-	if !ok || request == nil || request.GetGpuOwnerAttachment() != nil || len(request.GetOriginalCharges()) != 0 || request.GetRequestId() != "" {
+	if !ok || request == nil || len(request.GetOriginalCharges()) != 0 || request.GetRequestId() != "" {
 		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference user business")
 	}
 	return inferencev1.CanonicalBusinessPayload(request)
@@ -126,7 +125,7 @@ func (b *InferenceGpuBinding) ResolveGpuBusiness(ctx context.Context, p *auth.Pr
 
 func (*InferenceGpuBinding) ValidateGpuBusiness(_ context.Context, message proto.Message) ([]data.QuotaOccupyItem, error) {
 	r, ok := message.(*inferencev1.CreateInferenceServiceRequest)
-	if !ok || r == nil || r.GetResource().GetGpu() == nil || r.GetGpuOwnerAttachment() != nil || len(r.GetOriginalCharges()) != 0 || r.GetRequestId() != "" {
+	if !ok || r == nil || r.GetResource().GetGpu() == nil || len(r.GetOriginalCharges()) != 0 || r.GetRequestId() != "" {
 		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference user business")
 	}
 	if err := inferencev1.ValidateBusinessPayload(r); err != nil {
@@ -137,82 +136,10 @@ func (*InferenceGpuBinding) ValidateGpuBusiness(_ context.Context, message proto
 	return nil, nil
 }
 
-func (b *InferenceGpuBinding) Dispatch(ctx context.Context, command *QuotaDispatchCommand) ([]byte, error) {
-	if b == nil || b.client == nil || command == nil {
-		return nil, status.Error(codes.Unavailable, "INFERENCE_ADAPTER_UNAVAILABLE")
-	}
-	createAttachment, deleteAttachment, err := BuildGpuOwnerAttachments("ani-inference", command)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "INVALID_ORIGINAL_GPU_COMMAND")
-	}
-	frozen, err := DecodeGpuCanonical(command.CanonicalRequest)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "INVALID_ORIGINAL_GPU_COMMAND")
-	}
-	charges := make([]*inferencev1.OriginalQuotaCharge, 0, len(command.Charges))
-	for _, charge := range command.Charges {
-		charges = append(charges, &inferencev1.OriginalQuotaCharge{ChargeId: charge.ChargeID, QuotaCode: charge.QuotaCode, OriginalUnits: charge.ChargedUnits})
-	}
-	var response *inferencev1.OperationResponse
-	switch command.Action {
-	case InferenceCreateAction:
-		if createAttachment == nil || deleteAttachment != nil || command.CreateOperationID != "" {
-			return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_CREATE_COMMAND")
-		}
-		request, decodeErr := inferencev1.DecodeBusinessPayload(frozen.BusinessPayload)
-		if decodeErr != nil {
-			return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_BUSINESS")
-		}
-		digest, digestErr := inferencev1.BusinessPayloadDigest(request)
-		if digestErr != nil || digest != frozen.BusinessPayloadDigest {
-			return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_BUSINESS_DIGEST")
-		}
-		if _, validationErr := b.ValidateGpuBusiness(ctx, request); validationErr != nil {
-			return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_BUSINESS")
-		}
-		if !proto.Equal(inferenceGpuRequest(request.Resource.Gpu), frozen.GpuRequest) {
-			return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_GPU_REQUEST")
-		}
-		request.RequestId = command.OperationID
-		request.GpuOwnerAttachment = createAttachment
-		request.OriginalCharges = charges
-		if trusted, ok := b.client.(inferenceTrustedOwnerClient); ok {
-			response, err = trusted.CreateTrusted(ctx, command.ResourceTenantID, quotaActorString(command.Actor), request)
-		} else {
-			response, err = b.client.Create(ctx, request)
-		}
-	case InferenceDeleteAction:
-		if deleteAttachment == nil || createAttachment != nil || command.CreateOperationID == "" {
-			return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_DELETE_COMMAND")
-		}
-		deleteRequest := &inferencev1.DeleteInferenceServiceRequest{RequestId: command.OperationID, ResourceId: command.ResourceID, GpuOwnerAttachment: deleteAttachment, OriginalCharges: charges}
-		if trusted, ok := b.client.(inferenceTrustedOwnerClient); ok {
-			response, err = trusted.DeleteTrusted(ctx, command.ResourceTenantID, quotaActorString(command.Actor), deleteRequest)
-		} else {
-			response, err = b.client.Delete(ctx, deleteRequest)
-		}
-	default:
-		return nil, status.Error(codes.FailedPrecondition, "INVALID_INFERENCE_ACTION")
-	}
-	if err != nil {
-		return nil, err
-	}
-	if response == nil || response.DurableOwnerAck == nil || len(response.DurableOwnerAck.ProtoReflect().GetUnknown()) != 0 || !response.DurableOwnerAck.Accepted || response.DurableOwnerAck.OperationId != command.OperationID || response.DurableOwnerAck.ResourceId != command.ResourceID {
-		return nil, status.Error(codes.FailedPrecondition, "INVALID_DURABLE_OWNER_ACK")
-	}
-	ack := struct {
-		OperationID string `json:"operation_id"`
-		ResourceID  string `json:"resource_id"`
-		Accepted    bool   `json:"accepted"`
-	}{command.OperationID, command.ResourceID, true}
-	raw, err := json.Marshal(ack)
-	if err != nil {
-		return nil, err
-	}
-	if err = ValidateDurableOwnerAck(command, raw); err != nil {
-		return nil, err
-	}
-	return raw, nil
+// GPU execution is deliberately disabled until the owner implements the new
+// execution-only contract. Protocol compilation does not enable business delivery.
+func (b *InferenceGpuBinding) Dispatch(context.Context, *QuotaDispatchCommand) ([]byte, error) {
+	return nil, status.Error(codes.Unavailable, "INFERENCE_GPU_EXECUTION_NOT_INTEGRATED")
 }
 
 func inferenceGpuRequest(g *inferencev1.GpuRequest) *acc.GpuRequest {

@@ -8,7 +8,7 @@ package adminpb
 
 import (
 	context "context"
-	v11 "github.com/liangzai006/ani-inference-service/api/inference/v1"
+	v11 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	v1 "go-wind-admin/api/gen/go/inference/service/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

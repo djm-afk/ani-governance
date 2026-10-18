@@ -179,7 +179,7 @@ func NewQuotaInternalServer(cfg QuotaInternalServerConfig, ledger *data.QuotaLed
 
 // AuthInterceptor 从客户端证书提取精确 DNS SAN 并映射到已注册 owner；
 // 无证书/未知 SAN/多 SAN 混用一律拒绝（§9.3）。
-func (s *QuotaInternalServer) authInterceptor(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func (s *QuotaInternalServer) authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	p, ok := peer.FromContext(ctx)
 	if !ok || p == nil {
 		return nil, quotaerrors.ReleaseUnauthenticated("missing peer")
@@ -188,7 +188,13 @@ func (s *QuotaInternalServer) authInterceptor(ctx context.Context, req interface
 	if !ok || len(tlsInfo.State.VerifiedChains) == 0 {
 		return nil, quotaerrors.ReleaseUnauthenticated("client certificate required")
 	}
+	if info == nil || (info.FullMethod != quotapb.QuotaReleaseService_ReportResourceReleased_FullMethodName && info.FullMethod != quotapb.QuotaReleaseService_ReportQuotaRelease_FullMethodName) {
+		return nil, quotaerrors.ReleasePermissionDenied("RPC is not allowed")
+	}
 	leaf := tlsInfo.State.VerifiedChains[0][0]
+	if len(leaf.DNSNames) != 1 || len(leaf.URIs) != 0 || len(leaf.IPAddresses) != 0 || len(leaf.EmailAddresses) != 0 || strings.Contains(leaf.DNSNames[0], "*") {
+		return nil, quotaerrors.ReleaseUnauthenticated("one exact DNS service identity required")
+	}
 	// 同一 SAN 集内必须恰好命中一个已注册 owner；同 CA 的另一服务不能退他人额度。
 	ownerService := ""
 	for _, name := range leaf.DNSNames {
@@ -258,6 +264,9 @@ func (s *QuotaInternalServer) ReportQuotaRelease(ctx context.Context, req *quota
 		if _, perr := uuid.Parse(it.GetChargeId()); perr != nil {
 			return nil, quotaerrors.ReleaseInvalid("charge_id must be a UUID")
 		}
+		if strings.HasPrefix(it.GetQuotaCode(), "gpu.") {
+			return nil, quotaerrors.ReleaseInvalid("GPU owners must use ReportResourceReleased")
+		}
 		if it.GetQuotaCode() == "" {
 			return nil, quotaerrors.ReleaseInvalid("quota_code is required")
 		}
@@ -296,6 +305,40 @@ func (s *QuotaInternalServer) ReportQuotaRelease(ctx context.Context, req *quota
 		})
 	}
 	return &quotapb.ReportQuotaReleaseResponse{Items: out}, nil
+}
+
+// ReportResourceReleased accepts only a full physical cleanup fact. Quantities,
+// tenant and ownership are resolved and locked from the original create ledger.
+func (s *QuotaInternalServer) ReportResourceReleased(ctx context.Context, req *quotapb.ReportResourceReleasedRequest) (*quotapb.ReportResourceReleasedResponse, error) {
+	owner, err := quotaOwnerFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req == nil || len(req.ProtoReflect().GetUnknown()) != 0 {
+		return nil, quotaerrors.ReleaseInvalid("invalid resource release")
+	}
+	for _, id := range []string{req.ReleaseEventId, req.CreateOperationId, req.ResourceId} {
+		parsed, e := uuid.Parse(id)
+		if e != nil || parsed == uuid.Nil || parsed.String() != id {
+			return nil, quotaerrors.ReleaseInvalid("canonical UUID references required")
+		}
+	}
+	if req.Reason != quotapb.ReleaseReason_RESOURCE_RELEASED && req.Reason != quotapb.ReleaseReason_ABORTED_CLEANED {
+		return nil, quotaerrors.ReleaseInvalid("invalid complete release reason")
+	}
+	payload := fmt.Sprintf(`{"schema":"resource-release-v1","owner_service":%q,"release_event_id":%q,"create_operation_id":%q,"resource_id":%q,"reason":%q}`, owner, req.ReleaseEventId, req.CreateOperationId, req.ResourceId, req.Reason.String())
+	sum := sha256.Sum256([]byte(payload))
+	results, err := s.ledger.Release(ctx, &data.QuotaReleaseInput{OwnerService: owner, ReleaseEventID: req.ReleaseEventId, OperationID: req.CreateOperationId, ResourceID: req.ResourceId, Complete: true, Reason: req.Reason.String(), PayloadHash: hex.EncodeToString(sum[:]), PayloadJSON: payload})
+	if err != nil {
+		return nil, err
+	}
+	state := quotapb.ResourceReleaseStatus_ALREADY_APPLIED
+	for _, result := range results {
+		if result.AppliedDelta > 0 {
+			state = quotapb.ResourceReleaseStatus_APPLIED
+		}
+	}
+	return &quotapb.ReportResourceReleasedResponse{ReleaseEventId: req.ReleaseEventId, CreateOperationId: req.CreateOperationId, ResourceId: req.ResourceId, Status: state}, nil
 }
 
 // quotaReleasePayloadHash 基于固定结构、排序后的唯一 items/resource_refs 计算；

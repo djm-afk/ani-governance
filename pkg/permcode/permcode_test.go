@@ -21,6 +21,9 @@ func TestResolveAuthoritativeCodes(t *testing.T) {
 		{"POST", "/api/v1/instances/{data.instance_id}:stop", "instance:stop", SourceCapability},
 		{"POST", "/api/v1/inference/services/{data.resource_id}:delete", "inference:service:delete", SourceCapability},
 		{"GET", "/api/v1/me/quota-accounts", "quota:account:self-read", SourceCapability},
+		{"GET", "/api/v1/admin/accelerator/profiles:preview", "accelerator:profile:preview", SourceCapability},
+		{"POST", "/api/v1/admin/accelerator/profiles/{profile_id}:set-state", "accelerator:profile:set-state", SourceCapability},
+		{"POST", "/api/v1/admin/accelerator/profiles/{profile_id}:delete", "accelerator:profile:delete", SourceCapability},
 	}
 	for _, tc := range cases {
 		exp, err := Resolve(tc.method, tc.path)
@@ -75,8 +78,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 116 {
-		t.Errorf("CapabilityCount() = %d, want 116", CapabilityCount())
+	if CapabilityCount() != 119 {
+		t.Errorf("CapabilityCount() = %d, want 119", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {

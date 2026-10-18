@@ -733,7 +733,8 @@ func TestQuotaPostgresInstanceCPUCommands(t *testing.T) {
 	repo := newTestRepo(c)
 	tid, _ := seedTenantPlan(t, c, "cpu-command", 8)
 	input := occupyInput(c, tid, "7", uuid.NewString(), 1)
-	business := &res.CreateBusiness{Data: &res.CreateInstanceData{Name: "cpu", ImageId: "img_" + strings.Repeat("a", 32), ImageScope: "platform", PresetId: "cpu", PresetVersion: 1}, Spec: &res.FrozenSpec{InstanceType: "cpu", ClusterId: uuid.NewString(), Namespace: "tenant-cpu", ImageDigest: "sha256:" + strings.Repeat("a", 64), ImageReference: "registry.invalid/cpu@sha256:" + strings.Repeat("a", 64), Cpu: "1", Memory: "1Gi", ServiceAccount: "workload", StorageClass: "workspace", WorkspaceSize: "1Gi", Shell: "/bin/bash", Uid: 1000, Gid: 1000}}
+	business := &res.CreateSpec{Name: "cpu", ImageId: "img_" + strings.Repeat("a", 32), ImageScope: "platform", PresetId: "20000000-0000-4000-8000-000000000001", InstanceKind: "container", ComputeType: "cpu", Scheduling: &res.SchedulingOptions{PodPlacement: res.SchedulingOptions_NONE.Enum()}, ClusterId: uuid.NewString(), Namespace: "tenant-cpu", ImageReference: "registry.invalid/cpu@sha256:" + strings.Repeat("a", 64), Cpu: "1", Memory: "1Gi", ServiceAccount: "workload", StorageClass: "workspace", WorkspaceSize: "1Gi", Shell: "/bin/bash", Uid: 1000, Gid: 1000}
+
 	raw, e := res.CanonicalBusinessPayload(business)
 	require.NoError(t, e)
 	digest, e := res.BusinessPayloadDigest(business)

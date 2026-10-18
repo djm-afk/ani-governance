@@ -232,7 +232,7 @@ TLS 校验与拦截器行为参照 [Go TLS 文档](https://pkg.go.dev/crypto/tls
 | 重放 | 同 ID、同内容返回原结果；同 ID、异内容拒绝。业务变更与幂等记录同事务保存，不能先 ACK 再落库 |
 | ACK | durable ACK 只表示命令已持久受理，不表示工作负载 Ready、删除完成或已退额；异步结果由已登记的查询/完成通知观察 |
 | 后台通知 | 先持久保存完成事实和待发送事件，再可靠投递；重试沿用事件 ID。触发判定属于实际业务 owner，传输 adapter 不替它判定完成 |
-| GPU 退额 | 只报告实际完整清理后的事实；使用原 CREATE、原 charge vector 和稳定事件 ID，GPU 退额为完整原 GPU 子集的累计总量，单位不转换。Gov 核验 owner、原账本和持久 DELETE 关联后幂等入账 |
+| GPU 退额 | 只报告实际完整清理后的事实；使用稳定 release event、原 CREATE、resource 和 reason 四字段。Gov 核验认证 owner、原操作和原账后幂等全退；owner 不传 charge/code/units。完整物理清理和创建封闭属于 owner，Gov 不根据 Usage 或当前目录推断 |
 | 不能触发退额的信号 | stop、restart、进程退出、NotFound、超时、ACK、usage ENDED 或单次 binding 缺失，都不能自动证明已释放 |
 | 错误 | 保留 RPC 状态和领域 reason，不吞错或把失败写成成功；对公网映射时隐藏内部证书、地址、密钥和跨租户数据 |
 

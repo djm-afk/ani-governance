@@ -23,7 +23,7 @@ func TestAcceleratorPublicViewsAreStructurallyRedacted(t *testing.T) {
 	require.NotContains(t, string(raw), "secret-")
 	require.Contains(t, string(raw), "inference")
 	require.Contains(t, string(raw), `"6144"`)
-	projection := &acc.GpuUsageProjection{Ref: ref, Revision: 2, State: acc.UsageState_ENDED, SourceFactRef: "secret-fact", PayloadDigest: "secret-payload", Plan: &acc.ResolvedGpuPlan{Runtime: &acc.RuntimeFragment{QueueName: "secret-queue"}, BaselineDigest: "secret-baseline", Profile: &acc.GpuProfile{ProfileId: "profile", ProfileVersion: 1}}}
+	projection := &acc.GpuUsageProjection{Ref: ref, Revision: 2, State: acc.UsageState_ENDED, SourceFactRef: "secret-fact", PayloadDigest: "secret-payload", ProfileId: "profile", ProfileVersion: 1, ExecutionDigest: "secret-execution", BaselineId: "secret-baseline"}
 	raw, e = protojson.Marshal(wireAcceleratorUsage(projection))
 	require.NoError(t, e)
 	require.NotContains(t, string(raw), "secret-")
