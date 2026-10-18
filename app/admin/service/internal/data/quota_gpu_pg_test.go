@@ -119,7 +119,7 @@ func gpuLedgerInput(t *testing.T, c *ent.Client, tid, pid uint32) *QuotaOccupyIn
 		require.NoError(t, c.PlanQuota.Create().SetPlanID(pid).SetQuotaCode(code).SetQuotaValue(100).Exec(ctx))
 	}
 	in := occupyInputForResourceTenant(tid, c.Tenant.GetX(ctx, tid).ResourceTenantID, "actor", uuid.NewString(), 2)
-	in.OwnerService = "ani-inference"
+	in.OwnerService = "ani-resource-service"
 	in.Action = "GPU_CREATE"
 	in.Items = []QuotaOccupyItem{{"gpu.physical.count", 2}, {"storage.bytes", 10}}
 	blob, e := json.Marshal(map[string]any{"schema_version": 3, "quota_items": in.Items})
@@ -127,8 +127,16 @@ func gpuLedgerInput(t *testing.T, c *ent.Client, tid, pid uint32) *QuotaOccupyIn
 	in.CanonicalRequest = string(blob)
 	return in
 }
-func gpuDelete(in *QuotaOccupyInput) *QuotaDeleteInput {
-	return &QuotaDeleteInput{TenantID: in.TenantID, ActorType: in.ActorType, ActorID: in.ActorID, OwnerService: in.OwnerService, Action: "GPU_DELETE", IdempotencyKey: uuid.NewString(), RequestHash: "delete-" + in.ResourceID, ResourceID: in.ResourceID, CanonicalRequest: in.CanonicalRequest}
+func gpuDelete(t *testing.T, in *QuotaOccupyInput) *QuotaDeleteInput {
+	t.Helper()
+	var snapshot map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(in.CanonicalRequest), &snapshot))
+	// Resource DELETE freezes the observed version alongside the unchanged
+	// original CREATE snapshot, including for a local unsent cancellation.
+	snapshot["delete_expected_version"] = json.RawMessage("1")
+	canonical, err := json.Marshal(snapshot)
+	require.NoError(t, err)
+	return &QuotaDeleteInput{TenantID: in.TenantID, ActorType: in.ActorType, ActorID: in.ActorID, OwnerService: in.OwnerService, Action: "GPU_DELETE", IdempotencyKey: uuid.NewString(), RequestHash: "delete-" + in.ResourceID + "-v1", ResourceID: in.ResourceID, CanonicalRequest: string(canonical)}
 }
 func gpuProjectionPayload(in *QuotaOccupyInput, id string, rev int64, hash string) string {
 	b, _ := json.Marshal(map[string]any{"ref": map[string]string{"tenant_id": in.ResourceTenantID, "owner_service": in.OwnerService, "resource_id": in.ResourceID, "create_operation_id": id}, "revision": rev, "state": rev, "payload_digest": hash})
@@ -201,7 +209,7 @@ func TestQuotaGpuDeleteReleaseAndProjectionRecovery(t *testing.T) {
 	claimed, e := r.ClaimDispatchable(ctx, "owner-worker", time.Minute, 1)
 	require.NoError(t, e)
 	require.Len(t, claimed, 1)
-	deleted, e := r.CreateDeleteOperation(ctx, gpuDelete(in))
+	deleted, e := r.CreateDeleteOperation(ctx, gpuDelete(t, in))
 	require.NoError(t, e)
 	require.False(t, deleted.LocalCanceled)
 	require.Len(t, deleted.ChargeIDs, 2)
@@ -288,7 +296,7 @@ func TestQuotaGpuAtomicCancelAndSameKey(t *testing.T) {
 		}
 		require.Equal(t, id, v.OperationID)
 	}
-	del := gpuDelete(in)
+	del := gpuDelete(t, in)
 	v, e := r.CreateDeleteOperation(ctx, del)
 	require.NoError(t, e)
 	require.True(t, v.LocalCanceled)

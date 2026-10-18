@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	identityv1 "go-wind-admin/api/gen/go/identity/service/v1"
 	"go-wind-admin/app/admin/service/internal/data/ent"
 	"go-wind-admin/app/admin/service/internal/data/ent/api"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
@@ -22,72 +21,36 @@ import (
 	entCrud "go-wind-admin/pkg/localdeps/go-crud/entgo"
 )
 
-const (
-	InferenceCreatePath         = "/api/v1/inference/services"
-	InferenceDeletePath         = "/api/v1/inference/services/{data.resource_id}:delete"
-	InferenceUpdatePath         = "/api/v1/inference/services/{data.resource_id}:update"
-	InferenceStartPath          = "/api/v1/inference/services/{data.resource_id}:start"
-	InferenceStopPath           = "/api/v1/inference/services/{data.resource_id}:stop"
-	InferenceRestartPath        = "/api/v1/inference/services/{data.resource_id}:restart"
-	InferenceListOperationsPath = "/api/v1/inference/services/{resource_id}/operations"
-)
+var ErrActionAuthorizationDenied = errors.New("action authorization denied")
+var ErrActionAuthorizationUnavailable = errors.New("action authorization unavailable")
 
-var ErrInferenceAuthorizationDenied = errors.New("inference action authorization denied")
-var ErrInferenceAuthorizationUnavailable = errors.New("inference authorization unavailable")
-
-type InferenceAuthorizationRepo struct {
+type ActionAuthorizationRepo struct {
 	entClient *entCrud.EntClient[*ent.Client]
 }
 
-func NewInferenceAuthorizationRepo(c *entCrud.EntClient[*ent.Client]) *InferenceAuthorizationRepo {
-	return &InferenceAuthorizationRepo{entClient: c}
+func NewActionAuthorizationRepo(c *entCrud.EntClient[*ent.Client]) *ActionAuthorizationRepo {
+	return &ActionAuthorizationRepo{entClient: c}
 }
 
-// InferenceModuleRegistered is a fail-closed check against the authoritative
-// generated registry. No provisional numeric module or Accelerator grant is
-// allowed to enable this integration.
-func InferenceModuleRegistered() bool {
-	id, ok := identityv1.Module_value["INFERENCE"]
-	return ok && id > 0
-}
-
-// Authorize requires the current tenant user's route grant AND the registered
-// Inference plan module in one RR snapshot, before any idempotency read.
-func (r *InferenceAuthorizationRepo) Authorize(ctx context.Context, tenantID, userID uint32, path string) (result error) {
-	if !InferenceModuleRegistered() || !isInferenceAuthorizedPath(path) {
-		return ErrInferenceAuthorizationDenied
-	}
-	return r.authorizeRoute(ctx, tenantID, userID, path, "INFERENCE", "POST")
-}
-
-func isInferenceAuthorizedPath(path string) bool {
-	switch path {
-	case InferenceCreatePath, InferenceDeletePath, InferenceUpdatePath, InferenceStartPath, InferenceStopPath, InferenceRestartPath:
-		return true
-	default:
-		return false
-	}
-}
-
-// The two GPU owners share the current tenant/role/plan snapshot checks while
-// keeping their module and exact API actions distinct.
-func (r *InferenceAuthorizationRepo) authorizeRoute(ctx context.Context, tenantID, userID uint32, path, module, method string) (result error) {
+// Check current tenant, membership, role, plan and the exact route grant in one
+// repeatable-read snapshot before a business command can read its replay key.
+func (r *ActionAuthorizationRepo) authorizeRoute(ctx context.Context, tenantID, userID uint32, path, module, method string) (result error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if tenantID == 0 || userID == 0 {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	if r == nil || r.entClient == nil || r.entClient.Client() == nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	tx, err := r.entClient.Client().BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	defer func() {
 		if rollback := tx.Rollback(); rollback != nil && !errors.Is(rollback, sql.ErrTxDone) {
-			result = ErrInferenceAuthorizationUnavailable
+			result = ErrActionAuthorizationUnavailable
 		}
 		if contextErr := ctx.Err(); contextErr != nil {
 			result = contextErr
@@ -96,39 +59,39 @@ func (r *InferenceAuthorizationRepo) authorizeRoute(ctx context.Context, tenantI
 	now := time.Now().UTC()
 	current, err := tx.Tenant.Query().Where(tenant.IDEQ(tenantID), tenant.StatusEQ(tenant.StatusOn), tenant.DeletedAtIsNil(), tenant.Or(tenant.ExpiredAtIsNil(), tenant.ExpiredAtGT(now))).Only(ctx)
 	if ent.IsNotFound(err) {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if current.PlanID == nil || *current.PlanID == 0 {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	allowed, err := tx.PlanModule.Query().Where(planmodule.HasPlanWith(plan.IDEQ(*current.PlanID)), planmodule.ModuleEQ(planmodule.Module(module)), planmodule.DeletedAtIsNil()).Exist(ctx)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if !allowed {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	allowed, err = tx.User.Query().Where(user.IDEQ(userID), user.TenantIDEQ(tenantID), user.StatusEQ(user.StatusNormal), user.DeletedAtIsNil()).Exist(ctx)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if !allowed {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	var memberRoleIDs []uint32
 	err = tx.UserRole.Query().Where(userrole.TenantIDEQ(tenantID), userrole.UserIDEQ(userID), userrole.StatusEQ(userrole.StatusActive), userrole.DeletedAtIsNil(), userrole.Or(userrole.StartAtIsNil(), userrole.StartAtLTE(now)), userrole.Or(userrole.EndAtIsNil(), userrole.EndAtGT(now))).Select(userrole.FieldRoleID).Scan(ctx, &memberRoleIDs)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if len(memberRoleIDs) == 0 {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	roles, err := tx.Role.Query().Where(role.IDIn(memberRoleIDs...), role.TenantIDEQ(tenantID), role.StatusEQ(role.StatusOn), role.TypeEQ(role.TypeTenant), role.CodeNEQ(""), role.DeletedAtIsNil(), role.Not(role.CodeHasPrefix(constants.TemplateRoleCodePrefix))).All(ctx)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	var roleIDs []uint32
 	hasAll := false
@@ -139,40 +102,40 @@ func (r *InferenceAuthorizationRepo) authorizeRoute(ctx context.Context, tenantI
 		}
 	}
 	if !hasAll {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	var permissionIDs []uint32
 	err = tx.RolePermission.Query().Where(rolepermission.TenantIDEQ(tenantID), rolepermission.RoleIDIn(roleIDs...), rolepermission.StatusEQ(rolepermission.StatusOn), rolepermission.EffectEQ(rolepermission.EffectAllow), rolepermission.DeletedAtIsNil()).Select(rolepermission.FieldPermissionID).Scan(ctx, &permissionIDs)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if len(permissionIDs) == 0 {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	permissionIDs, err = tx.Permission.Query().Where(permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil()).IDs(ctx)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if len(permissionIDs) == 0 {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	var apiIDs []uint32
 	err = tx.PermissionApi.Query().Where(permissionapi.PermissionIDIn(permissionIDs...), permissionapi.DeletedAtIsNil()).Select(permissionapi.FieldAPIID).Scan(ctx, &apiIDs)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if len(apiIDs) == 0 {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	allowed, err = tx.Api.Query().Where(api.IDIn(apiIDs...), api.StatusEQ(api.StatusOn), api.DeletedAtIsNil(), api.ScopeEQ(api.ScopeAdmin), api.BusinessModuleEQ(api.BusinessModule(module)), api.PathEQ(path), api.MethodEQ(method)).Exist(ctx)
 	if err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	if !allowed {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	if err = tx.Commit(); err != nil {
-		return ErrInferenceAuthorizationUnavailable
+		return ErrActionAuthorizationUnavailable
 	}
 	return nil
 }

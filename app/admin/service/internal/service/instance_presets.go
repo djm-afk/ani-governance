@@ -76,7 +76,7 @@ func (s *InstanceService) allowedPresetGPU(ctx context.Context, tenant string) (
 		AuthorizeCatalog(context.Context, uint32, uint32) error
 	})
 	if !ok {
-		return nil, nil, data.ErrInferenceAuthorizationDenied
+		return nil, nil, data.ErrActionAuthorizationDenied
 	}
 	if err = gate.AuthorizeCatalog(ctx, p.TenantID, p.ID); err != nil {
 		return nil, nil, err

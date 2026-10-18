@@ -110,13 +110,6 @@ downstream:
     caSecret: ""
     caKey: ca.crt
     clientCertificateSecret: governance-client-tls
-  inference:
-    enabled: false
-    address: ""
-    serverName: ""
-    caSecret: ""
-    caKey: ca.crt
-    clientCertificateSecret: governance-client-tls
   accelerator:
     enabled: false
     address: ""

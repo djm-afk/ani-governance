@@ -194,7 +194,6 @@ func NewRestServer(
 	acceleratorService *service.AcceleratorService,
 	imageService *service.ImageService,
 	modeldevService *service.ModelDevService,
-	inferenceService *service.InferenceService,
 	modelService *service.ModelService,
 	instanceServices ...*service.InstanceService,
 ) (*http.Server, error) {
@@ -279,9 +278,6 @@ func NewRestServer(
 	adminV1.RegisterAcceleratorServiceHTTPServer(srv, acceleratorService)
 	adminV1.RegisterQuotaSelfServiceHTTPServer(srv, acceleratorService)
 	registerModelDevHTTP(srv, modeldevService)
-	if inferenceService != nil {
-		RegisterInferenceHTTPServer(srv, inferenceService)
-	}
 	if modelService != nil {
 		adminV1.RegisterModelServiceHTTPServer(srv, modelService)
 	}

@@ -11,17 +11,16 @@ import (
 	"time"
 
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
-	inferencev1 "github.com/zhangzhe-ctrl/ani-inference-service/api/inference/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-// This opt-in contract test calls the production receivers started by Model's
-// TestModelIdentityInteropReceiver and Inference's TestGovernanceIdentityInteropProcess.
+// This opt-in contract test calls the production receiver started by Model's
+// TestModelIdentityInteropReceiver.
 // Invalid business input must reach real service validation without persistence.
-// The explicit build tag requires both endpoint files; missing receivers fail.
-func TestModelInferenceProductionReceiverIdentityInterop(t *testing.T) {
+// The explicit build tag requires the endpoint file; a missing receiver fails.
+func TestModelProductionReceiverIdentityInterop(t *testing.T) {
 	readConfig := func(variable string) map[string]string {
 		t.Helper()
 		path := os.Getenv(variable)
@@ -39,7 +38,6 @@ func TestModelInferenceProductionReceiverIdentityInterop(t *testing.T) {
 		return config
 	}
 	modelConfig := readConfig("ANI_MODEL_IDENTITY_INTEROP_FILE")
-	inferenceConfig := readConfig("ANI_INFERENCE_IDENTITY_INTEROP_FILE")
 	const tenant = "10000000-0000-4000-8000-000000000001"
 	const actor = "governance:user:7"
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs(
@@ -63,27 +61,4 @@ func TestModelInferenceProductionReceiverIdentityInterop(t *testing.T) {
 		_, err = client.CreateModel(ctx, tenant, actor, &modelv1.CreateModelRequest{TenantId: "forged-body-tenant"})
 		assertValidation(t, err, "invalid model name")
 	})
-	for _, receiver := range []string{"ordinary"} {
-		t.Run("Inference/"+receiver, func(t *testing.T) {
-			client, closeClient, err := NewInferenceClient(InferenceClientConfig{
-				Address: inferenceConfig[receiver+"_endpoint"], ServerName: inferenceConfig["server_name"],
-				CAFile: inferenceConfig["ca_file"], CertFile: inferenceConfig["client_cert_file"], KeyFile: inferenceConfig["client_key_file"], Timeout: 3 * time.Second,
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Cleanup(closeClient)
-			request := &inferencev1.CreateInferenceServiceRequest{}
-			_, err = client.CreateTrusted(ctx, tenant, actor, request)
-			assertValidation(t, err, "request_id, name and model_version_id are required")
-			_, err = client.GetTrusted(ctx, tenant, actor, &inferencev1.GetInferenceServiceRequest{})
-			assertValidation(t, err, "resource_id is required")
-			if receiver == "managed" {
-				_, err = client.CreateTrusted(ctx, "10000000-0000-4000-8000-000000000099", actor, request)
-				if status.Code(err) != codes.PermissionDenied {
-					t.Fatalf("attachment and trusted tenant conflict was accepted: %v", err)
-				}
-			}
-		})
-	}
 }

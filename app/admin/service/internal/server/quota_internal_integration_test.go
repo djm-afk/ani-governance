@@ -34,12 +34,12 @@ func TestQuotaInternalMTLSAndCumulativeRelease(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, c.Client().PlanQuota.Create().SetPlanID(plan.ID).SetQuotaCode("storage.bytes").SetQuotaValue(8).Exec(ctx))
 	ledger := data.NewQuotaLedgerRepo(testutil.NewBootstrapContext(nil), c)
-	occupied, err := ledger.Occupy(context.Background(), &data.QuotaOccupyInput{TenantID: tenant.ID, ResourceTenantID: tenant.ResourceTenantID, ResourceID: uuid.NewString(), ActorType: "user", ActorID: "1", OwnerService: "ani-inference", Action: "GPU_CREATE", IdempotencyKey: uuid.NewString(), RequestHash: "mtls-hash", CanonicalRequest: `{"schema_version":1}`, Items: []data.QuotaOccupyItem{{QuotaCode: "storage.bytes", Units: 2}}})
+	occupied, err := ledger.Occupy(context.Background(), &data.QuotaOccupyInput{TenantID: tenant.ID, ResourceTenantID: tenant.ResourceTenantID, ResourceID: uuid.NewString(), ActorType: "user", ActorID: "1", OwnerService: "ani-resource-service", Action: "GPU_CREATE", IdempotencyKey: uuid.NewString(), RequestHash: "mtls-hash", CanonicalRequest: `{"schema_version":1}`, Items: []data.QuotaOccupyItem{{QuotaCode: "storage.bytes", Units: 2}}})
 	require.NoError(t, err)
 	charge, err := c.Client().QuotaCharge.Query().Where(quotacharge.OperationIDEQ(occupied.OperationID)).Only(ctx)
 	require.NoError(t, err)
 	dir, pool := quotaTLSFixture(t)
-	srv, err := NewQuotaInternalServer(QuotaInternalServerConfig{Enabled: true, Address: "127.0.0.1:0", CAFile: filepath.Join(dir, "ca.pem"), CertFile: filepath.Join(dir, "server.pem"), KeyFile: filepath.Join(dir, "server.key"), CertOwnerMap: map[string]string{"ani-inference": "ani-inference", "ani-inference-alias": "ani-inference", "other-owner": "other-owner"}}, ledger)
+	srv, err := NewQuotaInternalServer(QuotaInternalServerConfig{Enabled: true, Address: "127.0.0.1:0", CAFile: filepath.Join(dir, "ca.pem"), CertFile: filepath.Join(dir, "server.pem"), KeyFile: filepath.Join(dir, "server.key"), CertOwnerMap: map[string]string{"ani-resource-service": "ani-resource-service", "ani-resource-alias": "ani-resource-service", "other-owner": "other-owner"}}, ledger)
 	require.NoError(t, err)
 	startResult := make(chan error, 1)
 	go func() { startResult <- srv.Start(context.Background()) }()
@@ -113,7 +113,7 @@ func TestQuotaInternalMTLSAndCumulativeRelease(t *testing.T) {
 	require.NoError(t, call(owner, uuid.NewString(), 1))
 	require.EqualValues(t, 0, balance())
 	// The new resource-release RPC carries no quota codes or quantities.
-	original, err := ledger.Occupy(context.Background(), &data.QuotaOccupyInput{TenantID: tenant.ID, ResourceTenantID: tenant.ResourceTenantID, ResourceID: uuid.NewString(), ActorType: "user", ActorID: "1", OwnerService: "ani-inference", Action: "GPU_CREATE", IdempotencyKey: uuid.NewString(), RequestHash: "complete-hash", CanonicalRequest: `{"schema_version":1}`, Items: []data.QuotaOccupyItem{{QuotaCode: "storage.bytes", Units: 3}}})
+	original, err := ledger.Occupy(context.Background(), &data.QuotaOccupyInput{TenantID: tenant.ID, ResourceTenantID: tenant.ResourceTenantID, ResourceID: uuid.NewString(), ActorType: "user", ActorID: "1", OwnerService: "ani-resource-service", Action: "GPU_CREATE", IdempotencyKey: uuid.NewString(), RequestHash: "complete-hash", CanonicalRequest: `{"schema_version":1}`, Items: []data.QuotaOccupyItem{{QuotaCode: "storage.bytes", Units: 3}}})
 	require.NoError(t, err)
 	full := &quotapb.ReportResourceReleasedRequest{ReleaseEventId: uuid.NewString(), CreateOperationId: original.OperationID, ResourceId: original.ResourceID, Reason: quotapb.ReleaseReason_RESOURCE_RELEASED}
 	callFull := func(client quotapb.QuotaReleaseServiceClient, r *quotapb.ReportResourceReleasedRequest) (*quotapb.ReportResourceReleasedResponse, error) {

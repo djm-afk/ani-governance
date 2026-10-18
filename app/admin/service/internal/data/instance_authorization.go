@@ -24,14 +24,14 @@ func InstanceModuleRegistered() bool {
 	return ok && id > 0
 }
 
-type InstanceAuthorizationRepo struct{ current *InferenceAuthorizationRepo }
+type InstanceAuthorizationRepo struct{ current *ActionAuthorizationRepo }
 
 func NewInstanceAuthorizationRepo(c *entCrud.EntClient[*ent.Client]) *InstanceAuthorizationRepo {
-	return &InstanceAuthorizationRepo{NewInferenceAuthorizationRepo(c)}
+	return &InstanceAuthorizationRepo{NewActionAuthorizationRepo(c)}
 }
 func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user uint32, path, method string) error {
 	if !InstanceModuleRegistered() {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	allowed := false
 	switch path {
@@ -45,7 +45,7 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 		allowed = method == "GET"
 	}
 	if !allowed || r == nil || r.current == nil {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	return r.current.authorizeRoute(ctx, tenant, user, path, "INSTANCE", method)
 }
@@ -54,7 +54,7 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 // entitlement as well as the independent INSTANCE entry gate.
 func (r *InstanceAuthorizationRepo) AuthorizeCatalog(ctx context.Context, tenant, user uint32) error {
 	if r == nil || r.current == nil {
-		return ErrInferenceAuthorizationDenied
+		return ErrActionAuthorizationDenied
 	}
 	return r.current.authorizeRoute(ctx, tenant, user, "/api/v1/accelerator/profiles", "ACCELERATOR", "GET")
 }

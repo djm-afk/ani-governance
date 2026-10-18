@@ -1,21 +1,21 @@
--- Grant the Model + Inference BFF to one explicitly selected tenant role and
+-- Grant the Model BFF to one explicitly selected tenant role and
 -- plan. Example:
 --   psql "$DSN" -v ON_ERROR_STOP=1 \
 --     -v tenant_id=6 -v role_id=8 -v plan_id=1 \
---     -f scripts/ops/sql/enable-model-inference-access.sql
+--     -f scripts/ops/sql/enable-model-access.sql
 --
--- Run register-model-inference-permissions.sql first. This file does not
+-- Run register-model-permissions.sql first. This file does not
 -- modify other tenants, role templates, quotas, identities or API keys.
 BEGIN;
-SELECT set_config('ani.model_inference_tenant', :'tenant_id', true);
-SELECT set_config('ani.model_inference_role', :'role_id', true);
-SELECT set_config('ani.model_inference_plan', :'plan_id', true);
+SELECT set_config('ani.model_tenant', :'tenant_id', true);
+SELECT set_config('ani.model_role', :'role_id', true);
+SELECT set_config('ani.model_plan', :'plan_id', true);
 
 DO $$
 DECLARE
-  tenant_id_value bigint := current_setting('ani.model_inference_tenant')::bigint;
-  role_id_value bigint := current_setting('ani.model_inference_role')::bigint;
-  plan_id_value bigint := current_setting('ani.model_inference_plan')::bigint;
+  tenant_id_value bigint := current_setting('ani.model_tenant')::bigint;
+  role_id_value bigint := current_setting('ani.model_role')::bigint;
+  plan_id_value bigint := current_setting('ani.model_plan')::bigint;
   permission_code text;
   v_permission_id bigint;
 BEGIN
@@ -40,11 +40,7 @@ BEGIN
   END IF;
 
   FOREACH permission_code IN ARRAY ARRAY[
-    'model:service:read', 'model:service:manage',
-    'inference:service:read', 'inference:service:create',
-    'inference:service:delete', 'inference:service:update',
-    'inference:service:start', 'inference:service:stop',
-    'inference:service:restart'
+    'model:service:read', 'model:service:manage'
   ] LOOP
     SELECT id INTO STRICT v_permission_id
       FROM sys_permissions
@@ -69,7 +65,7 @@ BEGIN
 
   INSERT INTO sys_plan_modules(plan_id, module, created_at)
   SELECT plan_id_value, module_name, now()
-    FROM unnest(ARRAY['MODEL'::text, 'INFERENCE'::text]) AS modules(module_name)
+    FROM unnest(ARRAY['MODEL'::text]) AS modules(module_name)
    WHERE NOT EXISTS (
      SELECT 1 FROM sys_plan_modules
       WHERE plan_id = plan_id_value AND module = module_name AND deleted_at IS NULL

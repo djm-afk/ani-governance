@@ -202,22 +202,6 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	// 配额账本与持久化转发（QUOTA-GPU-LOCAL-01）
 	quotaLedgerRepo := data.NewQuotaLedgerRepo(ctx, entClient)
 	quotaRegistry := service.NewQuotaAdapterRegistry()
-	inferenceConfig, err := data.InferenceConfigFromEnv()
-	if err != nil {
-		rollback()
-		return nil, nil, err
-	}
-	var inferenceClient service.InferenceOwnerClient
-	if inferenceConfig.Address != "" {
-		client, closeInference, err := data.NewInferenceClient(inferenceConfig)
-		if err != nil {
-			rollback()
-			return nil, nil, err
-		}
-		cleanups = append(cleanups, closeInference)
-		inferenceClient = client
-	}
-	inferenceBinding := service.NewInferenceGpuBindingWithModel(inferenceClient, data.NewInferenceAuthorizationRepo(entClient), modelClient)
 	instanceOwner, closeInstance, err := data.NewInstanceClientFromEnv()
 	if err != nil {
 		rollback()
@@ -241,8 +225,6 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 			return nil, nil, err
 		}
 	}
-	// Inference GPU execution awaits its new-contract implementation and stays disabled.
-
 	quotaAdminRepo.SetExecutionCapabilities(quotaRegistry)
 	quotaWorker := service.NewQuotaDispatchWorker(ctx, quotaLedgerRepo, quotaRegistry)
 
@@ -367,12 +349,6 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	if acceleratorClient != nil {
 		gpuPlans = acceleratorClient.Catalog
 	}
-	inferenceAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, gpuPlans, inferenceBinding, quotaWorker)
-	if err != nil {
-		rollback()
-		return nil, nil, err
-	}
-	inferenceService := service.NewInferenceServiceWithOwnerAndModel(inferenceAcceptance, inferenceClient, tenantRepo, modelClient)
 	modelService := service.NewModelService(modelClient, tenantRepo)
 	instanceAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, gpuPlans, instanceBinding, quotaWorker)
 	if err != nil {
@@ -433,7 +409,6 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		acceleratorService,
 		imageService,
 		modeldevService,
-		inferenceService,
 		modelService,
 		instanceService,
 	)

@@ -2,7 +2,7 @@
 
 当前合同使用每卡具体显存 MiB，供给 F=1。管理员目录与执行快照分开：停用或软删除规格阻止新解析，已受理的新合同仍按原快照恢复和删除。没有测试报告、人工资格或有效期准入。
 
-本期实际接入 owner 为 Resource 容器实例。Inference 仅同步其静态 API 依赖，Governance 不注册它的新 GPU 投递能力；不能把协议编译当作 Inference GPU 业务完成。真实 CUDA、物理释放与退额的结果以任务验收回执为准，软件测试不能代替硬件验证。
+本期实际接入 owner 为 Resource 容器实例。Governance 已移除 Inference 管理接口、API 模块依赖及出站装配，普通和 GPU 推理管理均不提供；后续重新对接另行发布合同。真实 CUDA、物理释放与退额的结果以任务验收回执为准，软件测试不能代替硬件验证。
 
 ## 1. 主链与写入职责
 
@@ -14,7 +14,7 @@ ACC 只维护供给、目录、最终 GPU 执行参数、Usage 投影与物理�
 
 - GPU 公共类型来自正式 ACC 模块的 `accelerator.v1`；公共 durable ACK 位于 `accelerator.command.v1`。
 - 释放协议位于独立 `github.com/zhangzhe-ctrl/ani-governance/api/quota`，权威源为 `api/protos/quota/service/v1/quota_release.proto`。固定入口 `make api-quota-release`；生成产物在 `api/quota/gen/go`。
-- ACC 与 Gov quota 提供方先发布；Res 与 Inference API 消费精确版本后发布；Gov 最后消费正式可下载版本。使用 `GOWORK=off`，记录 `Origin.Hash` 与校验和，不使用本地 `replace` 或复制生成代码。
+- ACC 与 Gov quota 提供方先发布，Res 消费精确版本后发布，Gov 最后消费正式可下载版本。Inference API 不在当前依赖链中。使用 `GOWORK=off`，记录 `Origin.Hash` 与校验和，不使用本地 `replace` 或复制生成代码。
 - Gov BFF 使用本仓 `make api` 的固定插件与暂存保护流程；生成代码不得手改。
 
 ## 3. 创建合同
