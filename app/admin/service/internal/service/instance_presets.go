@@ -53,6 +53,9 @@ type InstanceSchedulingCluster interface {
 
 func instanceBusinessError(err error) error {
 	reason := "INVALID_INSTANCE_REQUEST"
+	if stderrors.Is(err, res.ErrReservedConfig) {
+		reason = "INSTANCE_RESERVED_CONFIG"
+	}
 	if stderrors.Is(err, res.ErrInvalidScheduling) {
 		reason = "INVALID_SCHEDULING_OPTIONS"
 	}

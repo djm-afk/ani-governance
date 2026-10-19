@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"os"
 	"strconv"
 	"time"
 
@@ -46,14 +47,15 @@ type InstanceActionAuthorizer interface {
 	Authorize(context.Context, uint32, uint32, string, string) error
 }
 type InstanceGpuBinding struct {
-	client        InstanceOwnerClient
-	authorization InstanceActionAuthorizer
-	clusterID     string
-	scheduling    *InstanceSchedulingPolicy
+	client           InstanceOwnerClient
+	authorization    InstanceActionAuthorizer
+	clusterID        string
+	scheduling       *InstanceSchedulingPolicy
+	newCreateEnabled bool
 }
 
 func NewInstanceGpuBinding(c InstanceOwnerClient, a InstanceActionAuthorizer, clusterID string, policies ...*InstanceSchedulingPolicy) *InstanceGpuBinding {
-	b := &InstanceGpuBinding{client: c, authorization: a, clusterID: clusterID}
+	b := &InstanceGpuBinding{client: c, authorization: a, clusterID: clusterID, newCreateEnabled: os.Getenv("ANI_INSTANCE_CONFIG_V2_WRITES") == "true"}
 	if len(policies) > 0 {
 		b.scheduling = policies[0]
 	}
@@ -89,8 +91,14 @@ func instanceAuthorizationError(e error) error {
 	}
 	return e
 }
+func (*InstanceGpuBinding) CanonicalGpuBusinessVersion(m proto.Message, version uint32) ([]byte, error) {
+	if version != data.CurrentInstanceContractVersion {
+		return nil, quota.ErrorInvalidQuotaRequest("%s", "unsupported instance contract")
+	}
+	return res.CanonicalBusinessPayloadVersion(m, version)
+}
 func (*InstanceGpuBinding) CanonicalGpuBusiness(m proto.Message) ([]byte, error) {
-	return res.CanonicalBusinessPayload(m)
+	return res.CanonicalBusinessPayloadVersion(m, data.CurrentInstanceContractVersion)
 }
 func (b *InstanceGpuBinding) ResolveGpuBusiness(ctx context.Context, p *auth.Principal, tenant string, m proto.Message) (*acc.GpuRequest, proto.Message, error) {
 	in, ok := m.(*res.CreateInstanceData)
@@ -270,7 +278,23 @@ func (s *InstanceService) CreateInstance(ctx context.Context, r *view.CreateInst
 			scheduling.PodPlacement = &value
 		}
 	}
-	result, e := s.acceptance.AcceptGpuCreate(ctx, d.IdempotencyKey, nil, &res.CreateInstanceData{Name: d.Name, ImageId: d.ImageId, ImageScope: d.ImageScope, PresetId: d.PresetId, Scheduling: scheduling})
+	business := &res.CreateInstanceData{Name: d.Name, ImageId: d.ImageId, ImageScope: d.ImageScope, PresetId: d.PresetId, Scheduling: scheduling, WorkspaceMountPath: d.WorkspaceMountPath, Labels: d.Labels, Annotations: d.Annotations}
+	for _, mount := range d.VolumeMounts {
+		if mount == nil {
+			return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid volume mount")
+		}
+		business.VolumeMounts = append(business.VolumeMounts, &res.VolumeMount{PvcName: mount.PvcName, MountPath: mount.MountPath, ReadOnly: mount.ReadOnly})
+	}
+	if d.Network != nil {
+		business.Network = &res.NetworkSelection{VpcId: d.Network.VpcId, SubnetId: d.Network.SubnetId}
+	}
+	for _, variable := range d.Env {
+		if variable == nil {
+			return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid environment variable")
+		}
+		business.Env = append(business.Env, &res.InstanceEnvVar{Name: variable.Name, Value: variable.Value})
+	}
+	result, e := s.acceptance.AcceptGpuCreate(ctx, d.IdempotencyKey, nil, business)
 	if e != nil {
 		return nil, e
 	}

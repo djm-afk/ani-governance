@@ -11,6 +11,8 @@ const InstanceCreatePath = "/api/v1/instances"
 const InstanceDeletePath = "/api/v1/instances/{data.instance_id}"
 const InstanceStartPath = "/api/v1/instances/{data.instance_id}:start"
 const InstanceStopPath = "/api/v1/instances/{data.instance_id}:stop"
+const InstanceMountablePVCsPath = "/api/v1/instances/mountable-pvcs"
+const InstanceConfigurationPath = "/api/v1/instances/{instance_id}/configuration"
 const InstanceGetPath = "/api/v1/instances/{instance_id}"
 const InstanceOperationPath = "/api/v1/instance-operations/{operation_id}"
 const InstancePresetPath = "/api/v1/instance-presets"
@@ -41,7 +43,7 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 		allowed = method == "DELETE"
 	case InstanceStartPath, InstanceStopPath, InstanceExecPath:
 		allowed = method == "POST"
-	case InstanceGetPath, InstanceOperationPath, InstancePresetPath, InstanceRuntimePath, InstanceEventsPath, InstanceLogsPath:
+	case InstanceGetPath, InstanceOperationPath, InstancePresetPath, InstanceRuntimePath, InstanceEventsPath, InstanceLogsPath, InstanceMountablePVCsPath, InstanceConfigurationPath:
 		allowed = method == "GET"
 	}
 	if !allowed || r == nil || r.current == nil {

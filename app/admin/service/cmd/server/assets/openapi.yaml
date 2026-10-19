@@ -7592,6 +7592,9 @@ paths:
         post:
             tags:
                 - InstanceService
+            description: |-
+                创建使用服务器固定的当前配置合同 2；可选配置省略时正常解析默认值。
+                 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
             operationId: InstanceService_CreateInstance
             requestBody:
                 content:
@@ -7606,6 +7609,33 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Acceptance'
+    /api/v1/instances/mountable-pvcs:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_ListMountablePVCs
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListMountablePVCsResponse'
     /api/v1/instances/{data.instance_id}:
         delete:
             tags:
@@ -7720,6 +7750,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Instance'
+    /api/v1/instances/{instance_id}/configuration:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_GetInstanceConfiguration
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InstanceConfiguration'
     /api/v1/instances/{instance_id}/events:
         get:
             tags:
@@ -7872,15 +7920,16 @@ paths:
                 - ModelDevService
             operationId: ModelDevService_ListExecutions
             parameters:
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
                     format: uint32
-                - name: cursor
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -7936,15 +7985,16 @@ paths:
                   required: true
                   schema:
                     type: string
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
                     format: uint32
-                - name: cursor
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -8006,19 +8056,20 @@ paths:
                 - ModelDevService
             operationId: ModelDevService_ListInputVersions
             parameters:
-                - name: limit
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: cursor
-                  in: query
-                  schema:
-                    type: string
                 - name: state
                   in: query
                   schema:
                     type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -8050,15 +8101,16 @@ paths:
                 - ModelDevService
             operationId: ModelDevService_ListPresets
             parameters:
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
                     format: uint32
-                - name: cursor
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -10591,6 +10643,26 @@ components:
                     type: string
                 scheduling:
                     $ref: '#/components/schemas/SchedulingOptions'
+                workspace_mount_path:
+                    type: string
+                volume_mounts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VolumeMount'
+                network:
+                    $ref: '#/components/schemas/NetworkSelection'
+                labels:
+                    type: object
+                    additionalProperties:
+                        type: string
+                annotations:
+                    type: object
+                    additionalProperties:
+                        type: string
+                env:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InstanceEnvVar'
         CreateInstanceRequest:
             type: object
             properties:
@@ -12460,6 +12532,51 @@ components:
                     $ref: '#/components/schemas/GpuSummary'
                 scheduling:
                     $ref: '#/components/schemas/SchedulingOptions'
+                networkState:
+                    type: string
+                    description: Safe lifecycle observations; dynamic state does not alter the frozen CREATE.
+                networkReason:
+                    type: string
+                networkCleaned:
+                    type: boolean
+                volumeReferencesReleased:
+                    type: boolean
+        InstanceConfiguration:
+            type: object
+            properties:
+                instance_id:
+                    type: string
+                instance_contract_version:
+                    type: integer
+                    description: 服务器保存的当前配置合同版本，固定为 2。
+                    format: uint32
+                workspace_mount_path:
+                    type: string
+                volume_mounts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VolumeMount'
+                network:
+                    $ref: '#/components/schemas/NetworkSelection'
+                labels:
+                    type: object
+                    additionalProperties:
+                        type: string
+                annotations:
+                    type: object
+                    additionalProperties:
+                        type: string
+                env:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InstanceEnvVar'
+        InstanceEnvVar:
+            type: object
+            properties:
+                name:
+                    type: string
+                value:
+                    type: string
         InstanceEvent:
             type: object
             properties:
@@ -13012,8 +13129,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ArtifactView'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListExecutionsResponse:
@@ -13023,8 +13138,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ExecutionView'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListImagesResponse:
@@ -13045,8 +13158,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/InputVersionView'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListInstancesResponse:
@@ -13158,6 +13269,15 @@ components:
                         $ref: '#/components/schemas/Model'
                 meta:
                     $ref: '#/components/schemas/CursorPageMeta'
+        ListMountablePVCsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MountablePVC'
+                total:
+                    type: string
         ListNodeInterfacesResponse:
             type: object
             properties:
@@ -14314,6 +14434,25 @@ components:
                     type: string
                 engine_image:
                     type: string
+        MountablePVC:
+            type: object
+            properties:
+                pvc_name:
+                    type: string
+                phase:
+                    type: string
+                requested_capacity:
+                    type: string
+                access_modes:
+                    type: array
+                    items:
+                        type: string
+                volume_mode:
+                    type: string
+                selectable:
+                    type: boolean
+                unavailable_reason:
+                    type: string
         NamedAny:
             type: object
             properties:
@@ -14467,6 +14606,13 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/NodeInterface'
+        NetworkSelection:
+            type: object
+            properties:
+                vpc_id:
+                    type: string
+                subnet_id:
+                    type: string
         NodeInterface:
             type: object
             properties:
@@ -17922,6 +18068,15 @@ components:
                 vlan_id:
                     type: integer
                     format: int32
+        VolumeMount:
+            type: object
+            properties:
+                pvc_name:
+                    type: string
+                mount_path:
+                    type: string
+                read_only:
+                    type: boolean
         WebAuthnAssertion:
             type: object
             properties:

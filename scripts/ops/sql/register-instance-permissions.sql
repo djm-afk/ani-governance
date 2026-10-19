@@ -8,6 +8,8 @@ BEGIN
   ('POST','/api/v1/instances','instance:create'),
   ('GET','/api/v1/instances','instance:list'),
   ('GET','/api/v1/instances/{instance_id}','instance:read'),
+  ('GET','/api/v1/instances/{instance_id}/configuration','instance:read'),
+  ('GET','/api/v1/instances/mountable-pvcs','instance:create'),
   ('GET','/api/v1/instances/{instance_id}/runtime','instance:read'),
   ('GET','/api/v1/instances/{instance_id}/events','instance:read'),
   ('GET','/api/v1/instances/{instance_id}/logs','instance:read'),

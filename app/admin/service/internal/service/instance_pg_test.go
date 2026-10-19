@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
@@ -78,6 +79,7 @@ func TestInstanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T)
 }
 
 func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu bool, schedulingScenario ...bool) {
+	t.Setenv("ANI_INSTANCE_CONFIG_V2_WRITES", "true")
 	c := testutil.NewQuotaPGClient(t)
 	testutil.ResetQuotaFixture(t, c)
 	sys := appViewer.NewSystemViewerContext(context.Background())
@@ -178,9 +180,16 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 	operation, e := ledger.GetOperationForUser(requestCtx, tenant.ID, first.OperationID)
 	require.NoError(t, e)
 	require.Equal(t, quotaoperation.DispatchStateAcked, operation.DispatchState, "real Resource durable ACK required")
+	require.EqualValues(t, 2, operation.InstanceContractVersion)
 	instance, e := owner.Get(requestCtx, tenant.ResourceTenantID, "governance:user:"+strconv.FormatUint(uint64(operator.ID), 10), first.ResourceID)
 	require.NoError(t, e)
 	require.Equal(t, first.OperationID, instance.CreateOperationId)
+	configuration, err := owner.Configuration(requestCtx, tenant.ResourceTenantID, "governance:user:"+strconv.FormatUint(uint64(operator.ID), 10), first.ResourceID)
+	require.NoError(t, err)
+	require.EqualValues(t, 2, configuration.InstanceContractVersion)
+	require.Equal(t, "/workspace", configuration.WorkspaceMountPath, "omitted optional configuration resolves the normal current defaults")
+	require.Empty(t, configuration.VolumeMounts)
+	require.Empty(t, configuration.Env)
 	require.EqualValues(t, 1, instance.Version)
 	require.Equal(t, "container", instance.InstanceKind)
 	require.Equal(t, peer.PresetID, instance.PresetId)
@@ -208,6 +217,19 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 		require.NoError(t, err)
 		schedulingStore.fail = true
 	}
+	t.Setenv("ANI_INSTANCE_CONFIG_V2_WRITES", "false")
+	closedBinding := NewInstanceGpuBinding(resource, data.NewInstanceAuthorizationRepo(c), peer.ClusterID, schedulingPolicy)
+	closedAcceptance, err := NewGpuAcceptance(ledger, registry, data.NewTenantRepo(bctx, c), planResolver, closedBinding, nil)
+	require.NoError(t, err)
+	_, err = closedAcceptance.AcceptGpuCreate(requestCtx, uuid.NewString(), nil, public)
+	require.Error(t, err)
+	require.EqualValues(t, 503, kratoserrors.FromError(err).Code)
+	require.Equal(t, "INSTANCE_CREATE_DISABLED", kratoserrors.FromError(err).Reason)
+	frozenReplay, err := closedAcceptance.AcceptGpuCreate(requestCtx, key, nil, public)
+	require.NoError(t, err, "maintenance gate retains current accepted replay")
+	require.Equal(t, first.OperationID, frozenReplay.OperationID)
+	require.True(t, frozenReplay.Replayed)
+	require.Equal(t, 1, resource.calls, "closed admission must not call current resolution")
 	resource.unavailable = true
 	plans.unavailable = true
 	replay, e := acceptance.AcceptGpuCreate(requestCtx, key, nil, public)
@@ -249,7 +271,7 @@ func instanceCurrentAuthorizationOriginalReplayAndOwnerRelease(t *testing.T, cpu
 		require.Empty(t, candidates, "CPU must never enter Acc usage projection")
 		require.NoError(t, c.Client().UserRole.UpdateOneID(membership.ID).SetStatus(userrole.StatusActive).Exec(sys))
 		deleteKey := uuid.NewString()
-		accepted, e := acceptance.AcceptGpuDeleteVersion(requestCtx, deleteKey, first.ResourceID, instance.Version)
+		accepted, e := closedAcceptance.AcceptGpuDeleteVersion(requestCtx, deleteKey, first.ResourceID, instance.Version)
 		require.NoError(t, e)
 		require.Equal(t, "QUEUED_FOR_OWNER", accepted.Result)
 		repeated, e := acceptance.AcceptGpuDeleteVersion(requestCtx, deleteKey, first.ResourceID, instance.Version)

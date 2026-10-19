@@ -20,6 +20,12 @@ func RegisterInstanceHTTPServer(server *http.Server, s *service.InstanceService)
 		invoke                  func(context.Context, proto.Message) (proto.Message, error)
 	}
 	routes := []route{
+		{"GET", data.InstanceMountablePVCsPath, admin.OperationInstanceServiceListMountablePVCs, func() proto.Message { return new(view.ListMountablePVCsRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
+			return s.ListMountablePVCs(c, r.(*view.ListMountablePVCsRequest))
+		}},
+		{"GET", data.InstanceConfigurationPath, admin.OperationInstanceServiceGetInstanceConfiguration, func() proto.Message { return new(view.GetInstanceRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
+			return s.GetInstanceConfiguration(c, r.(*view.GetInstanceRequest))
+		}},
 		{"GET", data.InstanceSchedulingSettingsPath, admin.OperationInstanceServiceGetInstanceSchedulingSettings, func() proto.Message { return new(view.InstanceSchedulingSettingsRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
 			return s.GetInstanceSchedulingSettings(c, r.(*view.InstanceSchedulingSettingsRequest))
 		}},
@@ -84,7 +90,7 @@ func RegisterInstanceHTTPServer(server *http.Server, s *service.InstanceService)
 			http.SetOperation(ctx, r.operation)
 			request := r.request()
 			write := r.method != "GET"
-			if r.path == data.InstanceExecPath {
+			if r.path == data.InstanceExecPath || r.path == data.InstanceConfigurationPath {
 				ctx.Response().Header().Set("Cache-Control", "no-store")
 			}
 			if write && !(r.method == "DELETE" && r.path == data.InstanceAdminPresetPath) {
