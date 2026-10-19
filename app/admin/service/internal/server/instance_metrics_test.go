@@ -153,6 +153,9 @@ func TestInstanceMetricsHTTPEncodingAndTrustedScope(t *testing.T) {
 	if _, exists := missing["value"]; !exists {
 		t.Fatal("missing value must explicitly be null")
 	}
+	if _, exists := zero["gap_reason"]; exists {
+		t.Fatal("valid points must omit gap_reason")
+	}
 	code, object = metricsRequest(t, srv, "GET", "latest", "")
 	if code != 200 || object["data"].(map[string]any)["evaluated_at"] == nil {
 		t.Fatalf("latest %d %+v", code, object)
