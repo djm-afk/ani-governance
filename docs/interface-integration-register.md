@@ -24,7 +24,7 @@
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
-| 通用配额与 GPU / Inference 接入 | QUOTA-01～03、INF-01/02；历史 QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 正式 Accelerator 目录与 Inference 创建/删除 BFF、账本和受控 owner 装配已接入；旧本地模拟入口已退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md) 与 GOV-ACC-INF-V12-WIRING-01；生产 / 真实 GPU 验收仍 not_verified |
+| 通用配额与 GPU 实例接入 | QUOTA-01～03；历史 INF-01/02、QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 保留 ACC 目录与 Resource 实例的新执行/释放合同；Inference 管理接口、API 依赖和配置本期移除，后续重新对接；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)；源码、部署与真实 GPU 验收分别记录 |
 | ModelDev CPU 主干受理及受管入口 | MODELDEV-01～MODELDEV-08；服务间调用登记 S2S-MODELDEV-CPUP01-01 | 当前授权、可信解析、持久受理/投递、查询及受管目录/输入/运行操作已装配；启用/回退经真实鉴权/PG CAS 验证；Gov→ModelDev 传输/身份/白名单三个差异收敛已实施并在 ani-system 真实环境完成正/负向验证 | CPU-P01，进行中 |
 
 ## 风格改动批次
@@ -1264,11 +1264,11 @@ Governance 通过 go.mod/go.sum 固定精确模块版本，生产代码不导入
 | --- | --- | --- | --- | --- |
 | MODELDEV-01 | `POST /api/v1/modeldev/executions` | lower_snake_case 的 name、kind、preset_id、dataset_version_id、可选 image_version_id/general_parameters 及 idempotency_key；只允许 GENERAL_TRAINING。source_execution_id 暂不支持非空关联，当前必须省略。持久受理后返回 202、原 operation/execution、resolved_release_id、replayed 和四组正交状态 | 复用 Principal、TenantAccess、Casbin，并重查当前数据库的有效租户、用户、成员角色、ALL 数据范围及 MODEL/POST 权限；通过 ResourceTenantResolver 取得 resource tenant UUID。body 不含 tenant/actor/cluster/SA/command/raw CRD，旧 actor 仅审计 | 实际 JWT/Redis、当前授权、mTLS 解析、PG commit 后 202、暂停后重放、异参冲突及撤权拒绝已获隔离 Fedora 证据；可靠投递、其他数据范围和目标集群业务验收仍未完成 |
 | MODELDEV-02 | 受管 T02 作业：`admin modeldev-import-release`、`modeldev-enable`、`modeldev-pause`；回退复用 enable | enable/pause 请求只含 preset_id、release_id、release_digest、expected_generation、reason、evidence_reference；返回 operator、before/after（含 generation）和 replayed，首次 before=null。导入使用 typed immutable canonical_release | 实际 admin ACCESS JWT 与 Redis session/blacklist、当前有效租户与用户、当前 ALL 数据范围及独立 `modeldev:manage_release_binding` 权限；租户和操作者只来自可信上下文，同目标重放仍重新授权 | enable 经 exact-method mTLS ValidateRelease 验证已导入目标与当前环境，再重查授权并复用原唯一绑定 CAS；首次 generation=1。已获真实 JWT/Redis/PG 的首次启用、切换、stale 拒绝和同指针回退 RED/GREEN；该测试只替代外部 ModelDev RPC 边界，实际目录验证及目标集群业务验收另行证明。pause 不要求 ModelDev 在线，详见[操作合同](deployment.md#暂停-modeldev-新受理) |
-| MODELDEV-03 | `GET /api/v1/modeldev/executions/{execution_id}`；`GET /api/v1/modeldev/executions/{execution_id}/artifacts` | 详情白名单含四组状态及 observed_at；产物仅返回已发布文件 ID、文件名、角色、大小、摘要和验证时间。产物分页仅接受 limit（上限 100）、cursor（上限 2048 字节） | 每次经过 JWT/session、TenantAccess、Casbin，并重新读取当前有效租户、用户、角色、ALL 范围与对应独立 GET API 授权；新签发 mTLS query delegation，剥离公网同名身份/委派头。非 ALL 拒绝，不使用受理时 actor 授权 | 仅源码与隔离测试，不表示真实 API 目录已同步；执行列表与日志见 MODELDEV-06 |
+| MODELDEV-03 | `GET /api/v1/modeldev/executions/{execution_id}`；`GET /api/v1/modeldev/executions/{execution_id}/artifacts` | 详情白名单含四组状态及 observed_at；产物仅返回已发布文件 ID、文件名、角色、大小、摘要和验证时间。产物分页仅接受 page（默认 1）、pageSize（默认 20、上限 100） | 每次经过 JWT/session、TenantAccess、Casbin，并重新读取当前有效租户、用户、角色、ALL 范围与对应独立 GET API 授权；新签发 mTLS query delegation，剥离公网同名身份/委派头。非 ALL 拒绝，不使用受理时 actor 授权 | 仅源码与隔离测试，不表示真实 API 目录已同步；执行列表与日志见 MODELDEV-06 |
 | MODELDEV-04 | `GET /api/v1/modeldev/artifacts/{artifact_id}/content` | 仅接受 artifact_id，返回已发布 ArtifactView、短期 HTTPS download_url 和 expires_at；响应及错误均 no-store/no-cache/no-referrer。下载 URL 不进入快照或本服务日志 | 独立当前 GET 授权；ModelDev 按可信租户解析 artifact 固定版本，不允许调用方选择 bucket/key/Pod/namespace；拒绝未发布、过期、非 HTTPS、含用户凭据或超过 15 分钟的签发结果 | 下载链接为短期凭据，仅交授权调用者；BFF 不代理任意 URL、不向用户发长期 AK/SK。真实存储/ENV 验收仍需独立验证 |
 | MODELDEV-05 | `POST /api/v1/modeldev/executions/{execution_id}:stop` | 仅 path selector，无请求体或 query；PG 持久停止意图后返回202：operation_id、execution_id、stop_requested、intent_generation、replayed；重复请求回原代次，不返回未观察到的 CLOSED | 每次当前 JWT/session、TenantAccess、Casbin、PG ALL范围及独立 POST API 授权；不使用历史 actor 授权，拒绝公网身份/代次注入；内部 ApplyCloseIntent 使用保存的本次 actor，独立租约投递及回执；尚未投递的 create 等待关闭墓碑 ACK | 202只代表受理，实际关闭经查询观察；G意图代次与M创建门闩 close_generation 独立；新增API需显式目录同步及授权，目标环境验收另行执行 |
-| MODELDEV-06 | `GET /api/v1/modeldev/executions`；`GET /api/v1/modeldev/executions/{execution_id}/logs` | 列表仅 limit（默认20，上限100）、cursor（上限2048字节），返回 ExecutionView 与 next_cursor/total；日志仅 tail_lines（默认200，上限1000）、max_bytes（默认16384，上限65536），返回 log_id、实际 timestamp/text、truncated、observed_at | 每次当前 JWT/session、TenantAccess、Casbin、PG ALL范围及各自独立 GET API授权；可信租户下查询，日志位置由 ModelDev 已观察训练资源确定；拒绝重复/未知参数、请求体及 Pod/namespace/log_id 等选择器；响应和错误 no-store | 不返回 Pod UID/container/object key；不可读、资源身份变化、无法完整选择历史日志均返回不可用，不伪造空成功。新增 API 需显式目录同步及授权，真实环境验收另行执行 |
-| MODELDEV-07 | `GET /api/v1/modeldev/presets`；`GET /api/v1/modeldev/input-versions`、`/{input_version_id}`；受管 `admin modeldev-import-csv` | 目录/输入白名单与注册参数；分页 limit 上限100/cursor 2048字节，返回 items/next_cursor/total，输入列表可用固定状态过滤。preset active_release_id/generation/gate 只由 G 当前唯一绑定填充；没有绑定则不宣称已启用。CSV 导入 typed 固定对象与 immutable Release ID/digest | 三个查询各自独立当前 GET API 授权和 ALL；导入使用当前 `modeldev:manage_release_binding` 和 ALL，再委派 exact-method mTLS；来源 object scope 由 M owner-approved admission facts 验证 | HTTP/CLI 入口与真实 JWT/Redis/PG 的跨客户端导入重放 RED/GREEN 已通过。仅 CSV 导入以 tenant/actor/input ID 派生稳定委派请求 ID，固定 requested_at/body 重放；已确认不可变冲突保留 AlreadyExists，FailedPrecondition 保留原分类，未知来源失败仍拒绝。隔离 LIVE 已证明真实固定 CSV 1024×16 导入 READY、同请求重放、异摘要 FAILED、不存在版本 VALIDATING，以及正常 BFF Get/List；完整计算/关闭/发布仍需独立验收 |
+| MODELDEV-06 | `GET /api/v1/modeldev/executions`；`GET /api/v1/modeldev/executions/{execution_id}/logs` | 列表仅 page（默认1）、pageSize（默认20、上限100），返回 ExecutionView 与 total；日志仅 tail_lines（默认200，上限1000）、max_bytes（默认16384，上限65536），返回 log_id、实际 timestamp/text、truncated、observed_at | 每次当前 JWT/session、TenantAccess、Casbin、PG ALL范围及各自独立 GET API授权；可信租户下查询，日志位置由 ModelDev 已观察训练资源确定；拒绝重复/未知参数、请求体及 Pod/namespace/log_id 等选择器；响应和错误 no-store | 不返回 Pod UID/container/object key；不可读、资源身份变化、无法完整选择历史日志均返回不可用，不伪造空成功。新增 API 需显式目录同步及授权，真实环境验收另行执行 |
+| MODELDEV-07 | `GET /api/v1/modeldev/presets`；`GET /api/v1/modeldev/input-versions`、`/{input_version_id}`；受管 `admin modeldev-import-csv` | 目录/输入白名单与注册参数；分页 page/pageSize（默认1/20，上限100），返回 items/total，输入列表可用固定状态过滤。preset active_release_id/generation/gate 只由 G 当前唯一绑定填充；没有绑定则不宣称已启用。CSV 导入 typed 固定对象与 immutable Release ID/digest | 三个查询各自独立当前 GET API 授权和 ALL；导入使用当前 `modeldev:manage_release_binding` 和 ALL，再委派 exact-method mTLS；来源 object scope 由 M owner-approved admission facts 验证 | HTTP/CLI 入口与真实 JWT/Redis/PG 的跨客户端导入重放 RED/GREEN 已通过。仅 CSV 导入以 tenant/actor/input ID 派生稳定委派请求 ID，固定 requested_at/body 重放；已确认不可变冲突保留 AlreadyExists，FailedPrecondition 保留原分类，未知来源失败仍拒绝。隔离 LIVE 已证明真实固定 CSV 1024×16 导入 READY、同请求重放、异摘要 FAILED、不存在版本 VALIDATING，以及正常 BFF Get/List；完整计算/关闭/发布仍需独立验收 |
 | MODELDEV-08 | 受管 `admin modeldev-inspect`、`modeldev-reconcile`、`modeldev-cleanup-plan`、`modeldev-cleanup-apply` | 前三仅 execution_id；apply 仅 execution_id 和 plan_sha256；输出 typed inspection/plan/audit receipt | inspect 重查独立 execution GET grant 与 ALL；reconcile/cleanup 重查 `modeldev:manage_execution` 与 ALL；所有委派 exact RPC method，CLI 无调用者可选 tenant/actor/namespace/resource | M 重建 exact-UID cleanup plan，只允许已关闭且 PUBLISHED、无活动写者的停止训练资源，保留 PVC/Workflow/Pod/DB/S3；G 已装配受认证 typed 入口，真正观察/删除与租户隔离需真实环境验收，不以编译或 CLI 私有文件检查替代 |
 
 `general_parameters` 保留缺省与显式 `[]` 的区别，外部 JSON 不直接套用 ProtoJSON。
@@ -1574,6 +1574,8 @@ roles 取页后需逐条回填权限/组织单元/字段权限，故 keyset 采�
 
 ## GOV-ACC-INF-V12-WIRING-01：推理创建与删除接线（2026-10-09）
 
+本节为历史接线记录。2026-10-18 起 INF-01/02 及普通推理管理接口均已撤下，不是当前可调用合同；Inference API 模块与出站配置也不保留。以下旧权限登记、启用及退款映射步骤不再适用，后续重新对接另行登记。
+
 用户明确批准本仓登记 `INFERENCE=15`。新增推理模块和两项独立动作；当前源码登记与实际授权/部署分别验收，不据此向基础套餐、所有角色或生产环境自动开放。
 
 | 编号 | 入口 | 报文与可靠受理 | 当前授权条件 |
@@ -1587,7 +1589,7 @@ ledger adapter action固定为权威 Inference RPC full method `CreateInferenceS
 
 当前受管GPU的LWS输入在共享业务校验中、Occupy之前明确拒绝；锁定KServe的LWS模板无法可靠投影GPU annotations与Queue。本批不把typed渲染接口或接受后补丁当C02可运行路径，实际LWS投影仍为not_verified。
 
-模块资格 `PlanModule`、上限 `PlanQuota` 与当前用户动作授权各自独立。API先dry-run/显式sync后执行 [权限目录登记](../scripts/ops/sql/register-inference-permissions.sql)，再仅为显式选定tenant:manager角色和选定套餐执行 [启用脚本](../scripts/ops/sql/enable-inference-access.sql)，传tenant_id/role_id/plan_id；不修改基础FREE、模板、所有角色或用户配额。Gov内部退款listener仅编译注册固定ani-inference，生产精确客户端DNS SAN必须明确配置，不猜测。
+模块资格 `PlanModule`、上限 `PlanQuota` 与当前用户动作授权各自独立。API先dry-run/显式sync后执行 旧权限目录登记脚本（已退役），再仅为显式选定tenant:manager角色和选定套餐执行 旧启用脚本（已退役），传tenant_id/role_id/plan_id；不修改基础FREE、模板、所有角色或用户配额。Gov内部退款listener仅编译注册固定ani-inference，生产精确客户端DNS SAN必须明确配置，不猜测。
 
 软件测试使用实际Gov受理/账本/当前权限、真实Acc解析和真实Inference RPC/PG；只有外部provider证据可用明确替身，外部模型/Kubernetes执行暂停。完成通知在持久DELETE后显式注入，通过真实Inference退款客户端调用真实Gov mTLS/PG。源码实现、发布依赖、运行结果、CI及生产/真实GPU验收由本批结果索引分别记录；本文不回填未执行PASS，也不将本批之外的接口风格整体登记结项。
 
@@ -1613,11 +1615,21 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依赖固定为 `v0.0.0-20261012083359-e7b5a8a34359`。Fedora 新模块缓存已验证下载内容、模块/go.mod 校验和及 `Origin.Hash` 与发布提交一致，完整 `make api` 复验无生成差异。发布时保留最新 Governance main 的 ModelDev 和鉴权计划更新；源码发布不改变共享部署或此前 LB 回归未解结论。提交前 Resource 完整 `make verify` 已通过，前缀和平台方法的证据沿用上述入口；发布补充日志保留在同一工件目录的 `publication/`。
 ## INSTANCE-MVP-V15（2026-10-13，后端接线实施中）
 
+2026-10-16 联合批次的当前合同见 [容器实例 HTTP 合同](contracts/container-instances.md)。该批次将实例公开/内部类型统一为 `instance_kind=container` 与可信 `compute_type`，删除外层规格版本和旧实例分页；新增 Res 数据库规格的 Gov 平台 CRUD、可选 scheduling、平台调度配置、只读 runtime/events 和受保护 SSE 日志。新增/改造列表统一 page/pageSize 与 items/total，授权/筛选先于计数和分页。以下 10-13～10-16 发布记录说明此前交付，不能作为本批验收证据。
+
+本批身份条件：平台规格及调度管理要求 tenant=0 的平台用户和独立权限；租户创建/读取沿当前 INSTANCE 角色/套餐，GPU 候选另取当前 ACC 目录权限交集。ConfigMap 使用编辑时 resourceVersion 条件写入并保持其他键及 metadata；现场基线未对齐时写闸门关闭。日志通过专用 SSE 等 READY 后发送头，使用原请求取消，不套普通 REST/unary 总期限；fetch 示例及运行安全字段见上述合同。
+
+本批实际验证由任务独占 evidence/EXECUTION-STATUS.md 关联具名原始结果：CPU 公开受理至真实 Pod Running/Ready、规格/defaults 冻结重试、正常启停/删除；Whole1/Shared1/Whole2 的实际控制器 Pod 字段（Pending，仅字段）；ConfigMap 条件更新/冲突恢复、平台互斥权限，以及 runtime/events 和真实 SSE 长连接、期限及故障回收。按 Profile 上限通用化的数量增量使用真实 builder、软件与 PG 边界定向验证，未扩 3/4 卡现场矩阵。正式依赖版本由本仓 go.mod/go.sum 固定，使用正常 Go 模块下载核对 Origin.Hash 与校验和；源码发布不表示合并或共享部署，不授权旧实验数据清理，硬件与浏览器边界保持未验证。
+
 新增固定 `INSTANCE=16`，独立于 INFERENCE/ACCELERATOR 的当前套餐和动作授权。输入、路由及安全查询视图以 `api/protos/instance/service/v1/instance.proto`、`api/protos/admin/service/v1/i_instance.proto` 为准；创建/变更保留 `{data:{...}}`，不允许公共 tenant、namespace、owner、GPU plan 或 charges。`instance_http.go` 严格解码写入，并校验路径和正文 ID 相同；终端响应 `no-store`。
 
 创建先执行当前角色/套餐授权及原公开请求幂等查找，新请求再解析 Image/preset/Namespace。占额、持久投递及全量附件沿用 Quota；启停调用原实例版本，不动原账。删除版本和幂等内容进入持久 DELETE，已接受删除阻止后续新启停/终端。Resource owner 固定 `ani-resource-service`，退额证书映射为 `ANI_QUOTA_RESOURCE_DNS_SAN`；合法 owner 原 GPU 全量累计声明不要求 Gov 持久 DELETE，更不查询 Notebook/Pod。Acc ENDED 保留实际 binding。
 
-列表协议登记为 `page_size/after_id`、`items/next_after_id`：默认 50、1～100、按实例 UUID 升序键集；无过滤/排序参数，查询每页重新当前授权并限定可信租户。不宣称 HMAC cursor、total 或跨页快照。前端本轮由用户指定专人接手。
+2026-10-15 CPU 扩展：创建仍只接收 image/preset 公开字段，可信 preset 决定 `cpu`/`gpu`；列表和详情新增只读 `instance_type`，preset 同时返回类型。创建后类型、CPU/内存和 GPU 规格固定，不提供变配/互转接口。CPU 复用当前 INSTANCE 角色/套餐授权、原公开请求幂等、QuotaOperation 持久投递、Notebook/PVC 及 SG 终端；CPU 不调用 Acc、不创建 GPU plan/charge，不新增 CPU 计费额度。零 charge 仅接受固定 Resource owner/action 与 `instance-cpu-v1` 冻结合同，GPU 原全量占退额不变。CPU DELETE 保存原 CREATE 关联及 expected_version，接受后阻止新启停/终端；SG 依据 Resource 可信实例类型使用 CONTAINER，并保留 InstanceBinding 的 namespace/UID/version 校验。CPU 创建/删除已由 Gov 持久受理但尚未得到 Resource ACK 时，operation 查询返回 Gov 原持久 `QUEUED`/`DISPATCHING`/`UNKNOWN`；本地取消返回终态 `CANCELED_UNSENT` 和原因 `CANCELED_BEFORE_DISPATCH`。这些操作尚无 Resource intent_version，返回 0；ACKED 后读取 Resource 的真实操作状态。本项生成/目标构建、真实 PG 的 GPU/CPU 当前授权与幂等接单回归，以及隔离真实 CPU Notebook→SG→两轮启停保盘→删盘均已完成；具体运行配置、精确源码/结果和前端交接统一见 Resource 当前状态，不据此声明 GPU 实机或浏览器页面验收通过。
+
+2026-10-16 按用户授权发布本次全部实例后端代码到 main。Resource provider 为 `921a22a85758d42986d271406cafdd74ca421d1d`，Gov 固定正式模块 `v0.0.0-20261016021904-921a22a85758`；Fedora `GOWORK=off` 下载已核对 `Origin.Hash`、Sum `h1:SCUfArA8dAHTZXs1N3ZpLjd5Y3n77OWQtYDQ12zha3I=` 和 GoModSum `h1:DXqtxWJ+IEu9gZIgGVHTbFONYQc9hcuaeXOUzmY5Yjw=`。两仓目标独立构建通过，未提交 workspace 或 sibling replace。实现/生成物与已通过定向及 CPU 真实业务验收的代码清单一致，复用原证据；本次发布不重复业务场景、不等待 CI、不更新共享部署，GPU 实机与浏览器验收边界保持。准确 Gov 发布提交以远端 main 为准，命令及模块回执在原 Fedora 任务根 `publication-20261016/`。
+
+此前 `page_size/after_id` 列表协议已由本批替换；当前接口不接旧分页参数，不提供双轨兼容。前端按上方当前合同接入。
 
 早期定向联调已使用真实授权、PG/Redis/mTLS 和生产业务代码，GPU/Kubernetes/exec 边界受控；真实 GPU 产品验收仍未完成。2026-10-13 用户授权先推送 main，剩余门禁由后续任务处理：已固定正式 Resource/Acc/SG API 版本并核对下载 SHA/sums，但新版 main 合入后的最终独立构建、定向组合用例及 CI 尚未完成，不声明通过。权威当前状态统一见 Resource `docs/execution/status.md#gpu-container-instance-mvp-v15`。`scripts/ops/sql/register-instance-permissions.sql` 只准备已同步的 API/permission 目录，未执行共享环境授权；本轮没有部署。
 
@@ -1643,68 +1655,93 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 
 本机（Windows 1.25.4 主机 + 自动拉取 Go 1.26.9 工具链）已执行：下游 `buf generate`/`sqlc generate` 通过，`GOOS=linux go build ./...` 通过，`go vet ./internal/...` 与 `go vet -tags cpu_mainflow ./internal/data/submittest/...` 通过（下游含 Linux-only 代码，Windows 原生编译不适用）；Governance `go build ./...`、`go test -count=1 ./app/admin/service/internal/server/... ./app/admin/service/internal/data/...` 通过。真实环境/部署验收（真实 PG、mTLS 链路、OpenAPI 目录同步）尚未执行，保留 `not_verified`；Governance 完整 `make api`（含 OpenAPI 后处理，Linux/bash 专用链）未在本机重跑，仅对受影响的单个 proto 做了定向 `buf generate`。
 
+> 后续已由 MODELDEV-11 将四个列表由 `limit/cursor` 迁移为 `page/pageSize`；MODELDEV-10 的 `total` 契约与筛选一致性结论保留，参数名与响应字段随之改名。
+
+## MODELDEV-11：ModelDev 四个列表由 limit/cursor 迁移为 page/pageSize（2026-10-19）
+
+按[前端 HTTP 接口规范](contracts/frontend-http-api.md)，把 `GET /api/v1/modeldev/executions`、
+`/presets`、`/input-versions`、`/executions/{execution_id}/artifacts` 四个列表从 MODELDEV-10 的
+`limit`/`cursor` 游标协议迁移为规范的页码协议：请求 `page`（默认 1）、`pageSize`（默认 20，合法 1～100），
+两个参数各自独立取默认值；响应 `{items, total}`（`total` 为 uint64，HTTP JSON 为十进制字符串），
+支持直接跳到任意合法页，页码超出最后一页时 `items` 为空且 `total` 保留实际匹配总数。
+
+MODELDEV-10 的下游不透明 ID 游标只支持单向连续翻页，与"可直接跳页"的页码协议不共存，因此本次整体移除游标。
+
+下游 `ani-modeldev-service`：
+- `PageRequest` 的 `limit`/`cursor` 与四个 Response 的 `next_cursor` 改为 `reserved`，改以 `page`/`page_size`
+  求 `(page-1)*pageSize` 窗口；`executions` 复用与取页相同的批量扫描在应用层窗口化，
+  `input-versions` 改为 `ORDER BY input_version_id LIMIT/OFFSET`（重跑 `sqlc generate`），
+  `presets`/`artifacts` 在内存排序后按窗口切片。
+- PR#4 曾引入的 HMAC-SHA256 签名游标（`cursor_signing_key` + `biz.CursorCodec`，缺密钥时 fail-closed 装配）
+  同为单向 keyset 语义，一并移除：删除该组件与其测试、`conf.Bootstrap.cursor_signing_key` 字段与校验、
+  `WithCursorCodec`/`newCursorCodec` 及启动装配。部署侧不再需要 `modeldev-cursor-signing-key` Secret
+  与 `ANI_CURSOR_SIGNING_KEY` 环境变量；`md-fixed-config` 中的占位符行可移除。
+
+Governance：
+- 对外 `modeldev/service/v1/execution.proto` 四个 Request 改 `optional uint32 page`/`page_size`，
+  `limit`/`cursor` 与四个 Response 的 `next_cursor` 改为 `reserved`；新增定向模板
+  `api/buf.modeldev.gen.yaml` 仅重生成受影响 Proto。
+- BFF 手写路由（`modeldev_query_http.go`、`modeldev_catalogue_http.go`）的参数白名单由 `limit`/`cursor`
+  改为 `page`/`pageSize`，沿用 `modelDevBoundedQuery` 拒绝重复/未知参数、请求体与 `ForceQuery`；
+  `page` 取 1..4294967295、`pageSize` 取 1..100，显式 `0`、前导零、小数、越界与 `limit`/`cursor`
+  一律 400。service 层 `resolveModelDevPage` 独立解析默认值并校验；client 以 `page/pageSize` 传下游，
+  响应校验不再依赖 `next_cursor`。
+
+因下游新字段尚未发布为新模块版本，Governance `go.mod` 需在下游发布后升级到正式伪版本；
+本地验证时以 `replace github.com/zhangzhe-ctrl/ani-modeldev-service => <下游工作树>` 消费同源下游代码（验证后移除）。
+
+本机（Windows）已验证：下游 `buf generate`/`sqlc generate` 通过，`GOOS=linux go build ./...` 与
+`go vet -tags cpu_mainflow ./internal/... ./cmd/...` 通过；Governance `GOOS=linux go build ./app/... ./pkg/...`
+与 `go vet ./app/admin/service/internal/server/ ./app/admin/service/internal/data/` 通过，service 包测试可编译。
+下游含 Linux-only syscall 代码且运行期测试需要 PostgreSQL，Windows 原生无法执行测试二进制；
+真实环境/部署验收（真实 PG、mTLS 链路、OpenAPI 目录同步）尚未执行，保留 `not_verified`。
+
 ## GOV-MODEL-INF-20261012：Model / Inference BFF 接入
 
-本批把模型目录、模型导入和推理生命周期接入 Governance BFF。调用方只面向
-Governance HTTP；Governance 根据已认证的租户用户建立下游 mTLS gRPC 请求，Model
-和 Inference 不读取客户端提交的租户或 actor 字段。ModelScope 导入仍由 Model
-Service 创建一次性 Kubernetes Job 完成，模型文件写入当前 Model Service 配置的
-S3-compatible 存储；Inference 新创建必须引用已就绪的 `model_version_id`。
-GPU 同键重放先做当前授权并读取原受理记录，不再查询 Model readiness；Model 或
-投递适配器暂不可用时仍返回原 operation/resource。GPU 删除先按当前租户查询
-Governance 原 CREATE，再执行原本地取消或持久 DELETE 流程；未投递创建的取消退款
-不依赖 Inference 资源已经存在。
+本登记当前只保留 Model 模型目录、版本和导入 BFF。Inference 管理接入已整体撤下，
+包括普通及 GPU 推理的创建、查询、操作查询、更新、启停/重启和删除；本仓不再依赖
+Inference Go API 模块，后续重新对接另行登记。调用方通过 Governance HTTP 管理模型，
+Governance 根据已认证的租户用户建立下游 Model mTLS gRPC 请求，不信任客户端提交的
+租户或 actor。ModelScope 导入仍由 Model Service 创建一次性 Kubernetes Job 完成，
+文件写入当前 Model Service 配置的 S3-compatible 存储。
 
 ### HTTP 入口
 
 | 业务 | 方法与路径 | 权限 |
 |---|---|---|
 | 模型列表/详情 | `GET /api/v1/models`、`GET /api/v1/models/{model_id}` | `model:service:read` |
+| 外部模型搜索 | `GET /api/v1/models:search` | `model:service:read` |
 | 模型版本 | `GET /api/v1/models/{model_id}/versions`、`GET /api/v1/model-versions/{model_version_id}` | `model:service:read` |
 | 导入任务查询 | `GET /api/v1/models/import-tasks/{task_id}` | `model:service:read` |
-| 创建模型/版本、发起导入、重试 | `POST /api/v1/models`、`POST /api/v1/model-versions`、`POST /api/v1/models:import`、`POST /api/v1/models/import-tasks/{task_id}:retry` | `model:service:manage` |
-| 创建推理 | `POST /api/v1/inference/services` | `inference:service:create` |
-| 推理查询 | `GET /api/v1/inference/services`、`GET /api/v1/inference/services/{resource_id}`、`GET /api/v1/inference/operations/{operation_id}` | `inference:service:read` |
-| 删除推理 | `POST /api/v1/inference/services/{data.resource_id}:delete` | `inference:service:delete` |
-
-请求体沿用各自 `data` 公开报文。推理创建使用 `engine_type`、`engine_image`、
-完整的单字符串 `command` 和 `served_model_name`；不再有 `engine.command[]` 或
-`engine.args[]` 数组。Governance、Model 和 Inference 都不会解析、拼接、替换或
-写死引擎启动参数；请求中的完整 command 原样保存并转发。未传 `gpu` 表示不使用
-GPU；传入 GPU 才进入配额/Accelerator 受理路径。
-运行时网络端点由适配器固定为 TCP `containerPort=8000`、`servicePort=80`、
-`targetPort=8000`；调用方提供的完整 command 必须让引擎监听容器端口 8000。
-适配器不解析 command，也不向其中追加端口或其他启动参数。
-
+| 模型下载地址 | `GET /api/v1/model-versions/{model_version_id}/download-url` | `model:service:read`（由 Governance 通过受信任的 Model gRPC 调用） |
+| 创建模型/版本、上传地址、发起导入、重试 | `POST /api/v1/models`、`POST /api/v1/model-versions`、`POST /api/v1/models/{model_id}/upload-url`、`POST /api/v1/models:import`、`POST /api/v1/models/import-tasks/{task_id}:retry` | `model:service:manage` |
+| 删除模型/版本 | `DELETE /api/v1/models/{model_id}`、`DELETE /api/v1/model-versions/{model_version_id}` | `model:service:manage` |
 ### 新环境启用步骤
 
 1. 先对本版本 OpenAPI 执行 `admin sync-apis --dry-run`，人工确认后执行
    `admin sync-apis`。
-2. 执行 [Model/Inference 权限目录登记](../scripts/ops/sql/register-model-inference-permissions.sql)。
+2. 执行 [Model 权限目录登记](../scripts/ops/sql/register-model-permissions.sql)。
    该文件只登记权限与 API 关联，不自动给任何角色授权。
 3. 对明确的租户、当前 `tenant:manager` 角色和套餐执行
-   [Model/Inference 启用脚本](../scripts/ops/sql/enable-model-inference-access.sql)。
-   它只增加所选租户角色的权限和所选套餐的 `MODEL`、`INFERENCE` 模块，不修改其他租户、
+   [Model 启用脚本](../scripts/ops/sql/enable-model-access.sql)。
+   它只增加所选租户角色的权限和所选套餐的 `MODEL` 模块，不修改其他租户、
    模板角色或配额。
-4. 配置 Governance → Model/Inference 的证书、精确服务 DNS 和地址；调用者证书只含
+4. 配置 Governance → Model 的证书、精确服务 DNS 和地址；调用者证书只含
    DNS SAN `ani-governance`，不混入其他 DNS、URI、IP 或 email。重启 Governance
    使 Casbin 策略重新加载；配置缺失时 BFF 应返回下游不可用，不退化为直连或明文。
 
 ### 业务链路验收
 
 `登录 → POST /api/v1/models → POST /api/v1/model-versions → POST /api/v1/models:import
-→ 轮询导入任务 → 读取已就绪版本 → POST /api/v1/inference/services → 轮询
-operation/service → Higress /v1/completions`。导入任务状态可以在版本就绪前为
+→ 轮询导入任务 → 读取已就绪版本`。导入任务状态可以在版本就绪前为
 `importing`；`GET /api/v1/model-versions/{id}` 只返回已就绪版本，不能把导入中的
-404 当作导入失败。CPU 验收不需要 GPU 或 Accelerator；GPU 验收必须在有 GPU 节点的
-新集群另行执行。本批不修改旧集群。
+404 当作导入失败。该链路不包含推理服务管理或推理数据面验收；Model 当前功能范围保持不变。
 
-## MODELDEV-11：ModelDev 四个列表游标改为下游签名游标（对齐 VPC）
 
-按用户明确授权，把 MODELDEV-10 遗留的“裸下游 ID 游标”改为**与 VPC 一致的下游签名游标**：签名下沉在 `ani-modeldev-service` 内（不是 Governance BFF），BFF 仍只透传。游标格式 `base64url(payload).base64url(mac)`，HMAC-SHA256，载荷绑定 `{版本, 资源种类, 租户, 筛选指纹, 上页边界}`；篡改、跨租户、跨资源种类或换筛选复用一律 400 `INVALID_CURSOR`，不降级为首页。
+### GOV-ACC-INF-V12-WIRING-01：2026-10-18 显存值合同替换
 
-密钥：下游 `conf.Bootstrap` 新增 `cursor_signing_key`（base64，32～128 字节），`Validate()` 强制校验；装配链（shell `app.go`、`command.go`、`runtime.go`）在启动时解码并注入 `biz.CursorCodec`，缺密钥即 fail-closed。所有副本须使用同一密钥。
+本轮移除 GPU 旧大附件、百分比与证明准入，使用单执行快照和 `QuotaReleaseService/ReportResourceReleased` 四字段完整释放。内部 mTLS owner → 原 CREATE → resource → 原账事务全退；非 GPU 的独立累计释放接口保持原范围。当前正式合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)。
 
-代码面（全部在 `ani-modeldev-service`）：新增 `internal/biz/cursor.go`（`CursorCodec`/`CursorBinding`/`CursorFilterKey`）与 `internal/biz/cursor_test.go`；`internal/service/query.go`、`materials.go` 四个列表在 service 层做签名/解签，仓库层与 SQL 不变；`internal/conf/v1/conf.proto` 新增字段并重生成 `conf.pb.go`；`configs/examples/managed-runtime.yaml` 增加 `${CURSOR_SIGNING_KEY}` 占位。Governance 侧无需改动（已确认 BFF 对 modeldev `cursor` 仅校验长度≤2048、纯透传）。
+管理 Profile 创建仍为 `POST /api/v1/admin/accelerator/profiles`，正式 RPC 改为 `CreateProfile`；新增 `GET .../profiles:preview`、`POST .../profiles/{profile_id}:set-state` 和 `POST .../profiles/{profile_id}:delete`。写请求保持 `{data:{...}}`，平台 JWT、当前权限与 ACC 对应 action/cluster grant 必须齐全。API 目录同步只登记接口，不自动授予权限。
 
-本机（WSL Ubuntu + Go 1.26.9）已执行：下游 `buf generate` 通过，`go build ./...`、`go vet ./internal/... ./cmd/...` 通过，`go test ./internal/biz/... ./internal/conf/... ./internal/service/...` 通过（含签名/绑定/篡改/跨租户拒绝用例）。真实部署验收（密钥注入、mTLS 链路、两个副本同密钥翻页）尚未执行，保留 `not_verified`；下游需发布新模块版本后，Governance `go.mod` 依赖相应升级。
+用户 Preset 返回每卡显存值、selectable 与 unavailable_reason；CPU 查询不依赖 ACC，GPU 仍须通过租户目录授权过滤。Inference 的普通及 GPU 管理接口、API 依赖和出站配置均移除，后续重新对接。编码、软件回归和真实 GPU 验收分别记证，不能沿用旧结果宣称新合同已验收。
