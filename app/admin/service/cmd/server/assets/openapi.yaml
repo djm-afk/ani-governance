@@ -1008,8 +1008,8 @@ paths:
     /api/v1/admin/compute-presets:
         get:
             tags:
-                - InstanceService
-            operationId: InstanceService_AdminListPresets
+                - ComputePresetService
+            operationId: ComputePresetService_AdminListPresets
             parameters:
                 - name: page
                   in: query
@@ -1050,8 +1050,8 @@ paths:
                                 $ref: '#/components/schemas/AdminListPresetsResponse'
         post:
             tags:
-                - InstanceService
-            operationId: InstanceService_AdminCreatePreset
+                - ComputePresetService
+            operationId: ComputePresetService_AdminCreatePreset
             requestBody:
                 content:
                     application/json:
@@ -1068,8 +1068,8 @@ paths:
     /api/v1/admin/compute-presets/{id}:
         get:
             tags:
-                - InstanceService
-            operationId: InstanceService_AdminGetPreset
+                - ComputePresetService
+            operationId: ComputePresetService_AdminGetPreset
             parameters:
                 - name: id
                   in: path
@@ -1085,8 +1085,8 @@ paths:
                                 $ref: '#/components/schemas/Preset'
         delete:
             tags:
-                - InstanceService
-            operationId: InstanceService_AdminDeletePreset
+                - ComputePresetService
+            operationId: ComputePresetService_AdminDeletePreset
             parameters:
                 - name: id
                   in: path
@@ -1098,8 +1098,8 @@ paths:
                     description: Deleted
         patch:
             tags:
-                - InstanceService
-            operationId: InstanceService_AdminUpdatePreset
+                - ComputePresetService
+            operationId: ComputePresetService_AdminUpdatePreset
             parameters:
                 - name: id
                   in: path
@@ -1122,8 +1122,8 @@ paths:
     /api/v1/admin/compute-presets/{id}:set-enabled:
         post:
             tags:
-                - InstanceService
-            operationId: InstanceService_AdminSetPresetEnabled
+                - ComputePresetService
+            operationId: ComputePresetService_AdminSetPresetEnabled
             parameters:
                 - name: id
                   in: path
@@ -18308,6 +18308,7 @@ tags:
          路径规范：本服务的路由统一挂 /api/v1/auth/*，与 ANI Core OpenAPI 契约
          （api/openapi/v1.yaml，servers[0].url = https://{host}/api/v1）拼出的最终 URL 一致。
          仓库内其余服务仍为 /api/v1/admin/*，两套前缀并存，按域逐步迁移。
+    - name: ComputePresetService
     - name: ConfigService
       description: 系统参数管理服务
     - name: DashboardService

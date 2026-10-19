@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	authpb "go-wind-admin/api/gen/go/authentication/service/v1"
+	computeview "go-wind-admin/api/gen/go/compute/service/v1"
 	identity "go-wind-admin/api/gen/go/identity/service/v1"
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	"go-wind-admin/app/admin/service/cmd/server/assets"
@@ -180,7 +181,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		t.Setenv("INSTANCE_JOINT_QUOTA_FILE", path)
 	}
 	resourcePeer := testutil.StartInstanceResourcePeer(t, gpuRequest, gpuProfile)
-	owner, closeOwner, e := data.NewInstanceClientFromEnv()
+	owner, computeOwner, closeOwner, e := data.NewResourceClientsFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeOwner)
 	// This suite covers the current frozen instance admission contract.
@@ -207,7 +208,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		t.Cleanup(close)
 		sessions = client
 	}
-	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID, Catalog: accelerator.Catalog})
+	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID, Compute: computeOwner, Catalog: accelerator.Catalog})
 	if lifecycle {
 		sync := service.NewGpuUsageSyncWorker(ledger, accelerator, func(e error) { t.Log("Acc sync attempt failed", e) })
 		require.NoError(t, sync.Start(ctx))
@@ -341,7 +342,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	operation := new(view.Operation)
 	request("GET", "/api/v1/instance-operations/"+accepted.OperationId, nil, operation, 200, token)
 	require.Equal(t, accepted.ResourceId, operation.InstanceId)
-	presets := new(view.ListPresetsResponse)
+	presets := new(computeview.ListPresetsResponse)
 	request("GET", "/api/v1/instance-presets", nil, presets, 200, token)
 	require.Len(t, presets.Items, 1)
 	require.EqualValues(t, 1, presets.Total)

@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-kratos/kratos/v2/errors"
+	computeview "go-wind-admin/api/gen/go/compute/service/v1"
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -54,7 +55,7 @@ func decodeInstanceHTTP(r *http.Request, message proto.Message) error {
 		if value, ok := data["priority_class_allowlists"]; !ok || bytes.Equal(bytes.TrimSpace(value), []byte("null")) || json.Unmarshal(value, &allowlists) != nil {
 			return invalid
 		}
-	case *view.UpdatePresetRequest, *view.SetPresetEnabledRequest:
+	case *computeview.UpdatePresetRequest, *computeview.SetPresetEnabledRequest:
 		var envelope map[string]json.RawMessage
 		if json.Unmarshal(raw, &envelope) != nil {
 			return invalid
@@ -62,7 +63,7 @@ func decodeInstanceHTTP(r *http.Request, message proto.Message) error {
 		if _, present := envelope["id"]; present {
 			return invalid
 		}
-		if _, update := message.(*view.UpdatePresetRequest); update {
+		if _, update := message.(*computeview.UpdatePresetRequest); update {
 			var data map[string]json.RawMessage
 			if json.Unmarshal(envelope["data"], &data) != nil {
 				return invalid
@@ -175,11 +176,11 @@ func decodeInstanceQuery(r *http.Request, message proto.Message) error {
 		for _, k := range []string{"page", "pageSize", "instance_kind", "compute_type", "observedState", "name"} {
 			allowed[k] = true
 		}
-	case *view.ListPresetsRequest, *view.AdminListPresetsRequest:
+	case *computeview.ListPresetsRequest, *computeview.AdminListPresetsRequest:
 		for _, k := range []string{"page", "pageSize", "name", "code", "compute_type", "gpu_mode"} {
 			allowed[k] = true
 		}
-		if _, admin := message.(*view.AdminListPresetsRequest); admin {
+		if _, admin := message.(*computeview.AdminListPresetsRequest); admin {
 			allowed["enabled"] = true
 		}
 	}

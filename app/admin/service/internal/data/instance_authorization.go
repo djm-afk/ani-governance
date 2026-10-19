@@ -62,3 +62,13 @@ func (r *InstanceAuthorizationRepo) AuthorizeCatalog(ctx context.Context, tenant
 	}
 	return r.current.authorizeRoute(ctx, tenant, user, "/api/v1/accelerator/profiles", "ACCELERATOR", "GET")
 }
+
+func (r *InstanceAuthorizationRepo) AuthorizeGpuUse(ctx context.Context, tenant, user uint32) error {
+	if r == nil || r.current == nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return ErrActionAuthorizationUnavailable
+	}
+	return NewGpuUseAuthorizationRepo(r.current.entClient).AuthorizeGpuUse(ctx, tenant, user)
+}

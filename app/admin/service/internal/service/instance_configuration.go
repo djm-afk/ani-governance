@@ -25,7 +25,7 @@ func (s *InstanceService) ListMountablePVCs(ctx context.Context, request *view.L
 	if err != nil {
 		return nil, err
 	}
-	page, size, err := resolveInstancePage(request.Page, request.PageSize)
+	page, size, err := resolveComputePage(request.Page, request.PageSize)
 	if err != nil {
 		return nil, err
 	}

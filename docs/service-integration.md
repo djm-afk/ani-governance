@@ -75,6 +75,16 @@ make api
 | Gov → ModelDev | 客户端唯一 DNS SAN 为 `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-modeldev-service` 并额外检查字面 DNS SAN | `ANI_MODELDEV_ADDR/CA/CERT/KEY/TIMEOUT` |
 | Gov → Observability | 客户端唯一 DNS SAN `ani-governance`，服务端固定 `ani-observability-service` 并拒绝通配符；固定 6s，继承父取消 | `ANI_OBSERVABILITY_GRPC_ADDR`、`ANI_OBSERVABILITY_CA_FILE`、`ANI_OBSERVABILITY_CLIENT_CERT_FILE`、`ANI_OBSERVABILITY_CLIENT_KEY_FILE` |
 | Gov → Accelerator | 客户端唯一 URI SAN 为 `spiffe://ani.internal/service/ani-governance`；服务端名称来自受管配置 | `ANI_ACCELERATOR_ADDR/CA/CERT/KEY/TIMEOUT/SERVER_NAME` |
+| Gov → Resource Instance / Compute | 两个独立领域客户端共享一条现有受管 Resource mTLS 连接，唯一客户端 DNS SAN `ani-governance`，沿用固定服务器 DNS SAN `ani-network-service`；唯一 cleanup 由装配持有 | 共享既有 `ANI_INSTANCE_ADDR/CA/CERT/KEY`，不增加目的地址回退 |
+
+Compute 管理、目录与公共解析由 `ComputeClient` 调用正式 `compute.v1.ComputePresetService`，
+不再通过 InstanceService。平台管理 metadata 只携带 platform scope、真实平台用户 actor 和 request ID；
+租户目录/解析整体重建 tenant、actor、request ID，不转发公网认证或身份 header。
+公共 `ResolveComputePreset` 支持 CONTAINER_INSTANCE、TRAINING、INFERENCE，默认3s并遵守更短的父期限；
+客户端使用正式 `compute.ValidateSelection` 校验版本、资源内容及摘要，并核对返回的 preset ID。
+它只提供只读候选能力，不新增训练/微调创建字段，也不装配推理消费服务。
+容器目录显式注入 ComputeCatalog 且固定 CONTAINER_INSTANCE；容器新建只调用原 ResolveCreateSpec 一次，
+由 Res 内部共享 compute resolver，再完成镜像/运行环境等完整校验，原幂等和冻结投递链保持。
 
 以各客户端源码和专项合同为准：[Network](../app/admin/service/internal/data/network_client.go)、[Image](../app/admin/service/internal/data/image_client.go)、[ModelDev](../app/admin/service/internal/data/modeldev_client.go) / [配置](../app/admin/service/internal/data/modeldev_client_config.go)、[Accelerator](../app/admin/service/internal/data/accelerator_client.go)。此表描述现有实现；统一身份规则或迁移须另有明确合同，不以修改本文代替运行代码迁移。
 

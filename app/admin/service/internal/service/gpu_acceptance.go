@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	commandv1 "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/command/v1"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -125,7 +126,10 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 	if err != nil {
 		return nil, err
 	}
-	if err = s.binding.AuthorizeGpu(ctx, p, s.binding.CreateAction(), ""); err != nil {
+	grant, err := authorizeGpuBusiness(ctx, p, compute.Usage_CONTAINER_INSTANCE, s.binding.CreateAction(), func() error {
+		return s.binding.AuthorizeGpu(ctx, p, s.binding.CreateAction(), "")
+	})
+	if err != nil {
 		return nil, err
 	}
 	_, resolvesBusiness := s.binding.(GpuBusinessResolver)
@@ -240,6 +244,13 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 	}
 	if gpu == nil || s.plans == nil {
 		return nil, quotapb.ErrorQuotaAdapterUnavailable("%s", "GPU plan resolution unavailable")
+	}
+	eligibility, ok := s.binding.(GpuUseEligibility)
+	if !ok {
+		return nil, gpuUseUnavailable()
+	}
+	if err = authorizeNewGpuUse(ctx, grant, eligibility); err != nil {
+		return nil, err
 	}
 	extra, err := s.binding.ValidateGpuBusiness(ctx, business)
 	if err != nil {

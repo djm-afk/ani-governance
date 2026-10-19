@@ -75,6 +75,28 @@ func TestInstanceMetricsRoutePermissions(t *testing.T) {
 	}
 }
 
+func TestComputePresetPlatformPermissions(t *testing.T) {
+	for _, route := range []struct{ method, path, action string }{
+		{"GET", "/api/v1/admin/compute-presets", "list"},
+		{"GET", "/api/v1/admin/compute-presets/{id}", "read"},
+		{"POST", "/api/v1/admin/compute-presets", "create"},
+		{"PATCH", "/api/v1/admin/compute-presets/{id}", "update"},
+		{"POST", "/api/v1/admin/compute-presets/{id}:set-enabled", "update"},
+		{"DELETE", "/api/v1/admin/compute-presets/{id}", "delete"},
+	} {
+		t.Run(route.method+" "+route.path, func(t *testing.T) {
+			exp, err := Resolve(route.method, route.path)
+			if err != nil || exp.Code != "compute:preset:admin:"+route.action || exp.BusinessModule != "SYSTEM" || exp.ScopeKind != "platform" {
+				t.Fatalf("compute platform capability: %+v %v", exp, err)
+			}
+		})
+	}
+	exp, err := Resolve("GET", "/api/v1/instance-presets")
+	if err != nil || exp.Code != "instance:preset:read" || exp.BusinessModule != "INSTANCE" || exp.ScopeKind != "tenant" {
+		t.Fatalf("instance catalog capability changed: %+v %v", exp, err)
+	}
+}
+
 // TestResolveMissing 未命中且非豁免时返回 MissingError（对齐入口据此整批拒绝）。
 func TestResolveMissing(t *testing.T) {
 	_, err := Resolve("GET", "/api/v1/admin/not-registered")
@@ -114,8 +136,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 113 {
-		t.Errorf("CapabilityCount() = %d, want 113", CapabilityCount())
+	if CapabilityCount() != 119 {
+		t.Errorf("CapabilityCount() = %d, want 119", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {

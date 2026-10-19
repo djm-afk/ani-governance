@@ -22,3 +22,17 @@ func TestInstanceConfigurationAuditRedactsEnvironmentValues(t *testing.T) {
 	require.Equal(t, "/case/5", record.GetRequestUri())
 	require.Empty(t, record.GetResponse())
 }
+
+func TestComputePresetAuditKeepsQueryAndBodyRedacted(t *testing.T) {
+	env := newAuditServer(t)
+	env.fire(http.MethodPost, "/case/5?name=private-preset", map[string]string{
+		"X-Test-Operation": admin.OperationComputePresetServiceAdminCreatePreset,
+		"Content-Type":     "application/json",
+		"Referer":          "https://example.test/?name=private-preset",
+	}, `{"data":{"name":"private-preset"}}`, "127.0.0.1:1234")
+	require.Len(t, env.capture.api, 1)
+	record := env.capture.api[0]
+	require.Equal(t, "[redacted]", record.GetRequestBody())
+	require.Empty(t, record.GetReferer())
+	require.Equal(t, "/case/5", record.GetRequestUri())
+}

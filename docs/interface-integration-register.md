@@ -1641,6 +1641,17 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依赖固定为 `v0.0.0-20261012083359-e7b5a8a34359`。Fedora 新模块缓存已验证下载内容、模块/go.mod 校验和及 `Origin.Hash` 与发布提交一致，完整 `make api` 复验无生成差异。发布时保留最新 Governance main 的 ModelDev 和鉴权计划更新；源码发布不改变共享部署或此前 LB 回归未解结论。提交前 Resource 完整 `make verify` 已通过，前缀和平台方法的证据沿用上述入口；发布补充日志保留在同一工件目录的 `publication/`。
 ## INSTANCE-MVP-V15（2026-10-13，后端接线实施中）
 
+2026-10-20 算力目录归位的当前接口：平台原六条 `/api/v1/admin/compute-presets…` 由
+`ComputePresetService` 单一 handler 接管，DTO 归 `compute.service.v1`，SYSTEM 管理分类和五个
+`compute:preset:admin:*` 精确动作见 [容器/规格 HTTP 合同](contracts/container-instances.md) 与
+[权限升级步骤](deployment.md#算力规格管理归属迁移)。`GET /api/v1/instance-presets` 继续使用
+`instance:preset:read`/INSTANCE，经显式 ComputeCatalog 调用新 Res ListPresets，固定用途 CONTAINER_INSTANCE。
+旧 InstanceService 六管理方法、旧 Admin client/平台包装及 Presets 方法直接删除，不转发或回退。
+Gov 固定正式 Res 模块 `v0.0.0-20261019174951-733f625995f8`（源码733f625995f89ee71b86192c5995eec4602df408）；
+共享受管 listener 的 mTLS、三用途公共解析与 Selection 校验见 [服务接入](service-integration.md#current-client-contracts)。
+公共解析提供训练/微调和推理用途，不代表这些业务已消费；Gov 不装配推理管理接口。
+本次业务回归、联合迁移与目标环境验收按既有任务结果分别记录，不复用下方早期验收作为本次完成证据。
+
 2026-10-16 联合批次的当前合同见 [容器实例 HTTP 合同](contracts/container-instances.md)。该批次将实例公开/内部类型统一为 `instance_kind=container` 与可信 `compute_type`，删除外层规格版本和旧实例分页；新增 Res 数据库规格的 Gov 平台 CRUD、可选 scheduling、平台调度配置、只读 runtime/events 和受保护 SSE 日志。新增/改造列表统一 page/pageSize 与 items/total，授权/筛选先于计数和分页。以下 10-13～10-16 发布记录说明此前交付，不能作为本批验收证据。
 
 本批身份条件：平台规格及调度管理要求 tenant=0 的平台用户和独立权限；租户创建/读取沿当前 INSTANCE 角色/套餐，GPU 候选另取当前 ACC 目录权限交集。ConfigMap 使用编辑时 resourceVersion 条件写入并保持其他键及 metadata；现场基线未对齐时写闸门关闭。日志通过专用 SSE 等 READY 后发送头，使用原请求取消，不套普通 REST/unary 总期限；fetch 示例及运行安全字段见上述合同。

@@ -24,13 +24,7 @@ BEGIN
   ('DELETE','/api/v1/instances/{data.instance_id}','instance:delete'),
   ('GET','/api/v1/instance-operations/{operation_id}','instance:operation:read'),
   ('GET','/api/v1/instance-presets','instance:preset:read'),
-  ('POST','/api/v1/instances/{data.instance_id}/exec','instance:exec'),
-  ('GET','/api/v1/admin/compute-presets','instance:preset:admin:list'),
-  ('POST','/api/v1/admin/compute-presets','instance:preset:admin:create'),
-  ('GET','/api/v1/admin/compute-presets/{id}','instance:preset:admin:read'),
-  ('PATCH','/api/v1/admin/compute-presets/{id}','instance:preset:admin:update'),
-  ('POST','/api/v1/admin/compute-presets/{id}:set-enabled','instance:preset:admin:update'),
-  ('DELETE','/api/v1/admin/compute-presets/{id}','instance:preset:admin:delete')
+  ('POST','/api/v1/instances/{data.instance_id}/exec','instance:exec')
  ) AS routes(method,path,code) LOOP
   SELECT count(*),min(id) INTO route_count,aid FROM sys_apis
    WHERE path=r.path AND method=r.method AND module='InstanceService'

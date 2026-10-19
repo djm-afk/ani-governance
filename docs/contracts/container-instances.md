@@ -16,6 +16,8 @@
 
 可信规格决定 `instance_kind=container` 与 `compute_type=cpu|gpu`。CPU 不调用 ACC，不产生 GPU 执行参数或 GPU charges。GPU 创建由 Resource 解析受管业务规格，ACC 返回 `GpuExecution`、配额向量和 `GpuDisplay`。Gov 将执行参数和展示信息冻结到同一份 `CreateSpec`；`GpuExecution` 只有 `scheduler_name/queue_name/runtime_class_name/node_selector/pod_annotations/resources/execution_digest`，`GpuDisplay` 只有 `profile_id/profile_version/profile_name/model_key/mode`。`resources` 的 GPU 键固定为 `volcano.sh/vgpu-number`、`volcano.sh/vgpu-memory`、`volcano.sh/vgpu-cores`，其中 memory 直接使用 MiB 整数值。Gov→Resource 创建合同只有命令上下文和这份扁平规格，不发送完整 GPU 计划、重复请求或 charges；原 GPU 请求、配额向量和 charge 原账由 Gov 保存。
 
+受理顺序为当前业务动作授权→原幂等记录→新键才调用一次 `ResolveCreateSpec`。新 GPU 再组合当前业务授权与当前租户的 ACCELERATOR 套餐资格，然后调用 ACC；资格检查不要求 Profile 目录 GET 权限。缺资格返回 403 `GPU_USE_DENIED`，资格存储不可用返回 503 `GPU_USE_AUTHORIZATION_UNAVAILABLE`。已受理原键仍先检查当前业务授权，随后返回原冻结记录，不重查规格、不重做新 GPU 资格。CPU 跳过资格与 ACC。共享资格能力支持 TRAINING（普通训练和微调共用），不依赖 INSTANCE；本次未增加训练或推理创建消费链。
+
 原公开请求哈希不含动态解析的规格、默认值、执行参数或配额向量；当前授权通过后先找原幂等记录。已受理重试返回原 operation/resource，规格编辑、禁用或删除不改变原冻结参数，也不重新解析当前目录。共享按原账的 MiB 占用 `gpu.shared_memory_mib`，整卡按设备数占用 `gpu.physical.count`。最终删除须由 Resource 持久确认资源释放及不会迟到创建，再以 `release_event_id/create_operation_id/resource_id/reason` 上报；Gov 校验可信 owner 和原创建关系，在同一事务中按原账一次性全退。重复事件不重复退额，同事件内容冲突拒绝，同资源换事件也不能产生第二次退款。stop、重启及单独的 Usage ENDED 不触发退额。
 
 响应为 `{operationId,resourceId,replayed,result:"ACCEPTED"}`。ACCEPTED 表示持久受理，运行情况通过 operation 和实例状态查询。启停与删除沿用 `{data:{idempotencyKey,expectedVersion}}` 及路径实例 ID；终端沿用既有独立接口。实例没有变配、CPU/GPU 互转或历史规格版本入口。
@@ -96,6 +98,15 @@ Gov 显式结构迁移 `20261019090000_instance_contract_version.sql` 为操作�
 | PATCH `/api/v1/admin/compute-presets/{id}` | `{data:{...},update_mask:"name,cpuMillis"}`，200 + 规格 |
 | POST `/api/v1/admin/compute-presets/{id}:set-enabled` | `{data:{enabled:false}}`，200 + 规格 |
 | DELETE `/api/v1/admin/compute-presets/{id}` | 无正文，204 |
+
+规格目录 DTO 归 [compute](../../api/protos/compute/service/v1/compute.proto)，平台六条管理 HTTP
+由 [ComputePresetService](../../api/protos/admin/service/v1/i_compute.proto) 单独接管，使用既有 SYSTEM 管理分类和
+`compute:preset:admin:list/read/create/update/delete` 精确权限；set-enabled 复用 update。
+原 InstanceService 管理方法与旧管理权限判断直接删除。容器目录路径与
+`instance:preset:read`/INSTANCE 授权保持，调用新的 `compute.v1.ComputePresetService/ListPresets`，
+服务端固定用途 CONTAINER_INSTANCE；可信 GPU 五元组交集先于最终计数和分页。
+目录与实例创建分别调用各自接口；容器创建仍只调用一次活跃 ResolveCreateSpec，
+不先调用公共 ResolveComputePreset，不改变已冻结的实例 v2 字节与摘要。
 
 分页独立默认 page=1/pageSize=20，pageSize 1..100；未知、重复、零和非规范正整数参数拒绝。授权、可见性和过滤先于最终计数及分页。HTTP 的 int64/uint64 按 ProtoJSON 为十进制字符串。
 

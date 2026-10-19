@@ -12,10 +12,12 @@ import (
 
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	terminal "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal/v1"
 	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
 	sessionpb "github.com/zhangzhe-ctrl/ani-session-gateway/api/gen/session/v1"
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
+	computeview "go-wind-admin/api/gen/go/compute/service/v1"
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	quota "go-wind-admin/api/gen/go/quota/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
@@ -41,7 +43,6 @@ type InstanceOwnerClient interface {
 	ResolveInstanceMetricScope(context.Context, string, string, string) (*res.InstanceMetricScope, error)
 	List(context.Context, string, string, *res.ListInstancesRequest) (*res.ListInstancesResponse, error)
 	Operation(context.Context, string, string, string) (*res.Operation, error)
-	Presets(context.Context, string, string, *res.ListPresetsRequest) (*res.ListPresetsResponse, error)
 	Target(context.Context, string, string, string, int64) (*terminal.TerminalTarget, error)
 }
 type InstanceActionAuthorizer interface {
@@ -389,7 +390,7 @@ func (s *InstanceService) ListInstances(ctx context.Context, r *view.ListInstanc
 	if e != nil {
 		return nil, e
 	}
-	page, size, e := resolveInstancePage(r.Page, r.PageSize)
+	page, size, e := resolveComputePage(r.Page, r.PageSize)
 	if e != nil {
 		return nil, e
 	}
@@ -454,19 +455,22 @@ func (s *InstanceService) GetInstanceOperation(ctx context.Context, r *view.GetO
 	}
 	return out, e
 }
-func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListPresetsRequest) (*view.ListPresetsResponse, error) {
+func (s *InstanceService) ListInstancePresets(ctx context.Context, r *computeview.ListPresetsRequest) (*computeview.ListPresetsResponse, error) {
 	tenant, actor, e := s.scope(ctx, data.InstancePresetPath, "GET")
 	if e != nil {
 		return nil, e
 	}
+	if s.catalog.Compute == nil {
+		return nil, kratoserrors.ServiceUnavailable("COMPUTE_ADAPTER_UNAVAILABLE", "compute catalog unavailable")
+	}
 	if r == nil {
 		return nil, quota.ErrorInvalidQuotaRequest("%s", "request required")
 	}
-	page, size, e := resolveInstancePage(r.Page, r.PageSize)
+	page, size, e := resolveComputePage(r.Page, r.PageSize)
 	if e != nil {
 		return nil, e
 	}
-	items, e := s.binding.client.Presets(ctx, tenant, actor, &res.ListPresetsRequest{TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode})
+	items, e := s.catalog.Compute.ListPresets(ctx, tenant, actor, &compute.ListPresetsRequest{Usage: compute.Usage_CONTAINER_INSTANCE, TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode})
 	if e != nil {
 		return nil, e
 	}
@@ -484,7 +488,7 @@ func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListP
 				catalogStatus, reason = "NO_PERMISSION", "GPU_CATALOG_NO_PERMISSION"
 			}
 		} else {
-			items, e = s.binding.client.Presets(ctx, tenant, actor, &res.ListPresetsRequest{TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode, AllowedGpuProfiles: allowed})
+			items, e = s.catalog.Compute.ListPresets(ctx, tenant, actor, &compute.ListPresetsRequest{Usage: compute.Usage_CONTAINER_INSTANCE, TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode, AllowedGpuProfiles: allowed})
 			if e != nil {
 				return nil, e
 			}
@@ -493,9 +497,9 @@ func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListP
 			}
 		}
 	}
-	out := &view.ListPresetsResponse{Items: []*view.Preset{}, Total: items.Total, GpuCatalogStatus: catalogStatus, GpuCatalogReason: reason}
+	out := &computeview.ListPresetsResponse{Items: []*computeview.Preset{}, Total: items.Total, GpuCatalogStatus: catalogStatus, GpuCatalogReason: reason}
 	for _, p := range items.Items {
-		item := wireInstancePreset(p)
+		item := wireComputePreset(p)
 		if item != nil && p.ComputeType == "gpu" && p.Gpu != nil && item.Enabled {
 			switch profileStates[fmt.Sprintf("%s/%d", p.Gpu.ProfileId, p.Gpu.ProfileVersion)] {
 			case acc.ProfileState_PROFILE_DISABLED:
