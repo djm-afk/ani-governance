@@ -7914,15 +7914,16 @@ paths:
                 - ModelDevService
             operationId: ModelDevService_ListExecutions
             parameters:
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
                     format: uint32
-                - name: cursor
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -7978,15 +7979,16 @@ paths:
                   required: true
                   schema:
                     type: string
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
                     format: uint32
-                - name: cursor
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -8048,19 +8050,20 @@ paths:
                 - ModelDevService
             operationId: ModelDevService_ListInputVersions
             parameters:
-                - name: limit
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: cursor
-                  in: query
-                  schema:
-                    type: string
                 - name: state
                   in: query
                   schema:
                     type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -8092,15 +8095,16 @@ paths:
                 - ModelDevService
             operationId: ModelDevService_ListPresets
             parameters:
-                - name: limit
+                - name: page
                   in: query
                   schema:
                     type: integer
                     format: uint32
-                - name: cursor
+                - name: pageSize
                   in: query
                   schema:
-                    type: string
+                    type: integer
+                    format: uint32
             responses:
                 "200":
                     description: OK
@@ -13114,8 +13118,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ArtifactView'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListExecutionsResponse:
@@ -13125,8 +13127,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ExecutionView'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListImagesResponse:
@@ -13147,8 +13147,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/InputVersionView'
-                next_cursor:
-                    type: string
                 total:
                     type: string
         ListInstancesResponse:
