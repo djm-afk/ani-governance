@@ -73,6 +73,7 @@ make api
 | Gov → Network | 客户端唯一 DNS SAN `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-network-service`，复核字面 DNS SAN 并拒绝通配符 | `ANI_NETWORK_ADDR/CA/CERT/KEY/TIMEOUT` |
 | Gov → Image | 与 Network 使用相同 Resource 身份校验，服务端固定 `ani-network-service` | `ANI_IMAGE_ADDR/CA/CERT/KEY/TIMEOUT` |
 | Gov → ModelDev | 客户端唯一 DNS SAN 为 `ani-governance`，不允许其他类型 SAN；服务端固定 `ani-modeldev-service` 并额外检查字面 DNS SAN | `ANI_MODELDEV_ADDR/CA/CERT/KEY/TIMEOUT` |
+| Gov → Observability | 客户端唯一 DNS SAN `ani-governance`，服务端固定 `ani-observability-service` 并拒绝通配符；固定 6s，继承父取消 | `ANI_OBSERVABILITY_GRPC_ADDR`、`ANI_OBSERVABILITY_CA_FILE`、`ANI_OBSERVABILITY_CLIENT_CERT_FILE`、`ANI_OBSERVABILITY_CLIENT_KEY_FILE` |
 | Gov → Accelerator | 客户端唯一 URI SAN 为 `spiffe://ani.internal/service/ani-governance`；服务端名称来自受管配置 | `ANI_ACCELERATOR_ADDR/CA/CERT/KEY/TIMEOUT/SERVER_NAME` |
 
 以各客户端源码和专项合同为准：[Network](../app/admin/service/internal/data/network_client.go)、[Image](../app/admin/service/internal/data/image_client.go)、[ModelDev](../app/admin/service/internal/data/modeldev_client.go) / [配置](../app/admin/service/internal/data/modeldev_client_config.go)、[Accelerator](../app/admin/service/internal/data/accelerator_client.go)。此表描述现有实现；统一身份规则或迁移须另有明确合同，不以修改本文代替运行代码迁移。
@@ -147,6 +148,7 @@ make api
 Resource 接收方的完整方法、租户范围、超时和幂等统一见 [调用登记](https://github.com/zhangzhe-ctrl/ani-resource-service/blob/82c4b2d6fb7ca6fec15ddcb3cf236e5a0ca9a971/docs/specs/governance-calls.md)，需随接收方源码一起交付；任务分支发布不代表已合入 main 或部署。其他现有链路使用各自合同：
 
 - **Gov → ModelDev**：Resolve/AcceptExecution/ApplyCloseIntent 重建上述三项；查询另加完整 RPC 的 `x-ani-authorized-method` 和 `x-ani-data-scope=tenant-all`，受管目录操作复用该委派并按其幂等合同绑定 request ID。见 [query client](../app/admin/service/internal/data/modeldev_query_client.go)、[management client](../app/admin/service/internal/data/modeldev_management_client.go) 与接口登记。
+- **Gov → Observability**：复用实例选租户和 `instance:read` 授权，先调用 Res 的 `ResolveInstanceMetricScope`（2s），核对返回范围后仅调用 `MonitoringService/QueryRange` 或 `QueryLatest`（6s）。三项 metadata 每次重建为单值，actor 沿用 `governance:user:<canonical uint32 ID>`，request ID 为新非零规范 UUID。实例入口当前只接受既有用户身份；不因此扩大 API Key 或跨租户管理员范围。新客户端完全未配置时禁用查询，部分配置或证书不合法时启动失败。见 [client](../app/admin/service/internal/data/observability_client.go)、[TLS](../app/admin/service/internal/data/observability_client_security.go) 与 [OBS-07](interface-integration-register.md#obs-07容器实例-cpu内存查询)。
 - **Gov → Accelerator**：委托 RPC 从 typed context 派生 `x-ani-action`（RPC 短名）、`x-ani-actor-type`、`x-ani-actor-id`，租户调用再加 `x-ani-tenant-id`；`SyncGpuUsage` 使用原持久投影并重建空 metadata。不能照搬 Network actor header。见 [acceleratorMetadata](../app/admin/service/internal/data/accelerator_client.go) 和 GPU owner 指南。
 
 [scripts/deploy/governance-mtls/](../scripts/deploy/governance-mtls/) 提供 Network/Image DNS 身份材料的 cert-manager 模板（`clientAuth` EKU、Issuer `ani-internal-ca`、有效期 72 小时/提前 24 小时续期；以 [certificate.yaml](../scripts/deploy/governance-mtls/certificate.yaml) 为准）。新下游的 Certificate、SAN、信任根、部署补丁和环境变量须按其具体合同准备；现有 URI 身份不能直接套用该 DNS 证书。

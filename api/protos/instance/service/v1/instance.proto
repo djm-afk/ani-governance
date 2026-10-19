@@ -3,6 +3,43 @@ package instance.service.v1;
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
+import "gnostic/openapi/v3/annotations.proto";
+
+message QueryInstanceMetricsRequest {
+  string instance_id = 1 [json_name = "instance_id"];
+  QueryInstanceMetricsData data = 2;
+}
+message QueryInstanceMetricsData {
+  repeated string metric_codes = 1 [json_name = "metric_codes"];
+  google.protobuf.Timestamp start = 2;
+  google.protobuf.Timestamp end = 3;
+  optional uint32 step_seconds = 4 [json_name = "step_seconds"];
+}
+message QueryInstanceMetricsResponse { InstanceMetricsRangeData data = 1; }
+message InstanceMetricsRangeData {
+  string instance_id = 1 [json_name = "instance_id"];
+  google.protobuf.Timestamp start = 2;
+  google.protobuf.Timestamp end = 3;
+  uint32 step_seconds = 4 [json_name = "step_seconds"];
+  repeated InstanceMetricSeries series = 5;
+}
+message GetInstanceLatestMetricsResponse { InstanceMetricsLatestData data = 1; }
+message InstanceMetricsLatestData {
+  string instance_id = 1 [json_name = "instance_id"];
+  google.protobuf.Timestamp evaluated_at = 2 [json_name = "evaluated_at"];
+  repeated InstanceMetricSeries series = 3;
+}
+message InstanceMetricSeries {
+  string metric_code = 1 [json_name = "metric_code"];
+  string unit = 2;
+  string status = 3;
+  repeated InstanceMetricPoint points = 4;
+}
+message InstanceMetricPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  google.protobuf.DoubleValue value = 2 [(gnostic.openapi.v3.property) = { nullable: true }];
+  optional string gap_reason = 3 [json_name = "gap_reason"];
+}
 
 message SchedulingOptions {
  enum PodPlacement { POD_PLACEMENT_UNSPECIFIED = 0; NONE = 1; COLOCATE_PREFERRED = 2; SPREAD_PREFERRED = 3; }

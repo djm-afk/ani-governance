@@ -86,6 +86,13 @@ func (c *InstanceClient) Get(ctx context.Context, t, a, id string) (*pb.Instance
 		return c.client.GetInstance(ctx, &pb.GetInstanceRequest{TenantId: t, InstanceId: id})
 	})
 }
+func (c *InstanceClient) ResolveInstanceMetricScope(ctx context.Context, tenant, actor, id string) (*pb.InstanceMetricScope, error) {
+	call, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	return instanceCall(c, call, tenant, actor, func(ctx context.Context) (*pb.InstanceMetricScope, error) {
+		return c.client.ResolveInstanceMetricScope(ctx, &pb.GetInstanceRequest{TenantId: tenant, InstanceId: id})
+	})
+}
 func (c *InstanceClient) List(ctx context.Context, t, a string, r *pb.ListInstancesRequest) (*pb.ListInstancesResponse, error) {
 	if r == nil || r.TenantId != t {
 		return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_REQUEST")

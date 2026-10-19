@@ -208,6 +208,12 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	cleanups = append(cleanups, closeInstance)
+	observabilityClient, closeObservability, err := data.NewObservabilityClientFromEnv()
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	cleanups = append(cleanups, closeObservability)
 	var instanceClient service.InstanceOwnerClient
 	if instanceOwner != nil {
 		instanceClient = instanceOwner
@@ -366,6 +372,9 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		instanceSessions = instanceSession
 	}
 	instanceCatalog := service.InstanceCatalogConfig{ClusterID: os.Getenv("ANI_INSTANCE_CLUSTER_ID"), Cluster: instanceCluster, Settings: instanceScheduling}
+	if observabilityClient != nil {
+		instanceCatalog.Monitoring = observabilityClient
+	}
 	if acceleratorClient != nil {
 		instanceCatalog.Admin = acceleratorClient.Admin
 		instanceCatalog.Catalog = acceleratorClient.Catalog

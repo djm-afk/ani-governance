@@ -20,6 +20,8 @@ const InstanceExecPath = "/api/v1/instances/{data.instance_id}/exec"
 const InstanceRuntimePath = "/api/v1/instances/{instance_id}/runtime"
 const InstanceEventsPath = "/api/v1/instances/{instance_id}/events"
 const InstanceLogsPath = "/api/v1/instances/{instance_id}/logs"
+const InstanceMetricsQueryPath = "/api/v1/instances/{instance_id}/metrics/query"
+const InstanceMetricsLatestPath = "/api/v1/instances/{instance_id}/metrics/latest"
 
 func InstanceModuleRegistered() bool {
 	id, ok := identity.Module_value["INSTANCE"]
@@ -41,9 +43,9 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 		allowed = method == "POST" || method == "GET"
 	case InstanceDeletePath:
 		allowed = method == "DELETE"
-	case InstanceStartPath, InstanceStopPath, InstanceExecPath:
+	case InstanceStartPath, InstanceStopPath, InstanceExecPath, InstanceMetricsQueryPath:
 		allowed = method == "POST"
-	case InstanceGetPath, InstanceOperationPath, InstancePresetPath, InstanceRuntimePath, InstanceEventsPath, InstanceLogsPath, InstanceMountablePVCsPath, InstanceConfigurationPath:
+	case InstanceGetPath, InstanceOperationPath, InstancePresetPath, InstanceRuntimePath, InstanceEventsPath, InstanceLogsPath, InstanceMountablePVCsPath, InstanceConfigurationPath, InstanceMetricsLatestPath:
 		allowed = method == "GET"
 	}
 	if !allowed || r == nil || r.current == nil {

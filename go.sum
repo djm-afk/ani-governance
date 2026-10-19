@@ -396,8 +396,12 @@ github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261014073039-acd8a5cb2b25
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261014073039-acd8a5cb2b25/go.mod h1:Z2/IqgMC1UdiV8rWIACl3ZbCpTxhb91ETwkjO/wmuDc=
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261019114539-40a12484258c h1:hKSlZu1GU8FGgJbMtJJpS3T8MmQRRnOsHduyVnw1tk8=
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261019114539-40a12484258c/go.mod h1:AIcB6Er0GCzp6xLwDqfhLb5C4yeFBvkWjdsok9y4/Pk=
+github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1 h1:SEr70/++V17GJrSzZMG6pEChKj+y9R7kThLe0bYmewQ=
+github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1/go.mod h1:a+WDRsjGC2HUmncHBgkHfUKaRfsfMqvFr+uJzJW2T4A=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261017195047-4f341a0ae98d h1:GXroHwOwIW5Y4FE4CFwvpc1BbdScO6ae9GCJ3xlTyNw=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261017195047-4f341a0ae98d/go.mod h1:pvOlyTY++A80DtgFezkgXgo8eem2GYz2dRH4/Q42zYQ=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019084504-9fa3b4aa41f9 h1:9hCojnkfUm6mB4mH9cl1URkehWVkhiF7ycwyyHHAPxs=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019084504-9fa3b4aa41f9/go.mod h1:pvOlyTY++A80DtgFezkgXgo8eem2GYz2dRH4/Q42zYQ=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019092521-f5b80afdd8c3 h1:uHv7URy2MrOz/Q+f8GD9+a2wop7TVHLnz1zRfcm43b8=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019092521-f5b80afdd8c3/go.mod h1:pvOlyTY++A80DtgFezkgXgo8eem2GYz2dRH4/Q42zYQ=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019101827-d6b96fed4977 h1:jLI3Phk6Z7ebYsBMM1Qb7ezz/Ufb0t/VHHvshAKI/5s=

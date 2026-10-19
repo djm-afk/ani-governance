@@ -58,6 +58,23 @@ func TestInstanceConfigurationRoutePermissions(t *testing.T) {
 	}
 }
 
+func TestInstanceMetricsRoutePermissions(t *testing.T) {
+	for _, route := range []struct{ method, path string }{
+		{"POST", "/api/v1/instances/{instance_id}/metrics/query"},
+		{"GET", "/api/v1/instances/{instance_id}/metrics/latest"},
+	} {
+		t.Run(route.method+" "+route.path, func(t *testing.T) {
+			exp, err := Resolve(route.method, route.path)
+			if err != nil {
+				t.Fatalf("registered metrics route must resolve for permissions-align: %v", err)
+			}
+			if exp.Code != "instance:read" || exp.Source != SourceCapability || exp.BusinessModule != "INSTANCE" || exp.ScopeKind != "tenant" {
+				t.Fatalf("metrics route must reuse the existing tenant read grant: %+v", exp)
+			}
+		})
+	}
+}
+
 // TestResolveMissing 未命中且非豁免时返回 MissingError（对齐入口据此整批拒绝）。
 func TestResolveMissing(t *testing.T) {
 	_, err := Resolve("GET", "/api/v1/admin/not-registered")
@@ -97,8 +114,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 111 {
-		t.Errorf("CapabilityCount() = %d, want 111", CapabilityCount())
+	if CapabilityCount() != 113 {
+		t.Errorf("CapabilityCount() = %d, want 113", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
