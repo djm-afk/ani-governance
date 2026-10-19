@@ -1368,7 +1368,7 @@ RPC 方法清单（接收方白名单，精确 FullMethod）：
 - `ModelDevAdmissionService/ResolveAdmission`
 - `ModelDevCommandService/AcceptExecution`、`ModelDevCommandService/ApplyCloseIntent`
 - `ModelDevQueryService/GetExecution`、`ListExecutions`、`GetExecutionLogs`、`ListExecutionArtifacts`、`AuthorizeArtifactDownload`、`ListPresets`、`GetInputVersion`、`ListInputVersions`
-- `ModelDevManagementService/ImportRelease`、`ValidateRelease`、`ImportCSV`
+- `ModelDevManagementService/ImportRelease`、`ValidateRelease`、`ImportCSV`、`ImportFinetuningDataset`
 - `ModelDevOperationsService/InspectExecution`、`ReconcileExecution`、`PlanExecutionCleanup`、`ApplyExecutionCleanup`
 
 配置依赖定性（本轮评审确认）：Governance 对 ModelDev 为**可选依赖**。`ANI_MODELDEV_*` 全空时客户端置 nil，仅禁用远程解析/投递并返回不可用，不启动失败；命令 `modeldev-pause` 不依赖 ModelDev 在线。
