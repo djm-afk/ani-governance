@@ -20,6 +20,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	InstanceService_QueryInstanceMetrics_FullMethodName             = "/admin.service.v1.InstanceService/QueryInstanceMetrics"
+	InstanceService_GetInstanceLatestMetrics_FullMethodName         = "/admin.service.v1.InstanceService/GetInstanceLatestMetrics"
 	InstanceService_GetInstanceSchedulingSettings_FullMethodName    = "/admin.service.v1.InstanceService/GetInstanceSchedulingSettings"
 	InstanceService_UpdateInstanceSchedulingSettings_FullMethodName = "/admin.service.v1.InstanceService/UpdateInstanceSchedulingSettings"
 	InstanceService_GetSchedulerConfig_FullMethodName               = "/admin.service.v1.InstanceService/GetSchedulerConfig"
@@ -48,6 +50,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InstanceServiceClient interface {
+	QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v1.QueryInstanceMetricsResponse, error)
+	GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceLatestMetricsResponse, error)
 	GetInstanceSchedulingSettings(ctx context.Context, in *v1.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error)
 	UpdateInstanceSchedulingSettings(ctx context.Context, in *v1.UpdateInstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error)
 	GetSchedulerConfig(ctx context.Context, in *v1.SchedulerConfigRequest, opts ...grpc.CallOption) (*v1.SchedulerConfig, error)
@@ -80,6 +84,26 @@ type instanceServiceClient struct {
 
 func NewInstanceServiceClient(cc grpc.ClientConnInterface) InstanceServiceClient {
 	return &instanceServiceClient{cc}
+}
+
+func (c *instanceServiceClient) QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v1.QueryInstanceMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.QueryInstanceMetricsResponse)
+	err := c.cc.Invoke(ctx, InstanceService_QueryInstanceMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *instanceServiceClient) GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceLatestMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetInstanceLatestMetricsResponse)
+	err := c.cc.Invoke(ctx, InstanceService_GetInstanceLatestMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *instanceServiceClient) GetInstanceSchedulingSettings(ctx context.Context, in *v1.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error) {
@@ -315,6 +339,8 @@ func (c *instanceServiceClient) ExecInstance(ctx context.Context, in *v1.ExecIns
 // All implementations must embed UnimplementedInstanceServiceServer
 // for forward compatibility.
 type InstanceServiceServer interface {
+	QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error)
+	GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error)
 	GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
 	UpdateInstanceSchedulingSettings(context.Context, *v1.UpdateInstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
 	GetSchedulerConfig(context.Context, *v1.SchedulerConfigRequest) (*v1.SchedulerConfig, error)
@@ -349,6 +375,12 @@ type InstanceServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedInstanceServiceServer struct{}
 
+func (UnimplementedInstanceServiceServer) QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QueryInstanceMetrics not implemented")
+}
+func (UnimplementedInstanceServiceServer) GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInstanceLatestMetrics not implemented")
+}
 func (UnimplementedInstanceServiceServer) GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceSchedulingSettings not implemented")
 }
@@ -434,6 +466,42 @@ func RegisterInstanceServiceServer(s grpc.ServiceRegistrar, srv InstanceServiceS
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&InstanceService_ServiceDesc, srv)
+}
+
+func _InstanceService_QueryInstanceMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.QueryInstanceMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InstanceServiceServer).QueryInstanceMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InstanceService_QueryInstanceMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InstanceServiceServer).QueryInstanceMetrics(ctx, req.(*v1.QueryInstanceMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InstanceService_GetInstanceLatestMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InstanceServiceServer).GetInstanceLatestMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InstanceService_GetInstanceLatestMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InstanceServiceServer).GetInstanceLatestMetrics(ctx, req.(*v1.GetInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstanceSchedulingSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -832,6 +900,14 @@ var InstanceService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.InstanceService",
 	HandlerType: (*InstanceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "QueryInstanceMetrics",
+			Handler:    _InstanceService_QueryInstanceMetrics_Handler,
+		},
+		{
+			MethodName: "GetInstanceLatestMetrics",
+			Handler:    _InstanceService_GetInstanceLatestMetrics_Handler,
+		},
 		{
 			MethodName: "GetInstanceSchedulingSettings",
 			Handler:    _InstanceService_GetInstanceSchedulingSettings_Handler,

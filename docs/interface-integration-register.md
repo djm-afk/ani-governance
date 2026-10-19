@@ -1,5 +1,31 @@
 # 功能对接与接口风格改动登记
 
+## OBS-07：容器实例 CPU、内存查询
+
+权威合同位于 `ani-observability-service` 同仓的 `docs/specs/observability-phase1/CONTRACT.md`、
+`contracts/gov-http.md` 及 `ACCEPTANCE.md`，本仓不复制协议。
+
+| 方法与路径 | 权限 | 报文与结果 |
+|---|---|---|
+| `POST /api/v1/instances/{instance_id}/metrics/query` | `instance:read` | `{data:{metric_codes,start,end,step_seconds?}}`；同步 200，实际 `data` 包装 |
+| `GET /api/v1/instances/{instance_id}/metrics/latest` | `instance:read` | 无 body/query；同步 200，CPU 后内存，各一个点 |
+
+复用现有身份、租户与 INSTANCE 套餐闸门，再由受信 Res 只读 RPC 解析范围。
+Gov 验证 tenant/instance/cluster/namespace/workspace 后，使用独立 TLS 1.3 客户端调用
+Observability；客户端身份为唯一 DNS SAN `ani-governance`，服务端身份为
+`ani-observability-service`，三项身份元数据由 Gov 重建，不透传外部 header。
+HTTP/Res/Obs 预算分别为 10s/2s/6s，继承父取消与更短 deadline。
+
+POST 仅接受合同字段、拒绝重复 JSON 字段及任何外部 scope，64 KiB 超限为 413；
+step 省略为 60、显式 0 拒绝。响应的缺失值明确为 `null`，真实零为 `0`，正常点省略
+`gap_reason`。两接口复用 `instance:read`，权限 SQL 只登记 API 关联，不新增角色授权。
+部署时先 `admin sync-apis --dry-run`，再同步目录、执行
+`scripts/ops/sql/register-instance-permissions.sql` 并按部署说明刷新策略。
+
+本期沿用既有到期租户访问策略，不承诺到期后历史读取；Prometheus 底层入口额外隔离
+按用户决定延期。OBS-07 的真实服务联调和环境权限同步只有实际执行后才能记为完成，
+源码和边界 fixture 不代替 OBS-08 的真实 Prometheus 主链验收。
+
 总体状态：**进行中，未结项**。最后更新：2026-10-13。
 
 本文件覆盖所有后续对接功能。每次用户对接一个新功能时，AI 先排查真实调用链，将涉及的接口、请求和响应、鉴权条件、现有问题追加到对应功能组。先累计登记，等用户指定某个批次后，再统一修改该批接口的路径、字段和响应风格；不能因排查或登记就自动改接口风格。

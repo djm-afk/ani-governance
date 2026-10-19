@@ -37,11 +37,12 @@ type InstanceGPUCatalog interface {
 	GetCapacity(context.Context, *acc.GetCapacityRequest, ...grpc.CallOption) (*acc.CapacityView, error)
 }
 type InstanceCatalogConfig struct {
-	ClusterID string
-	Admin     InstanceGPUAdmin
-	Catalog   InstanceGPUCatalog
-	Cluster   InstanceSchedulingCluster
-	Settings  *InstanceSchedulingPolicy
+	Monitoring InstanceMonitoringClient
+	ClusterID  string
+	Admin      InstanceGPUAdmin
+	Catalog    InstanceGPUCatalog
+	Cluster    InstanceSchedulingCluster
+	Settings   *InstanceSchedulingPolicy
 }
 
 // InstanceSchedulingCluster accesses the one deployment-managed cluster.

@@ -37,6 +37,7 @@ type InstanceOwnerClient interface {
 	Delete(context.Context, *res.AcceptDeleteRequest) (*res.OperationResponse, error)
 	Change(context.Context, string, string, *res.ChangeInstanceRequest, bool) (*res.OperationResponse, error)
 	Get(context.Context, string, string, string) (*res.Instance, error)
+	ResolveInstanceMetricScope(context.Context, string, string, string) (*res.InstanceMetricScope, error)
 	List(context.Context, string, string, *res.ListInstancesRequest) (*res.ListInstancesResponse, error)
 	Operation(context.Context, string, string, string) (*res.Operation, error)
 	Presets(context.Context, string, string, *res.ListPresetsRequest) (*res.ListPresetsResponse, error)
@@ -231,12 +232,14 @@ type InstanceService struct {
 	ledger     *data.QuotaLedgerRepo
 	sessions   InstanceSessionClient
 	catalog    InstanceCatalogConfig
+	monitoring InstanceMonitoringClient
 }
 
 func NewInstanceService(a *GpuAcceptance, b *InstanceGpuBinding, r ResourceTenantResolver, l *data.QuotaLedgerRepo, sessions InstanceSessionClient, catalogs ...InstanceCatalogConfig) *InstanceService {
 	s := &InstanceService{acceptance: a, binding: b, resolver: r, ledger: l, sessions: sessions}
 	if len(catalogs) > 0 {
 		s.catalog = catalogs[0]
+		s.monitoring = catalogs[0].Monitoring
 	}
 	return s
 }
