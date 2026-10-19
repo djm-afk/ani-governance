@@ -30,6 +30,7 @@ const OperationInstanceServiceCreateInstance = "/admin.service.v1.InstanceServic
 const OperationInstanceServiceDeleteInstance = "/admin.service.v1.InstanceService/DeleteInstance"
 const OperationInstanceServiceExecInstance = "/admin.service.v1.InstanceService/ExecInstance"
 const OperationInstanceServiceGetInstance = "/admin.service.v1.InstanceService/GetInstance"
+const OperationInstanceServiceGetInstanceLatestMetrics = "/admin.service.v1.InstanceService/GetInstanceLatestMetrics"
 const OperationInstanceServiceGetInstanceOperation = "/admin.service.v1.InstanceService/GetInstanceOperation"
 const OperationInstanceServiceGetInstanceRuntime = "/admin.service.v1.InstanceService/GetInstanceRuntime"
 const OperationInstanceServiceGetInstanceSchedulingSettings = "/admin.service.v1.InstanceService/GetInstanceSchedulingSettings"
@@ -37,6 +38,7 @@ const OperationInstanceServiceGetSchedulerConfig = "/admin.service.v1.InstanceSe
 const OperationInstanceServiceListInstanceEvents = "/admin.service.v1.InstanceService/ListInstanceEvents"
 const OperationInstanceServiceListInstancePresets = "/admin.service.v1.InstanceService/ListInstancePresets"
 const OperationInstanceServiceListInstances = "/admin.service.v1.InstanceService/ListInstances"
+const OperationInstanceServiceQueryInstanceMetrics = "/admin.service.v1.InstanceService/QueryInstanceMetrics"
 const OperationInstanceServiceStartInstance = "/admin.service.v1.InstanceService/StartInstance"
 const OperationInstanceServiceStopInstance = "/admin.service.v1.InstanceService/StopInstance"
 const OperationInstanceServiceUpdateInstanceSchedulingSettings = "/admin.service.v1.InstanceService/UpdateInstanceSchedulingSettings"
@@ -53,6 +55,7 @@ type InstanceServiceHTTPServer interface {
 	DeleteInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
 	ExecInstance(context.Context, *v1.ExecInstanceRequest) (*v1.ExecInstanceResponse, error)
 	GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.Instance, error)
+	GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error)
 	GetInstanceOperation(context.Context, *v1.GetOperationRequest) (*v1.Operation, error)
 	GetInstanceRuntime(context.Context, *v1.GetInstanceRequest) (*v1.InstanceRuntime, error)
 	GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
@@ -60,6 +63,7 @@ type InstanceServiceHTTPServer interface {
 	ListInstanceEvents(context.Context, *v1.GetInstanceRequest) (*v1.InstanceEvents, error)
 	ListInstancePresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 	ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error)
+	QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error)
 	StartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
 	StopInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
 	UpdateInstanceSchedulingSettings(context.Context, *v1.UpdateInstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
@@ -68,6 +72,8 @@ type InstanceServiceHTTPServer interface {
 
 func RegisterInstanceServiceHTTPServer(s *http.Server, srv InstanceServiceHTTPServer) {
 	r := s.Route("/")
+	r.POST("/api/v1/instances/{instance_id}/metrics/query", _InstanceService_QueryInstanceMetrics0_HTTP_Handler(srv))
+	r.GET("/api/v1/instances/{instance_id}/metrics/latest", _InstanceService_GetInstanceLatestMetrics0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/instance-scheduling-settings", _InstanceService_GetInstanceSchedulingSettings0_HTTP_Handler(srv))
 	r.PUT("/api/v1/admin/instance-scheduling-settings", _InstanceService_UpdateInstanceSchedulingSettings0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/scheduler-config", _InstanceService_GetSchedulerConfig0_HTTP_Handler(srv))
@@ -89,6 +95,53 @@ func RegisterInstanceServiceHTTPServer(s *http.Server, srv InstanceServiceHTTPSe
 	r.GET("/api/v1/instance-operations/{operation_id}", _InstanceService_GetInstanceOperation0_HTTP_Handler(srv))
 	r.GET("/api/v1/instance-presets", _InstanceService_ListInstancePresets0_HTTP_Handler(srv))
 	r.POST("/api/v1/instances/{data.instance_id}/exec", _InstanceService_ExecInstance0_HTTP_Handler(srv))
+}
+
+func _InstanceService_QueryInstanceMetrics0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.QueryInstanceMetricsRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInstanceServiceQueryInstanceMetrics)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.QueryInstanceMetrics(ctx, req.(*v1.QueryInstanceMetricsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.QueryInstanceMetricsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _InstanceService_GetInstanceLatestMetrics0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetInstanceRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInstanceServiceGetInstanceLatestMetrics)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetInstanceLatestMetrics(ctx, req.(*v1.GetInstanceRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetInstanceLatestMetricsResponse)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _InstanceService_GetInstanceSchedulingSettings0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
@@ -567,6 +620,7 @@ type InstanceServiceHTTPClient interface {
 	DeleteInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
 	ExecInstance(ctx context.Context, req *v1.ExecInstanceRequest, opts ...http.CallOption) (rsp *v1.ExecInstanceResponse, err error)
 	GetInstance(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.Instance, err error)
+	GetInstanceLatestMetrics(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.GetInstanceLatestMetricsResponse, err error)
 	GetInstanceOperation(ctx context.Context, req *v1.GetOperationRequest, opts ...http.CallOption) (rsp *v1.Operation, err error)
 	GetInstanceRuntime(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.InstanceRuntime, err error)
 	GetInstanceSchedulingSettings(ctx context.Context, req *v1.InstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v1.InstanceSchedulingSettings, err error)
@@ -574,6 +628,7 @@ type InstanceServiceHTTPClient interface {
 	ListInstanceEvents(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.InstanceEvents, err error)
 	ListInstancePresets(ctx context.Context, req *v1.ListPresetsRequest, opts ...http.CallOption) (rsp *v1.ListPresetsResponse, err error)
 	ListInstances(ctx context.Context, req *v1.ListInstancesRequest, opts ...http.CallOption) (rsp *v1.ListInstancesResponse, err error)
+	QueryInstanceMetrics(ctx context.Context, req *v1.QueryInstanceMetricsRequest, opts ...http.CallOption) (rsp *v1.QueryInstanceMetricsResponse, err error)
 	StartInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
 	StopInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
 	UpdateInstanceSchedulingSettings(ctx context.Context, req *v1.UpdateInstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v1.InstanceSchedulingSettings, err error)
@@ -718,6 +773,19 @@ func (c *InstanceServiceHTTPClientImpl) GetInstance(ctx context.Context, in *v1.
 	return &out, nil
 }
 
+func (c *InstanceServiceHTTPClientImpl) GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...http.CallOption) (*v1.GetInstanceLatestMetricsResponse, error) {
+	var out v1.GetInstanceLatestMetricsResponse
+	pattern := "/api/v1/instances/{instance_id}/metrics/latest"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceLatestMetrics))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *InstanceServiceHTTPClientImpl) GetInstanceOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...http.CallOption) (*v1.Operation, error) {
 	var out v1.Operation
 	pattern := "/api/v1/instance-operations/{operation_id}"
@@ -803,6 +871,19 @@ func (c *InstanceServiceHTTPClientImpl) ListInstances(ctx context.Context, in *v
 	opts = append(opts, http.Operation(OperationInstanceServiceListInstances))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *InstanceServiceHTTPClientImpl) QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...http.CallOption) (*v1.QueryInstanceMetricsResponse, error) {
+	var out v1.QueryInstanceMetricsResponse
+	pattern := "/api/v1/instances/{instance_id}/metrics/query"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationInstanceServiceQueryInstanceMetrics))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

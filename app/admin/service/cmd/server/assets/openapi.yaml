@@ -7738,6 +7738,48 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InstanceEvents'
+    /api/v1/instances/{instance_id}/metrics/latest:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_GetInstanceLatestMetrics
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetInstanceLatestMetricsResponse'
+    /api/v1/instances/{instance_id}/metrics/query:
+        post:
+            tags:
+                - InstanceService
+            operationId: InstanceService_QueryInstanceMetrics
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/QueryInstanceMetricsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/QueryInstanceMetricsResponse'
     /api/v1/instances/{instance_id}/runtime:
         get:
             tags:
@@ -11939,6 +11981,11 @@ components:
             properties:
                 input_version:
                     $ref: '#/components/schemas/InputVersionView'
+        GetInstanceLatestMetricsResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InstanceMetricsLatestData'
         GetIntranetAddressPoolResponse:
             type: object
             properties:
@@ -12492,6 +12539,61 @@ components:
                         $ref: '#/components/schemas/InstanceEvent'
                 truncated:
                     type: boolean
+        InstanceMetricPoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                value:
+                    nullable: true
+                    type: number
+                    format: double
+                gap_reason:
+                    type: string
+        InstanceMetricSeries:
+            type: object
+            properties:
+                metric_code:
+                    type: string
+                unit:
+                    type: string
+                status:
+                    type: string
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InstanceMetricPoint'
+        InstanceMetricsLatestData:
+            type: object
+            properties:
+                instance_id:
+                    type: string
+                evaluated_at:
+                    type: string
+                    format: date-time
+                series:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InstanceMetricSeries'
+        InstanceMetricsRangeData:
+            type: object
+            properties:
+                instance_id:
+                    type: string
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                step_seconds:
+                    type: integer
+                    format: uint32
+                series:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InstanceMetricSeries'
         InstanceRuntime:
             type: object
             properties:
@@ -15808,6 +15910,34 @@ components:
                 updatedAt:
                     type: string
                     format: date-time
+        QueryInstanceMetricsData:
+            type: object
+            properties:
+                metric_codes:
+                    type: array
+                    items:
+                        type: string
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                step_seconds:
+                    type: integer
+                    format: uint32
+        QueryInstanceMetricsRequest:
+            type: object
+            properties:
+                instance_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/QueryInstanceMetricsData'
+        QueryInstanceMetricsResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InstanceMetricsRangeData'
         QuotaAccountView:
             type: object
             properties:

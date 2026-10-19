@@ -7,6 +7,7 @@
 package servicev1
 
 import (
+	_ "github.com/google/gnostic/openapiv3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -73,7 +74,7 @@ func (x SchedulingOptions_PodPlacement) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SchedulingOptions_PodPlacement.Descriptor instead.
 func (SchedulingOptions_PodPlacement) EnumDescriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{0, 0}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{8, 0}
 }
 
 type InstanceLogFrame_Kind int32
@@ -128,7 +129,479 @@ func (x InstanceLogFrame_Kind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use InstanceLogFrame_Kind.Descriptor instead.
 func (InstanceLogFrame_Kind) EnumDescriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{36, 0}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{44, 0}
+}
+
+type QueryInstanceMetricsRequest struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	InstanceId    string                    `protobuf:"bytes,1,opt,name=instance_id,proto3" json:"instance_id,omitempty"`
+	Data          *QueryInstanceMetricsData `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryInstanceMetricsRequest) Reset() {
+	*x = QueryInstanceMetricsRequest{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryInstanceMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryInstanceMetricsRequest) ProtoMessage() {}
+
+func (x *QueryInstanceMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryInstanceMetricsRequest.ProtoReflect.Descriptor instead.
+func (*QueryInstanceMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *QueryInstanceMetricsRequest) GetInstanceId() string {
+	if x != nil {
+		return x.InstanceId
+	}
+	return ""
+}
+
+func (x *QueryInstanceMetricsRequest) GetData() *QueryInstanceMetricsData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type QueryInstanceMetricsData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MetricCodes   []string               `protobuf:"bytes,1,rep,name=metric_codes,proto3" json:"metric_codes,omitempty"`
+	Start         *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	End           *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
+	StepSeconds   *uint32                `protobuf:"varint,4,opt,name=step_seconds,proto3,oneof" json:"step_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryInstanceMetricsData) Reset() {
+	*x = QueryInstanceMetricsData{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryInstanceMetricsData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryInstanceMetricsData) ProtoMessage() {}
+
+func (x *QueryInstanceMetricsData) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryInstanceMetricsData.ProtoReflect.Descriptor instead.
+func (*QueryInstanceMetricsData) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *QueryInstanceMetricsData) GetMetricCodes() []string {
+	if x != nil {
+		return x.MetricCodes
+	}
+	return nil
+}
+
+func (x *QueryInstanceMetricsData) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Start
+	}
+	return nil
+}
+
+func (x *QueryInstanceMetricsData) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.End
+	}
+	return nil
+}
+
+func (x *QueryInstanceMetricsData) GetStepSeconds() uint32 {
+	if x != nil && x.StepSeconds != nil {
+		return *x.StepSeconds
+	}
+	return 0
+}
+
+type QueryInstanceMetricsResponse struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Data          *InstanceMetricsRangeData `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryInstanceMetricsResponse) Reset() {
+	*x = QueryInstanceMetricsResponse{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryInstanceMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryInstanceMetricsResponse) ProtoMessage() {}
+
+func (x *QueryInstanceMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryInstanceMetricsResponse.ProtoReflect.Descriptor instead.
+func (*QueryInstanceMetricsResponse) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *QueryInstanceMetricsResponse) GetData() *InstanceMetricsRangeData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type InstanceMetricsRangeData struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	InstanceId    string                  `protobuf:"bytes,1,opt,name=instance_id,proto3" json:"instance_id,omitempty"`
+	Start         *timestamppb.Timestamp  `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	End           *timestamppb.Timestamp  `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
+	StepSeconds   uint32                  `protobuf:"varint,4,opt,name=step_seconds,proto3" json:"step_seconds,omitempty"`
+	Series        []*InstanceMetricSeries `protobuf:"bytes,5,rep,name=series,proto3" json:"series,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstanceMetricsRangeData) Reset() {
+	*x = InstanceMetricsRangeData{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceMetricsRangeData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceMetricsRangeData) ProtoMessage() {}
+
+func (x *InstanceMetricsRangeData) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceMetricsRangeData.ProtoReflect.Descriptor instead.
+func (*InstanceMetricsRangeData) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *InstanceMetricsRangeData) GetInstanceId() string {
+	if x != nil {
+		return x.InstanceId
+	}
+	return ""
+}
+
+func (x *InstanceMetricsRangeData) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Start
+	}
+	return nil
+}
+
+func (x *InstanceMetricsRangeData) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.End
+	}
+	return nil
+}
+
+func (x *InstanceMetricsRangeData) GetStepSeconds() uint32 {
+	if x != nil {
+		return x.StepSeconds
+	}
+	return 0
+}
+
+func (x *InstanceMetricsRangeData) GetSeries() []*InstanceMetricSeries {
+	if x != nil {
+		return x.Series
+	}
+	return nil
+}
+
+type GetInstanceLatestMetricsResponse struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Data          *InstanceMetricsLatestData `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInstanceLatestMetricsResponse) Reset() {
+	*x = GetInstanceLatestMetricsResponse{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInstanceLatestMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInstanceLatestMetricsResponse) ProtoMessage() {}
+
+func (x *GetInstanceLatestMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInstanceLatestMetricsResponse.ProtoReflect.Descriptor instead.
+func (*GetInstanceLatestMetricsResponse) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetInstanceLatestMetricsResponse) GetData() *InstanceMetricsLatestData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type InstanceMetricsLatestData struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	InstanceId    string                  `protobuf:"bytes,1,opt,name=instance_id,proto3" json:"instance_id,omitempty"`
+	EvaluatedAt   *timestamppb.Timestamp  `protobuf:"bytes,2,opt,name=evaluated_at,proto3" json:"evaluated_at,omitempty"`
+	Series        []*InstanceMetricSeries `protobuf:"bytes,3,rep,name=series,proto3" json:"series,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstanceMetricsLatestData) Reset() {
+	*x = InstanceMetricsLatestData{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceMetricsLatestData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceMetricsLatestData) ProtoMessage() {}
+
+func (x *InstanceMetricsLatestData) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceMetricsLatestData.ProtoReflect.Descriptor instead.
+func (*InstanceMetricsLatestData) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InstanceMetricsLatestData) GetInstanceId() string {
+	if x != nil {
+		return x.InstanceId
+	}
+	return ""
+}
+
+func (x *InstanceMetricsLatestData) GetEvaluatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EvaluatedAt
+	}
+	return nil
+}
+
+func (x *InstanceMetricsLatestData) GetSeries() []*InstanceMetricSeries {
+	if x != nil {
+		return x.Series
+	}
+	return nil
+}
+
+type InstanceMetricSeries struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MetricCode    string                 `protobuf:"bytes,1,opt,name=metric_code,proto3" json:"metric_code,omitempty"`
+	Unit          string                 `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Points        []*InstanceMetricPoint `protobuf:"bytes,4,rep,name=points,proto3" json:"points,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstanceMetricSeries) Reset() {
+	*x = InstanceMetricSeries{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceMetricSeries) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceMetricSeries) ProtoMessage() {}
+
+func (x *InstanceMetricSeries) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceMetricSeries.ProtoReflect.Descriptor instead.
+func (*InstanceMetricSeries) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *InstanceMetricSeries) GetMetricCode() string {
+	if x != nil {
+		return x.MetricCode
+	}
+	return ""
+}
+
+func (x *InstanceMetricSeries) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *InstanceMetricSeries) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *InstanceMetricSeries) GetPoints() []*InstanceMetricPoint {
+	if x != nil {
+		return x.Points
+	}
+	return nil
+}
+
+type InstanceMetricPoint struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Timestamp     *timestamppb.Timestamp  `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Value         *wrapperspb.DoubleValue `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	GapReason     *string                 `protobuf:"bytes,3,opt,name=gap_reason,proto3,oneof" json:"gap_reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstanceMetricPoint) Reset() {
+	*x = InstanceMetricPoint{}
+	mi := &file_instance_service_v1_instance_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceMetricPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceMetricPoint) ProtoMessage() {}
+
+func (x *InstanceMetricPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_instance_service_v1_instance_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceMetricPoint.ProtoReflect.Descriptor instead.
+func (*InstanceMetricPoint) Descriptor() ([]byte, []int) {
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *InstanceMetricPoint) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *InstanceMetricPoint) GetValue() *wrapperspb.DoubleValue {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *InstanceMetricPoint) GetGapReason() string {
+	if x != nil && x.GapReason != nil {
+		return *x.GapReason
+	}
+	return ""
 }
 
 type SchedulingOptions struct {
@@ -141,7 +614,7 @@ type SchedulingOptions struct {
 
 func (x *SchedulingOptions) Reset() {
 	*x = SchedulingOptions{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[0]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -153,7 +626,7 @@ func (x *SchedulingOptions) String() string {
 func (*SchedulingOptions) ProtoMessage() {}
 
 func (x *SchedulingOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[0]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,7 +639,7 @@ func (x *SchedulingOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchedulingOptions.ProtoReflect.Descriptor instead.
 func (*SchedulingOptions) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{0}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SchedulingOptions) GetPodPlacement() SchedulingOptions_PodPlacement {
@@ -197,7 +670,7 @@ type CreateInstanceData struct {
 
 func (x *CreateInstanceData) Reset() {
 	*x = CreateInstanceData{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[1]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -209,7 +682,7 @@ func (x *CreateInstanceData) String() string {
 func (*CreateInstanceData) ProtoMessage() {}
 
 func (x *CreateInstanceData) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[1]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -222,7 +695,7 @@ func (x *CreateInstanceData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInstanceData.ProtoReflect.Descriptor instead.
 func (*CreateInstanceData) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{1}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateInstanceData) GetIdempotencyKey() string {
@@ -276,7 +749,7 @@ type CreateInstanceRequest struct {
 
 func (x *CreateInstanceRequest) Reset() {
 	*x = CreateInstanceRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[2]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -288,7 +761,7 @@ func (x *CreateInstanceRequest) String() string {
 func (*CreateInstanceRequest) ProtoMessage() {}
 
 func (x *CreateInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[2]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -301,7 +774,7 @@ func (x *CreateInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInstanceRequest.ProtoReflect.Descriptor instead.
 func (*CreateInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{2}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateInstanceRequest) GetData() *CreateInstanceData {
@@ -322,7 +795,7 @@ type ChangeInstanceData struct {
 
 func (x *ChangeInstanceData) Reset() {
 	*x = ChangeInstanceData{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[3]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -334,7 +807,7 @@ func (x *ChangeInstanceData) String() string {
 func (*ChangeInstanceData) ProtoMessage() {}
 
 func (x *ChangeInstanceData) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[3]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -347,7 +820,7 @@ func (x *ChangeInstanceData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeInstanceData.ProtoReflect.Descriptor instead.
 func (*ChangeInstanceData) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{3}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ChangeInstanceData) GetInstanceId() string {
@@ -380,7 +853,7 @@ type ChangeInstanceRequest struct {
 
 func (x *ChangeInstanceRequest) Reset() {
 	*x = ChangeInstanceRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[4]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -392,7 +865,7 @@ func (x *ChangeInstanceRequest) String() string {
 func (*ChangeInstanceRequest) ProtoMessage() {}
 
 func (x *ChangeInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[4]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -405,7 +878,7 @@ func (x *ChangeInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeInstanceRequest.ProtoReflect.Descriptor instead.
 func (*ChangeInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{4}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ChangeInstanceRequest) GetData() *ChangeInstanceData {
@@ -424,7 +897,7 @@ type GetInstanceRequest struct {
 
 func (x *GetInstanceRequest) Reset() {
 	*x = GetInstanceRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[5]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +909,7 @@ func (x *GetInstanceRequest) String() string {
 func (*GetInstanceRequest) ProtoMessage() {}
 
 func (x *GetInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[5]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +922,7 @@ func (x *GetInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInstanceRequest.ProtoReflect.Descriptor instead.
 func (*GetInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{5}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetInstanceRequest) GetInstanceId() string {
@@ -473,7 +946,7 @@ type ListInstancesRequest struct {
 
 func (x *ListInstancesRequest) Reset() {
 	*x = ListInstancesRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[6]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +958,7 @@ func (x *ListInstancesRequest) String() string {
 func (*ListInstancesRequest) ProtoMessage() {}
 
 func (x *ListInstancesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[6]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +971,7 @@ func (x *ListInstancesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInstancesRequest.ProtoReflect.Descriptor instead.
 func (*ListInstancesRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{6}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListInstancesRequest) GetPage() uint32 {
@@ -557,7 +1030,7 @@ type ListPresetsRequest struct {
 
 func (x *ListPresetsRequest) Reset() {
 	*x = ListPresetsRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[7]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +1042,7 @@ func (x *ListPresetsRequest) String() string {
 func (*ListPresetsRequest) ProtoMessage() {}
 
 func (x *ListPresetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[7]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +1055,7 @@ func (x *ListPresetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPresetsRequest.ProtoReflect.Descriptor instead.
 func (*ListPresetsRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{7}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListPresetsRequest) GetPage() uint32 {
@@ -636,7 +1109,7 @@ type GetOperationRequest struct {
 
 func (x *GetOperationRequest) Reset() {
 	*x = GetOperationRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[8]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -648,7 +1121,7 @@ func (x *GetOperationRequest) String() string {
 func (*GetOperationRequest) ProtoMessage() {}
 
 func (x *GetOperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[8]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -661,7 +1134,7 @@ func (x *GetOperationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationRequest.ProtoReflect.Descriptor instead.
 func (*GetOperationRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{8}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetOperationRequest) GetOperationId() string {
@@ -684,7 +1157,7 @@ type ExecInstanceData struct {
 
 func (x *ExecInstanceData) Reset() {
 	*x = ExecInstanceData{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[9]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -696,7 +1169,7 @@ func (x *ExecInstanceData) String() string {
 func (*ExecInstanceData) ProtoMessage() {}
 
 func (x *ExecInstanceData) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[9]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -709,7 +1182,7 @@ func (x *ExecInstanceData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecInstanceData.ProtoReflect.Descriptor instead.
 func (*ExecInstanceData) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{9}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ExecInstanceData) GetInstanceId() string {
@@ -756,7 +1229,7 @@ type ExecInstanceRequest struct {
 
 func (x *ExecInstanceRequest) Reset() {
 	*x = ExecInstanceRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[10]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -768,7 +1241,7 @@ func (x *ExecInstanceRequest) String() string {
 func (*ExecInstanceRequest) ProtoMessage() {}
 
 func (x *ExecInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[10]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -781,7 +1254,7 @@ func (x *ExecInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecInstanceRequest.ProtoReflect.Descriptor instead.
 func (*ExecInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{10}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ExecInstanceRequest) GetData() *ExecInstanceData {
@@ -823,7 +1296,7 @@ type Instance struct {
 
 func (x *Instance) Reset() {
 	*x = Instance{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[11]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -835,7 +1308,7 @@ func (x *Instance) String() string {
 func (*Instance) ProtoMessage() {}
 
 func (x *Instance) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[11]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -848,7 +1321,7 @@ func (x *Instance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Instance.ProtoReflect.Descriptor instead.
 func (*Instance) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{11}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Instance) GetId() string {
@@ -1029,7 +1502,7 @@ type ListInstancesResponse struct {
 
 func (x *ListInstancesResponse) Reset() {
 	*x = ListInstancesResponse{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[12]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1041,7 +1514,7 @@ func (x *ListInstancesResponse) String() string {
 func (*ListInstancesResponse) ProtoMessage() {}
 
 func (x *ListInstancesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[12]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1054,7 +1527,7 @@ func (x *ListInstancesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInstancesResponse.ProtoReflect.Descriptor instead.
 func (*ListInstancesResponse) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{12}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListInstancesResponse) GetItems() []*Instance {
@@ -1083,7 +1556,7 @@ type Acceptance struct {
 
 func (x *Acceptance) Reset() {
 	*x = Acceptance{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[13]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1095,7 +1568,7 @@ func (x *Acceptance) String() string {
 func (*Acceptance) ProtoMessage() {}
 
 func (x *Acceptance) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[13]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1108,7 +1581,7 @@ func (x *Acceptance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Acceptance.ProtoReflect.Descriptor instead.
 func (*Acceptance) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{13}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *Acceptance) GetOperationId() string {
@@ -1153,7 +1626,7 @@ type Operation struct {
 
 func (x *Operation) Reset() {
 	*x = Operation{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[14]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1165,7 +1638,7 @@ func (x *Operation) String() string {
 func (*Operation) ProtoMessage() {}
 
 func (x *Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[14]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1178,7 +1651,7 @@ func (x *Operation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Operation.ProtoReflect.Descriptor instead.
 func (*Operation) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{14}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Operation) GetId() string {
@@ -1239,7 +1712,7 @@ type GpuSummary struct {
 
 func (x *GpuSummary) Reset() {
 	*x = GpuSummary{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[15]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1251,7 +1724,7 @@ func (x *GpuSummary) String() string {
 func (*GpuSummary) ProtoMessage() {}
 
 func (x *GpuSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[15]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1264,7 +1737,7 @@ func (x *GpuSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GpuSummary.ProtoReflect.Descriptor instead.
 func (*GpuSummary) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{15}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GpuSummary) GetProfileId() string {
@@ -1344,7 +1817,7 @@ type Preset struct {
 
 func (x *Preset) Reset() {
 	*x = Preset{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[16]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1356,7 +1829,7 @@ func (x *Preset) String() string {
 func (*Preset) ProtoMessage() {}
 
 func (x *Preset) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[16]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1369,7 +1842,7 @@ func (x *Preset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Preset.ProtoReflect.Descriptor instead.
 func (*Preset) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{16}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *Preset) GetId() string {
@@ -1475,7 +1948,7 @@ type ListPresetsResponse struct {
 
 func (x *ListPresetsResponse) Reset() {
 	*x = ListPresetsResponse{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[17]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1487,7 +1960,7 @@ func (x *ListPresetsResponse) String() string {
 func (*ListPresetsResponse) ProtoMessage() {}
 
 func (x *ListPresetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[17]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1500,7 +1973,7 @@ func (x *ListPresetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPresetsResponse.ProtoReflect.Descriptor instead.
 func (*ListPresetsResponse) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{17}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListPresetsResponse) GetItems() []*Preset {
@@ -1542,7 +2015,7 @@ type PresetGpuInput struct {
 
 func (x *PresetGpuInput) Reset() {
 	*x = PresetGpuInput{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[18]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1554,7 +2027,7 @@ func (x *PresetGpuInput) String() string {
 func (*PresetGpuInput) ProtoMessage() {}
 
 func (x *PresetGpuInput) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[18]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1567,7 +2040,7 @@ func (x *PresetGpuInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresetGpuInput.ProtoReflect.Descriptor instead.
 func (*PresetGpuInput) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{18}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *PresetGpuInput) GetProfileId() string {
@@ -1607,7 +2080,7 @@ type PresetData struct {
 
 func (x *PresetData) Reset() {
 	*x = PresetData{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[19]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1619,7 +2092,7 @@ func (x *PresetData) String() string {
 func (*PresetData) ProtoMessage() {}
 
 func (x *PresetData) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[19]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1632,7 +2105,7 @@ func (x *PresetData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresetData.ProtoReflect.Descriptor instead.
 func (*PresetData) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{19}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *PresetData) GetCode() string {
@@ -1706,7 +2179,7 @@ type AdminListPresetsRequest struct {
 
 func (x *AdminListPresetsRequest) Reset() {
 	*x = AdminListPresetsRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[20]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1718,7 +2191,7 @@ func (x *AdminListPresetsRequest) String() string {
 func (*AdminListPresetsRequest) ProtoMessage() {}
 
 func (x *AdminListPresetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[20]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1731,7 +2204,7 @@ func (x *AdminListPresetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminListPresetsRequest.ProtoReflect.Descriptor instead.
 func (*AdminListPresetsRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{20}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *AdminListPresetsRequest) GetPage() uint32 {
@@ -1793,7 +2266,7 @@ type AdminListPresetsResponse struct {
 
 func (x *AdminListPresetsResponse) Reset() {
 	*x = AdminListPresetsResponse{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[21]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1805,7 +2278,7 @@ func (x *AdminListPresetsResponse) String() string {
 func (*AdminListPresetsResponse) ProtoMessage() {}
 
 func (x *AdminListPresetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[21]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1818,7 +2291,7 @@ func (x *AdminListPresetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminListPresetsResponse.ProtoReflect.Descriptor instead.
 func (*AdminListPresetsResponse) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{21}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *AdminListPresetsResponse) GetItems() []*Preset {
@@ -1844,7 +2317,7 @@ type PresetRequest struct {
 
 func (x *PresetRequest) Reset() {
 	*x = PresetRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[22]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1856,7 +2329,7 @@ func (x *PresetRequest) String() string {
 func (*PresetRequest) ProtoMessage() {}
 
 func (x *PresetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[22]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1869,7 +2342,7 @@ func (x *PresetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresetRequest.ProtoReflect.Descriptor instead.
 func (*PresetRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{22}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *PresetRequest) GetId() string {
@@ -1888,7 +2361,7 @@ type CreatePresetRequest struct {
 
 func (x *CreatePresetRequest) Reset() {
 	*x = CreatePresetRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[23]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1900,7 +2373,7 @@ func (x *CreatePresetRequest) String() string {
 func (*CreatePresetRequest) ProtoMessage() {}
 
 func (x *CreatePresetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[23]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1913,7 +2386,7 @@ func (x *CreatePresetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePresetRequest.ProtoReflect.Descriptor instead.
 func (*CreatePresetRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{23}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CreatePresetRequest) GetData() *PresetData {
@@ -1934,7 +2407,7 @@ type UpdatePresetRequest struct {
 
 func (x *UpdatePresetRequest) Reset() {
 	*x = UpdatePresetRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[24]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1946,7 +2419,7 @@ func (x *UpdatePresetRequest) String() string {
 func (*UpdatePresetRequest) ProtoMessage() {}
 
 func (x *UpdatePresetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[24]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1959,7 +2432,7 @@ func (x *UpdatePresetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePresetRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePresetRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{24}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *UpdatePresetRequest) GetId() string {
@@ -1992,7 +2465,7 @@ type SetPresetEnabledData struct {
 
 func (x *SetPresetEnabledData) Reset() {
 	*x = SetPresetEnabledData{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[25]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2004,7 +2477,7 @@ func (x *SetPresetEnabledData) String() string {
 func (*SetPresetEnabledData) ProtoMessage() {}
 
 func (x *SetPresetEnabledData) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[25]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2017,7 +2490,7 @@ func (x *SetPresetEnabledData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPresetEnabledData.ProtoReflect.Descriptor instead.
 func (*SetPresetEnabledData) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{25}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *SetPresetEnabledData) GetEnabled() bool {
@@ -2037,7 +2510,7 @@ type SetPresetEnabledRequest struct {
 
 func (x *SetPresetEnabledRequest) Reset() {
 	*x = SetPresetEnabledRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[26]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2049,7 +2522,7 @@ func (x *SetPresetEnabledRequest) String() string {
 func (*SetPresetEnabledRequest) ProtoMessage() {}
 
 func (x *SetPresetEnabledRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[26]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2062,7 +2535,7 @@ func (x *SetPresetEnabledRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPresetEnabledRequest.ProtoReflect.Descriptor instead.
 func (*SetPresetEnabledRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{26}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SetPresetEnabledRequest) GetId() string {
@@ -2087,7 +2560,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[27]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2099,7 +2572,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[27]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2112,7 +2585,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{27}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{35}
 }
 
 type EnvironmentSource struct {
@@ -2125,7 +2598,7 @@ type EnvironmentSource struct {
 
 func (x *EnvironmentSource) Reset() {
 	*x = EnvironmentSource{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[28]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2137,7 +2610,7 @@ func (x *EnvironmentSource) String() string {
 func (*EnvironmentSource) ProtoMessage() {}
 
 func (x *EnvironmentSource) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[28]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2150,7 +2623,7 @@ func (x *EnvironmentSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvironmentSource.ProtoReflect.Descriptor instead.
 func (*EnvironmentSource) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{28}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *EnvironmentSource) GetName() string {
@@ -2179,7 +2652,7 @@ type RuntimeMount struct {
 
 func (x *RuntimeMount) Reset() {
 	*x = RuntimeMount{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[29]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2191,7 +2664,7 @@ func (x *RuntimeMount) String() string {
 func (*RuntimeMount) ProtoMessage() {}
 
 func (x *RuntimeMount) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[29]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2204,7 +2677,7 @@ func (x *RuntimeMount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeMount.ProtoReflect.Descriptor instead.
 func (*RuntimeMount) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{29}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RuntimeMount) GetName() string {
@@ -2253,7 +2726,7 @@ type RuntimePod struct {
 
 func (x *RuntimePod) Reset() {
 	*x = RuntimePod{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[30]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2265,7 +2738,7 @@ func (x *RuntimePod) String() string {
 func (*RuntimePod) ProtoMessage() {}
 
 func (x *RuntimePod) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[30]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2278,7 +2751,7 @@ func (x *RuntimePod) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimePod.ProtoReflect.Descriptor instead.
 func (*RuntimePod) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{30}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *RuntimePod) GetName() string {
@@ -2361,7 +2834,7 @@ type RuntimeStatefulSet struct {
 
 func (x *RuntimeStatefulSet) Reset() {
 	*x = RuntimeStatefulSet{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[31]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2373,7 +2846,7 @@ func (x *RuntimeStatefulSet) String() string {
 func (*RuntimeStatefulSet) ProtoMessage() {}
 
 func (x *RuntimeStatefulSet) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[31]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2386,7 +2859,7 @@ func (x *RuntimeStatefulSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeStatefulSet.ProtoReflect.Descriptor instead.
 func (*RuntimeStatefulSet) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{31}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *RuntimeStatefulSet) GetDesiredReplicas() *wrapperspb.Int32Value {
@@ -2416,7 +2889,7 @@ type InstanceRuntime struct {
 
 func (x *InstanceRuntime) Reset() {
 	*x = InstanceRuntime{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[32]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2428,7 +2901,7 @@ func (x *InstanceRuntime) String() string {
 func (*InstanceRuntime) ProtoMessage() {}
 
 func (x *InstanceRuntime) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[32]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2441,7 +2914,7 @@ func (x *InstanceRuntime) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceRuntime.ProtoReflect.Descriptor instead.
 func (*InstanceRuntime) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{32}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *InstanceRuntime) GetInstanceId() string {
@@ -2492,7 +2965,7 @@ type InstanceEvent struct {
 
 func (x *InstanceEvent) Reset() {
 	*x = InstanceEvent{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[33]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2504,7 +2977,7 @@ func (x *InstanceEvent) String() string {
 func (*InstanceEvent) ProtoMessage() {}
 
 func (x *InstanceEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[33]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2517,7 +2990,7 @@ func (x *InstanceEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceEvent.ProtoReflect.Descriptor instead.
 func (*InstanceEvent) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{33}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *InstanceEvent) GetType() string {
@@ -2567,7 +3040,7 @@ type InstanceEvents struct {
 
 func (x *InstanceEvents) Reset() {
 	*x = InstanceEvents{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[34]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2579,7 +3052,7 @@ func (x *InstanceEvents) String() string {
 func (*InstanceEvents) ProtoMessage() {}
 
 func (x *InstanceEvents) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[34]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2592,7 +3065,7 @@ func (x *InstanceEvents) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceEvents.ProtoReflect.Descriptor instead.
 func (*InstanceEvents) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{34}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *InstanceEvents) GetPodUid() *wrapperspb.StringValue {
@@ -2634,7 +3107,7 @@ type InstanceLogsRequest struct {
 
 func (x *InstanceLogsRequest) Reset() {
 	*x = InstanceLogsRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[35]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2646,7 +3119,7 @@ func (x *InstanceLogsRequest) String() string {
 func (*InstanceLogsRequest) ProtoMessage() {}
 
 func (x *InstanceLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[35]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2659,7 +3132,7 @@ func (x *InstanceLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceLogsRequest.ProtoReflect.Descriptor instead.
 func (*InstanceLogsRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{35}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *InstanceLogsRequest) GetInstanceId() string {
@@ -2694,7 +3167,7 @@ type InstanceLogFrame struct {
 
 func (x *InstanceLogFrame) Reset() {
 	*x = InstanceLogFrame{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[36]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2706,7 +3179,7 @@ func (x *InstanceLogFrame) String() string {
 func (*InstanceLogFrame) ProtoMessage() {}
 
 func (x *InstanceLogFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[36]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2719,7 +3192,7 @@ func (x *InstanceLogFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceLogFrame.ProtoReflect.Descriptor instead.
 func (*InstanceLogFrame) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{36}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *InstanceLogFrame) GetKind() InstanceLogFrame_Kind {
@@ -2754,7 +3227,7 @@ type ExecInstanceResponse struct {
 
 func (x *ExecInstanceResponse) Reset() {
 	*x = ExecInstanceResponse{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[37]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2766,7 +3239,7 @@ func (x *ExecInstanceResponse) String() string {
 func (*ExecInstanceResponse) ProtoMessage() {}
 
 func (x *ExecInstanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[37]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2779,7 +3252,7 @@ func (x *ExecInstanceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecInstanceResponse.ProtoReflect.Descriptor instead.
 func (*ExecInstanceResponse) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{37}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ExecInstanceResponse) GetSessionId() string {
@@ -2812,7 +3285,7 @@ type SchedulerConfigRequest struct {
 
 func (x *SchedulerConfigRequest) Reset() {
 	*x = SchedulerConfigRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[38]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2824,7 +3297,7 @@ func (x *SchedulerConfigRequest) String() string {
 func (*SchedulerConfigRequest) ProtoMessage() {}
 
 func (x *SchedulerConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[38]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2837,7 +3310,7 @@ func (x *SchedulerConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchedulerConfigRequest.ProtoReflect.Descriptor instead.
 func (*SchedulerConfigRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{38}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{46}
 }
 
 type SchedulerConfig struct {
@@ -2850,7 +3323,7 @@ type SchedulerConfig struct {
 
 func (x *SchedulerConfig) Reset() {
 	*x = SchedulerConfig{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[39]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2862,7 +3335,7 @@ func (x *SchedulerConfig) String() string {
 func (*SchedulerConfig) ProtoMessage() {}
 
 func (x *SchedulerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[39]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2875,7 +3348,7 @@ func (x *SchedulerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchedulerConfig.ProtoReflect.Descriptor instead.
 func (*SchedulerConfig) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{39}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *SchedulerConfig) GetConfig() string {
@@ -2902,7 +3375,7 @@ type SchedulerConfigData struct {
 
 func (x *SchedulerConfigData) Reset() {
 	*x = SchedulerConfigData{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[40]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2914,7 +3387,7 @@ func (x *SchedulerConfigData) String() string {
 func (*SchedulerConfigData) ProtoMessage() {}
 
 func (x *SchedulerConfigData) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[40]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2927,7 +3400,7 @@ func (x *SchedulerConfigData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchedulerConfigData.ProtoReflect.Descriptor instead.
 func (*SchedulerConfigData) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{40}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *SchedulerConfigData) GetConfig() string {
@@ -2953,7 +3426,7 @@ type UpdateSchedulerConfigRequest struct {
 
 func (x *UpdateSchedulerConfigRequest) Reset() {
 	*x = UpdateSchedulerConfigRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[41]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2965,7 +3438,7 @@ func (x *UpdateSchedulerConfigRequest) String() string {
 func (*UpdateSchedulerConfigRequest) ProtoMessage() {}
 
 func (x *UpdateSchedulerConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[41]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2978,7 +3451,7 @@ func (x *UpdateSchedulerConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSchedulerConfigRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSchedulerConfigRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{41}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *UpdateSchedulerConfigRequest) GetData() *SchedulerConfigData {
@@ -2998,7 +3471,7 @@ type PriorityClassAllowlist struct {
 
 func (x *PriorityClassAllowlist) Reset() {
 	*x = PriorityClassAllowlist{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[42]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3010,7 +3483,7 @@ func (x *PriorityClassAllowlist) String() string {
 func (*PriorityClassAllowlist) ProtoMessage() {}
 
 func (x *PriorityClassAllowlist) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[42]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3023,7 +3496,7 @@ func (x *PriorityClassAllowlist) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PriorityClassAllowlist.ProtoReflect.Descriptor instead.
 func (*PriorityClassAllowlist) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{42}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *PriorityClassAllowlist) GetTenantId() uint32 {
@@ -3050,7 +3523,7 @@ type InstanceSchedulingSettings struct {
 
 func (x *InstanceSchedulingSettings) Reset() {
 	*x = InstanceSchedulingSettings{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[43]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3062,7 +3535,7 @@ func (x *InstanceSchedulingSettings) String() string {
 func (*InstanceSchedulingSettings) ProtoMessage() {}
 
 func (x *InstanceSchedulingSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[43]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3075,7 +3548,7 @@ func (x *InstanceSchedulingSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceSchedulingSettings.ProtoReflect.Descriptor instead.
 func (*InstanceSchedulingSettings) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{43}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *InstanceSchedulingSettings) GetDefaults() *SchedulingOptions {
@@ -3100,7 +3573,7 @@ type InstanceSchedulingSettingsRequest struct {
 
 func (x *InstanceSchedulingSettingsRequest) Reset() {
 	*x = InstanceSchedulingSettingsRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[44]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3112,7 +3585,7 @@ func (x *InstanceSchedulingSettingsRequest) String() string {
 func (*InstanceSchedulingSettingsRequest) ProtoMessage() {}
 
 func (x *InstanceSchedulingSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[44]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3125,7 +3598,7 @@ func (x *InstanceSchedulingSettingsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use InstanceSchedulingSettingsRequest.ProtoReflect.Descriptor instead.
 func (*InstanceSchedulingSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{44}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{52}
 }
 
 type UpdateInstanceSchedulingSettingsRequest struct {
@@ -3137,7 +3610,7 @@ type UpdateInstanceSchedulingSettingsRequest struct {
 
 func (x *UpdateInstanceSchedulingSettingsRequest) Reset() {
 	*x = UpdateInstanceSchedulingSettingsRequest{}
-	mi := &file_instance_service_v1_instance_proto_msgTypes[45]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3149,7 +3622,7 @@ func (x *UpdateInstanceSchedulingSettingsRequest) String() string {
 func (*UpdateInstanceSchedulingSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateInstanceSchedulingSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_instance_service_v1_instance_proto_msgTypes[45]
+	mi := &file_instance_service_v1_instance_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3162,7 +3635,7 @@ func (x *UpdateInstanceSchedulingSettingsRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use UpdateInstanceSchedulingSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateInstanceSchedulingSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{45}
+	return file_instance_service_v1_instance_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *UpdateInstanceSchedulingSettingsRequest) GetData() *InstanceSchedulingSettings {
@@ -3176,7 +3649,42 @@ var File_instance_service_v1_instance_proto protoreflect.FileDescriptor
 
 const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\n" +
-	"\"instance/service/v1/instance.proto\x12\x13instance.service.v1\x1a google/protobuf/field_mask.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbb\x02\n" +
+	"\"instance/service/v1/instance.proto\x12\x13instance.service.v1\x1a google/protobuf/field_mask.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$gnostic/openapi/v3/annotations.proto\"\x82\x01\n" +
+	"\x1bQueryInstanceMetricsRequest\x12 \n" +
+	"\vinstance_id\x18\x01 \x01(\tR\vinstance_id\x12A\n" +
+	"\x04data\x18\x02 \x01(\v2-.instance.service.v1.QueryInstanceMetricsDataR\x04data\"\xd8\x01\n" +
+	"\x18QueryInstanceMetricsData\x12\"\n" +
+	"\fmetric_codes\x18\x01 \x03(\tR\fmetric_codes\x120\n" +
+	"\x05start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +
+	"\x03end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x03end\x12'\n" +
+	"\fstep_seconds\x18\x04 \x01(\rH\x00R\fstep_seconds\x88\x01\x01B\x0f\n" +
+	"\r_step_seconds\"a\n" +
+	"\x1cQueryInstanceMetricsResponse\x12A\n" +
+	"\x04data\x18\x01 \x01(\v2-.instance.service.v1.InstanceMetricsRangeDataR\x04data\"\x83\x02\n" +
+	"\x18InstanceMetricsRangeData\x12 \n" +
+	"\vinstance_id\x18\x01 \x01(\tR\vinstance_id\x120\n" +
+	"\x05start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +
+	"\x03end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x03end\x12\"\n" +
+	"\fstep_seconds\x18\x04 \x01(\rR\fstep_seconds\x12A\n" +
+	"\x06series\x18\x05 \x03(\v2).instance.service.v1.InstanceMetricSeriesR\x06series\"f\n" +
+	" GetInstanceLatestMetricsResponse\x12B\n" +
+	"\x04data\x18\x01 \x01(\v2..instance.service.v1.InstanceMetricsLatestDataR\x04data\"\xc0\x01\n" +
+	"\x19InstanceMetricsLatestData\x12 \n" +
+	"\vinstance_id\x18\x01 \x01(\tR\vinstance_id\x12>\n" +
+	"\fevaluated_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\fevaluated_at\x12A\n" +
+	"\x06series\x18\x03 \x03(\v2).instance.service.v1.InstanceMetricSeriesR\x06series\"\xa6\x01\n" +
+	"\x14InstanceMetricSeries\x12 \n" +
+	"\vmetric_code\x18\x01 \x01(\tR\vmetric_code\x12\x12\n" +
+	"\x04unit\x18\x02 \x01(\tR\x04unit\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12@\n" +
+	"\x06points\x18\x04 \x03(\v2(.instance.service.v1.InstanceMetricPointR\x06points\"\xbe\x01\n" +
+	"\x13InstanceMetricPoint\x128\n" +
+	"\ttimestamp\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x129\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.google.protobuf.DoubleValueB\x05\xbaG\x02\b\x01R\x05value\x12#\n" +
+	"\n" +
+	"gap_reason\x18\x03 \x01(\tH\x00R\n" +
+	"gap_reason\x88\x01\x01B\r\n" +
+	"\v_gap_reason\"\xbb\x02\n" +
 	"\x11SchedulingOptions\x12^\n" +
 	"\rpod_placement\x18\x01 \x01(\x0e23.instance.service.v1.SchedulingOptions.PodPlacementH\x00R\rpod_placement\x88\x01\x01\x125\n" +
 	"\x13priority_class_name\x18\x02 \x01(\tH\x01R\x13priority_class_name\x88\x01\x01\"e\n" +
@@ -3485,101 +3993,123 @@ func file_instance_service_v1_instance_proto_rawDescGZIP() []byte {
 }
 
 var file_instance_service_v1_instance_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_instance_service_v1_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
+var file_instance_service_v1_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_instance_service_v1_instance_proto_goTypes = []any{
 	(SchedulingOptions_PodPlacement)(0),             // 0: instance.service.v1.SchedulingOptions.PodPlacement
 	(InstanceLogFrame_Kind)(0),                      // 1: instance.service.v1.InstanceLogFrame.Kind
-	(*SchedulingOptions)(nil),                       // 2: instance.service.v1.SchedulingOptions
-	(*CreateInstanceData)(nil),                      // 3: instance.service.v1.CreateInstanceData
-	(*CreateInstanceRequest)(nil),                   // 4: instance.service.v1.CreateInstanceRequest
-	(*ChangeInstanceData)(nil),                      // 5: instance.service.v1.ChangeInstanceData
-	(*ChangeInstanceRequest)(nil),                   // 6: instance.service.v1.ChangeInstanceRequest
-	(*GetInstanceRequest)(nil),                      // 7: instance.service.v1.GetInstanceRequest
-	(*ListInstancesRequest)(nil),                    // 8: instance.service.v1.ListInstancesRequest
-	(*ListPresetsRequest)(nil),                      // 9: instance.service.v1.ListPresetsRequest
-	(*GetOperationRequest)(nil),                     // 10: instance.service.v1.GetOperationRequest
-	(*ExecInstanceData)(nil),                        // 11: instance.service.v1.ExecInstanceData
-	(*ExecInstanceRequest)(nil),                     // 12: instance.service.v1.ExecInstanceRequest
-	(*Instance)(nil),                                // 13: instance.service.v1.Instance
-	(*ListInstancesResponse)(nil),                   // 14: instance.service.v1.ListInstancesResponse
-	(*Acceptance)(nil),                              // 15: instance.service.v1.Acceptance
-	(*Operation)(nil),                               // 16: instance.service.v1.Operation
-	(*GpuSummary)(nil),                              // 17: instance.service.v1.GpuSummary
-	(*Preset)(nil),                                  // 18: instance.service.v1.Preset
-	(*ListPresetsResponse)(nil),                     // 19: instance.service.v1.ListPresetsResponse
-	(*PresetGpuInput)(nil),                          // 20: instance.service.v1.PresetGpuInput
-	(*PresetData)(nil),                              // 21: instance.service.v1.PresetData
-	(*AdminListPresetsRequest)(nil),                 // 22: instance.service.v1.AdminListPresetsRequest
-	(*AdminListPresetsResponse)(nil),                // 23: instance.service.v1.AdminListPresetsResponse
-	(*PresetRequest)(nil),                           // 24: instance.service.v1.PresetRequest
-	(*CreatePresetRequest)(nil),                     // 25: instance.service.v1.CreatePresetRequest
-	(*UpdatePresetRequest)(nil),                     // 26: instance.service.v1.UpdatePresetRequest
-	(*SetPresetEnabledData)(nil),                    // 27: instance.service.v1.SetPresetEnabledData
-	(*SetPresetEnabledRequest)(nil),                 // 28: instance.service.v1.SetPresetEnabledRequest
-	(*Empty)(nil),                                   // 29: instance.service.v1.Empty
-	(*EnvironmentSource)(nil),                       // 30: instance.service.v1.EnvironmentSource
-	(*RuntimeMount)(nil),                            // 31: instance.service.v1.RuntimeMount
-	(*RuntimePod)(nil),                              // 32: instance.service.v1.RuntimePod
-	(*RuntimeStatefulSet)(nil),                      // 33: instance.service.v1.RuntimeStatefulSet
-	(*InstanceRuntime)(nil),                         // 34: instance.service.v1.InstanceRuntime
-	(*InstanceEvent)(nil),                           // 35: instance.service.v1.InstanceEvent
-	(*InstanceEvents)(nil),                          // 36: instance.service.v1.InstanceEvents
-	(*InstanceLogsRequest)(nil),                     // 37: instance.service.v1.InstanceLogsRequest
-	(*InstanceLogFrame)(nil),                        // 38: instance.service.v1.InstanceLogFrame
-	(*ExecInstanceResponse)(nil),                    // 39: instance.service.v1.ExecInstanceResponse
-	(*SchedulerConfigRequest)(nil),                  // 40: instance.service.v1.SchedulerConfigRequest
-	(*SchedulerConfig)(nil),                         // 41: instance.service.v1.SchedulerConfig
-	(*SchedulerConfigData)(nil),                     // 42: instance.service.v1.SchedulerConfigData
-	(*UpdateSchedulerConfigRequest)(nil),            // 43: instance.service.v1.UpdateSchedulerConfigRequest
-	(*PriorityClassAllowlist)(nil),                  // 44: instance.service.v1.PriorityClassAllowlist
-	(*InstanceSchedulingSettings)(nil),              // 45: instance.service.v1.InstanceSchedulingSettings
-	(*InstanceSchedulingSettingsRequest)(nil),       // 46: instance.service.v1.InstanceSchedulingSettingsRequest
-	(*UpdateInstanceSchedulingSettingsRequest)(nil), // 47: instance.service.v1.UpdateInstanceSchedulingSettingsRequest
-	(*fieldmaskpb.FieldMask)(nil),                   // 48: google.protobuf.FieldMask
-	(*wrapperspb.Int32Value)(nil),                   // 49: google.protobuf.Int32Value
-	(*timestamppb.Timestamp)(nil),                   // 50: google.protobuf.Timestamp
-	(*wrapperspb.Int64Value)(nil),                   // 51: google.protobuf.Int64Value
-	(*wrapperspb.StringValue)(nil),                  // 52: google.protobuf.StringValue
+	(*QueryInstanceMetricsRequest)(nil),             // 2: instance.service.v1.QueryInstanceMetricsRequest
+	(*QueryInstanceMetricsData)(nil),                // 3: instance.service.v1.QueryInstanceMetricsData
+	(*QueryInstanceMetricsResponse)(nil),            // 4: instance.service.v1.QueryInstanceMetricsResponse
+	(*InstanceMetricsRangeData)(nil),                // 5: instance.service.v1.InstanceMetricsRangeData
+	(*GetInstanceLatestMetricsResponse)(nil),        // 6: instance.service.v1.GetInstanceLatestMetricsResponse
+	(*InstanceMetricsLatestData)(nil),               // 7: instance.service.v1.InstanceMetricsLatestData
+	(*InstanceMetricSeries)(nil),                    // 8: instance.service.v1.InstanceMetricSeries
+	(*InstanceMetricPoint)(nil),                     // 9: instance.service.v1.InstanceMetricPoint
+	(*SchedulingOptions)(nil),                       // 10: instance.service.v1.SchedulingOptions
+	(*CreateInstanceData)(nil),                      // 11: instance.service.v1.CreateInstanceData
+	(*CreateInstanceRequest)(nil),                   // 12: instance.service.v1.CreateInstanceRequest
+	(*ChangeInstanceData)(nil),                      // 13: instance.service.v1.ChangeInstanceData
+	(*ChangeInstanceRequest)(nil),                   // 14: instance.service.v1.ChangeInstanceRequest
+	(*GetInstanceRequest)(nil),                      // 15: instance.service.v1.GetInstanceRequest
+	(*ListInstancesRequest)(nil),                    // 16: instance.service.v1.ListInstancesRequest
+	(*ListPresetsRequest)(nil),                      // 17: instance.service.v1.ListPresetsRequest
+	(*GetOperationRequest)(nil),                     // 18: instance.service.v1.GetOperationRequest
+	(*ExecInstanceData)(nil),                        // 19: instance.service.v1.ExecInstanceData
+	(*ExecInstanceRequest)(nil),                     // 20: instance.service.v1.ExecInstanceRequest
+	(*Instance)(nil),                                // 21: instance.service.v1.Instance
+	(*ListInstancesResponse)(nil),                   // 22: instance.service.v1.ListInstancesResponse
+	(*Acceptance)(nil),                              // 23: instance.service.v1.Acceptance
+	(*Operation)(nil),                               // 24: instance.service.v1.Operation
+	(*GpuSummary)(nil),                              // 25: instance.service.v1.GpuSummary
+	(*Preset)(nil),                                  // 26: instance.service.v1.Preset
+	(*ListPresetsResponse)(nil),                     // 27: instance.service.v1.ListPresetsResponse
+	(*PresetGpuInput)(nil),                          // 28: instance.service.v1.PresetGpuInput
+	(*PresetData)(nil),                              // 29: instance.service.v1.PresetData
+	(*AdminListPresetsRequest)(nil),                 // 30: instance.service.v1.AdminListPresetsRequest
+	(*AdminListPresetsResponse)(nil),                // 31: instance.service.v1.AdminListPresetsResponse
+	(*PresetRequest)(nil),                           // 32: instance.service.v1.PresetRequest
+	(*CreatePresetRequest)(nil),                     // 33: instance.service.v1.CreatePresetRequest
+	(*UpdatePresetRequest)(nil),                     // 34: instance.service.v1.UpdatePresetRequest
+	(*SetPresetEnabledData)(nil),                    // 35: instance.service.v1.SetPresetEnabledData
+	(*SetPresetEnabledRequest)(nil),                 // 36: instance.service.v1.SetPresetEnabledRequest
+	(*Empty)(nil),                                   // 37: instance.service.v1.Empty
+	(*EnvironmentSource)(nil),                       // 38: instance.service.v1.EnvironmentSource
+	(*RuntimeMount)(nil),                            // 39: instance.service.v1.RuntimeMount
+	(*RuntimePod)(nil),                              // 40: instance.service.v1.RuntimePod
+	(*RuntimeStatefulSet)(nil),                      // 41: instance.service.v1.RuntimeStatefulSet
+	(*InstanceRuntime)(nil),                         // 42: instance.service.v1.InstanceRuntime
+	(*InstanceEvent)(nil),                           // 43: instance.service.v1.InstanceEvent
+	(*InstanceEvents)(nil),                          // 44: instance.service.v1.InstanceEvents
+	(*InstanceLogsRequest)(nil),                     // 45: instance.service.v1.InstanceLogsRequest
+	(*InstanceLogFrame)(nil),                        // 46: instance.service.v1.InstanceLogFrame
+	(*ExecInstanceResponse)(nil),                    // 47: instance.service.v1.ExecInstanceResponse
+	(*SchedulerConfigRequest)(nil),                  // 48: instance.service.v1.SchedulerConfigRequest
+	(*SchedulerConfig)(nil),                         // 49: instance.service.v1.SchedulerConfig
+	(*SchedulerConfigData)(nil),                     // 50: instance.service.v1.SchedulerConfigData
+	(*UpdateSchedulerConfigRequest)(nil),            // 51: instance.service.v1.UpdateSchedulerConfigRequest
+	(*PriorityClassAllowlist)(nil),                  // 52: instance.service.v1.PriorityClassAllowlist
+	(*InstanceSchedulingSettings)(nil),              // 53: instance.service.v1.InstanceSchedulingSettings
+	(*InstanceSchedulingSettingsRequest)(nil),       // 54: instance.service.v1.InstanceSchedulingSettingsRequest
+	(*UpdateInstanceSchedulingSettingsRequest)(nil), // 55: instance.service.v1.UpdateInstanceSchedulingSettingsRequest
+	(*timestamppb.Timestamp)(nil),                   // 56: google.protobuf.Timestamp
+	(*wrapperspb.DoubleValue)(nil),                  // 57: google.protobuf.DoubleValue
+	(*fieldmaskpb.FieldMask)(nil),                   // 58: google.protobuf.FieldMask
+	(*wrapperspb.Int32Value)(nil),                   // 59: google.protobuf.Int32Value
+	(*wrapperspb.Int64Value)(nil),                   // 60: google.protobuf.Int64Value
+	(*wrapperspb.StringValue)(nil),                  // 61: google.protobuf.StringValue
 }
 var file_instance_service_v1_instance_proto_depIdxs = []int32{
-	0,  // 0: instance.service.v1.SchedulingOptions.pod_placement:type_name -> instance.service.v1.SchedulingOptions.PodPlacement
-	2,  // 1: instance.service.v1.CreateInstanceData.scheduling:type_name -> instance.service.v1.SchedulingOptions
-	3,  // 2: instance.service.v1.CreateInstanceRequest.data:type_name -> instance.service.v1.CreateInstanceData
-	5,  // 3: instance.service.v1.ChangeInstanceRequest.data:type_name -> instance.service.v1.ChangeInstanceData
-	11, // 4: instance.service.v1.ExecInstanceRequest.data:type_name -> instance.service.v1.ExecInstanceData
-	17, // 5: instance.service.v1.Instance.gpu_summary:type_name -> instance.service.v1.GpuSummary
-	2,  // 6: instance.service.v1.Instance.scheduling:type_name -> instance.service.v1.SchedulingOptions
-	13, // 7: instance.service.v1.ListInstancesResponse.items:type_name -> instance.service.v1.Instance
-	17, // 8: instance.service.v1.Preset.gpu:type_name -> instance.service.v1.GpuSummary
-	18, // 9: instance.service.v1.ListPresetsResponse.items:type_name -> instance.service.v1.Preset
-	20, // 10: instance.service.v1.PresetData.gpu:type_name -> instance.service.v1.PresetGpuInput
-	18, // 11: instance.service.v1.AdminListPresetsResponse.items:type_name -> instance.service.v1.Preset
-	21, // 12: instance.service.v1.CreatePresetRequest.data:type_name -> instance.service.v1.PresetData
-	21, // 13: instance.service.v1.UpdatePresetRequest.data:type_name -> instance.service.v1.PresetData
-	48, // 14: instance.service.v1.UpdatePresetRequest.update_mask:type_name -> google.protobuf.FieldMask
-	27, // 15: instance.service.v1.SetPresetEnabledRequest.data:type_name -> instance.service.v1.SetPresetEnabledData
-	30, // 16: instance.service.v1.RuntimePod.environment_sources:type_name -> instance.service.v1.EnvironmentSource
-	31, // 17: instance.service.v1.RuntimePod.mounts:type_name -> instance.service.v1.RuntimeMount
-	49, // 18: instance.service.v1.RuntimeStatefulSet.desired_replicas:type_name -> google.protobuf.Int32Value
-	49, // 19: instance.service.v1.RuntimeStatefulSet.ready_replicas:type_name -> google.protobuf.Int32Value
-	50, // 20: instance.service.v1.InstanceRuntime.observed_at:type_name -> google.protobuf.Timestamp
-	32, // 21: instance.service.v1.InstanceRuntime.pod:type_name -> instance.service.v1.RuntimePod
-	33, // 22: instance.service.v1.InstanceRuntime.stateful_set:type_name -> instance.service.v1.RuntimeStatefulSet
-	50, // 23: instance.service.v1.InstanceEvent.last_occurred_at:type_name -> google.protobuf.Timestamp
-	51, // 24: instance.service.v1.InstanceEvent.count:type_name -> google.protobuf.Int64Value
-	52, // 25: instance.service.v1.InstanceEvents.pod_uid:type_name -> google.protobuf.StringValue
-	50, // 26: instance.service.v1.InstanceEvents.observed_at:type_name -> google.protobuf.Timestamp
-	35, // 27: instance.service.v1.InstanceEvents.events:type_name -> instance.service.v1.InstanceEvent
-	1,  // 28: instance.service.v1.InstanceLogFrame.kind:type_name -> instance.service.v1.InstanceLogFrame.Kind
-	42, // 29: instance.service.v1.UpdateSchedulerConfigRequest.data:type_name -> instance.service.v1.SchedulerConfigData
-	2,  // 30: instance.service.v1.InstanceSchedulingSettings.defaults:type_name -> instance.service.v1.SchedulingOptions
-	44, // 31: instance.service.v1.InstanceSchedulingSettings.priority_class_allowlists:type_name -> instance.service.v1.PriorityClassAllowlist
-	45, // 32: instance.service.v1.UpdateInstanceSchedulingSettingsRequest.data:type_name -> instance.service.v1.InstanceSchedulingSettings
-	33, // [33:33] is the sub-list for method output_type
-	33, // [33:33] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	3,  // 0: instance.service.v1.QueryInstanceMetricsRequest.data:type_name -> instance.service.v1.QueryInstanceMetricsData
+	56, // 1: instance.service.v1.QueryInstanceMetricsData.start:type_name -> google.protobuf.Timestamp
+	56, // 2: instance.service.v1.QueryInstanceMetricsData.end:type_name -> google.protobuf.Timestamp
+	5,  // 3: instance.service.v1.QueryInstanceMetricsResponse.data:type_name -> instance.service.v1.InstanceMetricsRangeData
+	56, // 4: instance.service.v1.InstanceMetricsRangeData.start:type_name -> google.protobuf.Timestamp
+	56, // 5: instance.service.v1.InstanceMetricsRangeData.end:type_name -> google.protobuf.Timestamp
+	8,  // 6: instance.service.v1.InstanceMetricsRangeData.series:type_name -> instance.service.v1.InstanceMetricSeries
+	7,  // 7: instance.service.v1.GetInstanceLatestMetricsResponse.data:type_name -> instance.service.v1.InstanceMetricsLatestData
+	56, // 8: instance.service.v1.InstanceMetricsLatestData.evaluated_at:type_name -> google.protobuf.Timestamp
+	8,  // 9: instance.service.v1.InstanceMetricsLatestData.series:type_name -> instance.service.v1.InstanceMetricSeries
+	9,  // 10: instance.service.v1.InstanceMetricSeries.points:type_name -> instance.service.v1.InstanceMetricPoint
+	56, // 11: instance.service.v1.InstanceMetricPoint.timestamp:type_name -> google.protobuf.Timestamp
+	57, // 12: instance.service.v1.InstanceMetricPoint.value:type_name -> google.protobuf.DoubleValue
+	0,  // 13: instance.service.v1.SchedulingOptions.pod_placement:type_name -> instance.service.v1.SchedulingOptions.PodPlacement
+	10, // 14: instance.service.v1.CreateInstanceData.scheduling:type_name -> instance.service.v1.SchedulingOptions
+	11, // 15: instance.service.v1.CreateInstanceRequest.data:type_name -> instance.service.v1.CreateInstanceData
+	13, // 16: instance.service.v1.ChangeInstanceRequest.data:type_name -> instance.service.v1.ChangeInstanceData
+	19, // 17: instance.service.v1.ExecInstanceRequest.data:type_name -> instance.service.v1.ExecInstanceData
+	25, // 18: instance.service.v1.Instance.gpu_summary:type_name -> instance.service.v1.GpuSummary
+	10, // 19: instance.service.v1.Instance.scheduling:type_name -> instance.service.v1.SchedulingOptions
+	21, // 20: instance.service.v1.ListInstancesResponse.items:type_name -> instance.service.v1.Instance
+	25, // 21: instance.service.v1.Preset.gpu:type_name -> instance.service.v1.GpuSummary
+	26, // 22: instance.service.v1.ListPresetsResponse.items:type_name -> instance.service.v1.Preset
+	28, // 23: instance.service.v1.PresetData.gpu:type_name -> instance.service.v1.PresetGpuInput
+	26, // 24: instance.service.v1.AdminListPresetsResponse.items:type_name -> instance.service.v1.Preset
+	29, // 25: instance.service.v1.CreatePresetRequest.data:type_name -> instance.service.v1.PresetData
+	29, // 26: instance.service.v1.UpdatePresetRequest.data:type_name -> instance.service.v1.PresetData
+	58, // 27: instance.service.v1.UpdatePresetRequest.update_mask:type_name -> google.protobuf.FieldMask
+	35, // 28: instance.service.v1.SetPresetEnabledRequest.data:type_name -> instance.service.v1.SetPresetEnabledData
+	38, // 29: instance.service.v1.RuntimePod.environment_sources:type_name -> instance.service.v1.EnvironmentSource
+	39, // 30: instance.service.v1.RuntimePod.mounts:type_name -> instance.service.v1.RuntimeMount
+	59, // 31: instance.service.v1.RuntimeStatefulSet.desired_replicas:type_name -> google.protobuf.Int32Value
+	59, // 32: instance.service.v1.RuntimeStatefulSet.ready_replicas:type_name -> google.protobuf.Int32Value
+	56, // 33: instance.service.v1.InstanceRuntime.observed_at:type_name -> google.protobuf.Timestamp
+	40, // 34: instance.service.v1.InstanceRuntime.pod:type_name -> instance.service.v1.RuntimePod
+	41, // 35: instance.service.v1.InstanceRuntime.stateful_set:type_name -> instance.service.v1.RuntimeStatefulSet
+	56, // 36: instance.service.v1.InstanceEvent.last_occurred_at:type_name -> google.protobuf.Timestamp
+	60, // 37: instance.service.v1.InstanceEvent.count:type_name -> google.protobuf.Int64Value
+	61, // 38: instance.service.v1.InstanceEvents.pod_uid:type_name -> google.protobuf.StringValue
+	56, // 39: instance.service.v1.InstanceEvents.observed_at:type_name -> google.protobuf.Timestamp
+	43, // 40: instance.service.v1.InstanceEvents.events:type_name -> instance.service.v1.InstanceEvent
+	1,  // 41: instance.service.v1.InstanceLogFrame.kind:type_name -> instance.service.v1.InstanceLogFrame.Kind
+	50, // 42: instance.service.v1.UpdateSchedulerConfigRequest.data:type_name -> instance.service.v1.SchedulerConfigData
+	10, // 43: instance.service.v1.InstanceSchedulingSettings.defaults:type_name -> instance.service.v1.SchedulingOptions
+	52, // 44: instance.service.v1.InstanceSchedulingSettings.priority_class_allowlists:type_name -> instance.service.v1.PriorityClassAllowlist
+	53, // 45: instance.service.v1.UpdateInstanceSchedulingSettingsRequest.data:type_name -> instance.service.v1.InstanceSchedulingSettings
+	46, // [46:46] is the sub-list for method output_type
+	46, // [46:46] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_instance_service_v1_instance_proto_init() }
@@ -3587,20 +4117,22 @@ func file_instance_service_v1_instance_proto_init() {
 	if File_instance_service_v1_instance_proto != nil {
 		return
 	}
-	file_instance_service_v1_instance_proto_msgTypes[0].OneofWrappers = []any{}
-	file_instance_service_v1_instance_proto_msgTypes[6].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[1].OneofWrappers = []any{}
 	file_instance_service_v1_instance_proto_msgTypes[7].OneofWrappers = []any{}
-	file_instance_service_v1_instance_proto_msgTypes[19].OneofWrappers = []any{}
-	file_instance_service_v1_instance_proto_msgTypes[20].OneofWrappers = []any{}
-	file_instance_service_v1_instance_proto_msgTypes[25].OneofWrappers = []any{}
-	file_instance_service_v1_instance_proto_msgTypes[35].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[8].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[14].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[15].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[27].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[28].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[33].OneofWrappers = []any{}
+	file_instance_service_v1_instance_proto_msgTypes[43].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_instance_service_v1_instance_proto_rawDesc), len(file_instance_service_v1_instance_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   46,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

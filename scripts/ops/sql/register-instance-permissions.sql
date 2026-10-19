@@ -11,6 +11,8 @@ BEGIN
   ('GET','/api/v1/instances/{instance_id}/runtime','instance:read'),
   ('GET','/api/v1/instances/{instance_id}/events','instance:read'),
   ('GET','/api/v1/instances/{instance_id}/logs','instance:read'),
+  ('POST','/api/v1/instances/{instance_id}/metrics/query','instance:read'),
+  ('GET','/api/v1/instances/{instance_id}/metrics/latest','instance:read'),
   ('GET','/api/v1/admin/scheduler-config','instance:scheduler:read'),
   ('PUT','/api/v1/admin/scheduler-config','instance:scheduler:update'),
   ('GET','/api/v1/admin/instance-scheduling-settings','instance:scheduling:read'),
