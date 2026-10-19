@@ -1713,8 +1713,7 @@ Governance：
   一律 400。service 层 `resolveModelDevPage` 独立解析默认值并校验；client 以 `page/pageSize` 传下游，
   响应校验不再依赖 `next_cursor`。
 
-因下游新字段尚未发布为新模块版本，Governance `go.mod` 需在下游发布后升级到正式伪版本；
-本地验证时以 `replace github.com/zhangzhe-ctrl/ani-modeldev-service => <下游工作树>` 消费同源下游代码（验证后移除）。
+下游 PR#4 已合入 canonical，Governance `go.mod` 精确消费正式版本 `v0.0.0-20261019114539-40a12484258c`；`GOWORK=off` 下载所得 Origin.Hash 为 `40a12484258c6ed8f2e7ea795f41942c040ef21a`，真实模块校验和已写入 `go.sum`，不使用工作树 replace。
 
 本机（Windows）已验证：下游 `buf generate`/`sqlc generate` 通过，`GOOS=linux go build ./...` 与
 `go vet -tags cpu_mainflow ./internal/... ./cmd/...` 通过；Governance `GOOS=linux go build ./app/... ./pkg/...`
@@ -1771,3 +1770,12 @@ Governance 根据已认证的租户用户建立下游 Model mTLS gRPC 请求，�
 管理 Profile 创建仍为 `POST /api/v1/admin/accelerator/profiles`，正式 RPC 改为 `CreateProfile`；新增 `GET .../profiles:preview`、`POST .../profiles/{profile_id}:set-state` 和 `POST .../profiles/{profile_id}:delete`。写请求保持 `{data:{...}}`，平台 JWT、当前权限与 ACC 对应 action/cluster grant 必须齐全。API 目录同步只登记接口，不自动授予权限。
 
 用户 Preset 返回每卡显存值、selectable 与 unavailable_reason；CPU 查询不依赖 ACC，GPU 仍须通过租户目录授权过滤。Inference 的普通及 GPU 管理接口、API 依赖和出站配置均移除，后续重新对接。编码、软件回归和真实 GPU 验收分别记证，不能沿用旧结果宣称新合同已验收。
+
+
+### 2026-10-19 实例配置增量（复用实例联合合同）
+
+`POST /api/v1/instances` 的 `{data:{...}}` 增加已有卷/工作目录、业务 labels/annotations/env 及显式网络选择，公网不接收合同版本、PVC UID、Namespace 或冻结字段。新增 `GET /api/v1/instances/mountable-pvcs`（page/pageSize/name → items/total，当前 create 权限）及 `GET /api/v1/instances/{instance_id}/configuration`（当前 read 权限可读取字面 env，no-store）。正式字段、数量/路径/保留键、错误与升级顺序见[容器实例 HTTP 合同](contracts/container-instances.md#工作目录已有卷与业务配置)。
+
+Gov→Res 仍使用当前受管 mTLS/可信 tenant 和 actor；Resolve 的 `instance_contract_version` 由 Gov 选定，新查询 RPC 为 `ListMountablePVCs/GetInstanceConfiguration`。实例配置只接受服务器固定的当前合同 2，合法可选配置缺省正常解析默认值；摘要完整绑定配置，版本、载荷、摘要与原占额原子保存，同键重放复用当前冻结内容。缺省/旧版本持久命令、旧摘要域与配置兼容 reader 已移除；GPU 唯一 Execution、原始 charges 和物理释放退额合同保持。Gov 的新建开关为纯维护闸门，关闭返回 `503 INSTANCE_CREATE_DISABLED`，不降级合同；当前合同的重放和清理继续。旧实例及原账须先经产品路径清理，再关闭新建、升级全部 reader/worker，通过正式消费与门禁后开放。显式迁移为 `20261019090000_instance_contract_version.sql`；权限目录仍先 dry-run 再显式同步，运维映射复用 `instance:create/instance:read`，不自动授予角色或套餐。当前条目只登记本批源码合同，不表示已部署、正式依赖已发布或真实业务验收通过；本任务实际结果仅记 Resource `docs/execution/status.md`。
+
+同一实例详情/列表投影补齐 `networkState/networkReason/networkCleaned/volumeReferencesReleased` 四个安全只读字段（Proto 27–30），沿用当前 read/list 权限。Gov 严格 ProtoJSON 转换须与所固定的正式 Res 版本匹配；新增动态观察不改变 CREATE 摘要，网络、用户卷引用、专属盘、计算和原账清理分别展示，报文与异步完成条件见上述 HTTP 合同。

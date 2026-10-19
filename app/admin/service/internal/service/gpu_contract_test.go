@@ -1,8 +1,12 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	protocol "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
+	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"math"
@@ -126,5 +130,27 @@ func TestGpuChargesCompleteAndOrderIndependent(t *testing.T) {
 		if e := ValidateGpuCharges(c, invalid); e == nil {
 			t.Fatal("invalid charges")
 		}
+	}
+}
+
+func TestGpuCurrentInstanceContractRejectsRetiredEnvelope(t *testing.T) {
+	plan, _, _ := gpuVector(t)
+	business := instanceSettingsBusiness(t)
+	business.ComputeType = "gpu"
+	business.GpuExecution, business.GpuDisplay = plan.Resolved.Execution, plan.Resolved.Selection
+	payload, err := res.CanonicalBusinessPayloadVersion(business, 2)
+	require.NoError(t, err)
+	sum := sha256.Sum256(payload)
+	command := GpuCanonical{SchemaVersion: 3, InstanceContractVersion: 2, GpuRequest: plan.Request, BusinessPayload: payload, BusinessPayloadDigest: hex.EncodeToString(sum[:]), MeteringVersion: GpuMeteringVersion, QuotaItems: []GpuQuotaItem{{QuotaCode: GpuSharedQuotaCode, Units: 8192}}}
+	raw, err := gpuCanonicalJSON(command)
+	require.NoError(t, err)
+	_, err = DecodeGpuCanonical(raw)
+	require.NoError(t, err)
+	for _, version := range []uint32{0, 1, 3} {
+		command.InstanceContractVersion = version
+		raw, err = gpuCanonicalJSON(command)
+		require.NoError(t, err)
+		_, err = DecodeGpuCanonical(raw)
+		require.Error(t, err)
 	}
 }

@@ -20,6 +20,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	InstanceService_ListMountablePVCs_FullMethodName                = "/admin.service.v1.InstanceService/ListMountablePVCs"
+	InstanceService_GetInstanceConfiguration_FullMethodName         = "/admin.service.v1.InstanceService/GetInstanceConfiguration"
 	InstanceService_QueryInstanceMetrics_FullMethodName             = "/admin.service.v1.InstanceService/QueryInstanceMetrics"
 	InstanceService_GetInstanceLatestMetrics_FullMethodName         = "/admin.service.v1.InstanceService/GetInstanceLatestMetrics"
 	InstanceService_GetInstanceSchedulingSettings_FullMethodName    = "/admin.service.v1.InstanceService/GetInstanceSchedulingSettings"
@@ -50,6 +52,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InstanceServiceClient interface {
+	ListMountablePVCs(ctx context.Context, in *v1.ListMountablePVCsRequest, opts ...grpc.CallOption) (*v1.ListMountablePVCsResponse, error)
+	GetInstanceConfiguration(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceConfiguration, error)
 	QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v1.QueryInstanceMetricsResponse, error)
 	GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceLatestMetricsResponse, error)
 	GetInstanceSchedulingSettings(ctx context.Context, in *v1.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error)
@@ -67,6 +71,8 @@ type InstanceServiceClient interface {
 	AdminUpdatePreset(ctx context.Context, in *v1.UpdatePresetRequest, opts ...grpc.CallOption) (*v1.Preset, error)
 	AdminSetPresetEnabled(ctx context.Context, in *v1.SetPresetEnabledRequest, opts ...grpc.CallOption) (*v1.Preset, error)
 	AdminDeletePreset(ctx context.Context, in *v1.PresetRequest, opts ...grpc.CallOption) (*v1.Empty, error)
+	// 创建使用服务器固定的当前配置合同 2；可选配置省略时正常解析默认值。
+	// 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
 	CreateInstance(ctx context.Context, in *v1.CreateInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
 	ListInstances(ctx context.Context, in *v1.ListInstancesRequest, opts ...grpc.CallOption) (*v1.ListInstancesResponse, error)
 	GetInstance(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.Instance, error)
@@ -84,6 +90,26 @@ type instanceServiceClient struct {
 
 func NewInstanceServiceClient(cc grpc.ClientConnInterface) InstanceServiceClient {
 	return &instanceServiceClient{cc}
+}
+
+func (c *instanceServiceClient) ListMountablePVCs(ctx context.Context, in *v1.ListMountablePVCsRequest, opts ...grpc.CallOption) (*v1.ListMountablePVCsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListMountablePVCsResponse)
+	err := c.cc.Invoke(ctx, InstanceService_ListMountablePVCs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *instanceServiceClient) GetInstanceConfiguration(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceConfiguration, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InstanceConfiguration)
+	err := c.cc.Invoke(ctx, InstanceService_GetInstanceConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *instanceServiceClient) QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v1.QueryInstanceMetricsResponse, error) {
@@ -339,6 +365,8 @@ func (c *instanceServiceClient) ExecInstance(ctx context.Context, in *v1.ExecIns
 // All implementations must embed UnimplementedInstanceServiceServer
 // for forward compatibility.
 type InstanceServiceServer interface {
+	ListMountablePVCs(context.Context, *v1.ListMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error)
+	GetInstanceConfiguration(context.Context, *v1.GetInstanceRequest) (*v1.InstanceConfiguration, error)
 	QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error)
 	GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error)
 	GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
@@ -356,6 +384,8 @@ type InstanceServiceServer interface {
 	AdminUpdatePreset(context.Context, *v1.UpdatePresetRequest) (*v1.Preset, error)
 	AdminSetPresetEnabled(context.Context, *v1.SetPresetEnabledRequest) (*v1.Preset, error)
 	AdminDeletePreset(context.Context, *v1.PresetRequest) (*v1.Empty, error)
+	// 创建使用服务器固定的当前配置合同 2；可选配置省略时正常解析默认值。
+	// 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
 	CreateInstance(context.Context, *v1.CreateInstanceRequest) (*v1.Acceptance, error)
 	ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error)
 	GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.Instance, error)
@@ -375,6 +405,12 @@ type InstanceServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedInstanceServiceServer struct{}
 
+func (UnimplementedInstanceServiceServer) ListMountablePVCs(context.Context, *v1.ListMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMountablePVCs not implemented")
+}
+func (UnimplementedInstanceServiceServer) GetInstanceConfiguration(context.Context, *v1.GetInstanceRequest) (*v1.InstanceConfiguration, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInstanceConfiguration not implemented")
+}
 func (UnimplementedInstanceServiceServer) QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method QueryInstanceMetrics not implemented")
 }
@@ -466,6 +502,42 @@ func RegisterInstanceServiceServer(s grpc.ServiceRegistrar, srv InstanceServiceS
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&InstanceService_ServiceDesc, srv)
+}
+
+func _InstanceService_ListMountablePVCs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListMountablePVCsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InstanceServiceServer).ListMountablePVCs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InstanceService_ListMountablePVCs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InstanceServiceServer).ListMountablePVCs(ctx, req.(*v1.ListMountablePVCsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InstanceService_GetInstanceConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InstanceServiceServer).GetInstanceConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InstanceService_GetInstanceConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InstanceServiceServer).GetInstanceConfiguration(ctx, req.(*v1.GetInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_QueryInstanceMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -900,6 +972,14 @@ var InstanceService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.InstanceService",
 	HandlerType: (*InstanceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListMountablePVCs",
+			Handler:    _InstanceService_ListMountablePVCs_Handler,
+		},
+		{
+			MethodName: "GetInstanceConfiguration",
+			Handler:    _InstanceService_GetInstanceConfiguration_Handler,
+		},
 		{
 			MethodName: "QueryInstanceMetrics",
 			Handler:    _InstanceService_QueryInstanceMetrics_Handler,

@@ -48,7 +48,7 @@ func instanceCall[T any](c *InstanceClient, ctx context.Context, tenant, actor s
 }
 func (c *InstanceClient) Resolve(ctx context.Context, t, a string, r *pb.CreateInstanceData, defaults *pb.SchedulingOptions) (*pb.CreateSpec, error) {
 	return instanceCall(c, ctx, t, a, func(ctx context.Context) (*pb.CreateSpec, error) {
-		return c.client.ResolveCreateSpec(ctx, &pb.ResolveCreateSpecRequest{TenantId: t, Data: r, SchedulingDefaults: defaults})
+		return c.client.ResolveCreateSpec(ctx, &pb.ResolveCreateSpecRequest{TenantId: t, Data: r, SchedulingDefaults: defaults, InstanceContractVersion: CurrentInstanceContractVersion})
 	})
 }
 
@@ -117,5 +117,19 @@ func (c *InstanceClient) Presets(ctx context.Context, t, a string, r *pb.ListPre
 func (c *InstanceClient) Target(ctx context.Context, t, a, id string, version int64) (*terminal.TerminalTarget, error) {
 	return instanceCall(c, ctx, t, a, func(ctx context.Context) (*terminal.TerminalTarget, error) {
 		return c.client.ResolveTerminalTarget(ctx, &pb.ResolveTerminalTargetRequest{TenantId: t, InstanceId: id, ExpectedVersion: version})
+	})
+}
+
+func (c *InstanceClient) MountablePVCs(ctx context.Context, tenant, actor string, request *pb.ListMountablePVCsRequest) (*pb.ListMountablePVCsResponse, error) {
+	if request == nil || request.TenantId != tenant {
+		return nil, status.Error(codes.InvalidArgument, "INVALID_INSTANCE_REQUEST")
+	}
+	return instanceCall(c, ctx, tenant, actor, func(ctx context.Context) (*pb.ListMountablePVCsResponse, error) {
+		return c.client.ListMountablePVCs(ctx, request)
+	})
+}
+func (c *InstanceClient) Configuration(ctx context.Context, tenant, actor, id string) (*pb.InstanceConfiguration, error) {
+	return instanceCall(c, ctx, tenant, actor, func(ctx context.Context) (*pb.InstanceConfiguration, error) {
+		return c.client.GetInstanceConfiguration(ctx, &pb.GetInstanceRequest{TenantId: tenant, InstanceId: id})
 	})
 }

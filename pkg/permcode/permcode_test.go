@@ -38,6 +38,43 @@ func TestResolveAuthoritativeCodes(t *testing.T) {
 	}
 }
 
+func TestInstanceConfigurationRoutePermissions(t *testing.T) {
+	for _, route := range []struct {
+		path string
+		code string
+	}{
+		{"/api/v1/instances/mountable-pvcs", "instance:create"},
+		{"/api/v1/instances/{instance_id}/configuration", "instance:read"},
+	} {
+		t.Run(route.path, func(t *testing.T) {
+			exp, err := Resolve("GET", route.path)
+			if err != nil {
+				t.Fatalf("registered instance route must resolve for permissions-align: %v", err)
+			}
+			if exp.Code != route.code || exp.Source != SourceCapability || exp.BusinessModule != "INSTANCE" || exp.ScopeKind != "tenant" {
+				t.Fatalf("instance configuration route must reuse its existing tenant grant: %+v", exp)
+			}
+		})
+	}
+}
+
+func TestInstanceMetricsRoutePermissions(t *testing.T) {
+	for _, route := range []struct{ method, path string }{
+		{"POST", "/api/v1/instances/{instance_id}/metrics/query"},
+		{"GET", "/api/v1/instances/{instance_id}/metrics/latest"},
+	} {
+		t.Run(route.method+" "+route.path, func(t *testing.T) {
+			exp, err := Resolve(route.method, route.path)
+			if err != nil {
+				t.Fatalf("registered metrics route must resolve for permissions-align: %v", err)
+			}
+			if exp.Code != "instance:read" || exp.Source != SourceCapability || exp.BusinessModule != "INSTANCE" || exp.ScopeKind != "tenant" {
+				t.Fatalf("metrics route must reuse the existing tenant read grant: %+v", exp)
+			}
+		})
+	}
+}
+
 // TestResolveMissing 未命中且非豁免时返回 MissingError（对齐入口据此整批拒绝）。
 func TestResolveMissing(t *testing.T) {
 	_, err := Resolve("GET", "/api/v1/admin/not-registered")
@@ -77,8 +114,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 109 {
-		t.Errorf("CapabilityCount() = %d, want 109", CapabilityCount())
+	if CapabilityCount() != 113 {
+		t.Errorf("CapabilityCount() = %d, want 113", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
