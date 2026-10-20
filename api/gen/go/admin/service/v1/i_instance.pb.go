@@ -8,7 +8,6 @@ package adminpb
 
 import (
 	_ "github.com/google/gnostic/openapiv3"
-	v11 "go-wind-admin/api/gen/go/compute/service/v1"
 	v1 "go-wind-admin/api/gen/go/instance/service/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -28,7 +27,7 @@ var File_admin_service_v1_i_instance_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_instance_proto_rawDesc = "" +
 	"\n" +
-	"!admin/service/v1/i_instance.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\"instance/service/v1/instance.proto\x1a compute/service/v1/compute.proto2\xd1\x1b\n" +
+	"!admin/service/v1/i_instance.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\"instance/service/v1/instance.proto2\xc6\x1a\n" +
 	"\x0fInstanceService\x12\x9c\x01\n" +
 	"\x11ListMountablePVCs\x12-.instance.service.v1.ListMountablePVCsRequest\x1a..instance.service.v1.ListMountablePVCsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/instances/mountable-pvcs\x12\xa6\x01\n" +
 	"\x18GetInstanceConfiguration\x12'.instance.service.v1.GetInstanceRequest\x1a*.instance.service.v1.InstanceConfiguration\"5\x82\xd3\xe4\x93\x02/\x12-/api/v1/instances/{instance_id}/configuration\x12\xb5\x01\n" +
@@ -75,8 +74,7 @@ const file_admin_service_v1_i_instance_proto_rawDesc = "" +
 	"\x10application/json\x12%\n" +
 	"#\x12!\n" +
 	"\x1f#/components/schemas/Acceptance\x82\xd3\xe4\x93\x02):\x01**$/api/v1/instances/{data.instance_id}\x12\x94\x01\n" +
-	"\x14GetInstanceOperation\x12(.instance.service.v1.GetOperationRequest\x1a\x1e.instance.service.v1.Operation\"2\x82\xd3\xe4\x93\x02,\x12*/api/v1/instance-operations/{operation_id}\x12\x88\x01\n" +
-	"\x13ListInstancePresets\x12&.compute.service.v1.ListPresetsRequest\x1a'.compute.service.v1.ListPresetsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v1/instance-presets\x12\xfb\x01\n" +
+	"\x14GetInstanceOperation\x12(.instance.service.v1.GetOperationRequest\x1a\x1e.instance.service.v1.Operation\"2\x82\xd3\xe4\x93\x02,\x12*/api/v1/instance-operations/{operation_id}\x12\xfb\x01\n" +
 	"\fExecInstance\x12(.instance.service.v1.ExecInstanceRequest\x1a).instance.service.v1.ExecInstanceResponse\"\x95\x01\xbaG^B\\\x12Z\n" +
 	"\x03202\x12S\n" +
 	"Q\n" +
@@ -100,23 +98,21 @@ var file_admin_service_v1_i_instance_proto_goTypes = []any{
 	(*v1.ListInstancesRequest)(nil),                    // 9: instance.service.v1.ListInstancesRequest
 	(*v1.ChangeInstanceRequest)(nil),                   // 10: instance.service.v1.ChangeInstanceRequest
 	(*v1.GetOperationRequest)(nil),                     // 11: instance.service.v1.GetOperationRequest
-	(*v11.ListPresetsRequest)(nil),                     // 12: compute.service.v1.ListPresetsRequest
-	(*v1.ExecInstanceRequest)(nil),                     // 13: instance.service.v1.ExecInstanceRequest
-	(*v1.ListMountablePVCsResponse)(nil),               // 14: instance.service.v1.ListMountablePVCsResponse
-	(*v1.InstanceConfiguration)(nil),                   // 15: instance.service.v1.InstanceConfiguration
-	(*v1.QueryInstanceMetricsResponse)(nil),            // 16: instance.service.v1.QueryInstanceMetricsResponse
-	(*v1.GetInstanceLatestMetricsResponse)(nil),        // 17: instance.service.v1.GetInstanceLatestMetricsResponse
-	(*v1.InstanceSchedulingSettings)(nil),              // 18: instance.service.v1.InstanceSchedulingSettings
-	(*v1.SchedulerConfig)(nil),                         // 19: instance.service.v1.SchedulerConfig
-	(*v1.InstanceRuntime)(nil),                         // 20: instance.service.v1.InstanceRuntime
-	(*v1.InstanceEvents)(nil),                          // 21: instance.service.v1.InstanceEvents
-	(*v1.InstanceLogFrame)(nil),                        // 22: instance.service.v1.InstanceLogFrame
-	(*v1.Acceptance)(nil),                              // 23: instance.service.v1.Acceptance
-	(*v1.ListInstancesResponse)(nil),                   // 24: instance.service.v1.ListInstancesResponse
-	(*v1.Instance)(nil),                                // 25: instance.service.v1.Instance
-	(*v1.Operation)(nil),                               // 26: instance.service.v1.Operation
-	(*v11.ListPresetsResponse)(nil),                    // 27: compute.service.v1.ListPresetsResponse
-	(*v1.ExecInstanceResponse)(nil),                    // 28: instance.service.v1.ExecInstanceResponse
+	(*v1.ExecInstanceRequest)(nil),                     // 12: instance.service.v1.ExecInstanceRequest
+	(*v1.ListMountablePVCsResponse)(nil),               // 13: instance.service.v1.ListMountablePVCsResponse
+	(*v1.InstanceConfiguration)(nil),                   // 14: instance.service.v1.InstanceConfiguration
+	(*v1.QueryInstanceMetricsResponse)(nil),            // 15: instance.service.v1.QueryInstanceMetricsResponse
+	(*v1.GetInstanceLatestMetricsResponse)(nil),        // 16: instance.service.v1.GetInstanceLatestMetricsResponse
+	(*v1.InstanceSchedulingSettings)(nil),              // 17: instance.service.v1.InstanceSchedulingSettings
+	(*v1.SchedulerConfig)(nil),                         // 18: instance.service.v1.SchedulerConfig
+	(*v1.InstanceRuntime)(nil),                         // 19: instance.service.v1.InstanceRuntime
+	(*v1.InstanceEvents)(nil),                          // 20: instance.service.v1.InstanceEvents
+	(*v1.InstanceLogFrame)(nil),                        // 21: instance.service.v1.InstanceLogFrame
+	(*v1.Acceptance)(nil),                              // 22: instance.service.v1.Acceptance
+	(*v1.ListInstancesResponse)(nil),                   // 23: instance.service.v1.ListInstancesResponse
+	(*v1.Instance)(nil),                                // 24: instance.service.v1.Instance
+	(*v1.Operation)(nil),                               // 25: instance.service.v1.Operation
+	(*v1.ExecInstanceResponse)(nil),                    // 26: instance.service.v1.ExecInstanceResponse
 }
 var file_admin_service_v1_i_instance_proto_depIdxs = []int32{
 	0,  // 0: admin.service.v1.InstanceService.ListMountablePVCs:input_type -> instance.service.v1.ListMountablePVCsRequest
@@ -137,30 +133,28 @@ var file_admin_service_v1_i_instance_proto_depIdxs = []int32{
 	10, // 15: admin.service.v1.InstanceService.StopInstance:input_type -> instance.service.v1.ChangeInstanceRequest
 	10, // 16: admin.service.v1.InstanceService.DeleteInstance:input_type -> instance.service.v1.ChangeInstanceRequest
 	11, // 17: admin.service.v1.InstanceService.GetInstanceOperation:input_type -> instance.service.v1.GetOperationRequest
-	12, // 18: admin.service.v1.InstanceService.ListInstancePresets:input_type -> compute.service.v1.ListPresetsRequest
-	13, // 19: admin.service.v1.InstanceService.ExecInstance:input_type -> instance.service.v1.ExecInstanceRequest
-	14, // 20: admin.service.v1.InstanceService.ListMountablePVCs:output_type -> instance.service.v1.ListMountablePVCsResponse
-	15, // 21: admin.service.v1.InstanceService.GetInstanceConfiguration:output_type -> instance.service.v1.InstanceConfiguration
-	16, // 22: admin.service.v1.InstanceService.QueryInstanceMetrics:output_type -> instance.service.v1.QueryInstanceMetricsResponse
-	17, // 23: admin.service.v1.InstanceService.GetInstanceLatestMetrics:output_type -> instance.service.v1.GetInstanceLatestMetricsResponse
-	18, // 24: admin.service.v1.InstanceService.GetInstanceSchedulingSettings:output_type -> instance.service.v1.InstanceSchedulingSettings
-	18, // 25: admin.service.v1.InstanceService.UpdateInstanceSchedulingSettings:output_type -> instance.service.v1.InstanceSchedulingSettings
-	19, // 26: admin.service.v1.InstanceService.GetSchedulerConfig:output_type -> instance.service.v1.SchedulerConfig
-	19, // 27: admin.service.v1.InstanceService.UpdateSchedulerConfig:output_type -> instance.service.v1.SchedulerConfig
-	20, // 28: admin.service.v1.InstanceService.GetInstanceRuntime:output_type -> instance.service.v1.InstanceRuntime
-	21, // 29: admin.service.v1.InstanceService.ListInstanceEvents:output_type -> instance.service.v1.InstanceEvents
-	22, // 30: admin.service.v1.InstanceService.StreamInstanceLogs:output_type -> instance.service.v1.InstanceLogFrame
-	23, // 31: admin.service.v1.InstanceService.CreateInstance:output_type -> instance.service.v1.Acceptance
-	24, // 32: admin.service.v1.InstanceService.ListInstances:output_type -> instance.service.v1.ListInstancesResponse
-	25, // 33: admin.service.v1.InstanceService.GetInstance:output_type -> instance.service.v1.Instance
-	23, // 34: admin.service.v1.InstanceService.StartInstance:output_type -> instance.service.v1.Acceptance
-	23, // 35: admin.service.v1.InstanceService.StopInstance:output_type -> instance.service.v1.Acceptance
-	23, // 36: admin.service.v1.InstanceService.DeleteInstance:output_type -> instance.service.v1.Acceptance
-	26, // 37: admin.service.v1.InstanceService.GetInstanceOperation:output_type -> instance.service.v1.Operation
-	27, // 38: admin.service.v1.InstanceService.ListInstancePresets:output_type -> compute.service.v1.ListPresetsResponse
-	28, // 39: admin.service.v1.InstanceService.ExecInstance:output_type -> instance.service.v1.ExecInstanceResponse
-	20, // [20:40] is the sub-list for method output_type
-	0,  // [0:20] is the sub-list for method input_type
+	12, // 18: admin.service.v1.InstanceService.ExecInstance:input_type -> instance.service.v1.ExecInstanceRequest
+	13, // 19: admin.service.v1.InstanceService.ListMountablePVCs:output_type -> instance.service.v1.ListMountablePVCsResponse
+	14, // 20: admin.service.v1.InstanceService.GetInstanceConfiguration:output_type -> instance.service.v1.InstanceConfiguration
+	15, // 21: admin.service.v1.InstanceService.QueryInstanceMetrics:output_type -> instance.service.v1.QueryInstanceMetricsResponse
+	16, // 22: admin.service.v1.InstanceService.GetInstanceLatestMetrics:output_type -> instance.service.v1.GetInstanceLatestMetricsResponse
+	17, // 23: admin.service.v1.InstanceService.GetInstanceSchedulingSettings:output_type -> instance.service.v1.InstanceSchedulingSettings
+	17, // 24: admin.service.v1.InstanceService.UpdateInstanceSchedulingSettings:output_type -> instance.service.v1.InstanceSchedulingSettings
+	18, // 25: admin.service.v1.InstanceService.GetSchedulerConfig:output_type -> instance.service.v1.SchedulerConfig
+	18, // 26: admin.service.v1.InstanceService.UpdateSchedulerConfig:output_type -> instance.service.v1.SchedulerConfig
+	19, // 27: admin.service.v1.InstanceService.GetInstanceRuntime:output_type -> instance.service.v1.InstanceRuntime
+	20, // 28: admin.service.v1.InstanceService.ListInstanceEvents:output_type -> instance.service.v1.InstanceEvents
+	21, // 29: admin.service.v1.InstanceService.StreamInstanceLogs:output_type -> instance.service.v1.InstanceLogFrame
+	22, // 30: admin.service.v1.InstanceService.CreateInstance:output_type -> instance.service.v1.Acceptance
+	23, // 31: admin.service.v1.InstanceService.ListInstances:output_type -> instance.service.v1.ListInstancesResponse
+	24, // 32: admin.service.v1.InstanceService.GetInstance:output_type -> instance.service.v1.Instance
+	22, // 33: admin.service.v1.InstanceService.StartInstance:output_type -> instance.service.v1.Acceptance
+	22, // 34: admin.service.v1.InstanceService.StopInstance:output_type -> instance.service.v1.Acceptance
+	22, // 35: admin.service.v1.InstanceService.DeleteInstance:output_type -> instance.service.v1.Acceptance
+	25, // 36: admin.service.v1.InstanceService.GetInstanceOperation:output_type -> instance.service.v1.Operation
+	26, // 37: admin.service.v1.InstanceService.ExecInstance:output_type -> instance.service.v1.ExecInstanceResponse
+	19, // [19:38] is the sub-list for method output_type
+	0,  // [0:19] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

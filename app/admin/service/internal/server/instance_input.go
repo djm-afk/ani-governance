@@ -180,6 +180,9 @@ func decodeInstanceQuery(r *http.Request, message proto.Message) error {
 		for _, k := range []string{"page", "pageSize", "name", "code", "compute_type", "gpu_mode"} {
 			allowed[k] = true
 		}
+		if _, tenant := message.(*computeview.ListPresetsRequest); tenant {
+			allowed["usage"] = true
+		}
 		if _, admin := message.(*computeview.AdminListPresetsRequest); admin {
 			allowed["enabled"] = true
 		}
@@ -187,6 +190,16 @@ func decodeInstanceQuery(r *http.Request, message proto.Message) error {
 	values, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
 		return invalid
+	}
+	if _, tenant := message.(*computeview.ListPresetsRequest); tenant {
+		if len(values["usage"]) != 1 {
+			return invalid
+		}
+		switch values.Get("usage") {
+		case "CONTAINER_INSTANCE", "TRAINING", "INFERENCE":
+		default:
+			return invalid
+		}
 	}
 	object := map[string]any{}
 	for field, values := range values {
@@ -201,6 +214,8 @@ func decodeInstanceQuery(r *http.Request, message proto.Message) error {
 				return invalid
 			}
 			object[field] = uint32(n)
+		case "usage":
+			object[field] = value
 		case "instance_kind":
 			if value != "container" {
 				return invalid

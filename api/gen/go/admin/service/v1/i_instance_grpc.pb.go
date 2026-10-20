@@ -8,7 +8,6 @@ package adminpb
 
 import (
 	context "context"
-	v11 "go-wind-admin/api/gen/go/compute/service/v1"
 	v1 "go-wind-admin/api/gen/go/instance/service/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -39,7 +38,6 @@ const (
 	InstanceService_StopInstance_FullMethodName                     = "/admin.service.v1.InstanceService/StopInstance"
 	InstanceService_DeleteInstance_FullMethodName                   = "/admin.service.v1.InstanceService/DeleteInstance"
 	InstanceService_GetInstanceOperation_FullMethodName             = "/admin.service.v1.InstanceService/GetInstanceOperation"
-	InstanceService_ListInstancePresets_FullMethodName              = "/admin.service.v1.InstanceService/ListInstancePresets"
 	InstanceService_ExecInstance_FullMethodName                     = "/admin.service.v1.InstanceService/ExecInstance"
 )
 
@@ -69,7 +67,6 @@ type InstanceServiceClient interface {
 	StopInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
 	DeleteInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
 	GetInstanceOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...grpc.CallOption) (*v1.Operation, error)
-	ListInstancePresets(ctx context.Context, in *v11.ListPresetsRequest, opts ...grpc.CallOption) (*v11.ListPresetsResponse, error)
 	ExecInstance(ctx context.Context, in *v1.ExecInstanceRequest, opts ...grpc.CallOption) (*v1.ExecInstanceResponse, error)
 }
 
@@ -270,16 +267,6 @@ func (c *instanceServiceClient) GetInstanceOperation(ctx context.Context, in *v1
 	return out, nil
 }
 
-func (c *instanceServiceClient) ListInstancePresets(ctx context.Context, in *v11.ListPresetsRequest, opts ...grpc.CallOption) (*v11.ListPresetsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.ListPresetsResponse)
-	err := c.cc.Invoke(ctx, InstanceService_ListInstancePresets_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *instanceServiceClient) ExecInstance(ctx context.Context, in *v1.ExecInstanceRequest, opts ...grpc.CallOption) (*v1.ExecInstanceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ExecInstanceResponse)
@@ -316,7 +303,6 @@ type InstanceServiceServer interface {
 	StopInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
 	DeleteInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
 	GetInstanceOperation(context.Context, *v1.GetOperationRequest) (*v1.Operation, error)
-	ListInstancePresets(context.Context, *v11.ListPresetsRequest) (*v11.ListPresetsResponse, error)
 	ExecInstance(context.Context, *v1.ExecInstanceRequest) (*v1.ExecInstanceResponse, error)
 	mustEmbedUnimplementedInstanceServiceServer()
 }
@@ -381,9 +367,6 @@ func (UnimplementedInstanceServiceServer) DeleteInstance(context.Context, *v1.Ch
 }
 func (UnimplementedInstanceServiceServer) GetInstanceOperation(context.Context, *v1.GetOperationRequest) (*v1.Operation, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceOperation not implemented")
-}
-func (UnimplementedInstanceServiceServer) ListInstancePresets(context.Context, *v11.ListPresetsRequest) (*v11.ListPresetsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListInstancePresets not implemented")
 }
 func (UnimplementedInstanceServiceServer) ExecInstance(context.Context, *v1.ExecInstanceRequest) (*v1.ExecInstanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecInstance not implemented")
@@ -726,24 +709,6 @@ func _InstanceService_GetInstanceOperation_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InstanceService_ListInstancePresets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ListPresetsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InstanceServiceServer).ListInstancePresets(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: InstanceService_ListInstancePresets_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).ListInstancePresets(ctx, req.(*v11.ListPresetsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _InstanceService_ExecInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.ExecInstanceRequest)
 	if err := dec(in); err != nil {
@@ -836,10 +801,6 @@ var InstanceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInstanceOperation",
 			Handler:    _InstanceService_GetInstanceOperation_Handler,
-		},
-		{
-			MethodName: "ListInstancePresets",
-			Handler:    _InstanceService_ListInstancePresets_Handler,
 		},
 		{
 			MethodName: "ExecInstance",

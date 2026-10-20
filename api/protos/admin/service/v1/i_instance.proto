@@ -3,7 +3,6 @@ package admin.service.v1;
 import "google/api/annotations.proto";
 import "gnostic/openapi/v3/annotations.proto";
 import "instance/service/v1/instance.proto";
-import "compute/service/v1/compute.proto";
 
 service InstanceService {
  rpc ListMountablePVCs(instance.service.v1.ListMountablePVCsRequest) returns(instance.service.v1.ListMountablePVCsResponse) { option(google.api.http)={get:"/api/v1/instances/mountable-pvcs"}; }
@@ -28,6 +27,5 @@ service InstanceService {
  rpc StopInstance(instance.service.v1.ChangeInstanceRequest) returns(instance.service.v1.Acceptance) { option (gnostic.openapi.v3.operation) = { responses: { response_or_reference: [{ name: "202" value: { response: { description: "Accepted" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/Acceptance" } } } }] } } } }] } }; option(google.api.http)={post:"/api/v1/instances/{data.instance_id}:stop" body:"*"}; }
  rpc DeleteInstance(instance.service.v1.ChangeInstanceRequest) returns(instance.service.v1.Acceptance) { option (gnostic.openapi.v3.operation) = { responses: { response_or_reference: [{ name: "202" value: { response: { description: "Accepted" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/Acceptance" } } } }] } } } }] } }; option(google.api.http)={delete:"/api/v1/instances/{data.instance_id}" body:"*"}; }
  rpc GetInstanceOperation(instance.service.v1.GetOperationRequest) returns(instance.service.v1.Operation) { option(google.api.http)={get:"/api/v1/instance-operations/{operation_id}"}; }
- rpc ListInstancePresets(compute.service.v1.ListPresetsRequest) returns(compute.service.v1.ListPresetsResponse) { option(google.api.http)={get:"/api/v1/instance-presets"}; }
  rpc ExecInstance(instance.service.v1.ExecInstanceRequest) returns(instance.service.v1.ExecInstanceResponse) { option (gnostic.openapi.v3.operation) = { responses: { response_or_reference: [{ name: "202" value: { response: { description: "Accepted" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/ExecInstanceResponse" } } } }] } } } }] } }; option(google.api.http)={post:"/api/v1/instances/{data.instance_id}/exec" body:"*"}; }
 }

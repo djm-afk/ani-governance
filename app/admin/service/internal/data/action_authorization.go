@@ -35,6 +35,10 @@ func NewActionAuthorizationRepo(c *entCrud.EntClient[*ent.Client]) *ActionAuthor
 // Check current tenant, membership, role, plan and the exact route grant in one
 // repeatable-read snapshot before a business command can read its replay key.
 func (r *ActionAuthorizationRepo) authorizeRoute(ctx context.Context, tenantID, userID uint32, path, module, method string) (result error) {
+	return r.authorizeRouteGrant(ctx, tenantID, userID, path, module, module, method, "")
+}
+
+func (r *ActionAuthorizationRepo) authorizeRouteGrant(ctx context.Context, tenantID, userID uint32, path, module, apiModule, method, code string) (result error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -112,7 +116,11 @@ func (r *ActionAuthorizationRepo) authorizeRoute(ctx context.Context, tenantID, 
 	if len(permissionIDs) == 0 {
 		return ErrActionAuthorizationDenied
 	}
-	permissionIDs, err = tx.Permission.Query().Where(permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil()).IDs(ctx)
+	permissions := tx.Permission.Query().Where(permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil())
+	if code != "" {
+		permissions.Where(permission.CodeEQ(code))
+	}
+	permissionIDs, err = permissions.IDs(ctx)
 	if err != nil {
 		return ErrActionAuthorizationUnavailable
 	}
@@ -127,7 +135,7 @@ func (r *ActionAuthorizationRepo) authorizeRoute(ctx context.Context, tenantID, 
 	if len(apiIDs) == 0 {
 		return ErrActionAuthorizationDenied
 	}
-	allowed, err = tx.Api.Query().Where(api.IDIn(apiIDs...), api.StatusEQ(api.StatusOn), api.DeletedAtIsNil(), api.ScopeEQ(api.ScopeAdmin), api.BusinessModuleEQ(api.BusinessModule(module)), api.PathEQ(path), api.MethodEQ(method)).Exist(ctx)
+	allowed, err = tx.Api.Query().Where(api.IDIn(apiIDs...), api.StatusEQ(api.StatusOn), api.DeletedAtIsNil(), api.ScopeEQ(api.ScopeAdmin), api.BusinessModuleEQ(api.BusinessModule(apiModule)), api.PathEQ(path), api.MethodEQ(method)).Exist(ctx)
 	if err != nil {
 		return ErrActionAuthorizationUnavailable
 	}

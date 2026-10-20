@@ -104,6 +104,33 @@ SELECT setval(pg_get_serial_sequence('sys_permissions','id'),200,true),
 		require.NoError(t, db.QueryRowContext(ctx, query).Scan(&got))
 		require.Equal(t, want, got)
 	}
+	t.Run("unified catalog preserves grants and rolls back conflicts", func(t *testing.T) {
+		seed()
+		require.NoError(t, exec("UPDATE sys_permissions SET status='OFF',description='retain restriction' WHERE id=91; UPDATE sys_apis SET status='OFF' WHERE id=91"))
+		stable := func() string {
+			var result string
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT jsonb_build_object('permission',(SELECT to_jsonb(p) FROM sys_permissions p WHERE id=91),'roles',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM sys_role_permissions p),'plans',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM sys_plan_modules p),'mapping',(SELECT to_jsonb(p) FROM sys_permission_apis p WHERE id=91))::text`).Scan(&result))
+			return result
+		}
+		before := stable()
+		forward, restore := read("migrate-compute-catalog-route.sql"), read("restore-instance-catalog-route.sql")
+		require.NoError(t, exec(forward))
+		require.Equal(t, before, stable())
+		count("SELECT count(*) FROM sys_apis WHERE id=91 AND path='/api/v1/compute-presets' AND module='ComputePresetService' AND business_module='SYSTEM' AND status='OFF'", 1)
+		count("SELECT count(*) FROM sys_apis WHERE path='/api/v1/instance-presets'", 0)
+		count("SELECT count(*) FROM sys_permission_apis WHERE api_id=91", 3)
+		after := snapshot(false)
+		require.NoError(t, exec(forward))
+		require.Equal(t, after, snapshot(false))
+		require.NoError(t, exec(restore))
+		require.Equal(t, before, stable())
+		count("SELECT count(*) FROM sys_permission_apis WHERE api_id=91", 1)
+		count("SELECT count(*) FROM sys_apis WHERE id=91 AND path='/api/v1/instance-presets' AND status='OFF'", 1)
+		require.NoError(t, exec("INSERT INTO sys_apis(path,method,module) VALUES('/api/v1/compute-presets','GET','OtherService')"))
+		after = snapshot(false)
+		require.Error(t, exec(forward))
+		require.Equal(t, after, snapshot(false))
+	})
 	t.Run("preserve IDs grants disabled states restrictions and audit through upgrade recovery and rerun", func(t *testing.T) {
 		seed()
 		before, stable := snapshot(false), snapshot(true)

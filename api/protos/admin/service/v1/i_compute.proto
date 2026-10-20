@@ -5,6 +5,7 @@ import "gnostic/openapi/v3/annotations.proto";
 import "compute/service/v1/compute.proto";
 
 service ComputePresetService {
+ rpc ListPresets(compute.service.v1.ListPresetsRequest) returns(compute.service.v1.ListPresetsResponse) { option(google.api.http)={get:"/api/v1/compute-presets"}; }
  rpc AdminListPresets(compute.service.v1.AdminListPresetsRequest) returns(compute.service.v1.AdminListPresetsResponse) { option(google.api.http)={get:"/api/v1/admin/compute-presets"}; }
  rpc AdminGetPreset(compute.service.v1.PresetRequest) returns(compute.service.v1.Preset) { option(google.api.http)={get:"/api/v1/admin/compute-presets/{id}"}; }
  rpc AdminCreatePreset(compute.service.v1.CreatePresetRequest) returns(compute.service.v1.Preset) { option (gnostic.openapi.v3.operation) = { responses: { response_or_reference: [{ name: "201" value: { response: { description: "Created" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/Preset" } } } }] } } } }] } }; option(google.api.http)={post:"/api/v1/admin/compute-presets" body:"*"}; }

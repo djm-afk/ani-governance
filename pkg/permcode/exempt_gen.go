@@ -7,6 +7,7 @@ var exemptReasons = map[string]string{
 	"GET /api/v1/auth/api-keys":                                 "既有认证/会话域接口（不在权限码范围）",
 	"GET /api/v1/auth/api-keys/{key_id}":                        "既有认证/会话域接口（不在权限码范围）",
 	"GET /api/v1/auth/captcha":                                  "既有认证/会话域接口（不在权限码范围）",
+	"GET /api/v1/compute-presets":                               "业务域接口（不在管理面/六域权限码范围）",
 	"GET /api/v1/events":                                        "特殊传输入口",
 	"GET /api/v1/modeldev/artifacts/{artifact_id}/content":      "业务域接口（不在管理面/六域权限码范围）",
 	"GET /api/v1/modeldev/executions":                           "业务域接口（不在管理面/六域权限码范围）",

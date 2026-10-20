@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
 	"os"
 	"strconv"
@@ -12,12 +11,10 @@ import (
 
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
-	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	terminal "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal/v1"
 	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
 	sessionpb "github.com/zhangzhe-ctrl/ani-session-gateway/api/gen/session/v1"
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
-	computeview "go-wind-admin/api/gen/go/compute/service/v1"
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	quota "go-wind-admin/api/gen/go/quota/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
@@ -454,68 +451,6 @@ func (s *InstanceService) GetInstanceOperation(ctx context.Context, r *view.GetO
 		e = protojson.Unmarshal(raw, out)
 	}
 	return out, e
-}
-func (s *InstanceService) ListInstancePresets(ctx context.Context, r *computeview.ListPresetsRequest) (*computeview.ListPresetsResponse, error) {
-	tenant, actor, e := s.scope(ctx, data.InstancePresetPath, "GET")
-	if e != nil {
-		return nil, e
-	}
-	if s.catalog.Compute == nil {
-		return nil, kratoserrors.ServiceUnavailable("COMPUTE_ADAPTER_UNAVAILABLE", "compute catalog unavailable")
-	}
-	if r == nil {
-		return nil, quota.ErrorInvalidQuotaRequest("%s", "request required")
-	}
-	page, size, e := resolveComputePage(r.Page, r.PageSize)
-	if e != nil {
-		return nil, e
-	}
-	items, e := s.catalog.Compute.ListPresets(ctx, tenant, actor, &compute.ListPresetsRequest{Usage: compute.Usage_CONTAINER_INSTANCE, TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode})
-	if e != nil {
-		return nil, e
-	}
-	if items == nil {
-		return nil, kratoserrors.ServiceUnavailable("INSTANCE_INVALID_RESPONSE", "invalid owner response")
-	}
-	catalogStatus, reason := "OK", ""
-	var profileStates map[string]acc.ProfileState
-	if items.HasGpuCandidates && r.ComputeType != "cpu" {
-		allowed, states, err := s.allowedPresetGPU(ctx, tenant)
-		profileStates = states
-		if err != nil {
-			catalogStatus, reason = "UNAVAILABLE", "GPU_CATALOG_UNAVAILABLE"
-			if errors.Is(err, data.ErrActionAuthorizationDenied) || codes.PermissionDenied == status.Code(err) || codes.Unauthenticated == status.Code(err) {
-				catalogStatus, reason = "NO_PERMISSION", "GPU_CATALOG_NO_PERMISSION"
-			}
-		} else {
-			items, e = s.catalog.Compute.ListPresets(ctx, tenant, actor, &compute.ListPresetsRequest{Usage: compute.Usage_CONTAINER_INSTANCE, TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode, AllowedGpuProfiles: allowed})
-			if e != nil {
-				return nil, e
-			}
-			if items == nil {
-				return nil, kratoserrors.ServiceUnavailable("INSTANCE_INVALID_RESPONSE", "invalid owner response")
-			}
-		}
-	}
-	out := &computeview.ListPresetsResponse{Items: []*computeview.Preset{}, Total: items.Total, GpuCatalogStatus: catalogStatus, GpuCatalogReason: reason}
-	for _, p := range items.Items {
-		item := wireComputePreset(p)
-		if item != nil && p.ComputeType == "gpu" && p.Gpu != nil && item.Enabled {
-			switch profileStates[fmt.Sprintf("%s/%d", p.Gpu.ProfileId, p.Gpu.ProfileVersion)] {
-			case acc.ProfileState_PROFILE_DISABLED:
-				item.Selectable = false
-				item.UnavailableReason = "GPU_PROFILE_DISABLED"
-			case acc.ProfileState_PROFILE_DELETED:
-				item.Selectable = false
-				item.UnavailableReason = "GPU_PROFILE_DELETED"
-			case acc.ProfileState_PROFILE_ACTIVE:
-				item.UnavailableReason = s.presetGPUAvailability(ctx, tenant, p.Gpu)
-				item.Selectable = item.UnavailableReason == ""
-			}
-		}
-		out.Items = append(out.Items, item)
-	}
-	return out, nil
 }
 func (s *InstanceService) ExecInstance(ctx context.Context, r *view.ExecInstanceRequest) (*view.ExecInstanceResponse, error) {
 	if r == nil || r.Data == nil {

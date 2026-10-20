@@ -91,10 +91,19 @@ func TestComputePresetPlatformPermissions(t *testing.T) {
 			}
 		})
 	}
-	exp, err := Resolve("GET", "/api/v1/instance-presets")
-	if err != nil || exp.Code != "instance:preset:read" || exp.BusinessModule != "INSTANCE" || exp.ScopeKind != "tenant" {
-		t.Fatalf("instance catalog capability changed: %+v %v", exp, err)
+	if _, err := Resolve("GET", "/api/v1/instance-presets"); err == nil {
+		t.Fatal("removed route remains in permission table")
 	}
+	for _, usage := range []string{"CONTAINER_INSTANCE", "TRAINING", "INFERENCE"} {
+		module, code, ok := ComputeCatalogGrant(usage)
+		if !ok || module == "" || code == "" {
+			t.Fatal("missing usage grant", usage)
+		}
+	}
+	if _, _, ok := ComputeCatalogGrant(""); ok {
+		t.Fatal("implicit usage grant")
+	}
+
 }
 
 // TestResolveMissing 未命中且非豁免时返回 MissingError（对齐入口据此整批拒绝）。
@@ -136,8 +145,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 180 {
 		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
 	}
-	if CapabilityCount() != 119 {
-		t.Errorf("CapabilityCount() = %d, want 119", CapabilityCount())
+	if CapabilityCount() != 118 {
+		t.Errorf("CapabilityCount() = %d, want 118", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {

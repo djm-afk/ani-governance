@@ -27,8 +27,9 @@ var File_admin_service_v1_i_compute_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_compute_proto_rawDesc = "" +
 	"\n" +
-	" admin/service/v1/i_compute.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a compute/service/v1/compute.proto2\xc2\a\n" +
-	"\x14ComputePresetService\x12\x94\x01\n" +
+	" admin/service/v1/i_compute.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a compute/service/v1/compute.proto2\xc3\b\n" +
+	"\x14ComputePresetService\x12\x7f\n" +
+	"\vListPresets\x12&.compute.service.v1.ListPresetsRequest\x1a'.compute.service.v1.ListPresetsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v1/compute-presets\x12\x94\x01\n" +
 	"\x10AdminListPresets\x12+.compute.service.v1.AdminListPresetsRequest\x1a,.compute.service.v1.AdminListPresetsResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/admin/compute-presets\x12{\n" +
 	"\x0eAdminGetPreset\x12!.compute.service.v1.PresetRequest\x1a\x1a.compute.service.v1.Preset\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/admin/compute-presets/{id}\x12\xd4\x01\n" +
 	"\x11AdminCreatePreset\x12'.compute.service.v1.CreatePresetRequest\x1a\x1a.compute.service.v1.Preset\"z\xbaGOBM\x12K\n" +
@@ -48,30 +49,34 @@ const file_admin_service_v1_i_compute_proto_rawDesc = "" +
 	"\x14com.admin.service.v1B\rIComputeProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var file_admin_service_v1_i_compute_proto_goTypes = []any{
-	(*v1.AdminListPresetsRequest)(nil),  // 0: compute.service.v1.AdminListPresetsRequest
-	(*v1.PresetRequest)(nil),            // 1: compute.service.v1.PresetRequest
-	(*v1.CreatePresetRequest)(nil),      // 2: compute.service.v1.CreatePresetRequest
-	(*v1.UpdatePresetRequest)(nil),      // 3: compute.service.v1.UpdatePresetRequest
-	(*v1.SetPresetEnabledRequest)(nil),  // 4: compute.service.v1.SetPresetEnabledRequest
-	(*v1.AdminListPresetsResponse)(nil), // 5: compute.service.v1.AdminListPresetsResponse
-	(*v1.Preset)(nil),                   // 6: compute.service.v1.Preset
-	(*v1.Empty)(nil),                    // 7: compute.service.v1.Empty
+	(*v1.ListPresetsRequest)(nil),       // 0: compute.service.v1.ListPresetsRequest
+	(*v1.AdminListPresetsRequest)(nil),  // 1: compute.service.v1.AdminListPresetsRequest
+	(*v1.PresetRequest)(nil),            // 2: compute.service.v1.PresetRequest
+	(*v1.CreatePresetRequest)(nil),      // 3: compute.service.v1.CreatePresetRequest
+	(*v1.UpdatePresetRequest)(nil),      // 4: compute.service.v1.UpdatePresetRequest
+	(*v1.SetPresetEnabledRequest)(nil),  // 5: compute.service.v1.SetPresetEnabledRequest
+	(*v1.ListPresetsResponse)(nil),      // 6: compute.service.v1.ListPresetsResponse
+	(*v1.AdminListPresetsResponse)(nil), // 7: compute.service.v1.AdminListPresetsResponse
+	(*v1.Preset)(nil),                   // 8: compute.service.v1.Preset
+	(*v1.Empty)(nil),                    // 9: compute.service.v1.Empty
 }
 var file_admin_service_v1_i_compute_proto_depIdxs = []int32{
-	0, // 0: admin.service.v1.ComputePresetService.AdminListPresets:input_type -> compute.service.v1.AdminListPresetsRequest
-	1, // 1: admin.service.v1.ComputePresetService.AdminGetPreset:input_type -> compute.service.v1.PresetRequest
-	2, // 2: admin.service.v1.ComputePresetService.AdminCreatePreset:input_type -> compute.service.v1.CreatePresetRequest
-	3, // 3: admin.service.v1.ComputePresetService.AdminUpdatePreset:input_type -> compute.service.v1.UpdatePresetRequest
-	4, // 4: admin.service.v1.ComputePresetService.AdminSetPresetEnabled:input_type -> compute.service.v1.SetPresetEnabledRequest
-	1, // 5: admin.service.v1.ComputePresetService.AdminDeletePreset:input_type -> compute.service.v1.PresetRequest
-	5, // 6: admin.service.v1.ComputePresetService.AdminListPresets:output_type -> compute.service.v1.AdminListPresetsResponse
-	6, // 7: admin.service.v1.ComputePresetService.AdminGetPreset:output_type -> compute.service.v1.Preset
-	6, // 8: admin.service.v1.ComputePresetService.AdminCreatePreset:output_type -> compute.service.v1.Preset
-	6, // 9: admin.service.v1.ComputePresetService.AdminUpdatePreset:output_type -> compute.service.v1.Preset
-	6, // 10: admin.service.v1.ComputePresetService.AdminSetPresetEnabled:output_type -> compute.service.v1.Preset
-	7, // 11: admin.service.v1.ComputePresetService.AdminDeletePreset:output_type -> compute.service.v1.Empty
-	6, // [6:12] is the sub-list for method output_type
-	0, // [0:6] is the sub-list for method input_type
+	0, // 0: admin.service.v1.ComputePresetService.ListPresets:input_type -> compute.service.v1.ListPresetsRequest
+	1, // 1: admin.service.v1.ComputePresetService.AdminListPresets:input_type -> compute.service.v1.AdminListPresetsRequest
+	2, // 2: admin.service.v1.ComputePresetService.AdminGetPreset:input_type -> compute.service.v1.PresetRequest
+	3, // 3: admin.service.v1.ComputePresetService.AdminCreatePreset:input_type -> compute.service.v1.CreatePresetRequest
+	4, // 4: admin.service.v1.ComputePresetService.AdminUpdatePreset:input_type -> compute.service.v1.UpdatePresetRequest
+	5, // 5: admin.service.v1.ComputePresetService.AdminSetPresetEnabled:input_type -> compute.service.v1.SetPresetEnabledRequest
+	2, // 6: admin.service.v1.ComputePresetService.AdminDeletePreset:input_type -> compute.service.v1.PresetRequest
+	6, // 7: admin.service.v1.ComputePresetService.ListPresets:output_type -> compute.service.v1.ListPresetsResponse
+	7, // 8: admin.service.v1.ComputePresetService.AdminListPresets:output_type -> compute.service.v1.AdminListPresetsResponse
+	8, // 9: admin.service.v1.ComputePresetService.AdminGetPreset:output_type -> compute.service.v1.Preset
+	8, // 10: admin.service.v1.ComputePresetService.AdminCreatePreset:output_type -> compute.service.v1.Preset
+	8, // 11: admin.service.v1.ComputePresetService.AdminUpdatePreset:output_type -> compute.service.v1.Preset
+	8, // 12: admin.service.v1.ComputePresetService.AdminSetPresetEnabled:output_type -> compute.service.v1.Preset
+	9, // 13: admin.service.v1.ComputePresetService.AdminDeletePreset:output_type -> compute.service.v1.Empty
+	7, // [7:14] is the sub-list for method output_type
+	0, // [0:7] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

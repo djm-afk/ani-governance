@@ -23,7 +23,6 @@ BEGIN
   ('POST','/api/v1/instances/{data.instance_id}:stop','instance:stop'),
   ('DELETE','/api/v1/instances/{data.instance_id}','instance:delete'),
   ('GET','/api/v1/instance-operations/{operation_id}','instance:operation:read'),
-  ('GET','/api/v1/instance-presets','instance:preset:read'),
   ('POST','/api/v1/instances/{data.instance_id}/exec','instance:exec')
  ) AS routes(method,path,code) LOOP
   SELECT count(*),min(id) INTO route_count,aid FROM sys_apis

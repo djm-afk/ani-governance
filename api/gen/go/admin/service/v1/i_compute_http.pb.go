@@ -26,6 +26,7 @@ const OperationComputePresetServiceAdminGetPreset = "/admin.service.v1.ComputePr
 const OperationComputePresetServiceAdminListPresets = "/admin.service.v1.ComputePresetService/AdminListPresets"
 const OperationComputePresetServiceAdminSetPresetEnabled = "/admin.service.v1.ComputePresetService/AdminSetPresetEnabled"
 const OperationComputePresetServiceAdminUpdatePreset = "/admin.service.v1.ComputePresetService/AdminUpdatePreset"
+const OperationComputePresetServiceListPresets = "/admin.service.v1.ComputePresetService/ListPresets"
 
 type ComputePresetServiceHTTPServer interface {
 	AdminCreatePreset(context.Context, *v1.CreatePresetRequest) (*v1.Preset, error)
@@ -34,16 +35,37 @@ type ComputePresetServiceHTTPServer interface {
 	AdminListPresets(context.Context, *v1.AdminListPresetsRequest) (*v1.AdminListPresetsResponse, error)
 	AdminSetPresetEnabled(context.Context, *v1.SetPresetEnabledRequest) (*v1.Preset, error)
 	AdminUpdatePreset(context.Context, *v1.UpdatePresetRequest) (*v1.Preset, error)
+	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 }
 
 func RegisterComputePresetServiceHTTPServer(s *http.Server, srv ComputePresetServiceHTTPServer) {
 	r := s.Route("/")
+	r.GET("/api/v1/compute-presets", _ComputePresetService_ListPresets0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/compute-presets", _ComputePresetService_AdminListPresets0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/compute-presets/{id}", _ComputePresetService_AdminGetPreset0_HTTP_Handler(srv))
 	r.POST("/api/v1/admin/compute-presets", _ComputePresetService_AdminCreatePreset0_HTTP_Handler(srv))
 	r.PATCH("/api/v1/admin/compute-presets/{id}", _ComputePresetService_AdminUpdatePreset0_HTTP_Handler(srv))
 	r.POST("/api/v1/admin/compute-presets/{id}:set-enabled", _ComputePresetService_AdminSetPresetEnabled0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/admin/compute-presets/{id}", _ComputePresetService_AdminDeletePreset0_HTTP_Handler(srv))
+}
+
+func _ComputePresetService_ListPresets0_HTTP_Handler(srv ComputePresetServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListPresetsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationComputePresetServiceListPresets)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListPresets(ctx, req.(*v1.ListPresetsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListPresetsResponse)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _ComputePresetService_AdminListPresets0_HTTP_Handler(srv ComputePresetServiceHTTPServer) func(ctx http.Context) error {
@@ -188,6 +210,7 @@ type ComputePresetServiceHTTPClient interface {
 	AdminListPresets(ctx context.Context, req *v1.AdminListPresetsRequest, opts ...http.CallOption) (rsp *v1.AdminListPresetsResponse, err error)
 	AdminSetPresetEnabled(ctx context.Context, req *v1.SetPresetEnabledRequest, opts ...http.CallOption) (rsp *v1.Preset, err error)
 	AdminUpdatePreset(ctx context.Context, req *v1.UpdatePresetRequest, opts ...http.CallOption) (rsp *v1.Preset, err error)
+	ListPresets(ctx context.Context, req *v1.ListPresetsRequest, opts ...http.CallOption) (rsp *v1.ListPresetsResponse, err error)
 }
 
 type ComputePresetServiceHTTPClientImpl struct {
@@ -270,6 +293,19 @@ func (c *ComputePresetServiceHTTPClientImpl) AdminUpdatePreset(ctx context.Conte
 	opts = append(opts, http.Operation(OperationComputePresetServiceAdminUpdatePreset))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ComputePresetServiceHTTPClientImpl) ListPresets(ctx context.Context, in *v1.ListPresetsRequest, opts ...http.CallOption) (*v1.ListPresetsResponse, error) {
+	var out v1.ListPresetsResponse
+	pattern := "/api/v1/compute-presets"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationComputePresetServiceListPresets))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

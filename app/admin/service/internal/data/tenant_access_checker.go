@@ -20,6 +20,7 @@ import (
 	adminV1 "go-wind-admin/api/gen/go/admin/service/v1"
 	appViewer "go-wind-admin/pkg/entgo/viewer"
 	"go-wind-admin/pkg/middleware/auth"
+	"go-wind-admin/pkg/permcode"
 )
 
 // TenantAccessCheckerImpl 是 TenantAccessChecker 接口的 data 层实现。
@@ -42,6 +43,26 @@ func NewTenantAccessCheckerImpl(
 // CheckTenantAccess 实现 auth.TenantAccessChecker。
 // tenantId 由中间件保证 > 0。
 func (c *TenantAccessCheckerImpl) CheckTenantAccess(ctx context.Context, tenantId uint32, path string, method string) error {
+	return c.checkTenantAccess(ctx, tenantId, path, method, "")
+}
+
+func (c *TenantAccessCheckerImpl) CheckTenantRequestAccess(ctx context.Context, tenantId uint32, path, method string, request any) error {
+	module := ""
+	if path == ComputeCatalogPath && method == "GET" {
+		r, ok := request.(interface{ GetUsage() string })
+		if !ok {
+			return adminV1.ErrorForbidden("access denied")
+		}
+		var valid bool
+		module, _, valid = permcode.ComputeCatalogGrant(r.GetUsage())
+		if !valid {
+			return adminV1.ErrorForbidden("access denied")
+		}
+	}
+	return c.checkTenantAccess(ctx, tenantId, path, method, module)
+}
+
+func (c *TenantAccessCheckerImpl) checkTenantAccess(ctx context.Context, tenantId uint32, path, method, usageModule string) error {
 	sysCtx := appViewer.NewSystemViewerContext(ctx)
 
 	// 1. 查租户状态与到期时间（WithPlan 预载套餐以读取 expiry_policy）
@@ -93,6 +114,16 @@ func (c *TenantAccessCheckerImpl) CheckTenantAccess(ctx context.Context, tenantI
 		return adminV1.ErrorForbidden("access denied")
 	}
 
+	if path == ComputeCatalogPath {
+		if method != "GET" || usageModule == "" || a == nil || a.Status == nil || *a.Status != api.StatusOn || a.DeletedAt != nil || planId == 0 {
+			return adminV1.ErrorForbidden("access denied")
+		}
+		allowed, err := c.entClient.PlanModule.Query().Where(planmodule.HasPlanWith(plan.IDEQ(planId)), planmodule.ModuleEQ(planmodule.Module(usageModule)), planmodule.DeletedAtIsNil()).Exist(sysCtx)
+		if err != nil || !allowed {
+			return adminV1.ErrorForbidden("module not allowed")
+		}
+		return nil
+	}
 	if bizModule == identityV1.Module_MODULE_UNSPECIFIED {
 		// 未归类模块：不在任何白名单内，拒绝。
 		return adminV1.ErrorForbidden("module not allowed")
@@ -163,6 +194,8 @@ func mapProtoModuleToEnt(m identityV1.Module) planmodule.Module {
 		return planmodule.ModuleImage
 	case identityV1.Module_INSTANCE:
 		return planmodule.ModuleInstance
+	case identityV1.Module_INFERENCE:
+		return planmodule.ModuleInference
 	case identityV1.Module_MODEL:
 		return planmodule.ModuleModel
 	default:
@@ -200,6 +233,8 @@ func mapApiBusinessModuleToProto(m api.BusinessModule) identityV1.Module {
 		return identityV1.Module_IMAGE
 	case api.BusinessModuleInstance:
 		return identityV1.Module_INSTANCE
+	case api.BusinessModuleInference:
+		return identityV1.Module_INFERENCE
 	case api.BusinessModuleModel:
 		return identityV1.Module_MODEL
 	default:

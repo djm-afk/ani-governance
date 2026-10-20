@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ComputePresetService_ListPresets_FullMethodName           = "/admin.service.v1.ComputePresetService/ListPresets"
 	ComputePresetService_AdminListPresets_FullMethodName      = "/admin.service.v1.ComputePresetService/AdminListPresets"
 	ComputePresetService_AdminGetPreset_FullMethodName        = "/admin.service.v1.ComputePresetService/AdminGetPreset"
 	ComputePresetService_AdminCreatePreset_FullMethodName     = "/admin.service.v1.ComputePresetService/AdminCreatePreset"
@@ -32,6 +33,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ComputePresetServiceClient interface {
+	ListPresets(ctx context.Context, in *v1.ListPresetsRequest, opts ...grpc.CallOption) (*v1.ListPresetsResponse, error)
 	AdminListPresets(ctx context.Context, in *v1.AdminListPresetsRequest, opts ...grpc.CallOption) (*v1.AdminListPresetsResponse, error)
 	AdminGetPreset(ctx context.Context, in *v1.PresetRequest, opts ...grpc.CallOption) (*v1.Preset, error)
 	AdminCreatePreset(ctx context.Context, in *v1.CreatePresetRequest, opts ...grpc.CallOption) (*v1.Preset, error)
@@ -46,6 +48,16 @@ type computePresetServiceClient struct {
 
 func NewComputePresetServiceClient(cc grpc.ClientConnInterface) ComputePresetServiceClient {
 	return &computePresetServiceClient{cc}
+}
+
+func (c *computePresetServiceClient) ListPresets(ctx context.Context, in *v1.ListPresetsRequest, opts ...grpc.CallOption) (*v1.ListPresetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListPresetsResponse)
+	err := c.cc.Invoke(ctx, ComputePresetService_ListPresets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *computePresetServiceClient) AdminListPresets(ctx context.Context, in *v1.AdminListPresetsRequest, opts ...grpc.CallOption) (*v1.AdminListPresetsResponse, error) {
@@ -112,6 +124,7 @@ func (c *computePresetServiceClient) AdminDeletePreset(ctx context.Context, in *
 // All implementations must embed UnimplementedComputePresetServiceServer
 // for forward compatibility.
 type ComputePresetServiceServer interface {
+	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 	AdminListPresets(context.Context, *v1.AdminListPresetsRequest) (*v1.AdminListPresetsResponse, error)
 	AdminGetPreset(context.Context, *v1.PresetRequest) (*v1.Preset, error)
 	AdminCreatePreset(context.Context, *v1.CreatePresetRequest) (*v1.Preset, error)
@@ -128,6 +141,9 @@ type ComputePresetServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedComputePresetServiceServer struct{}
 
+func (UnimplementedComputePresetServiceServer) ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPresets not implemented")
+}
 func (UnimplementedComputePresetServiceServer) AdminListPresets(context.Context, *v1.AdminListPresetsRequest) (*v1.AdminListPresetsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AdminListPresets not implemented")
 }
@@ -165,6 +181,24 @@ func RegisterComputePresetServiceServer(s grpc.ServiceRegistrar, srv ComputePres
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ComputePresetService_ServiceDesc, srv)
+}
+
+func _ComputePresetService_ListPresets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListPresetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ComputePresetServiceServer).ListPresets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ComputePresetService_ListPresets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ComputePresetServiceServer).ListPresets(ctx, req.(*v1.ListPresetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ComputePresetService_AdminListPresets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -282,6 +316,10 @@ var ComputePresetService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.ComputePresetService",
 	HandlerType: (*ComputePresetServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListPresets",
+			Handler:    _ComputePresetService_ListPresets_Handler,
+		},
 		{
 			MethodName: "AdminListPresets",
 			Handler:    _ComputePresetService_AdminListPresets_Handler,

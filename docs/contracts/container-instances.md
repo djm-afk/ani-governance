@@ -194,3 +194,5 @@ try {
 `log` 数据为 `{text:"..."}`，`end` 为 `{reason:"EOF|TIME_LIMIT|POD_CHANGED"}`，`error` 为稳定脱敏 reason。没有事件 ID 或断点恢复。Bearer 不放 URL。连接有 no-store、flush、关闭代理缓冲和 15 秒注释心跳。默认每帧 16KiB、连接缓冲最多 256KiB、写超时 10 秒、寿命 10 分钟，进程/租户/实例上限 100/10/3。慢客户端终止，断连取消传递到上游，不切换到新 Pod。
 
 非法参数 400，权限 403，不存在 404，幂等/版本冲突 409，PVC 候选目录上限 422，日志连接上限 429，依赖不可用 503；错误体沿现有 code/reason/message/metadata。运行、GPU 硬件、浏览器及现场基线验收以本批执行证据为准。
+
+统一算力目录的必传 usage、三业务权限与旧路由删除约定见[算力目录 HTTP 合同](compute-presets.md)。

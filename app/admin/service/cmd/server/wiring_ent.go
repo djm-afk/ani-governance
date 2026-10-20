@@ -372,18 +372,18 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		instanceSessions = instanceSession
 	}
 	instanceCatalog := service.InstanceCatalogConfig{ClusterID: os.Getenv("ANI_INSTANCE_CLUSTER_ID"), Cluster: instanceCluster, Settings: instanceScheduling}
-	computeCatalog := service.ComputeCatalogConfig{ClusterID: os.Getenv("ANI_INSTANCE_CLUSTER_ID")}
+	computeCatalog := service.ComputeCatalogConfig{ClusterID: os.Getenv("ANI_INSTANCE_CLUSTER_ID"), Resolver: tenantRepo, Authorization: data.NewComputeCatalogAuthorizationRepo(entClient)}
 	var computeClient service.ComputePresetOwner
 	if computeOwner != nil {
 		computeClient = computeOwner
-		instanceCatalog.Compute = computeOwner
+		computeCatalog.Compute = computeOwner
 	}
 	if observabilityClient != nil {
 		instanceCatalog.Monitoring = observabilityClient
 	}
 	if acceleratorClient != nil {
 		computeCatalog.Admin = acceleratorClient.Admin
-		instanceCatalog.Catalog = acceleratorClient.Catalog
+		computeCatalog.Catalog = acceleratorClient.Catalog
 	}
 	instanceService := service.NewInstanceService(instanceAcceptance, instanceBinding, tenantRepo, quotaLedgerRepo, instanceSessions, instanceCatalog)
 	computeService := service.NewComputePresetService(computeClient, computeCatalog)

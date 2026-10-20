@@ -118,7 +118,6 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		"POST " + data.InstanceStopPath:     true,
 		"GET " + data.InstanceGetPath:       true,
 		"GET " + data.InstanceOperationPath: true,
-		"GET " + data.InstancePresetPath:    true,
 		"POST " + data.InstanceExecPath:     true,
 	}
 	routes := 0
@@ -140,7 +139,13 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		require.NoError(t, e)
 		require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(grant.ID).SetAPIID(route.ID).Exec(sys))
 	}
-	require.Equal(t, 9, routes, "all original tenant instance actions must remain registered")
+	require.Equal(t, 8, routes, "instance lifecycle routes remain registered; compute has its own owner")
+	computeRoute, e := c.Client().Api.Create().SetModule("ComputePresetService").SetOperation("ComputePresetService_ListPresets").SetPath(data.ComputeCatalogPath).SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleSystem).SetStatus(api.StatusOn).Save(sys)
+	require.NoError(t, e)
+	computeGrant, e := c.Client().Permission.Create().SetName("instance:preset:read").SetCode("instance:preset:read").SetStatus(permission.StatusOn).Save(sys)
+	require.NoError(t, e)
+	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(computeGrant.ID).SetAPIID(computeRoute.ID).Exec(sys))
+	require.NoError(t, c.Client().RolePermission.Create().SetTenantID(tenant.ID).SetRoleID(currentRole.ID).SetPermissionID(computeGrant.ID).SetStatus(rolepermission.StatusOn).SetEffect(rolepermission.EffectAllow).Exec(sys))
 	catalogRoute, e := c.Client().Api.Query().Where(api.PathEQ("/api/v1/accelerator/profiles"), api.MethodEQ("GET"), api.ScopeEQ(api.ScopeAdmin)).Only(sys)
 	if ent.IsNotFound(e) {
 		catalogRoute, e = c.Client().Api.Create().SetModule("AcceleratorService").SetPath("/api/v1/accelerator/profiles").SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleAccelerator).SetStatus(api.StatusOn).Save(sys)
@@ -208,7 +213,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		t.Cleanup(close)
 		sessions = client
 	}
-	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID, Compute: computeOwner, Catalog: accelerator.Catalog})
+	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID})
 	if lifecycle {
 		sync := service.NewGpuUsageSyncWorker(ledger, accelerator, func(e error) { t.Log("Acc sync attempt failed", e) })
 		require.NoError(t, sync.Start(ctx))
@@ -226,6 +231,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	require.NoError(t, e)
 	server := khttp.NewServer(khttp.Middleware(auth.CredentialHeaders(), auth.Server(auth.WithAccessTokenChecker(checker), auth.WithTenantAccessChecker(data.NewTenantAccessCheckerImpl(bctx, c)), auth.WithInjectMetadata(false), auth.WithInjectEnt(true)), authz.Server(policy.Engine())))
 	RegisterInstanceHTTPServer(server, handler)
+	RegisterComputeHTTPServer(server, service.NewComputePresetService(computeOwner, service.ComputeCatalogConfig{ClusterID: resourcePeer.ClusterID, Compute: computeOwner, Catalog: accelerator.Catalog, Resolver: tenants, Authorization: data.NewComputeCatalogAuthorizationRepo(c)}))
 	host := httptest.NewServer(server)
 	t.Cleanup(host.Close)
 	request := func(method, path string, in proto.Message, out proto.Message, status int, bearer string) {
@@ -343,7 +349,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	request("GET", "/api/v1/instance-operations/"+accepted.OperationId, nil, operation, 200, token)
 	require.Equal(t, accepted.ResourceId, operation.InstanceId)
 	presets := new(computeview.ListPresetsResponse)
-	request("GET", "/api/v1/instance-presets", nil, presets, 200, token)
+	request("GET", "/api/v1/compute-presets?usage=CONTAINER_INSTANCE", nil, presets, 200, token)
 	require.Len(t, presets.Items, 1)
 	require.EqualValues(t, 1, presets.Total)
 	require.Equal(t, resourcePeer.PresetID, presets.Items[0].Id)

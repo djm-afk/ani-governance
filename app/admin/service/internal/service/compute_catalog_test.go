@@ -25,6 +25,7 @@ const presetOtherTenant = "30000000-0000-4000-8000-000000000003"
 type instancePresetOwnerProbe struct {
 	InstanceOwnerClient
 	t        *testing.T
+	usage    res.Usage
 	tenant   string
 	requests []*res.ListPresetsRequest
 	reply    func(int, *res.ListPresetsRequest) (*res.ListPresetsResponse, error)
@@ -32,7 +33,12 @@ type instancePresetOwnerProbe struct {
 
 func (p *instancePresetOwnerProbe) ListPresets(_ context.Context, tenant, actor string, r *res.ListPresetsRequest) (*res.ListPresetsResponse, error) {
 	p.t.Helper()
-	if tenant != p.tenant || r.TenantId != p.tenant || actor != "governance:user:9" || r.Usage != res.Usage_CONTAINER_INSTANCE {
+	if tenant != p.tenant || r.TenantId != p.tenant || actor != "governance:user:9" || r.Usage != func() res.Usage {
+		if p.usage != 0 {
+			return p.usage
+		}
+		return res.Usage_CONTAINER_INSTANCE
+	}() {
 		p.t.Fatalf("untrusted owner identity: %s %s %#v", tenant, actor, r)
 	}
 	p.requests = append(p.requests, proto.Clone(r).(*res.ListPresetsRequest))
@@ -40,13 +46,19 @@ func (p *instancePresetOwnerProbe) ListPresets(_ context.Context, tenant, actor 
 }
 
 type instancePresetAuthorization struct {
+	usage                       string
 	instanceErr, catalogErr     error
 	instanceCalls, catalogCalls int
 }
 
-func (a *instancePresetAuthorization) Authorize(_ context.Context, tenant, actor uint32, path, method string) error {
+func (a *instancePresetAuthorization) AuthorizeComputeCatalog(_ context.Context, tenant, actor uint32, usage string) error {
 	a.instanceCalls++
-	if (tenant != 7 && tenant != 8) || actor != 9 || path != data.InstancePresetPath || method != "GET" {
+	if (tenant != 7 && tenant != 8) || actor != 9 || usage != func() string {
+		if a.usage != "" {
+			return a.usage
+		}
+		return "CONTAINER_INSTANCE"
+	}() {
 		return data.ErrActionAuthorizationDenied
 	}
 	return a.instanceErr
@@ -104,8 +116,8 @@ func (p *instancePresetCatalogProbe) GetCapacity(context.Context, *acc.GetCapaci
 func instancePresetContext(tenant uint32) context.Context {
 	return auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, TenantID: tenant, ID: 9})
 }
-func instancePresetService(owner *instancePresetOwnerProbe, a InstanceActionAuthorizer, catalog InstanceGPUCatalog, cluster string) *InstanceService {
-	return NewInstanceService(nil, NewInstanceGpuBinding(owner, a, cluster), instancePresetTenantResolver{}, nil, nil, InstanceCatalogConfig{ClusterID: cluster, Compute: owner, Catalog: catalog})
+func instancePresetService(owner *instancePresetOwnerProbe, a ComputeCatalogAuthorizer, catalog ComputeGPUCatalog, cluster string) *ComputePresetService {
+	return NewComputePresetService(nil, ComputeCatalogConfig{ClusterID: cluster, Compute: owner, Catalog: catalog, Resolver: instancePresetTenantResolver{}, Authorization: a})
 }
 func instancePresetBuilder(t *testing.T) *gpuPlanFixture {
 	t.Helper()
@@ -128,7 +140,7 @@ func instancePresetCPU() *res.Preset {
 
 // The boundary returns pre-counted pages; pagination/filtering SQL is exercised
 // by Resource's real-PG tests, rather than reimplemented inside this test.
-func TestInstancePresetCatalogAllPagesAuthorizeBeforeFinalCount(t *testing.T) {
+func TestComputeCatalogAllPagesAuthorizeBeforeFinalCount(t *testing.T) {
 	plan := instancePresetBuilder(t)
 	first := instancePresetCatalogPage(plan)
 	second := instancePresetCatalogPage(plan)
@@ -180,7 +192,7 @@ func TestInstancePresetCatalogAllPagesAuthorizeBeforeFinalCount(t *testing.T) {
 	}}
 	authorization := &instancePresetAuthorization{}
 	s := instancePresetService(owner, authorization, catalog, plan.Request.ClusterId)
-	result, err := s.ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{Page: &page, PageSize: &size, Name: "match"})
+	result, err := s.ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE", Page: &page, PageSize: &size, Name: "match"})
 	if err != nil || result.Total != 5 || len(result.Items) != 1 || result.Items[0].Code != "gpu-visible" || result.GpuCatalogStatus != "OK" || result.GpuCatalogReason != "" {
 		t.Fatalf("final page/count not taken atomically from final owner response: %v %v", result, err)
 	}
@@ -189,7 +201,7 @@ func TestInstancePresetCatalogAllPagesAuthorizeBeforeFinalCount(t *testing.T) {
 	}
 }
 
-func TestInstancePresetCatalogFaultsPreserveSafeCPUPage(t *testing.T) {
+func TestComputeCatalogFaultsPreserveSafeCPUPage(t *testing.T) {
 	plan := instancePresetBuilder(t)
 	for _, tc := range []struct {
 		name            string
@@ -228,7 +240,7 @@ func TestInstancePresetCatalogFaultsPreserveSafeCPUPage(t *testing.T) {
 			}}
 			s := instancePresetService(owner, &instancePresetAuthorization{catalogErr: tc.gateErr}, catalog, plan.Request.ClusterId)
 			page, size := uint32(5), uint32(2)
-			result, err := s.ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{Page: &page, PageSize: &size})
+			result, err := s.ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE", Page: &page, PageSize: &size})
 			if err != nil || result.GpuCatalogStatus != tc.status || result.Total != 9 || len(result.Items) != 1 || result.Items[0].ComputeType != "cpu" {
 				t.Fatalf("safe degraded result %v %v", result, err)
 			}
@@ -246,7 +258,7 @@ func TestInstancePresetCatalogFaultsPreserveSafeCPUPage(t *testing.T) {
 	}
 }
 
-func TestInstancePresetCatalogEmptyDirectoryUsesFinalSnapshot(t *testing.T) {
+func TestComputeCatalogEmptyDirectoryUsesFinalSnapshot(t *testing.T) {
 	plan := instancePresetBuilder(t)
 	catalog := &instancePresetCatalogProbe{t: t, cluster: plan.Request.ClusterId, tenant: presetTenant, reply: func(int, *acc.ListProfilesRequest) (*acc.ListProfilesResponse, error) {
 		return &acc.ListProfilesResponse{}, nil
@@ -267,13 +279,13 @@ func TestInstancePresetCatalogEmptyDirectoryUsesFinalSnapshot(t *testing.T) {
 		return &res.ListPresetsResponse{Items: []*res.Preset{instancePresetCPU(), other}, Total: 6, HasGpuCandidates: true}, nil
 	}}
 	page, size := uint32(3), uint32(2)
-	result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{Page: &page, PageSize: &size})
+	result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE", Page: &page, PageSize: &size})
 	if err != nil || result.GpuCatalogStatus != "OK" || result.Total != 6 || len(result.Items) != 2 || len(owner.requests) != 2 || len(catalog.requests) != 1 {
 		t.Fatalf("empty directory used stale first snapshot: %v %v", result, err)
 	}
 }
 
-func TestInstancePresetCatalogRejectsRepeatedTokensAndIdentities(t *testing.T) {
+func TestComputeCatalogRejectsRepeatedTokensAndIdentities(t *testing.T) {
 	plan := instancePresetBuilder(t)
 	for _, duplicate := range []bool{false, true} {
 		t.Run(map[bool]string{false: "repeated token", true: "repeated profile"}[duplicate], func(t *testing.T) {
@@ -295,7 +307,7 @@ func TestInstancePresetCatalogRejectsRepeatedTokensAndIdentities(t *testing.T) {
 				}
 				return &res.ListPresetsResponse{Items: []*res.Preset{instancePresetCPU()}, Total: 1, HasGpuCandidates: true}, nil
 			}}
-			result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{})
+			result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE"})
 			if err != nil || result.GpuCatalogStatus != "UNAVAILABLE" || result.Total != 1 || len(catalog.requests) != 2 {
 				t.Fatalf("pagination corruption accepted: %v %v", result, err)
 			}
@@ -303,7 +315,7 @@ func TestInstancePresetCatalogRejectsRepeatedTokensAndIdentities(t *testing.T) {
 	}
 }
 
-func TestInstancePresetCatalogSkipsACCAndKeepsTrustedTenant(t *testing.T) {
+func TestComputeCatalogSkipsACCAndKeepsTrustedTenant(t *testing.T) {
 	for _, tc := range []struct {
 		name, compute string
 		hasCandidates bool
@@ -329,7 +341,7 @@ func TestInstancePresetCatalogSkipsACCAndKeepsTrustedTenant(t *testing.T) {
 				return nil, nil
 			}}
 			authorization := &instancePresetAuthorization{}
-			result, err := instancePresetService(owner, authorization, catalog, "cluster").ListInstancePresets(instancePresetContext(tc.tenant), &view.ListPresetsRequest{ComputeType: tc.compute})
+			result, err := instancePresetService(owner, authorization, catalog, "cluster").ListPresets(instancePresetContext(tc.tenant), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE", ComputeType: tc.compute})
 			if err != nil || result.GpuCatalogStatus != "OK" || result.Items == nil || result.Total != 0 || authorization.catalogCalls != 0 || len(catalog.requests) != 0 {
 				t.Fatalf("CPU/no candidate depends on ACC: %v %v", result, err)
 			}
@@ -337,25 +349,25 @@ func TestInstancePresetCatalogSkipsACCAndKeepsTrustedTenant(t *testing.T) {
 	}
 }
 
-func TestInstancePresetCatalogRequiresInstancePermission(t *testing.T) {
+func TestComputeCatalogRequiresInstancePermission(t *testing.T) {
 	owner := &instancePresetOwnerProbe{t: t, tenant: presetTenant, reply: func(int, *res.ListPresetsRequest) (*res.ListPresetsResponse, error) {
 		t.Fatal("permission bypass called Resource")
 		return nil, nil
 	}}
 	authorization := &instancePresetAuthorization{instanceErr: data.ErrActionAuthorizationDenied}
 	s := instancePresetService(owner, authorization, nil, "cluster")
-	if _, err := s.ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{}); kratoserrors.Code(err) != 403 {
+	if _, err := s.ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE"}); kratoserrors.Code(err) != 403 {
 		t.Fatalf("instance permission: %v", err)
 	}
 	if len(owner.requests) != 0 || authorization.catalogCalls != 0 {
 		t.Fatal("denied request reached dependencies")
 	}
-	if _, err := s.ListInstancePresets(context.Background(), &view.ListPresetsRequest{}); err == nil {
+	if _, err := s.ListPresets(context.Background(), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE"}); err == nil {
 		t.Fatal("unauthenticated caller accepted")
 	}
 }
 
-func TestInstancePresetCatalogKeepsAuthorizedInactiveProfilesVisible(t *testing.T) {
+func TestComputeCatalogKeepsAuthorizedInactiveProfilesVisible(t *testing.T) {
 	for state, reason := range map[acc.ProfileState]string{acc.ProfileState_PROFILE_DISABLED: "GPU_PROFILE_DISABLED", acc.ProfileState_PROFILE_DELETED: "GPU_PROFILE_DELETED"} {
 		t.Run(state.String(), func(t *testing.T) {
 			plan := instancePresetBuilder(t)
@@ -372,7 +384,7 @@ func TestInstancePresetCatalogKeepsAuthorizedInactiveProfilesVisible(t *testing.
 				}
 				return &res.ListPresetsResponse{Items: []*res.Preset{{Id: "60000000-0000-4000-8000-000000000006", Code: "gpu-visible", ComputeType: "gpu", Enabled: true, Selectable: true, Gpu: &res.GpuPresetReference{ProfileId: plan.Profile.ProfileId, ProfileVersion: plan.Profile.ProfileVersion}}}, Total: 1, HasGpuCandidates: true}, nil
 			}}
-			result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListInstancePresets(instancePresetContext(7), &view.ListPresetsRequest{})
+			result, err := instancePresetService(owner, &instancePresetAuthorization{}, catalog, plan.Request.ClusterId).ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: "CONTAINER_INSTANCE"})
 			if err != nil || len(result.Items) != 1 || result.Items[0].Selectable || result.Items[0].UnavailableReason != reason {
 				t.Fatalf("inactive profile reason: %v %v", result, err)
 			}
@@ -414,5 +426,27 @@ func TestInstancePresetAvailabilityReasons(t *testing.T) {
 				t.Fatalf("reason %s want %s", got, test.want)
 			}
 		})
+	}
+}
+
+func TestComputeCatalogForwardsOnlyValidatedUsage(t *testing.T) {
+	for _, usage := range []res.Usage{res.Usage_CONTAINER_INSTANCE, res.Usage_TRAINING, res.Usage_INFERENCE} {
+		t.Run(usage.String(), func(t *testing.T) {
+			owner := &instancePresetOwnerProbe{t: t, tenant: presetTenant, usage: usage, reply: func(_ int, _ *res.ListPresetsRequest) (*res.ListPresetsResponse, error) {
+				return &res.ListPresetsResponse{Items: []*res.Preset{instancePresetCPU()}, Total: 1}, nil
+			}}
+			gate := &instancePresetAuthorization{usage: usage.String()}
+			svc := instancePresetService(owner, gate, nil, "")
+			result, err := svc.ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: usage.String(), ComputeType: "cpu"})
+			if err != nil || result.Total != 1 || len(owner.requests) != 1 || gate.instanceCalls != 1 || gate.catalogCalls != 0 {
+				t.Fatalf("usage flow: %v %+v", err, result)
+			}
+		})
+	}
+	svc := NewComputePresetService(nil, ComputeCatalogConfig{})
+	for _, usage := range []string{"", "0", "TRAINING ", "training", "UNKNOWN"} {
+		if _, err := svc.ListPresets(instancePresetContext(7), &view.ListPresetsRequest{Usage: usage}); kratoserrors.Code(err) != 400 {
+			t.Fatalf("invalid usage %q: %v", usage, err)
+		}
 	}
 }

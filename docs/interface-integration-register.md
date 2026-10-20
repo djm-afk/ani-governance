@@ -1644,7 +1644,7 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 2026-10-20 算力目录归位的当前接口：平台原六条 `/api/v1/admin/compute-presets…` 由
 `ComputePresetService` 单一 handler 接管，DTO 归 `compute.service.v1`，SYSTEM 管理分类和五个
 `compute:preset:admin:*` 精确动作见 [容器/规格 HTTP 合同](contracts/container-instances.md) 与
-[权限升级步骤](deployment.md#算力规格管理归属迁移)。`GET /api/v1/instance-presets` 继续使用
+[权限升级步骤](deployment.md#算力规格管理归属迁移)。`GET /api/v1/compute-presets?usage=CONTAINER_INSTANCE` 使用
 `instance:preset:read`/INSTANCE，经显式 ComputeCatalog 调用新 Res ListPresets，固定用途 CONTAINER_INSTANCE。
 旧 InstanceService 六管理方法、旧 Admin client/平台包装及 Presets 方法直接删除，不转发或回退。
 Gov 固定正式 Res 模块 `v0.0.0-20261019174951-733f625995f8`（源码733f625995f89ee71b86192c5995eec4602df408）；
@@ -1790,3 +1790,12 @@ Governance 根据已认证的租户用户建立下游 Model mTLS gRPC 请求，�
 Gov→Res 仍使用当前受管 mTLS/可信 tenant 和 actor；Resolve 的 `instance_contract_version` 由 Gov 选定，新查询 RPC 为 `ListMountablePVCs/GetInstanceConfiguration`。实例配置只接受服务器固定的当前合同 2，合法可选配置缺省正常解析默认值；摘要完整绑定配置，版本、载荷、摘要与原占额原子保存，同键重放复用当前冻结内容。缺省/旧版本持久命令、旧摘要域与配置兼容 reader 已移除；GPU 唯一 Execution、原始 charges 和物理释放退额合同保持。Gov 的新建开关为纯维护闸门，关闭返回 `503 INSTANCE_CREATE_DISABLED`，不降级合同；当前合同的重放和清理继续。旧实例及原账须先经产品路径清理，再关闭新建、升级全部 reader/worker，通过正式消费与门禁后开放。显式迁移为 `20261019090000_instance_contract_version.sql`；权限目录仍先 dry-run 再显式同步，运维映射复用 `instance:create/instance:read`，不自动授予角色或套餐。当前条目只登记本批源码合同，不表示已部署、正式依赖已发布或真实业务验收通过；本任务实际结果仅记 Resource `docs/execution/status.md`。
 
 同一实例详情/列表投影补齐 `networkState/networkReason/networkCleaned/volumeReferencesReleased` 四个安全只读字段（Proto 27–30），沿用当前 read/list 权限。Gov 严格 ProtoJSON 转换须与所固定的正式 Res 版本匹配；新增动态观察不改变 CREATE 摘要，网络、用户卷引用、专属盘、计算和原账清理分别展示，报文与异步完成条件见上述 HTTP 合同。
+
+### 2026-10-20：统一三用途算力目录
+
+`ComputePresetService.ListPresets` 接管 `GET /api/v1/compute-presets`，必传
+`usage=CONTAINER_INSTANCE|TRAINING|INFERENCE`；旧 `/api/v1/instance-presets`、
+InstanceService 的目录 RPC/handler 删除，无兼容入口。
+精确业务权限、套餐与严格 query、响应和错误合同见[算力目录](contracts/compute-presets.md)，
+原 API ID/容器授权保留及受控发布/恢复见[部署步骤](deployment.md#统一租户算力目录切换)。
+本变更不新增训练或推理受理和执行链，也不新增 Inference 依赖。

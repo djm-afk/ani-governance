@@ -19,6 +19,9 @@ func RegisterComputeHTTPServer(server *http.Server, s *service.ComputePresetServ
 		invoke                  func(context.Context, proto.Message) (proto.Message, error)
 	}
 	routes := []route{
+		{"GET", data.ComputeCatalogPath, admin.OperationComputePresetServiceListPresets, func() proto.Message { return new(view.ListPresetsRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
+			return s.ListPresets(c, r.(*view.ListPresetsRequest))
+		}},
 		{"GET", data.ComputeAdminPresetsPath, admin.OperationComputePresetServiceAdminListPresets, func() proto.Message { return new(view.AdminListPresetsRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
 			return s.AdminListPresets(c, r.(*view.AdminListPresetsRequest))
 		}},

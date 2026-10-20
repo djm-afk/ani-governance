@@ -26,6 +26,12 @@ type TenantAccessChecker interface {
 	CheckTenantAccess(ctx context.Context, tenantId uint32, path string, method string) error
 }
 
+// TenantRequestAccessChecker selects entitlement from a strictly decoded request.
+// The verified principal and the service's current action checks still apply.
+type TenantRequestAccessChecker interface {
+	CheckTenantRequestAccess(context.Context, uint32, string, string, any) error
+}
+
 type AccessTokenCheckerFunc func(ctx context.Context, accessToken string, skipRedis bool) (bool, *authenticationV1.UserTokenPayload)
 
 func (f AccessTokenCheckerFunc) IsValidAccessToken(ctx context.Context, accessToken string, skipRedis bool) (bool, *authenticationV1.UserTokenPayload) {

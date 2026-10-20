@@ -7194,6 +7194,55 @@ paths:
                     content: {}
             security:
                 - {}
+    /api/v1/compute-presets:
+        get:
+            tags:
+                - ComputePresetService
+            operationId: ComputePresetService_ListPresets
+            parameters:
+                - name: usage
+                  in: query
+                  required: true
+                  description: 'Required: CONTAINER_INSTANCE, TRAINING (including fine-tuning), or INFERENCE.'
+                  schema:
+                    type: string
+                    enum:
+                        - CONTAINER_INSTANCE
+                        - TRAINING
+                        - INFERENCE
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: code
+                  in: query
+                  schema:
+                    type: string
+                - name: compute_type
+                  in: query
+                  schema:
+                    type: string
+                - name: gpu_mode
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListPresetsResponse'
     /api/v1/images/publisher-credential:
         get:
             tags:
@@ -7511,45 +7560,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Operation'
-    /api/v1/instance-presets:
-        get:
-            tags:
-                - InstanceService
-            operationId: InstanceService_ListInstancePresets
-            parameters:
-                - name: page
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: pageSize
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: name
-                  in: query
-                  schema:
-                    type: string
-                - name: code
-                  in: query
-                  schema:
-                    type: string
-                - name: compute_type
-                  in: query
-                  schema:
-                    type: string
-                - name: gpu_mode
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/ListPresetsResponse'
     /api/v1/instances:
         get:
             tags:
@@ -10092,6 +10102,7 @@ components:
                         - MODEL
                         - ACCELERATOR
                         - IMAGE
+                        - INFERENCE
                         - INSTANCE
                     type: string
                     description: 所属业务功能模块（用于套餐白名单过滤）
@@ -14314,6 +14325,7 @@ components:
                         - MODEL
                         - ACCELERATOR
                         - IMAGE
+                        - INFERENCE
                         - INSTANCE
                     type: string
                     description: 所属业务功能模块
@@ -15553,6 +15565,7 @@ components:
                         - MODEL
                         - ACCELERATOR
                         - IMAGE
+                        - INFERENCE
                         - INSTANCE
                     type: string
                     description: 功能模块

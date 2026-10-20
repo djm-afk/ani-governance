@@ -152,8 +152,14 @@ func Server(opts ...Option) middleware.Middleware {
 					path = tr.Operation()
 					method = ""
 				}
-				if err := op.tenantAccessChecker.CheckTenantAccess(ctx, tokenPayload.GetTenantId(), path, method); err != nil {
-					return nil, err
+				var accessErr error
+				if checker, ok := op.tenantAccessChecker.(TenantRequestAccessChecker); ok {
+					accessErr = checker.CheckTenantRequestAccess(ctx, tokenPayload.GetTenantId(), path, method, req)
+				} else {
+					accessErr = op.tenantAccessChecker.CheckTenantAccess(ctx, tokenPayload.GetTenantId(), path, method)
+				}
+				if accessErr != nil {
+					return nil, accessErr
 				}
 			}
 

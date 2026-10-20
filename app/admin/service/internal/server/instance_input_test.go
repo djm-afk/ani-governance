@@ -164,7 +164,11 @@ func TestInstanceQueryPagePresenceAndFilters(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, message := range []proto.Message{new(view.ListInstancesRequest), new(computeview.ListPresetsRequest), new(computeview.AdminListPresetsRequest)} {
-				require.NoError(t, decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/instances?"+tc.query, nil), message))
+				query := tc.query
+				if _, tenant := message.(*computeview.ListPresetsRequest); tenant {
+					query = "usage=CONTAINER_INSTANCE&" + query
+				}
+				require.NoError(t, decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/instances?"+query, nil), message))
 				var page, size *uint32
 				switch m := message.(type) {
 				case *view.ListInstancesRequest:
@@ -186,7 +190,7 @@ func TestInstanceQueryPagePresenceAndFilters(t *testing.T) {
 	require.Equal(t, "running", instances.ObservedState)
 	require.Equal(t, "work%_", instances.Name)
 	presets := new(computeview.ListPresetsRequest)
-	require.NoError(t, decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/instance-presets?compute_type=gpu&gpu_mode=SHARED_FIXED&code=gpu-small", nil), presets))
+	require.NoError(t, decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/compute-presets?usage=CONTAINER_INSTANCE&compute_type=gpu&gpu_mode=SHARED_FIXED&code=gpu-small", nil), presets))
 	require.Equal(t, "gpu", presets.ComputeType)
 	require.Equal(t, "SHARED_FIXED", presets.GpuMode)
 	require.Equal(t, "gpu-small", presets.Code)
@@ -215,7 +219,7 @@ func TestInstanceQueryRejectsNonCanonicalPaging(t *testing.T) {
 		require.Error(t, err, query)
 	}
 	for _, query := range []string{"instance_kind=container", "compute_type=CPU", "gpu_mode=unknown", "enabled=true", "name=" + strings.Repeat("界", 129), "code=" + strings.Repeat("a", 65)} {
-		err := decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/instance-presets?"+query, nil), new(computeview.ListPresetsRequest))
+		err := decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/compute-presets?usage=CONTAINER_INSTANCE&"+query, nil), new(computeview.ListPresetsRequest))
 		require.Error(t, err, query)
 	}
 	err := decodeInstanceQuery(httptest.NewRequest("GET", "/api/v1/admin/compute-presets?enabled=0", nil), new(computeview.AdminListPresetsRequest))

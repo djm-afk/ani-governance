@@ -16,8 +16,12 @@ import (
 )
 
 type ComputeCatalogConfig struct {
-	ClusterID string
-	Admin     ComputeGPUAdmin
+	Compute       ComputeCatalog
+	Catalog       ComputeGPUCatalog
+	Resolver      ResourceTenantResolver
+	Authorization ComputeCatalogAuthorizer
+	ClusterID     string
+	Admin         ComputeGPUAdmin
 }
 
 type ComputePresetService struct {

@@ -143,3 +143,22 @@ func TestComputeHTTPManagementOwnerAuthorizationAndFieldMask(t *testing.T) {
 	response = fire("PATCH", detail, `{"data":{"name":"new"},"update_mask":"name"}`, 503)
 	require.NotContains(t, response.Body.String(), "private downstream")
 }
+
+func TestComputeHTTPRequiresUsageAndDeletesOldRoute(t *testing.T) {
+	server := khttp.NewServer()
+	RegisterComputeHTTPServer(server, service.NewComputePresetService(nil, service.ComputeCatalogConfig{}))
+	RegisterInstanceHTTPServer(server, service.NewInstanceService(nil, nil, nil, nil, nil))
+	for _, query := range []string{"", "usage=", "usage=unknown", "usage=TRAINING&usage=INFERENCE", "usage=0", "usage=TRAINING&tenant_id=1"} {
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/compute-presets?"+query, nil))
+		require.Equal(t, 400, response.Code, query+response.Body.String())
+	}
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/instance-presets", nil))
+	require.Equal(t, 404, response.Code)
+	for _, usage := range []string{"CONTAINER_INSTANCE", "TRAINING", "INFERENCE"} {
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/compute-presets?usage="+usage, nil))
+		require.NotEqual(t, 200, response.Code, "anonymous must not reach owner")
+	}
+}

@@ -210,7 +210,7 @@ gow run admin
 
 平台规格管理使用 `ComputePresetService`、既有 `SYSTEM` 管理分类和
 `compute:preset:admin:list/read/create/update/delete`；set-enabled 复用 update。
-租户目录 `GET /api/v1/instance-presets` 仍要求 `instance:preset:read` 和 `INSTANCE`。
+租户目录 `GET /api/v1/compute-presets?usage=CONTAINER_INSTANCE` 仍要求 `instance:preset:read` 和 `INSTANCE`。
 `SYSTEM` 不是租户使用算力的套餐授权，平台管理仍检查真实平台用户、tenant=0、平台角色和精确权限。
 
 首次安装只在显式同步新 API 目录后执行
@@ -327,3 +327,16 @@ export ANI_ACCESS_KEY_ENCRYPTION_KEY_FILE=/run/secrets/governance-access-key-enc
 运行账号仍无 DDL；服务配置保持 `migrate: false`。配额内部退额 listener 默认关闭；Resource 实例启用时显式设置 `ANI_QUOTA_ENABLED=true`、`ANI_QUOTA_INTERNAL_ADDR`、`ANI_QUOTA_CA_FILE`、`ANI_QUOTA_CERT_FILE`、`ANI_QUOTA_KEY_FILE` 和 `ANI_QUOTA_RESOURCE_DNS_SAN`。SAN 映射只允许已装配的 Resource owner；缺凭据或合法映射即启动失败，不降级明文。Inference 管理接口、API 依赖及出站环境配置本期移除，不再设置 `ANI_INFERENCE_*` 或 `ANI_QUOTA_INFERENCE_DNS_SAN`；Model 配置保留。完整接线、GPU code 与验收边界见 [GPU owner 接入指南](contracts/gpu-owner-integration-guide.md)；旧 `quota_lab` 模拟路由与构建标签已退役。新账本表的 CHECK 约束已通过 `entsql.Annotation.Checks` 进入 Ent 导出的 schema.sql，与手写迁移同名同义。
 
 本次 Atlas 检查确认 AK/SK、审计与角色复合约束一致。同时发现实施前初始基线仍保留 `files` 表、`sys_users.avatar` 列，而 Ent 已移除它们；这两项既有偏差不属于本批，未执行删除。今后 `migrate diff` 必须审查这些 DROP 候选，不得直接应用。
+
+### 统一租户算力目录切换
+
+当前租户目录与三用途授权以[合同](contracts/compute-presets.md)为准。
+先完成定向测试、真实 PG 权限与路由迁移/恢复演练，准备精确 Gov 镜像。
+核对目标集群、Gov 库和部署身份，保存原 API 行、permission/API 映射、角色链接、套餐及原镜像。
+停止 Gov，执行 `scripts/ops/sql/migrate-compute-catalog-route.sql`，再用新 admin CLI
+`sync-apis --dry-run` 核查后显式 `sync-apis`，避免先同步产生新旧双 API 行。
+SQL 原地保留旧 API ID 与原 `instance:preset:read` 授权；新两权限不会补入任何角色或套餐。
+部署新 Gov 并按本指南刷新策略，检查新三用途授权、旧 URL 404、平台 CRUD 和容器列表。
+Resource 协议、二进制、数据与实例运行对象无需变更。
+失败时停止 Gov，执行 `restore-instance-catalog-route.sql`，恢复原镜像并刷新策略。
+恢复脚本只删除训练/推理到该路由的映射，保留权限本身及角色、套餐状态；恢复之前检查没有外来路由映射。

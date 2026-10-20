@@ -5,7 +5,6 @@ import (
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/transport/http"
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
-	computeview "go-wind-admin/api/gen/go/compute/service/v1"
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/internal/service"
@@ -61,9 +60,7 @@ func RegisterInstanceHTTPServer(server *http.Server, s *service.InstanceService)
 		{"GET", data.InstanceOperationPath, admin.OperationInstanceServiceGetInstanceOperation, func() proto.Message { return new(view.GetOperationRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
 			return s.GetInstanceOperation(c, r.(*view.GetOperationRequest))
 		}},
-		{"GET", data.InstancePresetPath, admin.OperationInstanceServiceListInstancePresets, func() proto.Message { return new(computeview.ListPresetsRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
-			return s.ListInstancePresets(c, r.(*computeview.ListPresetsRequest))
-		}},
+
 		{"POST", data.InstanceExecPath, admin.OperationInstanceServiceExecInstance, func() proto.Message { return new(view.ExecInstanceRequest) }, func(c context.Context, r proto.Message) (proto.Message, error) {
 			return s.ExecInstance(c, r.(*view.ExecInstanceRequest))
 		}},

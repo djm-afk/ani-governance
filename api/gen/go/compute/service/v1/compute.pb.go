@@ -7,6 +7,8 @@
 package servicev1
 
 import (
+	_ "github.com/google/gnostic/openapiv3"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -123,13 +125,15 @@ func (x *GpuSummary) GetCoreLimitPercent() uint32 {
 }
 
 type ListPresetsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Page          *uint32                `protobuf:"varint,1,opt,name=page,proto3,oneof" json:"page,omitempty"`
-	PageSize      *uint32                `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Code          string                 `protobuf:"bytes,4,opt,name=code,proto3" json:"code,omitempty"`
-	ComputeType   string                 `protobuf:"bytes,5,opt,name=compute_type,proto3" json:"compute_type,omitempty"`
-	GpuMode       string                 `protobuf:"bytes,6,opt,name=gpu_mode,proto3" json:"gpu_mode,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required: CONTAINER_INSTANCE, TRAINING (including fine-tuning), or INFERENCE.
+	Usage         string  `protobuf:"bytes,7,opt,name=usage,proto3" json:"usage,omitempty"`
+	Page          *uint32 `protobuf:"varint,1,opt,name=page,proto3,oneof" json:"page,omitempty"`
+	PageSize      *uint32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
+	Name          string  `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Code          string  `protobuf:"bytes,4,opt,name=code,proto3" json:"code,omitempty"`
+	ComputeType   string  `protobuf:"bytes,5,opt,name=compute_type,proto3" json:"compute_type,omitempty"`
+	GpuMode       string  `protobuf:"bytes,6,opt,name=gpu_mode,proto3" json:"gpu_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,6 +166,13 @@ func (x *ListPresetsRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListPresetsRequest.ProtoReflect.Descriptor instead.
 func (*ListPresetsRequest) Descriptor() ([]byte, []int) {
 	return file_compute_service_v1_compute_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListPresetsRequest) GetUsage() string {
+	if x != nil {
+		return x.Usage
+	}
+	return ""
 }
 
 func (x *ListPresetsRequest) GetPage() uint32 {
@@ -1002,7 +1013,7 @@ var File_compute_service_v1_compute_proto protoreflect.FileDescriptor
 
 const file_compute_service_v1_compute_proto_rawDesc = "" +
 	"\n" +
-	" compute/service/v1/compute.proto\x12\x12compute.service.v1\x1a google/protobuf/field_mask.proto\"\x91\x03\n" +
+	" compute/service/v1/compute.proto\x12\x12compute.service.v1\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a$gnostic/openapi/v3/annotations.proto\"\x91\x03\n" +
 	"\n" +
 	"GpuSummary\x12\x1e\n" +
 	"\n" +
@@ -1015,14 +1026,16 @@ const file_compute_service_v1_compute_proto_rawDesc = "" +
 	"\x15memory_mib_per_device\x18\t \x01(\x03R\x15memory_mib_per_device\x12*\n" +
 	"\x10memory_mib_total\x18\n" +
 	" \x01(\x03R\x10memory_mib_total\x12.\n" +
-	"\x12core_limit_percent\x18\b \x01(\rR\x12core_limit_percentJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x1cshared_memory_mib_per_deviceR\x17shared_memory_mib_total\"\xce\x01\n" +
-	"\x12ListPresetsRequest\x12\x17\n" +
+	"\x12core_limit_percent\x18\b \x01(\rR\x12core_limit_percentJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x1cshared_memory_mib_per_deviceR\x17shared_memory_mib_total\"\x8d\x03\n" +
+	"\x12ListPresetsRequest\x12\xaf\x01\n" +
+	"\x05usage\x18\a \x01(\tB\x98\x01\xe0A\x02\xbaG\x91\x01\xc2\x01\x14\x12\x12CONTAINER_INSTANCE\xc2\x01\n" +
+	"\x12\bTRAINING\xc2\x01\v\x12\tINFERENCE\x92\x02\\Required business usage; permissions and plan modules are checked separately for each usage.R\x05usage\x12\x17\n" +
 	"\x04page\x18\x01 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
 	"\tpage_size\x18\x02 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
 	"\x04code\x18\x04 \x01(\tR\x04code\x12\"\n" +
 	"\fcompute_type\x18\x05 \x01(\tR\fcompute_type\x12\x1a\n" +
-	"\bgpu_mode\x18\x06 \x01(\tR\bgpu_modeB\a\n" +
+	"\bgpu_mode\x18\x06 \x01(\tR\bgpu_mode:\v\xbaG\b\xba\x01\x05usageB\a\n" +
 	"\x05_pageB\f\n" +
 	"\n" +
 	"_page_size\"\xdf\x03\n" +

@@ -10,7 +10,6 @@ import (
 	context "context"
 	http "github.com/go-kratos/kratos/v2/transport/http"
 	binding "github.com/go-kratos/kratos/v2/transport/http/binding"
-	v11 "go-wind-admin/api/gen/go/compute/service/v1"
 	v1 "go-wind-admin/api/gen/go/instance/service/v1"
 )
 
@@ -32,7 +31,6 @@ const OperationInstanceServiceGetInstanceRuntime = "/admin.service.v1.InstanceSe
 const OperationInstanceServiceGetInstanceSchedulingSettings = "/admin.service.v1.InstanceService/GetInstanceSchedulingSettings"
 const OperationInstanceServiceGetSchedulerConfig = "/admin.service.v1.InstanceService/GetSchedulerConfig"
 const OperationInstanceServiceListInstanceEvents = "/admin.service.v1.InstanceService/ListInstanceEvents"
-const OperationInstanceServiceListInstancePresets = "/admin.service.v1.InstanceService/ListInstancePresets"
 const OperationInstanceServiceListInstances = "/admin.service.v1.InstanceService/ListInstances"
 const OperationInstanceServiceListMountablePVCs = "/admin.service.v1.InstanceService/ListMountablePVCs"
 const OperationInstanceServiceQueryInstanceMetrics = "/admin.service.v1.InstanceService/QueryInstanceMetrics"
@@ -55,7 +53,6 @@ type InstanceServiceHTTPServer interface {
 	GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
 	GetSchedulerConfig(context.Context, *v1.SchedulerConfigRequest) (*v1.SchedulerConfig, error)
 	ListInstanceEvents(context.Context, *v1.GetInstanceRequest) (*v1.InstanceEvents, error)
-	ListInstancePresets(context.Context, *v11.ListPresetsRequest) (*v11.ListPresetsResponse, error)
 	ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error)
 	ListMountablePVCs(context.Context, *v1.ListMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error)
 	QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error)
@@ -84,7 +81,6 @@ func RegisterInstanceServiceHTTPServer(s *http.Server, srv InstanceServiceHTTPSe
 	r.POST("/api/v1/instances/{data.instance_id}:stop", _InstanceService_StopInstance0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/instances/{data.instance_id}", _InstanceService_DeleteInstance0_HTTP_Handler(srv))
 	r.GET("/api/v1/instance-operations/{operation_id}", _InstanceService_GetInstanceOperation0_HTTP_Handler(srv))
-	r.GET("/api/v1/instance-presets", _InstanceService_ListInstancePresets0_HTTP_Handler(srv))
 	r.POST("/api/v1/instances/{data.instance_id}/exec", _InstanceService_ExecInstance0_HTTP_Handler(srv))
 }
 
@@ -462,25 +458,6 @@ func _InstanceService_GetInstanceOperation0_HTTP_Handler(srv InstanceServiceHTTP
 	}
 }
 
-func _InstanceService_ListInstancePresets0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v11.ListPresetsRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationInstanceServiceListInstancePresets)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListInstancePresets(ctx, req.(*v11.ListPresetsRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v11.ListPresetsResponse)
-		return ctx.Result(200, reply)
-	}
-}
-
 func _InstanceService_ExecInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in v1.ExecInstanceRequest
@@ -520,7 +497,6 @@ type InstanceServiceHTTPClient interface {
 	GetInstanceSchedulingSettings(ctx context.Context, req *v1.InstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v1.InstanceSchedulingSettings, err error)
 	GetSchedulerConfig(ctx context.Context, req *v1.SchedulerConfigRequest, opts ...http.CallOption) (rsp *v1.SchedulerConfig, err error)
 	ListInstanceEvents(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.InstanceEvents, err error)
-	ListInstancePresets(ctx context.Context, req *v11.ListPresetsRequest, opts ...http.CallOption) (rsp *v11.ListPresetsResponse, err error)
 	ListInstances(ctx context.Context, req *v1.ListInstancesRequest, opts ...http.CallOption) (rsp *v1.ListInstancesResponse, err error)
 	ListMountablePVCs(ctx context.Context, req *v1.ListMountablePVCsRequest, opts ...http.CallOption) (rsp *v1.ListMountablePVCsResponse, err error)
 	QueryInstanceMetrics(ctx context.Context, req *v1.QueryInstanceMetricsRequest, opts ...http.CallOption) (rsp *v1.QueryInstanceMetricsResponse, err error)
@@ -675,19 +651,6 @@ func (c *InstanceServiceHTTPClientImpl) ListInstanceEvents(ctx context.Context, 
 	pattern := "/api/v1/instances/{instance_id}/events"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceListInstanceEvents))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *InstanceServiceHTTPClientImpl) ListInstancePresets(ctx context.Context, in *v11.ListPresetsRequest, opts ...http.CallOption) (*v11.ListPresetsResponse, error) {
-	var out v11.ListPresetsResponse
-	pattern := "/api/v1/instance-presets"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationInstanceServiceListInstancePresets))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
