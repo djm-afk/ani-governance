@@ -42,7 +42,8 @@ ACC 故障返回 CPU 安全集合并标记 UNAVAILABLE/GPU_CATALOG_UNAVAILABLE�
 显式 compute_type=cpu 不访问 ACC。selectable 和 unavailable_reason 只表示当次目录提示。
 
 400：缺少/非法 usage、分页/过滤/未知/重复参数；401：无有效认证；403：当前业务权限、
-租户/角色/套餐不满足或跨租户；503：当前授权存储或 Resource 等必要依赖不可用。
+租户/角色/套餐不满足或跨租户；平台身份访问此租户目录沿现有可信主体边界返回
+404 `QUOTA_NOT_FOUND`；503：当前授权存储或 Resource 等必要依赖不可用。
 目录选择不会创建资源、占额或冻结执行。创建仍须执行相应业务完整授权和正式解析；
 本次只提供 TRAINING/INFERENCE 目录，未接通它们的创建消费者。
 
