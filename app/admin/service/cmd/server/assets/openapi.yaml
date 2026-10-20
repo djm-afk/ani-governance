@@ -11950,16 +11950,6 @@ components:
                     items:
                         $ref: '#/components/schemas/NamedAny'
             description: Allows referencing an external resource for extended documentation.
-        FinetuningParameters:
-            type: object
-            properties:
-                learning_rate:
-                    type: string
-                max_steps:
-                    type: string
-            description: |-
-                Registered LoRA SFT parameters. Values are strings, including integers;
-                 program bounds and approved combinations are resolved against the Release.
         ExternalModelCandidate:
             type: object
             properties:
@@ -11984,6 +11974,16 @@ components:
                 updated_at:
                     type: string
                     format: date-time
+        FinetuningParameters:
+            type: object
+            properties:
+                learning_rate:
+                    type: string
+                max_steps:
+                    type: string
+            description: |-
+                Registered LoRA SFT parameters. Values are strings, including integers;
+                 program bounds and approved combinations are resolved against the Release.
         ForceLogoutSessionRequest:
             type: object
             properties:
