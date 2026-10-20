@@ -201,7 +201,7 @@ Content-Type: application/json
 
 **两种能力不共用字段**：微调请求**不得**出现 `image_version_id` / `general_parameters` / `source_execution_id`；通用训练请求**不得**出现 `base_model_version_id` / `finetuning` / `target_model_id` / `new_model_name`。混填会被拒绝（`400`）。
 
-**`finetuning` 参数**（键可省略，省略即取 Release 默认值；两个键都是**字符串化的数值**）：
+**`finetuning` 参数**（键可省略，省略即取 Release 默认值；**两个键的 JSON 类型不同**，见下表）：
 
 | 键               | 类型      | 说明                             |
 | --------------- | ------- | ------------------------------ |
@@ -217,7 +217,7 @@ Content-Type: application/json
 - 请求超时或响应丢失时，**必须用同一** **`idempotency_key`** **+ 完全相同的意图重试**，系统会返回原执行（`replayed=true`）。
 - **同一 key 改参数会返回** **`409`**；只有确实要再训一次时才换新 key。
 - `general_parameters` 的**省略 ≠ 显式** **`[]`**，二者是不同意图；`null` 被拒绝。
-- `learning_rate` 取值：十进制字符串，范围 `(0, 0.1]`，默认 `0.01`。epochs/batch\_size 固定，不可传。
+- **通用训练**的 `learning_rate` 取值：十进制字符串，范围 `(0, 0.1]`，默认 `0.01`（`epochs`/`batch_size` 固定，不可传）。**微调**参数是另一套：`learning_rate` 为十进制字符串，契约范围 `(0, 1]`；`max_steps` 为整数，契约范围 `[1, 200]`。微调的**默认值与已批准的取值组合由所选 Release 声明**（见 §4.1 `parameter_rules`），不要写死。
 
 响应 `202 Accepted`：
 
@@ -504,7 +504,8 @@ Query：`page`、`pageSize`。先等 `delivery_state=PUBLISHED` 再拉取才有�
 - ❌ 缓存或记录 `download_url`。
 - ❌ 在 body/query 传 `tenant_id`、`namespace`、对象存储 key、Pod 名。
 - ❌ 期望推送，或高频轮询日志接口。
-- ❌ 用 camelCase 字段名（本模块统一 `lower_snake_case`）。
+- ❌ 在**请求体**里用 camelCase 字段名（body 统一 `lower_snake_case`）。注意**分页 query 例外**：列表接口用 `page` + `pageSize`（见 §2）。
+- ❌ 列表接口沿用旧的 `limit` / `cursor` 参数（已退役，传了直接 400）。
 - ❌ 为微调寻找/猜测"基模列表"接口——本期**没有**该类端点，`base_model_version_id` 不通过接口下发（见 §4.3）。
 - ❌ 前端硬编码 `base_model_version_id` 的具体 UUID。
 
