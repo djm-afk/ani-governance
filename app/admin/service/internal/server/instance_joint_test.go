@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	authpb "go-wind-admin/api/gen/go/authentication/service/v1"
+	computeview "go-wind-admin/api/gen/go/compute/service/v1"
 	identity "go-wind-admin/api/gen/go/identity/service/v1"
 	view "go-wind-admin/api/gen/go/instance/service/v1"
 	"go-wind-admin/app/admin/service/cmd/server/assets"
@@ -117,7 +118,6 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		"POST " + data.InstanceStopPath:     true,
 		"GET " + data.InstanceGetPath:       true,
 		"GET " + data.InstanceOperationPath: true,
-		"GET " + data.InstancePresetPath:    true,
 		"POST " + data.InstanceExecPath:     true,
 	}
 	routes := 0
@@ -139,7 +139,13 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		require.NoError(t, e)
 		require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(grant.ID).SetAPIID(route.ID).Exec(sys))
 	}
-	require.Equal(t, 9, routes, "all original tenant instance actions must remain registered")
+	require.Equal(t, 8, routes, "instance lifecycle routes remain registered; compute has its own owner")
+	computeRoute, e := c.Client().Api.Create().SetModule("ComputePresetService").SetOperation("ComputePresetService_ListPresets").SetPath(data.ComputeCatalogPath).SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleSystem).SetStatus(api.StatusOn).Save(sys)
+	require.NoError(t, e)
+	computeGrant, e := c.Client().Permission.Create().SetName("instance:preset:read").SetCode("instance:preset:read").SetStatus(permission.StatusOn).Save(sys)
+	require.NoError(t, e)
+	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(computeGrant.ID).SetAPIID(computeRoute.ID).Exec(sys))
+	require.NoError(t, c.Client().RolePermission.Create().SetTenantID(tenant.ID).SetRoleID(currentRole.ID).SetPermissionID(computeGrant.ID).SetStatus(rolepermission.StatusOn).SetEffect(rolepermission.EffectAllow).Exec(sys))
 	catalogRoute, e := c.Client().Api.Query().Where(api.PathEQ("/api/v1/accelerator/profiles"), api.MethodEQ("GET"), api.ScopeEQ(api.ScopeAdmin)).Only(sys)
 	if ent.IsNotFound(e) {
 		catalogRoute, e = c.Client().Api.Create().SetModule("AcceleratorService").SetPath("/api/v1/accelerator/profiles").SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleAccelerator).SetStatus(api.StatusOn).Save(sys)
@@ -180,9 +186,11 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		t.Setenv("INSTANCE_JOINT_QUOTA_FILE", path)
 	}
 	resourcePeer := testutil.StartInstanceResourcePeer(t, gpuRequest, gpuProfile)
-	owner, closeOwner, e := data.NewInstanceClientFromEnv()
+	owner, computeOwner, closeOwner, e := data.NewResourceClientsFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeOwner)
+	// This suite covers the current frozen instance admission contract.
+	t.Setenv("ANI_INSTANCE_CONFIG_V2_WRITES", "true")
 	binding := service.NewInstanceGpuBinding(owner, data.NewInstanceAuthorizationRepo(c), resourcePeer.ClusterID)
 	registry := service.NewQuotaAdapterRegistry()
 	require.NoError(t, registry.Register(binding))
@@ -205,7 +213,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		t.Cleanup(close)
 		sessions = client
 	}
-	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID, Catalog: accelerator.Catalog})
+	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID})
 	if lifecycle {
 		sync := service.NewGpuUsageSyncWorker(ledger, accelerator, func(e error) { t.Log("Acc sync attempt failed", e) })
 		require.NoError(t, sync.Start(ctx))
@@ -223,6 +231,7 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	require.NoError(t, e)
 	server := khttp.NewServer(khttp.Middleware(auth.CredentialHeaders(), auth.Server(auth.WithAccessTokenChecker(checker), auth.WithTenantAccessChecker(data.NewTenantAccessCheckerImpl(bctx, c)), auth.WithInjectMetadata(false), auth.WithInjectEnt(true)), authz.Server(policy.Engine())))
 	RegisterInstanceHTTPServer(server, handler)
+	RegisterComputeHTTPServer(server, service.NewComputePresetService(computeOwner, service.ComputeCatalogConfig{ClusterID: resourcePeer.ClusterID, Compute: computeOwner, Catalog: accelerator.Catalog, Resolver: tenants, Authorization: data.NewComputeCatalogAuthorizationRepo(c)}))
 	host := httptest.NewServer(server)
 	t.Cleanup(host.Close)
 	request := func(method, path string, in proto.Message, out proto.Message, status int, bearer string) {
@@ -266,6 +275,48 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	require.True(t, replay.Replayed)
 	require.Equal(t, accepted.OperationId, replay.OperationId)
 	require.Equal(t, 1, plans.calls)
+	for _, field := range []string{"env", "labels"} {
+		encoded, err := protojson.Marshal(public)
+		require.NoError(t, err)
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(encoded, &payload))
+		object := payload["data"].(map[string]any)
+		if field == "env" {
+			object[field] = []any{}
+		} else {
+			object[field] = map[string]any{}
+		}
+		for _, configured := range []bool{false, true} {
+			if configured {
+				if field == "env" {
+					object[field] = []any{map[string]any{"name": "BUSINESS_VALUE", "value": " <literal> "}}
+				} else {
+					object[field] = map[string]any{"team": "science"}
+				}
+			}
+			body, err := json.Marshal(payload)
+			require.NoError(t, err)
+			rawRequest, err := http.NewRequest("POST", host.URL+"/api/v1/instances", bytes.NewReader(body))
+			require.NoError(t, err)
+			rawRequest.Header.Set("Content-Type", "application/json")
+			rawRequest.Header.Set("Authorization", "Bearer "+token)
+			response, err := host.Client().Do(rawRequest)
+			require.NoError(t, err)
+			raw, err := io.ReadAll(response.Body)
+			require.NoError(t, err)
+			require.NoError(t, response.Body.Close())
+			if configured {
+				require.Equal(t, http.StatusConflict, response.StatusCode, "%s changed current configuration: %s", field, raw)
+			} else {
+				require.Equal(t, http.StatusAccepted, response.StatusCode, "%s explicit empty current configuration: %s", field, raw)
+				var emptyReplay view.Acceptance
+				require.NoError(t, protojson.Unmarshal(raw, &emptyReplay))
+				require.True(t, emptyReplay.Replayed)
+				require.Equal(t, accepted.OperationId, emptyReplay.OperationId)
+			}
+		}
+	}
+	require.Equal(t, 1, plans.calls, "current replay and configuration conflicts cannot re-resolve or incur new quota")
 	instance := new(view.Instance)
 	request("GET", "/api/v1/instances/"+accepted.ResourceId, nil, instance, 200, token)
 	require.EqualValues(t, 1, instance.Version)
@@ -297,8 +348,8 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	operation := new(view.Operation)
 	request("GET", "/api/v1/instance-operations/"+accepted.OperationId, nil, operation, 200, token)
 	require.Equal(t, accepted.ResourceId, operation.InstanceId)
-	presets := new(view.ListPresetsResponse)
-	request("GET", "/api/v1/instance-presets", nil, presets, 200, token)
+	presets := new(computeview.ListPresetsResponse)
+	request("GET", "/api/v1/compute-presets?usage=CONTAINER_INSTANCE", nil, presets, 200, token)
 	require.Len(t, presets.Items, 1)
 	require.EqualValues(t, 1, presets.Total)
 	require.Equal(t, resourcePeer.PresetID, presets.Items[0].Id)

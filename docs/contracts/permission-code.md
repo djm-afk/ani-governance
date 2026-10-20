@@ -257,3 +257,5 @@ permission group 是权限目录组织方式；套餐业务模块来自实际 Se
 - [API目录增量同步](https://github.com/zhangzhe-ctrl/ani-governance/blob/34388cf90d0834da76c9e5701ade5d92a248144f/sql/bootstrap/catalog.go)
 - [部署与目录管理合同](https://github.com/zhangzhe-ctrl/ani-governance/blob/34388cf90d0834da76c9e5701ade5d92a248144f/docs/deployment.md)
 - [已发布的认证与路径迁移计划](https://github.com/zhangzhe-ctrl/ani-governance/blob/34388cf90d0834da76c9e5701ade5d92a248144f/docs/plans/gov-auth-session-api-unification/README.md)
+
+统一算力目录 `GET /api/v1/compute-presets` 使用[usage 权限表](compute-presets.md#请求与业务授权)，不按路径推导单一码。`pkg/permcode/compute_catalog.go` 固定三项精确映射；通用 Casbin 路径授权之后，Service 仍在当前数据库快照检查该 usage 的权限和套餐，禁止另一用途的授权代替。

@@ -46,7 +46,7 @@ type ModelDevServiceHTTPServer interface {
 
 func RegisterModelDevServiceHTTPServer(s *http.Server, srv ModelDevServiceHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/modeldev/presets", _ModelDevService_ListPresets0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/presets", _ModelDevService_ListPresets1_HTTP_Handler(srv))
 	r.GET("/api/v1/modeldev/input-versions/{input_version_id}", _ModelDevService_GetInputVersion0_HTTP_Handler(srv))
 	r.GET("/api/v1/modeldev/input-versions", _ModelDevService_ListInputVersions0_HTTP_Handler(srv))
 	r.GET("/api/v1/modeldev/executions", _ModelDevService_ListExecutions0_HTTP_Handler(srv))
@@ -58,7 +58,7 @@ func RegisterModelDevServiceHTTPServer(s *http.Server, srv ModelDevServiceHTTPSe
 	r.POST("/api/v1/modeldev/executions", _ModelDevService_CreateExecution0_HTTP_Handler(srv))
 }
 
-func _ModelDevService_ListPresets0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+func _ModelDevService_ListPresets1_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in v1.ListPresetsRequest
 		if err := ctx.BindQuery(&in); err != nil {

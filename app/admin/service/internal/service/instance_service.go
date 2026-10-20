@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
+	"os"
 	"strconv"
 	"time"
 
@@ -37,23 +37,24 @@ type InstanceOwnerClient interface {
 	Delete(context.Context, *res.AcceptDeleteRequest) (*res.OperationResponse, error)
 	Change(context.Context, string, string, *res.ChangeInstanceRequest, bool) (*res.OperationResponse, error)
 	Get(context.Context, string, string, string) (*res.Instance, error)
+	ResolveInstanceMetricScope(context.Context, string, string, string) (*res.InstanceMetricScope, error)
 	List(context.Context, string, string, *res.ListInstancesRequest) (*res.ListInstancesResponse, error)
 	Operation(context.Context, string, string, string) (*res.Operation, error)
-	Presets(context.Context, string, string, *res.ListPresetsRequest) (*res.ListPresetsResponse, error)
 	Target(context.Context, string, string, string, int64) (*terminal.TerminalTarget, error)
 }
 type InstanceActionAuthorizer interface {
 	Authorize(context.Context, uint32, uint32, string, string) error
 }
 type InstanceGpuBinding struct {
-	client        InstanceOwnerClient
-	authorization InstanceActionAuthorizer
-	clusterID     string
-	scheduling    *InstanceSchedulingPolicy
+	client           InstanceOwnerClient
+	authorization    InstanceActionAuthorizer
+	clusterID        string
+	scheduling       *InstanceSchedulingPolicy
+	newCreateEnabled bool
 }
 
 func NewInstanceGpuBinding(c InstanceOwnerClient, a InstanceActionAuthorizer, clusterID string, policies ...*InstanceSchedulingPolicy) *InstanceGpuBinding {
-	b := &InstanceGpuBinding{client: c, authorization: a, clusterID: clusterID}
+	b := &InstanceGpuBinding{client: c, authorization: a, clusterID: clusterID, newCreateEnabled: os.Getenv("ANI_INSTANCE_CONFIG_V2_WRITES") == "true"}
 	if len(policies) > 0 {
 		b.scheduling = policies[0]
 	}
@@ -89,8 +90,14 @@ func instanceAuthorizationError(e error) error {
 	}
 	return e
 }
+func (*InstanceGpuBinding) CanonicalGpuBusinessVersion(m proto.Message, version uint32) ([]byte, error) {
+	if version != data.CurrentInstanceContractVersion {
+		return nil, quota.ErrorInvalidQuotaRequest("%s", "unsupported instance contract")
+	}
+	return res.CanonicalBusinessPayloadVersion(m, version)
+}
 func (*InstanceGpuBinding) CanonicalGpuBusiness(m proto.Message) ([]byte, error) {
-	return res.CanonicalBusinessPayload(m)
+	return res.CanonicalBusinessPayloadVersion(m, data.CurrentInstanceContractVersion)
 }
 func (b *InstanceGpuBinding) ResolveGpuBusiness(ctx context.Context, p *auth.Principal, tenant string, m proto.Message) (*acc.GpuRequest, proto.Message, error) {
 	in, ok := m.(*res.CreateInstanceData)
@@ -231,12 +238,14 @@ type InstanceService struct {
 	ledger     *data.QuotaLedgerRepo
 	sessions   InstanceSessionClient
 	catalog    InstanceCatalogConfig
+	monitoring InstanceMonitoringClient
 }
 
 func NewInstanceService(a *GpuAcceptance, b *InstanceGpuBinding, r ResourceTenantResolver, l *data.QuotaLedgerRepo, sessions InstanceSessionClient, catalogs ...InstanceCatalogConfig) *InstanceService {
 	s := &InstanceService{acceptance: a, binding: b, resolver: r, ledger: l, sessions: sessions}
 	if len(catalogs) > 0 {
 		s.catalog = catalogs[0]
+		s.monitoring = catalogs[0].Monitoring
 	}
 	return s
 }
@@ -270,7 +279,23 @@ func (s *InstanceService) CreateInstance(ctx context.Context, r *view.CreateInst
 			scheduling.PodPlacement = &value
 		}
 	}
-	result, e := s.acceptance.AcceptGpuCreate(ctx, d.IdempotencyKey, nil, &res.CreateInstanceData{Name: d.Name, ImageId: d.ImageId, ImageScope: d.ImageScope, PresetId: d.PresetId, Scheduling: scheduling})
+	business := &res.CreateInstanceData{Name: d.Name, ImageId: d.ImageId, ImageScope: d.ImageScope, PresetId: d.PresetId, Scheduling: scheduling, WorkspaceMountPath: d.WorkspaceMountPath, Labels: d.Labels, Annotations: d.Annotations}
+	for _, mount := range d.VolumeMounts {
+		if mount == nil {
+			return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid volume mount")
+		}
+		business.VolumeMounts = append(business.VolumeMounts, &res.VolumeMount{PvcName: mount.PvcName, MountPath: mount.MountPath, ReadOnly: mount.ReadOnly})
+	}
+	if d.Network != nil {
+		business.Network = &res.NetworkSelection{VpcId: d.Network.VpcId, SubnetId: d.Network.SubnetId}
+	}
+	for _, variable := range d.Env {
+		if variable == nil {
+			return nil, quota.ErrorInvalidQuotaRequest("%s", "invalid environment variable")
+		}
+		business.Env = append(business.Env, &res.InstanceEnvVar{Name: variable.Name, Value: variable.Value})
+	}
+	result, e := s.acceptance.AcceptGpuCreate(ctx, d.IdempotencyKey, nil, business)
 	if e != nil {
 		return nil, e
 	}
@@ -362,7 +387,7 @@ func (s *InstanceService) ListInstances(ctx context.Context, r *view.ListInstanc
 	if e != nil {
 		return nil, e
 	}
-	page, size, e := resolveInstancePage(r.Page, r.PageSize)
+	page, size, e := resolveComputePage(r.Page, r.PageSize)
 	if e != nil {
 		return nil, e
 	}
@@ -426,65 +451,6 @@ func (s *InstanceService) GetInstanceOperation(ctx context.Context, r *view.GetO
 		e = protojson.Unmarshal(raw, out)
 	}
 	return out, e
-}
-func (s *InstanceService) ListInstancePresets(ctx context.Context, r *view.ListPresetsRequest) (*view.ListPresetsResponse, error) {
-	tenant, actor, e := s.scope(ctx, data.InstancePresetPath, "GET")
-	if e != nil {
-		return nil, e
-	}
-	if r == nil {
-		return nil, quota.ErrorInvalidQuotaRequest("%s", "request required")
-	}
-	page, size, e := resolveInstancePage(r.Page, r.PageSize)
-	if e != nil {
-		return nil, e
-	}
-	items, e := s.binding.client.Presets(ctx, tenant, actor, &res.ListPresetsRequest{TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode})
-	if e != nil {
-		return nil, e
-	}
-	if items == nil {
-		return nil, kratoserrors.ServiceUnavailable("INSTANCE_INVALID_RESPONSE", "invalid owner response")
-	}
-	catalogStatus, reason := "OK", ""
-	var profileStates map[string]acc.ProfileState
-	if items.HasGpuCandidates && r.ComputeType != "cpu" {
-		allowed, states, err := s.allowedPresetGPU(ctx, tenant)
-		profileStates = states
-		if err != nil {
-			catalogStatus, reason = "UNAVAILABLE", "GPU_CATALOG_UNAVAILABLE"
-			if errors.Is(err, data.ErrActionAuthorizationDenied) || codes.PermissionDenied == status.Code(err) || codes.Unauthenticated == status.Code(err) {
-				catalogStatus, reason = "NO_PERMISSION", "GPU_CATALOG_NO_PERMISSION"
-			}
-		} else {
-			items, e = s.binding.client.Presets(ctx, tenant, actor, &res.ListPresetsRequest{TenantId: tenant, Page: page, PageSize: size, Name: r.Name, Code: r.Code, ComputeType: r.ComputeType, GpuMode: r.GpuMode, AllowedGpuProfiles: allowed})
-			if e != nil {
-				return nil, e
-			}
-			if items == nil {
-				return nil, kratoserrors.ServiceUnavailable("INSTANCE_INVALID_RESPONSE", "invalid owner response")
-			}
-		}
-	}
-	out := &view.ListPresetsResponse{Items: []*view.Preset{}, Total: items.Total, GpuCatalogStatus: catalogStatus, GpuCatalogReason: reason}
-	for _, p := range items.Items {
-		item := wireInstancePreset(p)
-		if item != nil && p.ComputeType == "gpu" && p.Gpu != nil && item.Enabled {
-			switch profileStates[fmt.Sprintf("%s/%d", p.Gpu.ProfileId, p.Gpu.ProfileVersion)] {
-			case acc.ProfileState_PROFILE_DISABLED:
-				item.Selectable = false
-				item.UnavailableReason = "GPU_PROFILE_DISABLED"
-			case acc.ProfileState_PROFILE_DELETED:
-				item.Selectable = false
-				item.UnavailableReason = "GPU_PROFILE_DELETED"
-			case acc.ProfileState_PROFILE_ACTIVE:
-				item.UnavailableReason = s.presetGPUAvailability(ctx, tenant, p.Gpu)
-				item.Selectable = item.UnavailableReason == ""
-			}
-		}
-		out.Items = append(out.Items, item)
-	}
-	return out, nil
 }
 func (s *InstanceService) ExecInstance(ctx context.Context, r *view.ExecInstanceRequest) (*view.ExecInstanceResponse, error) {
 	if r == nil || r.Data == nil {

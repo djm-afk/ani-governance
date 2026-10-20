@@ -1,5 +1,31 @@
 # 功能对接与接口风格改动登记
 
+## OBS-07：容器实例 CPU、内存查询
+
+权威合同位于 `ani-observability-service` 同仓的 `docs/specs/observability-phase1/CONTRACT.md`、
+`contracts/gov-http.md` 及 `ACCEPTANCE.md`，本仓不复制协议。
+
+| 方法与路径 | 权限 | 报文与结果 |
+|---|---|---|
+| `POST /api/v1/instances/{instance_id}/metrics/query` | `instance:read` | `{data:{metric_codes,start,end,step_seconds?}}`；同步 200，实际 `data` 包装 |
+| `GET /api/v1/instances/{instance_id}/metrics/latest` | `instance:read` | 无 body/query；同步 200，CPU 后内存，各一个点 |
+
+复用现有身份、租户与 INSTANCE 套餐闸门，再由受信 Res 只读 RPC 解析范围。
+Gov 验证 tenant/instance/cluster/namespace/workspace 后，使用独立 TLS 1.3 客户端调用
+Observability；客户端身份为唯一 DNS SAN `ani-governance`，服务端身份为
+`ani-observability-service`，三项身份元数据由 Gov 重建，不透传外部 header。
+HTTP/Res/Obs 预算分别为 10s/2s/6s，继承父取消与更短 deadline。
+
+POST 仅接受合同字段、拒绝重复 JSON 字段及任何外部 scope，64 KiB 超限为 413；
+step 省略为 60、显式 0 拒绝。响应的缺失值明确为 `null`，真实零为 `0`，正常点省略
+`gap_reason`。两接口复用 `instance:read`，权限 SQL 只登记 API 关联，不新增角色授权。
+部署时先 `admin sync-apis --dry-run`，再同步目录、执行
+`scripts/ops/sql/register-instance-permissions.sql` 并按部署说明刷新策略。
+
+本期沿用既有到期租户访问策略，不承诺到期后历史读取；Prometheus 底层入口额外隔离
+按用户决定延期。OBS-07 的真实服务联调和环境权限同步只有实际执行后才能记为完成，
+源码和边界 fixture 不代替 OBS-08 的真实 Prometheus 主链验收。
+
 总体状态：**进行中，未结项**。最后更新：2026-10-13。
 
 本文件覆盖所有后续对接功能。每次用户对接一个新功能时，AI 先排查真实调用链，将涉及的接口、请求和响应、鉴权条件、现有问题追加到对应功能组。先累计登记，等用户指定某个批次后，再统一修改该批接口的路径、字段和响应风格；不能因排查或登记就自动改接口风格。
@@ -1615,6 +1641,17 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依赖固定为 `v0.0.0-20261012083359-e7b5a8a34359`。Fedora 新模块缓存已验证下载内容、模块/go.mod 校验和及 `Origin.Hash` 与发布提交一致，完整 `make api` 复验无生成差异。发布时保留最新 Governance main 的 ModelDev 和鉴权计划更新；源码发布不改变共享部署或此前 LB 回归未解结论。提交前 Resource 完整 `make verify` 已通过，前缀和平台方法的证据沿用上述入口；发布补充日志保留在同一工件目录的 `publication/`。
 ## INSTANCE-MVP-V15（2026-10-13，后端接线实施中）
 
+2026-10-20 算力目录归位的当前接口：平台原六条 `/api/v1/admin/compute-presets…` 由
+`ComputePresetService` 单一 handler 接管，DTO 归 `compute.service.v1`，SYSTEM 管理分类和五个
+`compute:preset:admin:*` 精确动作见 [容器/规格 HTTP 合同](contracts/container-instances.md) 与
+[权限升级步骤](deployment.md#算力规格管理归属迁移)。`GET /api/v1/compute-presets?usage=CONTAINER_INSTANCE` 使用
+`instance:preset:read`/INSTANCE，经显式 ComputeCatalog 调用新 Res ListPresets，固定用途 CONTAINER_INSTANCE。
+旧 InstanceService 六管理方法、旧 Admin client/平台包装及 Presets 方法直接删除，不转发或回退。
+Gov 固定正式 Res 模块 `v0.0.0-20261019174951-733f625995f8`（源码733f625995f89ee71b86192c5995eec4602df408）；
+共享受管 listener 的 mTLS、三用途公共解析与 Selection 校验见 [服务接入](service-integration.md#current-client-contracts)。
+公共解析提供训练/微调和推理用途，不代表这些业务已消费；Gov 不装配推理管理接口。
+本次业务回归、联合迁移与目标环境验收按既有任务结果分别记录，不复用下方早期验收作为本次完成证据。
+
 2026-10-16 联合批次的当前合同见 [容器实例 HTTP 合同](contracts/container-instances.md)。该批次将实例公开/内部类型统一为 `instance_kind=container` 与可信 `compute_type`，删除外层规格版本和旧实例分页；新增 Res 数据库规格的 Gov 平台 CRUD、可选 scheduling、平台调度配置、只读 runtime/events 和受保护 SSE 日志。新增/改造列表统一 page/pageSize 与 items/total，授权/筛选先于计数和分页。以下 10-13～10-16 发布记录说明此前交付，不能作为本批验收证据。
 
 本批身份条件：平台规格及调度管理要求 tenant=0 的平台用户和独立权限；租户创建/读取沿当前 INSTANCE 角色/套餐，GPU 候选另取当前 ACC 目录权限交集。ConfigMap 使用编辑时 resourceVersion 条件写入并保持其他键及 metadata；现场基线未对齐时写闸门关闭。日志通过专用 SSE 等 READY 后发送头，使用原请求取消，不套普通 REST/unary 总期限；fetch 示例及运行安全字段见上述合同。
@@ -1687,8 +1724,7 @@ Governance：
   一律 400。service 层 `resolveModelDevPage` 独立解析默认值并校验；client 以 `page/pageSize` 传下游，
   响应校验不再依赖 `next_cursor`。
 
-因下游新字段尚未发布为新模块版本，Governance `go.mod` 需在下游发布后升级到正式伪版本；
-本地验证时以 `replace github.com/zhangzhe-ctrl/ani-modeldev-service => <下游工作树>` 消费同源下游代码（验证后移除）。
+下游 PR#4 已合入 canonical，Governance `go.mod` 精确消费正式版本 `v0.0.0-20261019114539-40a12484258c`；`GOWORK=off` 下载所得 Origin.Hash 为 `40a12484258c6ed8f2e7ea795f41942c040ef21a`，真实模块校验和已写入 `go.sum`，不使用工作树 replace。
 
 本机（Windows）已验证：下游 `buf generate`/`sqlc generate` 通过，`GOOS=linux go build ./...` 与
 `go vet -tags cpu_mainflow ./internal/... ./cmd/...` 通过；Governance `GOOS=linux go build ./app/... ./pkg/...`
@@ -1735,7 +1771,7 @@ Governance 根据已认证的租户用户建立下游 Model mTLS gRPC 请求，�
 `登录 → POST /api/v1/models → POST /api/v1/model-versions → POST /api/v1/models:import
 → 轮询导入任务 → 读取已就绪版本`。导入任务状态可以在版本就绪前为
 `importing`；`GET /api/v1/model-versions/{id}` 只返回已就绪版本，不能把导入中的
-404 当作导入失败。该链路不包含推理服务管理或推理数据面验收；Model 当前功能范围保持不变。
+`404` 当作导入失败。该链路不包含推理服务管理或推理数据面验收；Model 当前功能范围保持不变。
 
 
 ### GOV-ACC-INF-V12-WIRING-01：2026-10-18 显存值合同替换
@@ -1745,3 +1781,88 @@ Governance 根据已认证的租户用户建立下游 Model mTLS gRPC 请求，�
 管理 Profile 创建仍为 `POST /api/v1/admin/accelerator/profiles`，正式 RPC 改为 `CreateProfile`；新增 `GET .../profiles:preview`、`POST .../profiles/{profile_id}:set-state` 和 `POST .../profiles/{profile_id}:delete`。写请求保持 `{data:{...}}`，平台 JWT、当前权限与 ACC 对应 action/cluster grant 必须齐全。API 目录同步只登记接口，不自动授予权限。
 
 用户 Preset 返回每卡显存值、selectable 与 unavailable_reason；CPU 查询不依赖 ACC，GPU 仍须通过租户目录授权过滤。Inference 的普通及 GPU 管理接口、API 依赖和出站配置均移除，后续重新对接。编码、软件回归和真实 GPU 验收分别记证，不能沿用旧结果宣称新合同已验收。
+
+## SELF-SCOPE-MODULE-EXEMPT-01：自助类路由豁免套餐模块白名单（2026-10-16）
+
+不新增 `(path, method)`、不改报文、不改权限码、不改套餐关系，仅调整租户闸门的判定顺序。
+
+背景：租户闸门 `TenantAccessCheckerImpl.CheckTenantAccess` 原按请求所属 `business_module`
+查套餐白名单，命中不到即 `403 module not allowed`。该判定对自助类路由（读写操作者自己或
+个人所属租户的资源）同样生效，导致三个既有事实偏差：`GET /api/v1/admin/me`（`OPM`）在套餐
+不含 `OPM` 时被拒；`GET /api/v1/me/quota-accounts`（`TENANT`，QUOTA-04）需套餐额外开启
+`TENANT` 才能读；`GET /api/v1/admin/online-session/my-sessions`（`SYSTEM`）对租户用户不可用。
+
+变更：闸门第 3 步（模块白名单）前增加自助判定——按权限码权威表（`pkg/permcode`）的
+`scope_kind` 取值为 `self` / `tenant-self` 时放行，跳过白名单查询。当前覆盖 8 条路由
+（`GET/PUT /api/v1/admin/me`、`POST /api/v1/admin/me/contact`、`/contact/verify`、`/password`、
+`GET /api/v1/admin/online-session/my-sessions`、`POST .../my-sessions/revoke`、
+`GET /api/v1/me/quota-accounts`）。租户状态（OFF/EXPIRED/FREEZE）与到期只读判定保持前置；
+业务授权仍由下游 Casbin 强制，未持对应 `self` 权限码的角色仍被拒。
+
+`scope_kind` 仅存在于代码侧权威表，`sys_apis` 无此列，故判定不读数据库列。未命中权威表的
+路由维持原 fail-closed 行为。新增自助路由须登记进权威表才会被豁免。
+
+边界：本变更只解除"买没买模块"这一层，不自动补齐自助权限码授予——上述 7 条 `self` 码在
+测试环境当前授予数为 0，故 `my-sessions` 等仍会因 Casbin 拒绝而不可用，需另行补授予。
+`GET /api/v1/me/quota-accounts` 归 `TENANT` 模块，此前为过闸门给活跃租户套餐补开的
+`TENANT` 模块行在本变更生效后可回退（回退顺序见实施方案 §5.5，不可先回退）。
+
+验证：本地 `go build ./...`（EXIT=0）、`go vet`（EXIT=0）、`pkg/permcode` 与 `data` 包定向用例通过
+（新增决策矩阵 4 例 + `TestIsSelfScopedRoute`）；部署实测（镜像 `20261016-self-scope-exempt`，ani-01，
+新 Pod `1/1 Running`）：三跑可逆实验（tenant-a，plan 3 摘/恢复 `OPM`+`TENANT`+`NETWORK`）证明摘模块后
+自助路由仍 200、同套餐非自助 `/api/v1/networks/vpcs` 转 `403 module not allowed`、越权平台路由始终 403，
+恢复后回基线；回归 `verify-plan-quota` 35/35、`verify-cursor` 24/24、`verify-list-cursor` 38/38、
+`verify-audit-notification` 31/31、`smoke-regression` fail=0 全 PASS。实测确认 `my-sessions` 仍
+`403 unauthorized access`（自助码 0 授予，属批次 B）；ACC 租户 `/admin/me` 未端到端验证（缺其登录密码）。
+本批次已提交（`9a0a659`，PR #21），批次 B/C 的环境收尾见下两节。
+
+### 后续批次 B：补授予自助类权限码（2026-10-16）
+
+闸门豁免只解除"买没买模块"这一层。7 条 `self` 码在测试环境**授予数为 0**，故
+`GET /api/v1/admin/online-session/my-sessions`（`SYSTEM` 模块）在豁免后仍 403
+`unauthorized access`（Casbin 拒绝）。按与 `grant-quota-tenant-self-read.sql` 同一模式
+（模板 `template:tenant:manager` + 存量 `tenant:manager` 角色），补授 7 条码：
+`me:profile:read`、`me:profile:edit`、`me:contact:edit`、`me:contact:verify`、
+`me:password:edit`、`online-session:self-read`、`online-session:self-revoke`。每条码仅绑定
+其自身的自助路由（目标是调用者自己的资料/联系方式/口令/会话），授予不越出调用者自身范围，
+不触碰平台角色、其它角色码、权限-API 关联与套餐模块。授权脚本见
+`local-remote/governance-换镜像手册/工具与脚本/grant-self-codes-tenant-roles.sql`（**本地，未入库**）。
+
+实测（ani-01，2026-10-16）：dry-run（事务内 `ROLLBACK`）报 `added: 21`，回滚后授予数仍为 0；
+正式应用 `added: 21`，7 码各授予 4 个角色（1 个模板 + 3 个存量租户管理员）；幂等复跑
+`added: 0`。`rollout restart` 刷新内存 Casbin 后复测：`online-session/my-sessions`
+**403 → 200**；`/api/v1/admin/me`、`/api/v1/me/quota-accounts` 仍 200；越权平台路由仍 403。
+
+### 后续批次 C：回退"快解"临时模块数据（2026-10-16）
+
+`enable-tenant-module-for-self-read.sql` 已写入测试环境的三行 `TENANT` 模块行
+（plan 1/3/4，`created_by IS NULL`），在 B2 生效后回退：按对称条件（`module='TENANT'`、
+`created_by IS NULL`、活跃租户所绑 plan）`DELETE 3`，幂等复跑 `DELETE 0`。回退后 plan 1/3/4
+的模块恢复为 DASHBOARD/MODEL/OPM 等原始集合（不含 `TENANT`）。
+
+回退后复测（关键判据）：`GET /api/v1/me/quota-accounts` **仍 200**（证明自助路由不依赖套餐
+`TENANT` 模块行）；`/api/v1/admin/me` 200；`online-session/my-sessions` 200；非 self
+`/api/v1/networks/vpcs` 200。越权平台路由（`/admin/tenants`、`/admin/plans`、
+`/admin/quota-definitions`、跨租户 `/admin/tenants/2/quota-accounts`）仍 403，但拒绝原因由
+`unauthorized access` 变为 `module not allowed`——这三行是"快解"临时加入的，回退后回到
+"该套餐不含 `TENANT`"的原始状态，租户对这些路由的可见性结果不变（仍 403）。回归
+`verify-plan-quota` 35/35、`verify-cursor` 24/24、`verify-list-cursor` 38/38、
+`smoke-regression` fail=0。确认通过后已删除脚本文件 `enable-tenant-module-for-self-read.sql`
+（**全程未入库**）。
+
+### 2026-10-19 实例配置增量（复用实例联合合同）
+
+`POST /api/v1/instances` 的 `{data:{...}}` 增加已有卷/工作目录、业务 labels/annotations/env 及显式网络选择，公网不接收合同版本、PVC UID、Namespace 或冻结字段。新增 `GET /api/v1/instances/mountable-pvcs`（page/pageSize/name → items/total，当前 create 权限）及 `GET /api/v1/instances/{instance_id}/configuration`（当前 read 权限可读取字面 env，no-store）。正式字段、数量/路径/保留键、错误与升级顺序见[容器实例 HTTP 合同](contracts/container-instances.md#工作目录已有卷与业务配置)。
+
+Gov→Res 仍使用当前受管 mTLS/可信 tenant 和 actor；Resolve 的 `instance_contract_version` 由 Gov 选定，新查询 RPC 为 `ListMountablePVCs/GetInstanceConfiguration`。实例配置只接受服务器固定的当前合同 2，合法可选配置缺省正常解析默认值；摘要完整绑定配置，版本、载荷、摘要与原占额原子保存，同键重放复用当前冻结内容。缺省/旧版本持久命令、旧摘要域与配置兼容 reader 已移除；GPU 唯一 Execution、原始 charges 和物理释放退额合同保持。Gov 的新建开关为纯维护闸门，关闭返回 `503 INSTANCE_CREATE_DISABLED`，不降级合同；当前合同的重放和清理继续。旧实例及原账须先经产品路径清理，再关闭新建、升级全部 reader/worker，通过正式消费与门禁后开放。显式迁移为 `20261019090000_instance_contract_version.sql`；权限目录仍先 dry-run 再显式同步，运维映射复用 `instance:create/instance:read`，不自动授予角色或套餐。当前条目只登记本批源码合同，不表示已部署、正式依赖已发布或真实业务验收通过；本任务实际结果仅记 Resource `docs/execution/status.md`。
+
+同一实例详情/列表投影补齐 `networkState/networkReason/networkCleaned/volumeReferencesReleased` 四个安全只读字段（Proto 27–30），沿用当前 read/list 权限。Gov 严格 ProtoJSON 转换须与所固定的正式 Res 版本匹配；新增动态观察不改变 CREATE 摘要，网络、用户卷引用、专属盘、计算和原账清理分别展示，报文与异步完成条件见上述 HTTP 合同。
+
+### 2026-10-20：统一三用途算力目录
+
+`ComputePresetService.ListPresets` 接管 `GET /api/v1/compute-presets`，必传
+`usage=CONTAINER_INSTANCE|TRAINING|INFERENCE`；旧 `/api/v1/instance-presets`、
+InstanceService 的目录 RPC/handler 删除，无兼容入口。
+精确业务权限、套餐与严格 query、响应和错误合同见[算力目录](contracts/compute-presets.md)，
+原 API ID/容器授权保留及受控发布/恢复见[部署步骤](deployment.md#统一租户算力目录切换)。
+本变更不新增训练或推理受理和执行链，也不新增 Inference 依赖。

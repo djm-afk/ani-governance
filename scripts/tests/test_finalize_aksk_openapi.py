@@ -129,6 +129,25 @@ components:
         with self.assertRaises(SystemExit):
             finalizer.repair_network_operation(text)
 
+    def test_compute_usage_is_required_and_enum_comes_from_proto(self):
+        text = """    /api/v1/compute-presets:
+        get:
+            parameters:
+                - name: usage
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200": {}
+components:
+"""
+        result = finalizer.require_compute_usage(text)
+        self.assertIn("required: true", result)
+        for usage in ["CONTAINER_INSTANCE", "TRAINING", "INFERENCE"]:
+            self.assertIn("- " + usage, result)
+        with self.assertRaises(SystemExit):
+            finalizer.require_compute_usage(text, 'string usage = 7;')
+
 
 if __name__ == '__main__':
     unittest.main()

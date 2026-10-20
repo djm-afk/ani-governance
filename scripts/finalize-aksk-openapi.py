@@ -167,6 +167,40 @@ def add_instance_log_stream(text):
     return text.replace(marker, operation + marker, 1)
 
 
+def require_compute_usage(text, proto_source=None):
+    # gnostic v0.7.1 does not carry field behavior/property enums into GET
+    # query parameters. Keep the emitted contract tied to its Proto input.
+    marker = "    /api/v1/compute-presets:\n"
+    if marker not in text:
+        return text
+    if text.count(marker) != 1:
+        raise SystemExit("expected one compute catalog route")
+    if proto_source is None:
+        proto_source = (pathlib.Path(__file__).resolve().parents[1] / "api/protos/compute/service/v1/compute.proto").read_text()
+    field = re.search(r"string usage = 7 \[(.*?)\];", proto_source, re.S)
+    if field is None or "(google.api.field_behavior) = REQUIRED" not in field.group(1):
+        raise SystemExit("compute usage must be required in Proto")
+    values = re.findall(r'yaml:\s*"([A-Z_]+)"', field.group(1))
+    if len(values) != 3 or len(set(values)) != 3:
+        raise SystemExit("compute usage enum missing or ambiguous")
+    start = text.index(marker)
+    end = text.find("\n    /", start + len(marker))
+    if end < 0:
+        end = text.index("\ncomponents:", start)
+    section = text[start:end]
+    pattern = r"(                - name: usage\n                  in: query\n)(.*?)(?=                - name:|            responses:)"
+    def annotate(match):
+        body = match.group(2)
+        if "required:" in body or "enum:" in body:
+            raise SystemExit("compute usage query was already annotated")
+        body = body.replace("                    type: string\n", "                    type: string\n                    enum:\n" + "".join("                        - " + v + "\n" for v in values), 1)
+        return match.group(1) + "                  required: true\n" + body
+    section, count = re.subn(pattern, annotate, section, flags=re.S)
+    if count != 1:
+        raise SystemExit("expected one compute usage query")
+    return text[:start] + section + text[end:]
+
+
 def finalize(text):
     text = remove_synthetic_200(text, "/api/v1/auth/api-keys", "201")
     # Minimal generator fixtures may omit ModelDev. Its public contract test
@@ -187,7 +221,7 @@ def finalize(text):
             text = remove_synthetic_200(text, route, status, method)
     # response_body endpoints retain their explicit public-object schema,
     # including the Network/Image mutation responses and existing details.
-    return add_instance_log_stream(repair_network_operation(remove_shadowed_200(text)))
+    return add_instance_log_stream(require_compute_usage(repair_network_operation(remove_shadowed_200(text))))
 
 
 if __name__ == "__main__":
