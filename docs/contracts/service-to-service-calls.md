@@ -250,9 +250,11 @@ TLS 校验与拦截器行为参照 [Go TLS 文档](https://pkg.go.dev/crypto/tls
 
 | 现状 | 按本文收敛 |
 |---|---|
-| Gov → Accelerator、Gov → 受管 Inference 使用客户端 URI SAN | 统一为已登记的唯一客户端 DNS SAN；双方同步修改校验、签发和合同，不长期双轨兼容 |
+| Gov → Accelerator 的历史版本及受管 Inference 使用客户端 URI SAN | 统一为已登记的唯一客户端 DNS SAN；双方同步修改校验、签发和合同，不长期双轨兼容 |
 | Network/Image、ModelDev 使用 Gov 客户端 DNS，但证书严格度和配置不同 | 对齐唯一客户端 DNS、字面服务器 DNS、方法允许清单和可信上下文规则 |
 | Inference 同时存在普通和受管业务 listener | 迁移必要 API、现有调用者和证书到同一个业务 mTLS listener，再删除普通入口；不只改 Gov 客户端就宣布完成 |
 | Gov 退额已有客户端 DNS → 固定 `ani-inference` owner 映射 | 保留显式映射和原账本 owner；按真实证书登记收敛配置，不开放任意 owner |
+
+本次 Gov/ACC 授权改造源码移除逐用户/逐租户静态 grant，直接复用 ACC provider.json 的受管连接，并将服务证书校验收敛为唯一 DNS SAN。它不改变角色/套餐由 Gov 管、资源归属由接收方核验的规则。现网 URI 证书和旧配置须配套迁移；源码与定向测试不代表已经部署。
 
 业务合同继续以 [GPU owner 指南](gpu-owner-integration-guide.md)、[AK/SK 合同](aksk-signature.md)等领域文档为准；本文对新接入和修改调用的传输、身份、授权和上下文规则有优先权。专项文档中的现有 URI SAN、listener 等实现记录应与迁移目标分开阅读。迁移需要独立的实现、证书配置和双方联调；**2026-10-10 制定规范的批次只将正文入仓，没有修改运行逻辑或宣称存量服务已符合新规。后续实现以各批次结果为准。**

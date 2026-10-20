@@ -18300,12 +18300,12 @@ security:
 tags:
     - name: AcceleratorAdminService
       description: |-
-        JWT platform user, current role permission and downstream exact actor/action/
-         cluster grant are all required. There is no implicit tenant-zero grant.
+        Governance requires a JWT platform user and current role permission.
+         Accelerator validates the service RPC and its provider-managed cluster scope.
     - name: AcceleratorService
       description: |-
-        JWT tenant user, active tenant, ACCELERATOR plan module, current role
-         permission and downstream delegation grant are all required.
+        Governance requires a JWT tenant user, active tenant, ACCELERATOR plan module
+         and current role permission. Accelerator enforces trusted tenant isolation.
     - name: AccessKeyService
       description: OpenAPI 访问凭证（AK/SK）管理 — BFF
     - name: AdminPortalService

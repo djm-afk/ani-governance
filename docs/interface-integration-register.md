@@ -1191,18 +1191,18 @@ x-ani-authz:
 ACC-01～12 需要用户 JWT、平台身份及对应当前角色权限；平台身份不伪造下游 tenant=0。
 ACC-13～19 需要用户 JWT、有效租户、套餐 `ACCELERATOR` 模块、当前角色权限；QUOTA-04
 归既有 `TENANT` 模块，不要求 GPU 模块。AK/SK 白名单不增加上述路由。
-上述 Governance 授权不能代替 Accelerator 启动配置中的 actor/action/tenant/cluster grant。
+用户角色、平台身份和套餐准入统一由 Governance 检查；Accelerator 不再维护逐用户、逐租户 grant。ACC 仅校验受管服务身份、完整 RPC 方法、请求上下文与租户资源归属。集群管理范围直接复用 provider.json 的 connections，不新增集群清单。GPU 新建在当前业务 action 授权后另检查 ACCELERATOR 套餐；目录读权限不代替业务使用授权。历史重放、同步、释放和退款依据原持久事实。
 
 HTTP 不接受 tenant/actor/context 作为身份来源；服务从已验证 Principal 分列主体 type/id，
 从持久 ResourceTenantID 映射取得 UUID。出站重建 metadata，清除 Bearer 和外部 identity headers。
-客户端叶证书要求唯一精确 URI SAN `spiffe://ani.internal/service/ani-governance`，TLS≥1.3，
-服务器由受管 CA 与配置的精确 DNS SAN 验证。配置见 `configs/accelerator.env.example`。
+客户端叶证书要求唯一精确 DNS SAN `ani-governance`，不混入其他类型 SAN，TLS≥1.3，
+服务器由受管 CA 与配置的精确 DNS SAN 验证，拒绝通配符。配置项见[当前客户端合同](service-integration.md#current-client-contracts)。旧 URI 证书、ACC 旧静态 grant 配置和对应二进制须配套切换，不提供双轨兼容。
 
 写请求保持 `{data:{...}}`；新增字段固定 snake_case；uint64/int64 按 protobuf JSON 为十进制字符串。
 列表用 `page_size`（0 默认50，最大200）、`page_token`，响应 `next_page_token`；不伪造 total。
 租户 DTO 不含 physical UUID、Pod 身份、原始 evidence、水位、source_fact_ref、完整 plan/runtime。
 缺投影是 `USAGE_PROJECTION_NOT_READY`，不表示业务资源不存在；投影/ACK 不表示 Ready 或删除完成。
-错误保留受限机器 reason，400/401/403/404/409/412/503/504 分别对应合同失败，原始下游正文不公开。
+错误保留受限机器 reason，400/401/403/404/409/412/503/504 分别对应合同失败，原始下游正文不公开。Gov 本地用户认证/权限失败仍为 401/403；ACC 服务身份或 RPC 拒绝映射为 503 `ACCELERATOR_SERVICE_ACCESS_DENIED`。算力目录此时保留 CPU 安全集合并返回 `UNAVAILABLE/GPU_CATALOG_UNAVAILABLE`，不得误报 `NO_PERMISSION`。
 
 先执行 `admin sync-apis --dry-run`、复核后执行 `admin sync-apis`，再显式应用
 `scripts/ops/sql/register-accelerator-permissions.sql` 登记精确权限关联。脚本不授予角色、不启用套餐、

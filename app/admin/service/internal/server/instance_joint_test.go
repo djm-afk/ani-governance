@@ -355,6 +355,55 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 	require.Equal(t, resourcePeer.PresetID, presets.Items[0].Id)
 	require.Equal(t, "gpu", presets.Items[0].ComputeType)
 	require.NotNil(t, presets.Items[0].Gpu)
+	require.Equal(t, "OK", presets.GpuCatalogStatus)
+	t.Run("new Gov tenant and user need no Accelerator provisioning", func(t *testing.T) {
+		secondPlan, err := c.Client().Plan.Create().SetName("new-gpu-user-" + fixture).Save(sys)
+		require.NoError(t, err)
+		secondTenant, err := c.Client().Tenant.Create().SetName("new-gpu-user-" + fixture).SetCode("new-gpu-user-" + fixture).SetPlanID(secondPlan.ID).Save(sys)
+		require.NoError(t, err)
+		require.NoError(t, c.Client().PlanModule.Create().SetPlanID(secondPlan.ID).SetModule(planmodule.ModuleInstance).Exec(sys))
+		acceleratorModule, err := c.Client().PlanModule.Create().SetPlanID(secondPlan.ID).SetModule(planmodule.ModuleAccelerator).Save(sys)
+		require.NoError(t, err)
+		secondUser, err := c.Client().User.Create().SetTenantID(secondTenant.ID).SetUsername("new-gpu-user-" + fixture).SetStatus(user.StatusNormal).Save(sys)
+		require.NoError(t, err)
+		secondRole, err := c.Client().Role.Create().SetTenantID(secondTenant.ID).SetName("new-gpu-user-" + fixture).SetCode("tenant:gpu:new:" + fixture).SetType(role.TypeTenant).SetStatus(role.StatusOn).SetDataScope(role.DataScopeAll).Save(sys)
+		require.NoError(t, err)
+		require.NoError(t, c.Client().UserRole.Create().SetTenantID(secondTenant.ID).SetUserID(secondUser.ID).SetRoleID(secondRole.ID).SetStatus(userrole.StatusActive).Exec(sys))
+		secondGrant, err := c.Client().RolePermission.Create().SetTenantID(secondTenant.ID).SetRoleID(secondRole.ID).SetPermissionID(grant.ID).SetStatus(rolepermission.StatusOn).SetEffect(rolepermission.EffectAllow).Save(sys)
+		require.NoError(t, err)
+		secondComputeGrant, err := c.Client().RolePermission.Create().SetTenantID(secondTenant.ID).SetRoleID(secondRole.ID).SetPermissionID(computeGrant.ID).SetStatus(rolepermission.StatusOn).SetEffect(rolepermission.EffectAllow).Save(sys)
+		require.NoError(t, err)
+		require.NoError(t, policy.ResetPolicies(ctx))
+		secondToken, _, err := tokens.CreateUserToken(ctx, authpb.ClientType_admin, &authpb.UserTokenPayload{UserId: secondUser.ID, TenantId: trans.Ptr(secondTenant.ID), Roles: []string{*secondRole.Code}, DataScopes: []identity.DataScope{identity.DataScope_ALL}, Application: authpb.ApplicationType_console.Enum(), Sid: trans.Ptr(uuid.NewString())})
+		require.NoError(t, err)
+		const catalogPath = "/api/v1/compute-presets?usage=CONTAINER_INSTANCE&page=1&pageSize=20&compute_type=gpu"
+		query := func(wantCatalog string) {
+			result := new(computeview.ListPresetsResponse)
+			request("GET", catalogPath, nil, result, 200, secondToken)
+			require.Equal(t, wantCatalog, result.GpuCatalogStatus)
+			if wantCatalog == "OK" {
+				require.Len(t, result.Items, 1)
+				require.Equal(t, gpuRequest.ProfileId, result.Items[0].Gpu.ProfileId)
+			} else {
+				require.Empty(t, result.Items)
+			}
+		}
+		// The existing Accelerator process/configuration remains untouched throughout.
+		query("OK")
+		require.NoError(t, c.Client().RolePermission.UpdateOneID(secondComputeGrant.ID).SetStatus(rolepermission.StatusOff).Exec(sys))
+		require.NoError(t, policy.ResetPolicies(ctx))
+		request("GET", catalogPath, nil, nil, 403, secondToken)
+		require.NoError(t, c.Client().RolePermission.UpdateOneID(secondComputeGrant.ID).SetStatus(rolepermission.StatusOn).Exec(sys))
+		require.NoError(t, c.Client().RolePermission.UpdateOneID(secondGrant.ID).SetStatus(rolepermission.StatusOff).Exec(sys))
+		require.NoError(t, policy.ResetPolicies(ctx))
+		query("NO_PERMISSION")
+		require.NoError(t, c.Client().RolePermission.UpdateOneID(secondGrant.ID).SetStatus(rolepermission.StatusOn).Exec(sys))
+		require.NoError(t, policy.ResetPolicies(ctx))
+		require.NoError(t, c.Client().PlanModule.DeleteOneID(acceleratorModule.ID).Exec(sys))
+		query("NO_PERMISSION")
+		require.NoError(t, c.Client().PlanModule.Create().SetPlanID(secondPlan.ID).SetModule(planmodule.ModuleAccelerator).Exec(sys))
+		query("OK")
+	})
 	change := func(action string, version int64) {
 		r := &view.ChangeInstanceRequest{Data: &view.ChangeInstanceData{IdempotencyKey: uuid.NewString(), ExpectedVersion: version}}
 		ack := new(view.Acceptance)
