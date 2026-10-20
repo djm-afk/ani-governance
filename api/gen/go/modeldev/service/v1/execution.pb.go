@@ -157,12 +157,15 @@ func (x *CreateExecutionRequest) GetNewModelName() string {
 	return ""
 }
 
-// Registered LoRA SFT parameters. Values are strings, including integers;
-// program bounds and approved combinations are resolved against the Release.
+// Registered LoRA SFT parameters. learning_rate is a decimal string and
+// max_steps is an integer; program bounds and approved combinations are
+// resolved against the Release.
 type FinetuningParameters struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LearningRate  *string                `protobuf:"bytes,1,opt,name=learning_rate,proto3,oneof" json:"learning_rate,omitempty"`
-	MaxSteps      *int64                 `protobuf:"varint,2,opt,name=max_steps,proto3,oneof" json:"max_steps,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	LearningRate *string                `protobuf:"bytes,1,opt,name=learning_rate,proto3,oneof" json:"learning_rate,omitempty"`
+	// int64 renders as a string under the OpenAPI convention; the shared
+	// contract decodes max_steps as a JSON number, so the type is pinned here.
+	MaxSteps      *int64 `protobuf:"varint,2,opt,name=max_steps,proto3,oneof" json:"max_steps,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1991,10 +1994,10 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\x16_base_model_version_idB\r\n" +
 	"\v_finetuningB\x12\n" +
 	"\x10_target_model_idB\x11\n" +
-	"\x0f_new_model_name\"\x84\x01\n" +
+	"\x0f_new_model_name\"\xbc\x02\n" +
 	"\x14FinetuningParameters\x12)\n" +
-	"\rlearning_rate\x18\x01 \x01(\tH\x00R\rlearning_rate\x88\x01\x01\x12!\n" +
-	"\tmax_steps\x18\x02 \x01(\x03H\x01R\tmax_steps\x88\x01\x01B\x10\n" +
+	"\rlearning_rate\x18\x01 \x01(\tH\x00R\rlearning_rate\x88\x01\x01\x12\xd8\x01\n" +
+	"\tmax_steps\x18\x02 \x01(\x03B\xb4\x01\xbaG\xb0\x01\xca\x01\ainteger\x92\x02\x9a\x01Required for FINETUNING: step budget as a JSON number (e.g. 8), never a string. Program range [1, 200]; approved combinations come from the Release rules.\x9a\x02\x05int64H\x01R\tmax_steps\x88\x01\x01B\x10\n" +
 	"\x0e_learning_rateB\f\n" +
 	"\n" +
 	"_max_steps\"P\n" +

@@ -56,11 +56,21 @@ message CreateExecutionRequest {
   ];
 }
 
-// Registered LoRA SFT parameters. Values are strings, including integers;
-// program bounds and approved combinations are resolved against the Release.
+// Registered LoRA SFT parameters. learning_rate is a decimal string and
+// max_steps is an integer; program bounds and approved combinations are
+// resolved against the Release.
 message FinetuningParameters {
   optional string learning_rate = 1 [json_name = "learning_rate"];
-  optional int64 max_steps = 2 [json_name = "max_steps"];
+  // int64 renders as a string under the OpenAPI convention; the shared
+  // contract decodes max_steps as a JSON number, so the type is pinned here.
+  optional int64 max_steps = 2 [
+    json_name = "max_steps",
+    (gnostic.openapi.v3.property) = {
+      type: "integer"
+      format: "int64"
+      description: "Required for FINETUNING: step budget as a JSON number (e.g. 8), never a string. Program range [1, 200]; approved combinations come from the Release rules."
+    }
+  ];
 }
 
 message GeneralParameter {

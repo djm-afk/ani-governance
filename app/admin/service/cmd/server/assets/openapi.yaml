@@ -11980,10 +11980,13 @@ components:
                 learning_rate:
                     type: string
                 max_steps:
-                    type: string
+                    type: integer
+                    description: 'Required for FINETUNING: step budget as a JSON number (e.g. 8), never a string. Program range [1, 200]; approved combinations come from the Release rules.'
+                    format: int64
             description: |-
-                Registered LoRA SFT parameters. Values are strings, including integers;
-                 program bounds and approved combinations are resolved against the Release.
+                Registered LoRA SFT parameters. learning_rate is a decimal string and
+                 max_steps is an integer; program bounds and approved combinations are
+                 resolved against the Release.
         ForceLogoutSessionRequest:
             type: object
             properties:
