@@ -86,7 +86,7 @@ Gov 显式结构迁移 `20261019090000_instance_contract_version.sql` 为操作�
 
 | 方法与路径 | 输入与结果 |
 |---|---|
-| GET `/api/v1/instance-presets` | page/pageSize，name/code/compute_type/gpu_mode；`{items,total,gpu_catalog_status,gpu_catalog_reason}` |
+| GET `/api/v1/compute-presets?usage=CONTAINER_INSTANCE` | page/pageSize，name/code/compute_type/gpu_mode；`{items,total,gpu_catalog_status,gpu_catalog_reason}` |
 | GET `/api/v1/instances` | page/pageSize，name/instance_kind/compute_type/observedState；`{items,total}` |
 | GET `/api/v1/instances/{instance_id}` | 冻结静态详情，与列表使用同一安全投影 |
 | GET `/api/v1/instance-operations/{operation_id}` | 受理响应的 operationId；返回 id/instanceId/action/intentVersion/state/reason |
