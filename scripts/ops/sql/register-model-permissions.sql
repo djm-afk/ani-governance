@@ -25,6 +25,7 @@ BEGIN
       ('POST', '/api/v1/model-versions',                              'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models/{model_id}/upload-url',                'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models:import',                               'model:service:manage', 'MODEL'),
+      ('POST', '/api/v1/models:import-bundle',                        'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models/import-tasks/{task_id}:retry',         'model:service:manage', 'MODEL'),
       ('DELETE','/api/v1/models/{model_id}',                          'model:service:manage', 'MODEL'),
       ('DELETE','/api/v1/model-versions/{model_version_id}',           'model:service:manage', 'MODEL')

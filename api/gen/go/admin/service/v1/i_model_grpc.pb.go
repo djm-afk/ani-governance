@@ -32,6 +32,7 @@ const (
 	ModelService_DeleteModelVersion_FullMethodName   = "/admin.service.v1.ModelService/DeleteModelVersion"
 	ModelService_GetUploadURL_FullMethodName         = "/admin.service.v1.ModelService/GetUploadURL"
 	ModelService_ImportModel_FullMethodName          = "/admin.service.v1.ModelService/ImportModel"
+	ModelService_ImportModelBundle_FullMethodName    = "/admin.service.v1.ModelService/ImportModelBundle"
 	ModelService_GetImportTask_FullMethodName        = "/admin.service.v1.ModelService/GetImportTask"
 	ModelService_RetryImportTask_FullMethodName      = "/admin.service.v1.ModelService/RetryImportTask"
 	ModelService_GetModelDownloadURL_FullMethodName  = "/admin.service.v1.ModelService/GetModelDownloadURL"
@@ -56,6 +57,7 @@ type ModelServiceClient interface {
 	DeleteModelVersion(ctx context.Context, in *v1.DeleteModelVersionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUploadURL(ctx context.Context, in *v1.GetUploadURLRequest, opts ...grpc.CallOption) (*v1.GetUploadURLResponse, error)
 	ImportModel(ctx context.Context, in *v1.ImportModelRequest, opts ...grpc.CallOption) (*v1.ImportModelResponse, error)
+	ImportModelBundle(ctx context.Context, in *v1.ImportModelBundleRequest, opts ...grpc.CallOption) (*v1.ImportModelBundleResponse, error)
 	GetImportTask(ctx context.Context, in *v1.GetImportTaskRequest, opts ...grpc.CallOption) (*v1.GetImportTaskResponse, error)
 	RetryImportTask(ctx context.Context, in *v1.RetryImportTaskRequest, opts ...grpc.CallOption) (*v1.RetryImportTaskResponse, error)
 	GetModelDownloadURL(ctx context.Context, in *v1.GetModelDownloadURLRequest, opts ...grpc.CallOption) (*v1.GetModelDownloadURLResponse, error)
@@ -179,6 +181,16 @@ func (c *modelServiceClient) ImportModel(ctx context.Context, in *v1.ImportModel
 	return out, nil
 }
 
+func (c *modelServiceClient) ImportModelBundle(ctx context.Context, in *v1.ImportModelBundleRequest, opts ...grpc.CallOption) (*v1.ImportModelBundleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ImportModelBundleResponse)
+	err := c.cc.Invoke(ctx, ModelService_ImportModelBundle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *modelServiceClient) GetImportTask(ctx context.Context, in *v1.GetImportTaskRequest, opts ...grpc.CallOption) (*v1.GetImportTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetImportTaskResponse)
@@ -228,6 +240,7 @@ type ModelServiceServer interface {
 	DeleteModelVersion(context.Context, *v1.DeleteModelVersionRequest) (*emptypb.Empty, error)
 	GetUploadURL(context.Context, *v1.GetUploadURLRequest) (*v1.GetUploadURLResponse, error)
 	ImportModel(context.Context, *v1.ImportModelRequest) (*v1.ImportModelResponse, error)
+	ImportModelBundle(context.Context, *v1.ImportModelBundleRequest) (*v1.ImportModelBundleResponse, error)
 	GetImportTask(context.Context, *v1.GetImportTaskRequest) (*v1.GetImportTaskResponse, error)
 	RetryImportTask(context.Context, *v1.RetryImportTaskRequest) (*v1.RetryImportTaskResponse, error)
 	GetModelDownloadURL(context.Context, *v1.GetModelDownloadURLRequest) (*v1.GetModelDownloadURLResponse, error)
@@ -273,6 +286,9 @@ func (UnimplementedModelServiceServer) GetUploadURL(context.Context, *v1.GetUplo
 }
 func (UnimplementedModelServiceServer) ImportModel(context.Context, *v1.ImportModelRequest) (*v1.ImportModelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ImportModel not implemented")
+}
+func (UnimplementedModelServiceServer) ImportModelBundle(context.Context, *v1.ImportModelBundleRequest) (*v1.ImportModelBundleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportModelBundle not implemented")
 }
 func (UnimplementedModelServiceServer) GetImportTask(context.Context, *v1.GetImportTaskRequest) (*v1.GetImportTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetImportTask not implemented")
@@ -502,6 +518,24 @@ func _ModelService_ImportModel_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ModelService_ImportModelBundle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ImportModelBundleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelServiceServer).ImportModelBundle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelService_ImportModelBundle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelServiceServer).ImportModelBundle(ctx, req.(*v1.ImportModelBundleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ModelService_GetImportTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.GetImportTaskRequest)
 	if err := dec(in); err != nil {
@@ -606,6 +640,10 @@ var ModelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ImportModel",
 			Handler:    _ModelService_ImportModel_Handler,
+		},
+		{
+			MethodName: "ImportModelBundle",
+			Handler:    _ModelService_ImportModelBundle_Handler,
 		},
 		{
 			MethodName: "GetImportTask",

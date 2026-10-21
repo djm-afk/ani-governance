@@ -12,6 +12,7 @@ import (
 
 type modelOwnerProbe struct {
 	create func(context.Context, string, string, *modelv1.CreateModelRequest) (*modelv1.Model, error)
+	bundle func(context.Context, string, string, *modelv1.ImportModelBundleRequest) (*modelv1.ImportModelBundleResponse, error)
 }
 
 func (p *modelOwnerProbe) CreateModel(ctx context.Context, tenant, actor string, request *modelv1.CreateModelRequest) (*modelv1.Model, error) {
@@ -46,6 +47,12 @@ func (*modelOwnerProbe) GetUploadURL(context.Context, string, string, *modelv1.G
 }
 func (*modelOwnerProbe) ImportModel(context.Context, string, string, *modelv1.ImportModelRequest) (*modelv1.ImportTask, error) {
 	panic("unused")
+}
+func (p *modelOwnerProbe) ImportModelBundle(ctx context.Context, tenant, actor string, req *modelv1.ImportModelBundleRequest) (*modelv1.ImportModelBundleResponse, error) {
+	if p.bundle == nil {
+		panic("unused")
+	}
+	return p.bundle(ctx, tenant, actor, req)
 }
 func (*modelOwnerProbe) GetImportTask(context.Context, string, string, *modelv1.GetImportTaskRequest) (*modelv1.GetImportTaskResponse, error) {
 	panic("unused")
@@ -132,20 +139,48 @@ func TestModelServiceCreatesVersionWithCallerSuppliedEngine(t *testing.T) {
 	}
 }
 
-func TestModelServiceForwardsExternalSearchIdentityAndFilters(t *testing.T) {
-	client := &modelOwnerExtraProbe{search: func(_ context.Context, tenant, actor string, req *modelv1.SearchExternalModelsRequest) (*modelv1.SearchExternalModelsResponse, error) {
-		if tenant != "11111111-1111-4111-8111-111111111111" || actor != "governance:user:7" || req.Source != "modelscope" || req.Keyword != "qwen" || req.Owner != "Qwen" || req.Page.GetLimit() != 10 {
-			t.Fatalf("unexpected search delegation: tenant=%q actor=%q req=%#v", tenant, actor, req)
+func TestModelServiceForwardsModelBundle(t *testing.T) {
+	client := &modelOwnerProbe{bundle: func(_ context.Context, tenant, actor string, req *modelv1.ImportModelBundleRequest) (*modelv1.ImportModelBundleResponse, error) {
+		if tenant != "11111111-1111-4111-8111-111111111111" || actor != "governance:user:7" || req.IdempotencyKey != "bundle-1" || req.Model.GetName() != "qwen" || req.Model.GetExternalModelId() != "Qwen/Qwen3-0.6B" || req.Version.GetStartupCommand() != "vllm serve /models --served-model-name qwen" || req.Source.GetProvider() != "modelscope" || req.Source.GetRepoId() != "Qwen/Qwen3-0.6B" {
+			t.Fatalf("unexpected bundle delegation: tenant=%q actor=%q req=%#v", tenant, actor, req)
 		}
-		return &modelv1.SearchExternalModelsResponse{Candidates: []*modelv1.ExternalModelCandidate{{Source: "modelscope", RepoId: "Qwen/Qwen2-0.5B", Name: "Qwen2-0.5B", Revision: "master"}}, Meta: &modelv1.CursorPageMeta{HasMore: true, NextCursor: "next"}}, nil
+		return &modelv1.ImportModelBundleResponse{
+			Model:   &modelv1.Model{TenantId: tenant, Id: "model-1", Name: "qwen"},
+			Version: &modelv1.ModelVersion{Id: "version-1", ModelId: "model-1", Version: "main"},
+			Task:    &modelv1.ImportTask{TaskId: "task-1", ModelId: "model-1", ModelVersionId: "version-1"},
+		}, nil
 	}}
 	s := NewModelService(client, modelTenantProbe{})
 	ctx := auth.NewPrincipalContext(context.Background(), &auth.Principal{ID: 7, TenantID: 42, Type: auth.SubjectUser})
-	reply, err := s.SearchExternalModels(ctx, &catalogv1.SearchExternalModelsRequest{Source: "modelscope", Keyword: "qwen", Owner: "Qwen", Page: &catalogv1.CursorPage{Limit: 10}})
+	reply, err := s.ImportModelBundle(ctx, &catalogv1.ImportModelBundleRequest{Data: &catalogv1.ImportModelBundleData{
+		IdempotencyKey: "bundle-1",
+		Model:          &catalogv1.ImportModelBundleModelData{Name: "qwen", Capabilities: []string{"text-generation"}, ExternalModelId: "Qwen/Qwen3-0.6B"},
+		Version:        &catalogv1.ImportModelBundleVersionData{Version: "main", Format: "safetensors", EngineType: "vllm", EngineImage: "registry/vllm:tag", StartupCommand: "vllm serve /models --served-model-name qwen"},
+		Source:         &catalogv1.ImportModelBundleSourceData{Provider: "modelscope", RepoId: "Qwen/Qwen3-0.6B", Revision: "master"},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(reply.GetCandidates()) != 1 || reply.GetCandidates()[0].GetRepoId() != "Qwen/Qwen2-0.5B" || !reply.GetMeta().GetHasMore() || reply.GetMeta().GetNextCursor() != "next" {
+	if reply.GetModel().GetId() != "model-1" || reply.GetVersion().GetId() != "version-1" || reply.GetTask().GetTaskId() != "task-1" {
+		t.Fatalf("unexpected bundle response: %#v", reply)
+	}
+}
+
+func TestModelServiceForwardsExternalSearchIdentityAndFilters(t *testing.T) {
+	client := &modelOwnerExtraProbe{search: func(_ context.Context, tenant, actor string, req *modelv1.SearchExternalModelsRequest) (*modelv1.SearchExternalModelsResponse, error) {
+		if tenant != "11111111-1111-4111-8111-111111111111" || actor != "governance:user:7" || req.Source != "modelscope" || req.Keyword != "qwen" || req.Owner != "Qwen" || req.Page == nil || *req.Page != 1 || req.PageSize == nil || *req.PageSize != 10 {
+			t.Fatalf("unexpected search delegation: tenant=%q actor=%q req=%#v", tenant, actor, req)
+		}
+		return &modelv1.SearchExternalModelsResponse{Items: []*modelv1.ExternalModelCandidate{{Source: "modelscope", RepoId: "Qwen/Qwen2-0.5B", Name: "Qwen2-0.5B", Revision: "master"}}, HasMore: true}, nil
+	}}
+	s := NewModelService(client, modelTenantProbe{})
+	ctx := auth.NewPrincipalContext(context.Background(), &auth.Principal{ID: 7, TenantID: 42, Type: auth.SubjectUser})
+	page, pageSize := int32(1), int32(10)
+	reply, err := s.SearchExternalModels(ctx, &catalogv1.SearchExternalModelsRequest{Source: "modelscope", Keyword: "qwen", Owner: "Qwen", Page: &page, PageSize: &pageSize})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reply.GetItems()) != 1 || reply.GetItems()[0].GetRepoId() != "Qwen/Qwen2-0.5B" || !reply.GetHasMore() {
 		t.Fatalf("unexpected search response: %#v", reply)
 	}
 }

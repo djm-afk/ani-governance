@@ -142,11 +142,11 @@ func TestNoConflicts(t *testing.T) {
 
 // TestCountsAndKeys 表体量与键集合自检，防止生成物与实现脱节。
 func TestCountsAndKeys(t *testing.T) {
-	if ManagementCount() != 180 {
-		t.Errorf("ManagementCount() = %d, want 180", ManagementCount())
+	if ManagementCount() != 190 {
+		t.Errorf("ManagementCount() = %d, want 190", ManagementCount())
 	}
-	if CapabilityCount() != 118 {
-		t.Errorf("CapabilityCount() = %d, want 118", CapabilityCount())
+	if CapabilityCount() != 129 {
+		t.Errorf("CapabilityCount() = %d, want 129", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
@@ -163,12 +163,12 @@ func TestLookup(t *testing.T) {
 	if code, ok := Lookup("GET", "/api/v1/admin/roles"); !ok || code != "role:view" {
 		t.Errorf("Lookup(roles) = (%q,%v), want (role:view,true)", code, ok)
 	}
-	for _, route := range []struct{ method, path string }{
-		{"GET", "/api/v1/inference/services"},
-		{"POST", "/api/v1/inference/services/{data.resource_id}:delete"},
+	for _, route := range []struct{ method, path, code string }{
+		{"GET", "/api/v1/inference/services", "inference:service:read"},
+		{"POST", "/api/v1/inference/services/{data.resource_id}:delete", "inference:service:delete"},
 	} {
-		if _, ok := Lookup(route.method, route.path); ok {
-			t.Errorf("Lookup(%s %s) should miss after Inference management retirement", route.method, route.path)
+		if code, ok := Lookup(route.method, route.path); !ok || code != route.code {
+			t.Errorf("Lookup(%s %s) = (%q,%v), want %q", route.method, route.path, code, ok, route.code)
 		}
 	}
 	if _, ok := Lookup("GET", "/api/v1/nope"); ok {

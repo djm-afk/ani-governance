@@ -314,6 +314,20 @@ func (c *ModelClient) ImportModel(ctx context.Context, tenant, actor string, req
 	return c.client.ImportModel(call, req, grpc.WaitForReady(true))
 }
 
+func (c *ModelClient) ImportModelBundle(ctx context.Context, tenant, actor string, request *modelv1.ImportModelBundleRequest) (*modelv1.ImportModelBundleResponse, error) {
+	req, err := cloneModelRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	req.TenantId = tenant
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, err
+	}
+	defer cancel()
+	return c.client.ImportModelBundle(call, req, grpc.WaitForReady(true))
+}
+
 func (c *ModelClient) GetImportTask(ctx context.Context, tenant, actor string, request *modelv1.GetImportTaskRequest) (*modelv1.GetImportTaskResponse, error) {
 	req, err := cloneModelRequest(request)
 	if err != nil {

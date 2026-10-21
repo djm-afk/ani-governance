@@ -19,7 +19,23 @@ import (
 
 type modelClientProbe struct {
 	modelv1.ModelServiceClient
-	calls int
+	calls         int
+	bundleCalls   int
+	bundleRequest *modelv1.ImportModelBundleRequest
+}
+
+func (p *modelClientProbe) ImportModelBundle(ctx context.Context, request *modelv1.ImportModelBundleRequest, _ ...grpc.CallOption) (*modelv1.ImportModelBundleResponse, error) {
+	p.bundleCalls++
+	p.bundleRequest = request
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok || len(md.Get("authorization")) != 0 || md.Get("x-ani-tenant-id")[0] != request.TenantId || md.Get("x-ani-actor")[0] != "governance:user:7" {
+		return nil, status.Error(codes.Internal, "identity metadata was not rebuilt")
+	}
+	return &modelv1.ImportModelBundleResponse{
+		Model:   &modelv1.Model{TenantId: request.TenantId, Id: "model-1", Name: request.Model.Name},
+		Version: &modelv1.ModelVersion{Id: "version-1", ModelId: "model-1", Version: request.Version.Version},
+		Task:    &modelv1.ImportTask{TaskId: "task-1", ModelId: "model-1", ModelVersionId: "version-1"},
+	}, nil
 }
 
 func (p *modelClientProbe) CreateModel(ctx context.Context, request *modelv1.CreateModelRequest, _ ...grpc.CallOption) (*modelv1.Model, error) {
@@ -48,6 +64,24 @@ func TestModelClientRebuildsTrustedIdentity(t *testing.T) {
 	}
 	if c.client.(*modelClientProbe).calls != 1 {
 		t.Fatal("model call was not made exactly once")
+	}
+}
+
+func TestModelClientImportsBundleOnceAndPreservesRuntimeInput(t *testing.T) {
+	probe := &modelClientProbe{}
+	c := &ModelClient{client: probe, timeout: time.Second}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "secret", "x-ani-tenant-id", "forged"))
+	reply, err := c.ImportModelBundle(ctx, "11111111-1111-4111-8111-111111111111", "governance:user:7", &modelv1.ImportModelBundleRequest{
+		TenantId: "body-tenant", IdempotencyKey: "bundle-1",
+		Model:   &modelv1.ImportModelBundleModelData{Name: "qwen", Capabilities: []string{"text-generation"}},
+		Version: &modelv1.ImportModelBundleVersionData{Version: "main", Format: "safetensors", EngineType: "vllm", EngineImage: "registry/vllm:tag", StartupCommand: "vllm serve /models --served-model-name qwen"},
+		Source:  &modelv1.ImportModelBundleSourceData{Provider: "modelscope", RepoId: "Qwen/qwen", Revision: "main"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.GetTask().GetTaskId() != "task-1" || probe.bundleCalls != 1 || probe.bundleRequest.GetTenantId() != "11111111-1111-4111-8111-111111111111" || probe.bundleRequest.GetVersion().GetStartupCommand() != "vllm serve /models --served-model-name qwen" || probe.bundleRequest.GetVersion().GetEngineImage() != "registry/vllm:tag" {
+		t.Fatalf("unexpected bundle call: calls=%d request=%#v reply=%#v", probe.bundleCalls, probe.bundleRequest, reply)
 	}
 }
 

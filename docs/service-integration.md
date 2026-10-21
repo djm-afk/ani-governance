@@ -6,7 +6,7 @@
 - **Model / ModelDev（共享 MODEL 模块）**：[model_client.go](../app/admin/service/internal/data/model_client.go) 接入模型目录、版本和导入生命周期；[modeldev_client.go](../app/admin/service/internal/data/modeldev_client.go) 与 [CPU-P01 接口登记](interface-integration-register.md) 记录训练受理、投递、查询和受管目录操作。Model BFF 的恢复范围以 [GOV-MODEL-INF 接口登记](interface-integration-register.md#gov-model-inf-20261012model--inference-bff-接入) 为准。
 - **Accelerator / Resource 实例**：[GPU owner 接入指南](contracts/gpu-owner-integration-guide.md) 记录 typed context、冻结命令及退款 listener 等专项合同。Model 出站客户端使用唯一 DNS SAN `ani-governance`；Accelerator 与内部退款 listener 的身份要求分别按各自合同维护。
 
-Inference 管理接入本期整体下线：普通和 GPU 推理的创建、查询、更新、启停、删除及操作查询均不提供，不保留静态 API 模块或 fork 依赖，也不配置 Inference 出站证书和地址。后续重新对接另行确认正式上游合同与发布版本。
+Inference 管理由 Governance BFF 接入：普通和 GPU 推理的创建、查询、更新、启停、删除及操作查询均通过 `/api/v1/inference/...` 提供。Gov 使用正式 Inference API 模块和 TLS 1.3 双向证书、精确 DNS SAN；Higress 仍只承载推理数据面。
 
 下游在目标环境可能缺席时可参考 Network 的可选装配模式；是否属于启动必需依赖由本次接入合同决定。旧 Model 的强制依赖装配仅是历史先例，重接时须重新确定授权范围和启动条件。
 

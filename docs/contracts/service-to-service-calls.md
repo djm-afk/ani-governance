@@ -1,6 +1,6 @@
 # ANI 服务间调用规则
 
-当前 Governance 不提供 Inference 推理服务管理接口，也不装配其 API 模块或出站客户端；后续重新对接仍须遵循本规范。本文的 Inference 调用示例及明确标注的旧源码快照仅说明调用边界，不代表当前已接入。Model、Resource 与 ACC 的现行合同保持各自范围。
+Governance 当前通过受信 Inference API 客户端提供推理服务管理 BFF。Gov → Inference 使用 TLS 1.3 双向认证、精确 DNS SAN 和登记的 RPC；客户端重建租户与 actor metadata，不透传公网 Authorization 或自报 owner。Inference 的 GPU 命令还携带冻结业务摘要、执行/展示快照和操作幂等 ID，Gov 原始 quota_items 仍只保存在 Gov。Model、Resource 与 ACC 的现行合同保持各自范围。
 
 适用：Gov → svc、svc → Gov、svc → svc 的内部业务 RPC。本文是新接入及修改服务间调用时必须遵守的统一规范；存量差异须在明确范围的独立迁移中处理，见[当前差异与迁移边界](#current-differences)。规范入仓不表示当前运行实现已全部符合。本文不改变各服务的业务职责、已发布字段或历史验收结论。
 

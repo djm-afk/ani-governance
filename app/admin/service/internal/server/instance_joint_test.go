@@ -34,6 +34,7 @@ import (
 	"go-wind-admin/app/admin/service/internal/data/ent"
 	api "go-wind-admin/app/admin/service/internal/data/ent/api"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
+	"go-wind-admin/app/admin/service/internal/data/ent/permissionapi"
 	"go-wind-admin/app/admin/service/internal/data/ent/planmodule"
 	"go-wind-admin/app/admin/service/internal/data/ent/quotaoperation"
 	"go-wind-admin/app/admin/service/internal/data/ent/role"
@@ -140,11 +141,29 @@ func TestInstancePublicHTTPPersistentIntakeAndCommands(t *testing.T) {
 		require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(grant.ID).SetAPIID(route.ID).Exec(sys))
 	}
 	require.Equal(t, 8, routes, "instance lifecycle routes remain registered; compute has its own owner")
-	computeRoute, e := c.Client().Api.Create().SetModule("ComputePresetService").SetOperation("ComputePresetService_ListPresets").SetPath(data.ComputeCatalogPath).SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleSystem).SetStatus(api.StatusOn).Save(sys)
+	// Shared API and permission catalogs survive task tenant cleanup. Reuse
+	// their exact records so a preceding fixture or retry cannot duplicate them.
+	computeRoute, e := c.Client().Api.Query().Where(api.ModuleEQ("ComputePresetService"), api.PathEQ(data.ComputeCatalogPath), api.MethodEQ("GET"), api.ScopeEQ(api.ScopeAdmin)).Only(sys)
+	if ent.IsNotFound(e) {
+		computeRoute, e = c.Client().Api.Create().SetModule("ComputePresetService").SetOperation("ComputePresetService_ListPresets").SetPath(data.ComputeCatalogPath).SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleSystem).SetStatus(api.StatusOn).Save(sys)
+	}
 	require.NoError(t, e)
-	computeGrant, e := c.Client().Permission.Create().SetName("instance:preset:read").SetCode("instance:preset:read").SetStatus(permission.StatusOn).Save(sys)
+	require.NotNil(t, computeRoute.BusinessModule)
+	require.Equal(t, api.BusinessModuleSystem, *computeRoute.BusinessModule)
+	require.NotNil(t, computeRoute.Status)
+	require.Equal(t, api.StatusOn, *computeRoute.Status)
+	computeGrant, e := c.Client().Permission.Query().Where(permission.CodeEQ("instance:preset:read")).Only(sys)
+	if ent.IsNotFound(e) {
+		computeGrant, e = c.Client().Permission.Create().SetName("instance:preset:read").SetCode("instance:preset:read").SetStatus(permission.StatusOn).Save(sys)
+	}
 	require.NoError(t, e)
-	require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(computeGrant.ID).SetAPIID(computeRoute.ID).Exec(sys))
+	require.NotNil(t, computeGrant.Status)
+	require.Equal(t, permission.StatusOn, *computeGrant.Status)
+	linked, e := c.Client().PermissionApi.Query().Where(permissionapi.PermissionIDEQ(computeGrant.ID), permissionapi.APIIDEQ(computeRoute.ID)).Exist(sys)
+	require.NoError(t, e)
+	if !linked {
+		require.NoError(t, c.Client().PermissionApi.Create().SetPermissionID(computeGrant.ID).SetAPIID(computeRoute.ID).Exec(sys))
+	}
 	require.NoError(t, c.Client().RolePermission.Create().SetTenantID(tenant.ID).SetRoleID(currentRole.ID).SetPermissionID(computeGrant.ID).SetStatus(rolepermission.StatusOn).SetEffect(rolepermission.EffectAllow).Exec(sys))
 	catalogRoute, e := c.Client().Api.Query().Where(api.PathEQ("/api/v1/accelerator/profiles"), api.MethodEQ("GET"), api.ScopeEQ(api.ScopeAdmin)).Only(sys)
 	if ent.IsNotFound(e) {
