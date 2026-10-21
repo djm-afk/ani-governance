@@ -3209,6 +3209,71 @@ paths:
                                 $ref: '#/components/schemas/GetPlatformNetworkCapabilitiesResponse'
             security:
                 - BearerAuth: []
+    /api/v1/admin/networks/default-vpc-egresses:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateDefaultVPCEgress
+            description: Requires platform user JWT and network:platform:default-egress:create. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness.
+            operationId: PlatformNetworkService_CreateDefaultVPCEgress
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateDefaultVPCEgressRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/default-vpc-egresses/{egress_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetDefaultVPCEgress
+            description: Requires platform user JWT and network:platform:default-egress:get. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness.
+            operationId: PlatformNetworkService_GetDefaultVPCEgress
+            parameters:
+                - name: egress_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteDefaultVPCEgress
+            description: Requires platform user JWT and network:platform:default-egress:delete. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness.
+            operationId: PlatformNetworkService_DeleteDefaultVPCEgress
+            parameters:
+                - name: egress_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
     /api/v1/admin/networks/devices:
         post:
             tags:
@@ -3251,6 +3316,55 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetNetworkDeviceResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/devices/{device_id}/retirement:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetNetworkDeviceRetirement
+            description: Requires platform user JWT and network:platform:device-retirement:get. Restricted legacy registration closure preserves history and fencing; blocked or unknown outcomes are not completion. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetNetworkDeviceRetirement
+            parameters:
+                - name: device_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetNetworkDeviceRetirementResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: RetireNetworkDevice
+            description: Requires platform user JWT and network:platform:device-retirement:create. Restricted legacy registration closure preserves history and fencing; blocked or unknown outcomes are not completion. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_RetireNetworkDevice
+            parameters:
+                - name: device_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RetireNetworkDeviceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RetireNetworkDeviceResponse'
             security:
                 - BearerAuth: []
     /api/v1/admin/networks/egress-gateways:
@@ -3545,6 +3659,14 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: cluster_id
+                  in: query
+                  schema:
+                    type: string
+                - name: virtual_switch_id
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -3756,6 +3878,105 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/RecordPublicPoolVerificationResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/virtual-switches:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListVirtualSwitches
+            description: Requires platform user JWT and network:platform:virtual-switch:list. Lists use page/pageSize with direct items/total; total is a decimal string. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListVirtualSwitches
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVirtualSwitchesResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateVirtualSwitch
+            description: Requires platform user JWT and network:platform:virtual-switch:create. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_CreateVirtualSwitch
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVirtualSwitchRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateVirtualSwitchResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/virtual-switches/{virtual_switch_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetVirtualSwitch
+            description: Requires platform user JWT and network:platform:virtual-switch:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetVirtualSwitch
+            parameters:
+                - name: virtual_switch_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetVirtualSwitchResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteVirtualSwitch
+            description: Requires platform user JWT and network:platform:virtual-switch:delete. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_DeleteVirtualSwitch
+            parameters:
+                - name: virtual_switch_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteVirtualSwitchResponse'
             security:
                 - BearerAuth: []
     /api/v1/admin/networks/vlan-networks:
@@ -10851,6 +11072,25 @@ components:
                 data:
                     $ref: '#/components/schemas/Config'
             description: 创建系统参数 - 请求
+        CreateDefaultVPCEgressData:
+            type: object
+            properties:
+                name:
+                    type: string
+                pool_id:
+                    type: string
+                idempotency_key:
+                    type: string
+        CreateDefaultVPCEgressRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateDefaultVPCEgressData'
+        CreateDefaultVPCEgressResponse:
+            type: object
+            properties:
+                egress:
+                    $ref: '#/components/schemas/DefaultVPCEgress'
         CreateDictEntryRequest:
             type: object
             properties:
@@ -11397,6 +11637,23 @@ components:
             properties:
                 vpc:
                     $ref: '#/components/schemas/VPC'
+        CreateVirtualSwitchData:
+            type: object
+            properties:
+                name:
+                    type: string
+                idempotency_key:
+                    type: string
+        CreateVirtualSwitchRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVirtualSwitchData'
+        CreateVirtualSwitchResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/VirtualSwitch'
         CreateVlanNetworkData:
             type: object
             properties:
@@ -11410,6 +11667,13 @@ components:
                     type: integer
                     format: int32
                 idempotency_key:
+                    type: string
+                cluster_id:
+                    type: string
+                    description: Legacy device_id and the three v2 fields are mutually exclusive.
+                virtual_switch_id:
+                    type: string
+                device_name:
                     type: string
         CreateVlanNetworkRequest:
             type: object
@@ -11613,6 +11877,69 @@ components:
                     type: boolean
                 string:
                     type: string
+        DefaultVPCEgress:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                pool_id:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                version:
+                    type: string
+                last_operation_id:
+                    type: string
+                operation_state:
+                    type: string
+                phase:
+                    type: string
+                pending_unknown:
+                    type: boolean
+                address:
+                    type: string
+                eip_provider_name:
+                    type: string
+                eip_provider_uid:
+                    type: string
+                snat_provider_name:
+                    type: string
+                snat_provider_uid:
+                    type: string
+                desired_enabled:
+                    type: boolean
+                applied_enabled:
+                    type: boolean
+                cluster_id:
+                    type: string
+                cluster_uid:
+                    type: string
+                default_vpc_namespace:
+                    type: string
+                default_vpc_name:
+                    type: string
+                default_vpc_uid:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                observed_at:
+                    type: string
+                    format: date-time
+                target_generation:
+                    type: string
+                pending_action:
+                    type: string
+                observation_stale:
+                    type: boolean
+            description: The system VPC identity is output-only and fixed by Resource configuration.
         DeleteAcceleratorProfileData:
             type: object
             properties:
@@ -11632,6 +11959,11 @@ components:
             properties:
                 status:
                     type: string
+        DeleteDefaultVPCEgressResponse:
+            type: object
+            properties:
+                egress:
+                    $ref: '#/components/schemas/DefaultVPCEgress'
         DeleteEIPResponse:
             type: object
             properties:
@@ -11701,6 +12033,11 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        DeleteVirtualSwitchResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/VirtualSwitch'
         DeleteVlanNetworkResponse:
             type: object
             properties:
@@ -11792,6 +12129,37 @@ components:
                     type: string
                     description: 内核版本
             description: 设备信息
+        DeviceRetirement:
+            type: object
+            properties:
+                device_id:
+                    type: string
+                operation_id:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                version:
+                    type: string
+                expected_version:
+                    type: string
+                config_uid:
+                    type: string
+                fence_version:
+                    type: string
+                pending_unknown:
+                    type: boolean
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                completed_at:
+                    type: string
+                    format: date-time
+            description: A restricted legacy registration closure has a durable fence and keeps history.
         DictEntry:
             type: object
             properties:
@@ -12361,6 +12729,11 @@ components:
                 imageBase64:
                     type: string
                     description: 验证码图片的Base64编码字符串，客户端可以解码并显示给用户
+        GetDefaultVPCEgressResponse:
+            type: object
+            properties:
+                egress:
+                    $ref: '#/components/schemas/DefaultVPCEgress'
         GetEIPResponse:
             type: object
             properties:
@@ -12490,6 +12863,11 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        GetNetworkDeviceRetirementResponse:
+            type: object
+            properties:
+                retirement:
+                    $ref: '#/components/schemas/DeviceRetirement'
         GetOperationResponse:
             type: object
             properties:
@@ -12573,6 +12951,11 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        GetVirtualSwitchResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/VirtualSwitch'
         GetVlanNetworkResponse:
             type: object
             properties:
@@ -14224,6 +14607,15 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/VPC'
+                total:
+                    type: string
+        ListVirtualSwitchesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualSwitch'
                 total:
                     type: string
         ListVlanNetworksResponse:
@@ -16944,6 +17336,25 @@ components:
                     type: integer
                     format: int32
             description: 重启调度任务 - 回应
+        RetireNetworkDeviceData:
+            type: object
+            properties:
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        RetireNetworkDeviceRequest:
+            type: object
+            properties:
+                device_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RetireNetworkDeviceData'
+        RetireNetworkDeviceResponse:
+            type: object
+            properties:
+                retirement:
+                    $ref: '#/components/schemas/DeviceRetirement'
         RetryImportTaskRequest:
             type: object
             properties:
@@ -18802,6 +19213,60 @@ components:
                     $ref: '#/components/schemas/WebAuthnAssertion'
                 backupCode:
                     type: string
+        VirtualSwitch:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                reason_message:
+                    type: string
+                version:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                last_operation_id:
+                    type: string
+                cluster_id:
+                    type: string
+                group_name:
+                    type: string
+                binding_state:
+                    type: string
+                binding_version:
+                    type: string
+                membership_fingerprint:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualSwitchNode'
+            description: A persisted platform switch has no Provider object or cluster before first use.
+        VirtualSwitchNode:
+            type: object
+            properties:
+                node_name:
+                    type: string
+                node_uid:
+                    type: string
+                mac:
+                    type: string
+                priority:
+                    type: integer
+                    format: int32
+                state:
+                    type: string
+                reason:
+                    type: string
         VlanNetwork:
             type: object
             properties:
@@ -18810,6 +19275,16 @@ components:
                 vlan_id:
                     type: integer
                     format: int32
+                virtual_switch_id:
+                    type: string
+                device_name:
+                    type: string
+                group_name:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualSwitchNode'
         VolumeMount:
             type: object
             properties:
