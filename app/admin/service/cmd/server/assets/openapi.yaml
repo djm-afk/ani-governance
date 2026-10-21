@@ -8476,6 +8476,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetImportTaskResponse'
+    /api/v1/models/import-tasks/{task_id}/logs:
+        get:
+            tags:
+                - ModelService
+            operationId: ModelService_GetImportTaskLogs
+            parameters:
+                - name: task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetImportTaskLogsResponse'
     /api/v1/models/import-tasks/{task_id}:retry:
         post:
             tags:
@@ -12382,6 +12400,17 @@ components:
             properties:
                 space:
                     $ref: '#/components/schemas/ImageSpace'
+        GetImportTaskLogsResponse:
+            type: object
+            properties:
+                task_id:
+                    type: string
+                status:
+                    type: string
+                logs:
+                    type: string
+                available:
+                    type: boolean
         GetImportTaskResponse:
             type: object
             properties:

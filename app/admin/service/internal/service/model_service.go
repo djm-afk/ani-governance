@@ -31,6 +31,7 @@ type ModelOwnerClient interface {
 	ImportModel(context.Context, string, string, *modelv1.ImportModelRequest) (*modelv1.ImportTask, error)
 	ImportModelBundle(context.Context, string, string, *modelv1.ImportModelBundleRequest) (*modelv1.ImportModelBundleResponse, error)
 	GetImportTask(context.Context, string, string, *modelv1.GetImportTaskRequest) (*modelv1.GetImportTaskResponse, error)
+	GetImportTaskLogs(context.Context, string, string, *modelv1.GetImportTaskLogsRequest) (*modelv1.GetImportTaskLogsResponse, error)
 	RetryImportTask(context.Context, string, string, *modelv1.RetryImportTaskRequest) (*modelv1.RetryImportTaskResponse, error)
 	GetModelDownloadURL(context.Context, string, string, *modelv1.GetModelDownloadURLRequest) (*modelv1.GetModelDownloadURLResponse, error)
 }
@@ -358,6 +359,24 @@ func (s *ModelService) GetImportTask(ctx context.Context, in *catalogv1.GetImpor
 	return &catalogv1.GetImportTaskResponse{Task: wireImportTask(reply.Task)}, nil
 }
 
+func (s *ModelService) GetImportTaskLogs(ctx context.Context, in *catalogv1.GetImportTaskLogsRequest) (*catalogv1.GetImportTaskLogsResponse, error) {
+	if in == nil || strings.TrimSpace(in.TaskId) == "" {
+		return nil, kratoserrors.BadRequest("INVALID_MODEL_IMPORT", "task_id is required")
+	}
+	tenant, actor, err := s.trustedModelOperator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	reply, err := s.client.GetImportTaskLogs(ctx, tenant, actor, &modelv1.GetImportTaskLogsRequest{TaskId: in.TaskId})
+	if err != nil {
+		return nil, mapImportTaskLogsError(err)
+	}
+	if reply == nil || strings.TrimSpace(reply.TaskId) == "" || reply.TaskId != in.TaskId {
+		return nil, modelInvalidReply()
+	}
+	return &catalogv1.GetImportTaskLogsResponse{TaskId: reply.TaskId, Status: reply.Status, Logs: reply.Logs, Available: reply.Available}, nil
+}
+
 func (s *ModelService) RetryImportTask(ctx context.Context, in *catalogv1.RetryImportTaskRequest) (*catalogv1.RetryImportTaskResponse, error) {
 	if in == nil || strings.TrimSpace(in.TaskId) == "" {
 		return nil, kratoserrors.BadRequest("INVALID_MODEL_IMPORT", "task_id is required")
@@ -441,6 +460,14 @@ func mapModelError(err error) error {
 	default:
 		return kratoserrors.ServiceUnavailable("MODEL_UNAVAILABLE", "Model service unavailable")
 	}
+}
+
+func mapImportTaskLogsError(err error) error {
+	modelErr := kratoserrors.FromError(err)
+	if modelErr != nil && modelErr.Code == 409 && modelErr.Reason == "IMPORT_LOGS_UNAVAILABLE" {
+		return kratoserrors.Conflict("IMPORT_LOGS_UNAVAILABLE", "import task logs are no longer available")
+	}
+	return mapModelError(err)
 }
 
 func wireModel(model *modelv1.Model) *catalogv1.Model {

@@ -241,5 +241,12 @@ message ImportModelBundleResponse {
 
 message GetImportTaskRequest { string task_id = 1 [json_name = "task_id"]; }
 message GetImportTaskResponse { ImportTask task = 1; }
+message GetImportTaskLogsRequest { string task_id = 1 [json_name = "task_id"]; }
+message GetImportTaskLogsResponse {
+  string task_id = 1 [json_name = "task_id"];
+  string status = 2;
+  string logs = 3;
+  bool available = 4;
+}
 message RetryImportTaskRequest { string task_id = 1 [json_name = "task_id"]; }
 message RetryImportTaskResponse { ImportTask task = 1; }

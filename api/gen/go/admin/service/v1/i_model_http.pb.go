@@ -26,6 +26,7 @@ const OperationModelServiceCreateModelVersion = "/admin.service.v1.ModelService/
 const OperationModelServiceDeleteModel = "/admin.service.v1.ModelService/DeleteModel"
 const OperationModelServiceDeleteModelVersion = "/admin.service.v1.ModelService/DeleteModelVersion"
 const OperationModelServiceGetImportTask = "/admin.service.v1.ModelService/GetImportTask"
+const OperationModelServiceGetImportTaskLogs = "/admin.service.v1.ModelService/GetImportTaskLogs"
 const OperationModelServiceGetModel = "/admin.service.v1.ModelService/GetModel"
 const OperationModelServiceGetModelDownloadURL = "/admin.service.v1.ModelService/GetModelDownloadURL"
 const OperationModelServiceGetModelVersion = "/admin.service.v1.ModelService/GetModelVersion"
@@ -43,6 +44,7 @@ type ModelServiceHTTPServer interface {
 	DeleteModel(context.Context, *v1.DeleteModelRequest) (*emptypb.Empty, error)
 	DeleteModelVersion(context.Context, *v1.DeleteModelVersionRequest) (*emptypb.Empty, error)
 	GetImportTask(context.Context, *v1.GetImportTaskRequest) (*v1.GetImportTaskResponse, error)
+	GetImportTaskLogs(context.Context, *v1.GetImportTaskLogsRequest) (*v1.GetImportTaskLogsResponse, error)
 	GetModel(context.Context, *v1.GetModelRequest) (*v1.GetModelResponse, error)
 	GetModelDownloadURL(context.Context, *v1.GetModelDownloadURLRequest) (*v1.GetModelDownloadURLResponse, error)
 	GetModelVersion(context.Context, *v1.GetModelVersionRequest) (*v1.GetModelVersionResponse, error)
@@ -70,6 +72,7 @@ func RegisterModelServiceHTTPServer(s *http.Server, srv ModelServiceHTTPServer) 
 	r.POST("/api/v1/models:import", _ModelService_ImportModel0_HTTP_Handler(srv))
 	r.POST("/api/v1/models:import-bundle", _ModelService_ImportModelBundle0_HTTP_Handler(srv))
 	r.GET("/api/v1/models/import-tasks/{task_id}", _ModelService_GetImportTask0_HTTP_Handler(srv))
+	r.GET("/api/v1/models/import-tasks/{task_id}/logs", _ModelService_GetImportTaskLogs0_HTTP_Handler(srv))
 	r.POST("/api/v1/models/import-tasks/{task_id}:retry", _ModelService_RetryImportTask0_HTTP_Handler(srv))
 	r.GET("/api/v1/model-versions/{model_version_id}/download-url", _ModelService_GetModelDownloadURL0_HTTP_Handler(srv))
 }
@@ -357,6 +360,28 @@ func _ModelService_GetImportTask0_HTTP_Handler(srv ModelServiceHTTPServer) func(
 	}
 }
 
+func _ModelService_GetImportTaskLogs0_HTTP_Handler(srv ModelServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetImportTaskLogsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelServiceGetImportTaskLogs)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetImportTaskLogs(ctx, req.(*v1.GetImportTaskLogsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetImportTaskLogsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _ModelService_RetryImportTask0_HTTP_Handler(srv ModelServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in v1.RetryImportTaskRequest
@@ -410,6 +435,7 @@ type ModelServiceHTTPClient interface {
 	DeleteModel(ctx context.Context, req *v1.DeleteModelRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 	DeleteModelVersion(ctx context.Context, req *v1.DeleteModelVersionRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 	GetImportTask(ctx context.Context, req *v1.GetImportTaskRequest, opts ...http.CallOption) (rsp *v1.GetImportTaskResponse, err error)
+	GetImportTaskLogs(ctx context.Context, req *v1.GetImportTaskLogsRequest, opts ...http.CallOption) (rsp *v1.GetImportTaskLogsResponse, err error)
 	GetModel(ctx context.Context, req *v1.GetModelRequest, opts ...http.CallOption) (rsp *v1.GetModelResponse, err error)
 	GetModelDownloadURL(ctx context.Context, req *v1.GetModelDownloadURLRequest, opts ...http.CallOption) (rsp *v1.GetModelDownloadURLResponse, err error)
 	GetModelVersion(ctx context.Context, req *v1.GetModelVersionRequest, opts ...http.CallOption) (rsp *v1.GetModelVersionResponse, err error)
@@ -487,6 +513,19 @@ func (c *ModelServiceHTTPClientImpl) GetImportTask(ctx context.Context, in *v1.G
 	pattern := "/api/v1/models/import-tasks/{task_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationModelServiceGetImportTask))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelServiceHTTPClientImpl) GetImportTaskLogs(ctx context.Context, in *v1.GetImportTaskLogsRequest, opts ...http.CallOption) (*v1.GetImportTaskLogsResponse, error) {
+	var out v1.GetImportTaskLogsResponse
+	pattern := "/api/v1/models/import-tasks/{task_id}/logs"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelServiceGetImportTaskLogs))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

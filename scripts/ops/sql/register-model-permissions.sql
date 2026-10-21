@@ -21,6 +21,7 @@ BEGIN
       ('GET',  '/api/v1/model-versions/{model_version_id}',           'model:service:read',   'MODEL'),
       ('GET',  '/api/v1/model-versions/{model_version_id}/download-url','model:service:read',   'MODEL'),
       ('GET',  '/api/v1/models/import-tasks/{task_id}',               'model:service:read',   'MODEL'),
+      ('GET',  '/api/v1/models/import-tasks/{task_id}/logs',           'model:service:read',   'MODEL'),
       ('POST', '/api/v1/models',                                      'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/model-versions',                              'model:service:manage', 'MODEL'),
       ('POST', '/api/v1/models/{model_id}/upload-url',                'model:service:manage', 'MODEL'),

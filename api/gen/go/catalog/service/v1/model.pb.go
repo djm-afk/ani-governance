@@ -2641,6 +2641,118 @@ func (x *GetImportTaskResponse) GetTask() *ImportTask {
 	return nil
 }
 
+type GetImportTaskLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetImportTaskLogsRequest) Reset() {
+	*x = GetImportTaskLogsRequest{}
+	mi := &file_catalog_service_v1_model_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImportTaskLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImportTaskLogsRequest) ProtoMessage() {}
+
+func (x *GetImportTaskLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog_service_v1_model_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetImportTaskLogsRequest.ProtoReflect.Descriptor instead.
+func (*GetImportTaskLogsRequest) Descriptor() ([]byte, []int) {
+	return file_catalog_service_v1_model_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *GetImportTaskLogsRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+type GetImportTaskLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,proto3" json:"task_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Logs          string                 `protobuf:"bytes,3,opt,name=logs,proto3" json:"logs,omitempty"`
+	Available     bool                   `protobuf:"varint,4,opt,name=available,proto3" json:"available,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetImportTaskLogsResponse) Reset() {
+	*x = GetImportTaskLogsResponse{}
+	mi := &file_catalog_service_v1_model_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImportTaskLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImportTaskLogsResponse) ProtoMessage() {}
+
+func (x *GetImportTaskLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog_service_v1_model_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetImportTaskLogsResponse.ProtoReflect.Descriptor instead.
+func (*GetImportTaskLogsResponse) Descriptor() ([]byte, []int) {
+	return file_catalog_service_v1_model_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *GetImportTaskLogsResponse) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *GetImportTaskLogsResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetImportTaskLogsResponse) GetLogs() string {
+	if x != nil {
+		return x.Logs
+	}
+	return ""
+}
+
+func (x *GetImportTaskLogsResponse) GetAvailable() bool {
+	if x != nil {
+		return x.Available
+	}
+	return false
+}
+
 type RetryImportTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,proto3" json:"task_id,omitempty"`
@@ -2650,7 +2762,7 @@ type RetryImportTaskRequest struct {
 
 func (x *RetryImportTaskRequest) Reset() {
 	*x = RetryImportTaskRequest{}
-	mi := &file_catalog_service_v1_model_proto_msgTypes[38]
+	mi := &file_catalog_service_v1_model_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2662,7 +2774,7 @@ func (x *RetryImportTaskRequest) String() string {
 func (*RetryImportTaskRequest) ProtoMessage() {}
 
 func (x *RetryImportTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_model_proto_msgTypes[38]
+	mi := &file_catalog_service_v1_model_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2675,7 +2787,7 @@ func (x *RetryImportTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryImportTaskRequest.ProtoReflect.Descriptor instead.
 func (*RetryImportTaskRequest) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_model_proto_rawDescGZIP(), []int{38}
+	return file_catalog_service_v1_model_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *RetryImportTaskRequest) GetTaskId() string {
@@ -2694,7 +2806,7 @@ type RetryImportTaskResponse struct {
 
 func (x *RetryImportTaskResponse) Reset() {
 	*x = RetryImportTaskResponse{}
-	mi := &file_catalog_service_v1_model_proto_msgTypes[39]
+	mi := &file_catalog_service_v1_model_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2706,7 +2818,7 @@ func (x *RetryImportTaskResponse) String() string {
 func (*RetryImportTaskResponse) ProtoMessage() {}
 
 func (x *RetryImportTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_model_proto_msgTypes[39]
+	mi := &file_catalog_service_v1_model_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2719,7 +2831,7 @@ func (x *RetryImportTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryImportTaskResponse.ProtoReflect.Descriptor instead.
 func (*RetryImportTaskResponse) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_model_proto_rawDescGZIP(), []int{39}
+	return file_catalog_service_v1_model_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *RetryImportTaskResponse) GetTask() *ImportTask {
@@ -2970,7 +3082,14 @@ const file_catalog_service_v1_model_proto_rawDesc = "" +
 	"\x14GetImportTaskRequest\x12\x18\n" +
 	"\atask_id\x18\x01 \x01(\tR\atask_id\"K\n" +
 	"\x15GetImportTaskResponse\x122\n" +
-	"\x04task\x18\x01 \x01(\v2\x1e.catalog.service.v1.ImportTaskR\x04task\"2\n" +
+	"\x04task\x18\x01 \x01(\v2\x1e.catalog.service.v1.ImportTaskR\x04task\"4\n" +
+	"\x18GetImportTaskLogsRequest\x12\x18\n" +
+	"\atask_id\x18\x01 \x01(\tR\atask_id\"\x7f\n" +
+	"\x19GetImportTaskLogsResponse\x12\x18\n" +
+	"\atask_id\x18\x01 \x01(\tR\atask_id\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
+	"\x04logs\x18\x03 \x01(\tR\x04logs\x12\x1c\n" +
+	"\tavailable\x18\x04 \x01(\bR\tavailable\"2\n" +
 	"\x16RetryImportTaskRequest\x12\x18\n" +
 	"\atask_id\x18\x01 \x01(\tR\atask_id\"M\n" +
 	"\x17RetryImportTaskResponse\x122\n" +
@@ -2990,7 +3109,7 @@ func file_catalog_service_v1_model_proto_rawDescGZIP() []byte {
 	return file_catalog_service_v1_model_proto_rawDescData
 }
 
-var file_catalog_service_v1_model_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_catalog_service_v1_model_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_catalog_service_v1_model_proto_goTypes = []any{
 	(*ModelVersion)(nil),                 // 0: catalog.service.v1.ModelVersion
 	(*Model)(nil),                        // 1: catalog.service.v1.Model
@@ -3030,28 +3149,30 @@ var file_catalog_service_v1_model_proto_goTypes = []any{
 	(*ImportModelBundleResponse)(nil),    // 35: catalog.service.v1.ImportModelBundleResponse
 	(*GetImportTaskRequest)(nil),         // 36: catalog.service.v1.GetImportTaskRequest
 	(*GetImportTaskResponse)(nil),        // 37: catalog.service.v1.GetImportTaskResponse
-	(*RetryImportTaskRequest)(nil),       // 38: catalog.service.v1.RetryImportTaskRequest
-	(*RetryImportTaskResponse)(nil),      // 39: catalog.service.v1.RetryImportTaskResponse
-	nil,                                  // 40: catalog.service.v1.GetUploadURLResponse.UploadHeadersEntry
-	(*timestamppb.Timestamp)(nil),        // 41: google.protobuf.Timestamp
+	(*GetImportTaskLogsRequest)(nil),     // 38: catalog.service.v1.GetImportTaskLogsRequest
+	(*GetImportTaskLogsResponse)(nil),    // 39: catalog.service.v1.GetImportTaskLogsResponse
+	(*RetryImportTaskRequest)(nil),       // 40: catalog.service.v1.RetryImportTaskRequest
+	(*RetryImportTaskResponse)(nil),      // 41: catalog.service.v1.RetryImportTaskResponse
+	nil,                                  // 42: catalog.service.v1.GetUploadURLResponse.UploadHeadersEntry
+	(*timestamppb.Timestamp)(nil),        // 43: google.protobuf.Timestamp
 }
 var file_catalog_service_v1_model_proto_depIdxs = []int32{
-	41, // 0: catalog.service.v1.ModelVersion.created_at:type_name -> google.protobuf.Timestamp
+	43, // 0: catalog.service.v1.ModelVersion.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 1: catalog.service.v1.Model.versions:type_name -> catalog.service.v1.ModelVersion
-	41, // 2: catalog.service.v1.Model.created_at:type_name -> google.protobuf.Timestamp
-	41, // 3: catalog.service.v1.Model.updated_at:type_name -> google.protobuf.Timestamp
-	41, // 4: catalog.service.v1.ImportTask.created_at:type_name -> google.protobuf.Timestamp
-	41, // 5: catalog.service.v1.ImportTask.completed_at:type_name -> google.protobuf.Timestamp
+	43, // 2: catalog.service.v1.Model.created_at:type_name -> google.protobuf.Timestamp
+	43, // 3: catalog.service.v1.Model.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 4: catalog.service.v1.ImportTask.created_at:type_name -> google.protobuf.Timestamp
+	43, // 5: catalog.service.v1.ImportTask.completed_at:type_name -> google.protobuf.Timestamp
 	3,  // 6: catalog.service.v1.CreateModelRequest.data:type_name -> catalog.service.v1.CreateModelData
 	1,  // 7: catalog.service.v1.CreateModelResponse.model:type_name -> catalog.service.v1.Model
 	1,  // 8: catalog.service.v1.GetModelResponse.model:type_name -> catalog.service.v1.Model
 	1,  // 9: catalog.service.v1.ListModelsResponse.items:type_name -> catalog.service.v1.Model
-	41, // 10: catalog.service.v1.ExternalModelCandidate.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 10: catalog.service.v1.ExternalModelCandidate.updated_at:type_name -> google.protobuf.Timestamp
 	11, // 11: catalog.service.v1.SearchExternalModelsResponse.items:type_name -> catalog.service.v1.ExternalModelCandidate
 	15, // 12: catalog.service.v1.GetUploadURLRequest.data:type_name -> catalog.service.v1.GetUploadURLData
-	41, // 13: catalog.service.v1.GetUploadURLResponse.expires_at:type_name -> google.protobuf.Timestamp
-	40, // 14: catalog.service.v1.GetUploadURLResponse.upload_headers:type_name -> catalog.service.v1.GetUploadURLResponse.UploadHeadersEntry
-	41, // 15: catalog.service.v1.GetModelDownloadURLResponse.expires_at:type_name -> google.protobuf.Timestamp
+	43, // 13: catalog.service.v1.GetUploadURLResponse.expires_at:type_name -> google.protobuf.Timestamp
+	42, // 14: catalog.service.v1.GetUploadURLResponse.upload_headers:type_name -> catalog.service.v1.GetUploadURLResponse.UploadHeadersEntry
+	43, // 15: catalog.service.v1.GetModelDownloadURLResponse.expires_at:type_name -> google.protobuf.Timestamp
 	20, // 16: catalog.service.v1.CreateModelVersionRequest.data:type_name -> catalog.service.v1.CreateModelVersionData
 	0,  // 17: catalog.service.v1.CreateModelVersionResponse.version:type_name -> catalog.service.v1.ModelVersion
 	1,  // 18: catalog.service.v1.GetModelVersionResponse.model:type_name -> catalog.service.v1.Model
@@ -3089,7 +3210,7 @@ func file_catalog_service_v1_model_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_catalog_service_v1_model_proto_rawDesc), len(file_catalog_service_v1_model_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   41,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

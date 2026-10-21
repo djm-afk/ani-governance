@@ -1749,7 +1749,7 @@ mTLS gRPC 请求，不信任客户端提交的租户或 actor。Higress 只承�
 | 模型列表/详情 | `GET /api/v1/models`、`GET /api/v1/models/{model_id}` | `model:service:read` |
 | 外部模型搜索 | `GET /api/v1/models:search` | `model:service:read` |
 | 模型版本 | `GET /api/v1/models/{model_id}/versions`、`GET /api/v1/model-versions/{model_version_id}` | `model:service:read` |
-| 导入任务查询 | `GET /api/v1/models/import-tasks/{task_id}` | `model:service:read` |
+| 导入任务查询与日志 | `GET /api/v1/models/import-tasks/{task_id}`、`GET /api/v1/models/import-tasks/{task_id}/logs` | `model:service:read` |
 | 模型下载地址 | `GET /api/v1/model-versions/{model_version_id}/download-url` | `model:service:read`（由 Governance 通过受信任的 Model gRPC 调用） |
 | 创建模型/版本、上传地址、发起导入、重试 | `POST /api/v1/models`、`POST /api/v1/model-versions`、`POST /api/v1/models/{model_id}/upload-url`、`POST /api/v1/models:import`、`POST /api/v1/models/import-tasks/{task_id}:retry` | `model:service:manage` |
 | 聚合创建模型、版本并发起导入 | `POST /api/v1/models:import-bundle`；请求体使用 `data.model`、`data.version`、`data.source` 和 `data.idempotency_key`，一次幂等委托 Model Service | `model:service:manage` |
@@ -1759,6 +1759,14 @@ mTLS gRPC 请求，不信任客户端提交的租户或 actor。Higress 只承�
 | 推理服务创建/删除 | `POST /api/v1/inference/services`、`POST /api/v1/inference/services/{resource_id}:delete` | `inference:service:create` / `inference:service:delete` |
 | 推理操作查询 | `GET /api/v1/inference/operations/{operation_id}`、`GET /api/v1/inference/services/{resource_id}/operations` | `inference:service:read` |
 | 推理更新/启停/重启 | `POST /api/v1/inference/services/{resource_id}:update`、`:start`、`:stop`、`:restart` | `inference:service:manage` |
+
+导入任务日志接口是单次读取当前日志快照，直接返回
+`{task_id, status, logs, available}`，不提供流式订阅。它沿用 MODEL 套餐模块和
+`model:service:read` 权限；Governance 从认证主体解析租户 UUID 和 actor，通过现有
+Model mTLS 客户端调用 `/model.v1.ModelService/GetImportTaskLogs`，Model 按可信租户
+核验任务归属。日志已清理时保留 HTTP 409 和 `IMPORT_LOGS_UNAVAILABLE`，公开响应
+不转发下游私有错误说明。新增路径仍须按下文顺序显式同步 API 目录和权限关系；
+源码合入不等于部署或目标环境已授权。
 
 Inference 列表请求使用 `page`/`pageSize`（默认 20，最大 100），筛选条件在分页前
 应用；响应为 `{items, total}`，其中 `total` 按 HTTP JSON 合同编码为十进制字符串。

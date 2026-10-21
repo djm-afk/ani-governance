@@ -48,6 +48,9 @@ service ModelService {
   rpc GetImportTask(catalog.service.v1.GetImportTaskRequest) returns (catalog.service.v1.GetImportTaskResponse) {
     option (google.api.http) = { get: "/api/v1/models/import-tasks/{task_id}" };
   }
+  rpc GetImportTaskLogs(catalog.service.v1.GetImportTaskLogsRequest) returns (catalog.service.v1.GetImportTaskLogsResponse) {
+    option (google.api.http) = { get: "/api/v1/models/import-tasks/{task_id}/logs" };
+  }
   rpc RetryImportTask(catalog.service.v1.RetryImportTaskRequest) returns (catalog.service.v1.RetryImportTaskResponse) {
     option (google.api.http) = { post: "/api/v1/models/import-tasks/{task_id}:retry" body: "*" };
   }

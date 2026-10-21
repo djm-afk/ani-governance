@@ -342,6 +342,20 @@ func (c *ModelClient) GetImportTask(ctx context.Context, tenant, actor string, r
 	return c.client.GetImportTask(call, req, grpc.WaitForReady(true))
 }
 
+func (c *ModelClient) GetImportTaskLogs(ctx context.Context, tenant, actor string, request *modelv1.GetImportTaskLogsRequest) (*modelv1.GetImportTaskLogsResponse, error) {
+	req, err := cloneModelRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	req.TenantId = tenant
+	call, cancel, err := c.trustedContext(ctx, tenant, actor)
+	if err != nil {
+		return nil, err
+	}
+	defer cancel()
+	return c.client.GetImportTaskLogs(call, req, grpc.WaitForReady(true))
+}
+
 func (c *ModelClient) RetryImportTask(ctx context.Context, tenant, actor string, request *modelv1.RetryImportTaskRequest) (*modelv1.RetryImportTaskResponse, error) {
 	req, err := cloneModelRequest(request)
 	if err != nil {

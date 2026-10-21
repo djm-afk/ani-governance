@@ -145,8 +145,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 190 {
 		t.Errorf("ManagementCount() = %d, want 190", ManagementCount())
 	}
-	if CapabilityCount() != 129 {
-		t.Errorf("CapabilityCount() = %d, want 129", CapabilityCount())
+	if CapabilityCount() != 130 {
+		t.Errorf("CapabilityCount() = %d, want 130", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
@@ -155,6 +155,16 @@ func TestCountsAndKeys(t *testing.T) {
 	method, path := SplitKey("GET /api/v1/admin/users")
 	if method != "GET" || path != "/api/v1/admin/users" {
 		t.Errorf("SplitKey() = (%q,%q)", method, path)
+	}
+}
+
+func TestModelImportLogsReadPermission(t *testing.T) {
+	exp, err := Resolve("GET", "/api/v1/models/import-tasks/{task_id}/logs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp.Code != "model:service:read" || exp.Source != SourceCapability || exp.BusinessModule != "MODEL" || exp.ScopeKind != "tenant" {
+		t.Fatalf("import logs must reuse the tenant Model read grant: %+v", exp)
 	}
 }
 
