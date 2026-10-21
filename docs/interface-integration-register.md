@@ -1394,7 +1394,7 @@ RPC 方法清单（接收方白名单，精确 FullMethod）：
 - `ModelDevAdmissionService/ResolveAdmission`
 - `ModelDevCommandService/AcceptExecution`、`ModelDevCommandService/ApplyCloseIntent`
 - `ModelDevQueryService/GetExecution`、`ListExecutions`、`GetExecutionLogs`、`ListExecutionArtifacts`、`AuthorizeArtifactDownload`、`ListPresets`、`GetInputVersion`、`ListInputVersions`
-- `ModelDevManagementService/ImportRelease`、`ValidateRelease`、`ImportCSV`
+- `ModelDevManagementService/ImportRelease`、`ValidateRelease`、`ImportCSV`、`ImportFinetuningDataset`
 - `ModelDevOperationsService/InspectExecution`、`ReconcileExecution`、`PlanExecutionCleanup`、`ApplyExecutionCleanup`
 
 配置依赖定性（本轮评审确认）：Governance 对 ModelDev 为**可选依赖**。`ANI_MODELDEV_*` 全空时客户端置 nil，仅禁用远程解析/投递并返回不可用，不启动失败；命令 `modeldev-pause` 不依赖 ModelDev 在线。
@@ -1684,7 +1684,7 @@ Gov 固定正式 Res 模块 `v0.0.0-20261019174951-733f625995f8`（源码733f625
 
 按用户明确授权，把 `GET /api/v1/modeldev/executions`、`/presets`、`/input-versions`、`/executions/{execution_id}/artifacts` 四个列表由 `page_size`/`page_token`/`next_page_token` 迁移为与 users/VPC 同一对外形状：请求 `limit`（默认 20、1～100）、`cursor`（不透明、上限 2048 字节），响应 `{items, next_cursor, total}`（`total` 为 uint64，HTTP JSON 为十进制字符串）。
 
-对外字段统一为 `items`/`next_cursor`/`total` 与 users 一致。`cursor` 沿用下游 ModelDev 的不透明 ID（同 VPC 的“下游游标”，**不做** Governance c1 HMAC 签名）：换筛选/排序复用旧游标不会 400，客户端应从首页重新取数；这是本次明确接受的行为边界，与 users 的签名绑定语义不同。
+对外字段统一为 `items`/`next_cursor`/`total` 与 users 一致。`cursor` 沿用下游 ModelDev 的游标（**参见 MODELDEV-11**：该游标随后改为下游 ani-modeldev-service 的 HMAC-SHA256 签名游标，绑定资源种类/租户/筛选，换筛选复用会 400；MODELDEV-10 初次迁移时下游仍为裸 ID，故此处措辞以 MODELDEV-11 为准）。
 
 `total` 与筛选一致，由下游在可信租户内计算：`input-versions` 走单表 `SELECT count(*)`（含 state 过滤）；`executions` 因 `compute/delivery/close` 状态是多表应用层投影、无法用普通 SQL count 精确表达，改为复用与取页相同的批量扫描在应用层全量遍历计数；`presets` 取去重后 preset 数；`artifacts` 取该执行的已发布产物数。
 

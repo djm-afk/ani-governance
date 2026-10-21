@@ -10891,7 +10891,7 @@ components:
                     type: string
                 kind:
                     type: string
-                    description: CPU-P01 supports GENERAL_TRAINING only
+                    description: GENERAL_TRAINING or FINETUNING. Take the value from the preset's kind; never hardcode it.
                 preset_id:
                     type: string
                 dataset_version_id:
@@ -10904,10 +10904,21 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/GeneralParameter'
-                    description: Optional registered parameters; omitted and [] are distinct intents. Null is rejected.
+                    description: Optional registered parameters; omitted and [] are distinct intents. Null is rejected. GENERAL_TRAINING only.
                 source_execution_id:
                     type: string
                     description: Reserved optional association. Currently rejected with 403 SOURCE_EXECUTION_UNAVAILABLE until source execution access can be verified. Omit this field.
+                base_model_version_id:
+                    type: string
+                    description: 'Required for FINETUNING: immutable base model version ID the adapter is trained against.'
+                finetuning:
+                    $ref: '#/components/schemas/FinetuningParameters'
+                target_model_id:
+                    type: string
+                    description: 'FINETUNING only: existing model to register the merged result under. Mutually exclusive with new_model_name.'
+                new_model_name:
+                    type: string
+                    description: 'FINETUNING only: name for a newly created model for the merged result. Mutually exclusive with target_model_id.'
             description: |-
                 CPU-P01 public intent. Shared canonicalization and immutable execution
                  contracts are maintained by ani-modeldev-service/contract/cpup01.
@@ -12271,6 +12282,19 @@ components:
                 updated_at:
                     type: string
                     format: date-time
+        FinetuningParameters:
+            type: object
+            properties:
+                learning_rate:
+                    type: string
+                max_steps:
+                    type: integer
+                    description: 'Required for FINETUNING: step budget as a JSON number (e.g. 8), never a string. Program range [1, 200]; approved combinations come from the Release rules.'
+                    format: int64
+            description: |-
+                Registered LoRA SFT parameters. learning_rate is a decimal string and
+                 max_steps is an integer; program bounds and approved combinations are
+                 resolved against the Release.
         ForceLogoutSessionRequest:
             type: object
             properties:
