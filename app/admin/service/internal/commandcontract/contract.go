@@ -47,14 +47,18 @@ type Facts struct {
 	Inference       *InferenceCanonical
 }
 
-func Invalid(reason string) error    { return quota.ErrorInvalidQuotaRequest("%s", reason) }
-func ManagedOwner(owner string) bool { return owner == InstanceOwner || owner == InferenceOwner }
+func Invalid(reason string) error { return quota.ErrorInvalidQuotaRequest("%s", reason) }
+func ManagedOwner(owner string) bool {
+	return owner == InstanceOwner || owner == InferenceOwner || owner == ModelDevOwner
+}
 func Usage(owner string) string {
 	switch owner {
 	case InstanceOwner:
 		return "CONTAINER_INSTANCE"
 	case InferenceOwner:
 		return "INFERENCE"
+	case ModelDevOwner:
+		return ModelDevUsage
 	}
 	return ""
 }
@@ -99,6 +103,8 @@ func ValidateStoredCommand(in StoredCommand) (*Facts, error) {
 		return &Facts{BusinessPayload: c.BusinessPayload, GpuRequest: c.GpuRequest, Execution: business.GpuExecution, Display: business.GpuDisplay, QuotaItems: items}, nil
 	case InferenceOwner:
 		return validateInferenceStored(in)
+	case ModelDevOwner:
+		return ValidateModelDevStoredCommand(in)
 	default:
 		return nil, Invalid("unsupported managed owner")
 	}

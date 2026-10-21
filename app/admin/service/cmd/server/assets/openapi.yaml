@@ -8314,6 +8314,26 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetExecutionLogsResponse'
+    /api/v1/modeldev/executions/{execution_id}:resume-model-registration:
+        post:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ResumeModelRegistration
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Current original execution and its persisted model-registration observation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ExecutionView'
+            security:
+                - BearerAuth: []
     /api/v1/modeldev/executions/{execution_id}:stop:
         post:
             tags:
@@ -12214,6 +12234,30 @@ components:
                     type: string
                 device_mode:
                     type: string
+        ExecutionHistoryView:
+            type: object
+            properties:
+                run_id:
+                    type: string
+                workflow_uid:
+                    type: string
+                observed_at:
+                    type: string
+                run_state:
+                    type: string
+                run_finished_at:
+                    type: string
+                workflow_phase:
+                    type: string
+                workflow_finished_at:
+                    type: string
+                workflow_resource_version:
+                    type: string
+                workflow_nodes_sha256:
+                    type: string
+            description: |-
+                Original persisted controller evidence. Empty terminal fields preserve missing
+                 evidence; the BFF never infers terminal success from publication or registration.
         ExecutionLogLine:
             type: object
             properties:
@@ -12296,6 +12340,10 @@ components:
                     type: string
                 timing:
                     $ref: '#/components/schemas/ExecutionTimingView'
+                model_registration:
+                    $ref: '#/components/schemas/ModelRegistrationView'
+                history:
+                    $ref: '#/components/schemas/ExecutionHistoryView'
                 input_version_id:
                     type: string
                 image_version_id:
@@ -15150,6 +15198,22 @@ components:
                     format: date-time
                 model_id:
                     type: string
+        ModelRegistrationView:
+            type: object
+            properties:
+                state:
+                    type: string
+                registration_id:
+                    type: string
+                model_id:
+                    type: string
+                model_version_id:
+                    type: string
+                failure_code:
+                    type: string
+            description: |-
+                Original persisted registration observation; READY IDs come from the verified
+                 provider receipt. No live Model lookup or inferred success fills this view.
         ModelVersion:
             type: object
             properties:

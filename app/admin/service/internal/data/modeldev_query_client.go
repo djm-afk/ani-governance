@@ -59,7 +59,61 @@ func modelDevValidExecution(in *modeldevv1.ExecutionView) bool {
 		modelDevCanonicalUUID(in.Identity.OperationId) && modelDevDigest(in.Identity.ExecutionSpecHash) && in.States != nil &&
 		modelDevSupportedExecutionKind(in.Kind) &&
 		modelDevValidTimestamp(in.AcceptedAt) && modelDevValidTimestamp(in.DeadlineAt) && modelDevValidTimestamp(in.ObservedAt) &&
-		in.States.ComputeState != 0 && in.States.DeliveryState != 0 && in.States.CloseState != 0 && in.States.ResourceState != 0
+		in.States.ComputeState != 0 && in.States.DeliveryState != 0 && in.States.CloseState != 0 && in.States.ResourceState != 0 && modelDevValidModelRegistration(in) && modelDevValidExecutionHistory(in)
+}
+
+// Registration is an owner observation, never a conclusion inferred from
+// successful transport or artifact publication. No arbitrary backend error is
+// passed to the public DTO.
+func modelDevValidModelRegistration(in *modeldevv1.ExecutionView) bool {
+	r := in.ModelRegistration
+	if r == nil {
+		return true
+	}
+	if in.Kind != trainingv1.ExecutionKind_EXECUTION_KIND_FINETUNING {
+		return false
+	}
+	noIDs := r.RegistrationId == "" && r.ModelId == "" && r.ModelVersionId == ""
+	switch r.State {
+	case "PENDING":
+		return noIDs && r.FailureCode == ""
+	case "DEPENDENCY_UNAVAILABLE":
+		return noIDs && r.FailureCode == "MODEL_DEPENDENCY_UNAVAILABLE"
+	case "READY":
+		return r.FailureCode == "" && modelDevCanonicalUUID(r.RegistrationId) && modelDevCanonicalUUID(r.ModelId) && modelDevCanonicalUUID(r.ModelVersionId)
+	default:
+		return false
+	}
+}
+
+// History is the typed projection of the original owner's persisted close
+// evidence. A managed close may precede terminal controller evidence; absence
+// of terminal fields never implies a successful run or Workflow.
+func modelDevValidExecutionHistory(in *modeldevv1.ExecutionView) bool {
+	h := in.History
+	if h == nil {
+		return true
+	}
+	if !modelDevValidTimestamp(h.ObservedAt) || h.ObservedAt.AsTime().Before(in.AcceptedAt.AsTime()) {
+		return false
+	}
+	hasIDs := h.RunId != "" || h.WorkflowUid != ""
+	if hasIDs && (!modelDevCanonicalUUID(h.RunId) || !modelDevCanonicalUUID(h.WorkflowUid)) {
+		return false
+	}
+	if h.RunState == 0 && h.WorkflowPhase == 0 {
+		return h.RunFinishedAt == nil && h.WorkflowFinishedAt == nil && h.WorkflowResourceVersion == "" && h.WorkflowNodesSha256 == ""
+	}
+	if !hasIDs || h.RunState < modeldevv1.KfpRunTerminalState_KFP_RUN_TERMINAL_STATE_SUCCEEDED || h.RunState > modeldevv1.KfpRunTerminalState_KFP_RUN_TERMINAL_STATE_CANCELED || h.WorkflowPhase < modeldevv1.WorkflowTerminalPhase_WORKFLOW_TERMINAL_PHASE_SUCCEEDED || h.WorkflowPhase > modeldevv1.WorkflowTerminalPhase_WORKFLOW_TERMINAL_PHASE_ERROR || !modelDevValidTimestamp(h.RunFinishedAt) || !modelDevValidTimestamp(h.WorkflowFinishedAt) || h.WorkflowResourceVersion == "" || (h.WorkflowNodesSha256 != "" && !modelDevDigest(h.WorkflowNodesSha256)) {
+		return false
+	}
+	for _, r := range h.WorkflowResourceVersion {
+		if unicode.IsControl(r) || unicode.IsSpace(r) {
+			return false
+		}
+	}
+	accepted, observed := in.AcceptedAt.AsTime(), h.ObservedAt.AsTime()
+	return !h.RunFinishedAt.AsTime().Before(accepted) && !h.WorkflowFinishedAt.AsTime().Before(accepted) && !h.RunFinishedAt.AsTime().After(observed) && !h.WorkflowFinishedAt.AsTime().After(observed)
 }
 
 // Historical details carry the original frozen compute/timing observation.

@@ -415,7 +415,11 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	}
 	instanceService := service.NewInstanceService(instanceAcceptance, instanceBinding, tenantRepo, quotaLedgerRepo, instanceSessions, instanceCatalog)
 	computeService := service.NewComputePresetService(computeClient, computeCatalog)
-	modeldevService := service.NewModelDevService(modeldevAuthorizationRepo, tenantRepo, modeldevAcceptanceRepo, modeldevClient, computeOwner)
+	modeldevGPU := service.ModelDevGPUAdmission{Eligibility: data.NewGpuUseAuthorizationRepo(entClient)}
+	if acceleratorClient != nil {
+		modeldevGPU.Plans = acceleratorClient.Catalog
+	}
+	modeldevService := service.NewModelDevService(modeldevAuthorizationRepo, tenantRepo, modeldevAcceptanceRepo, modeldevClient, computeOwner, modeldevGPU)
 
 	// ═══════════════════════ 五、传输层(internal/server) ═══════════════════════
 
