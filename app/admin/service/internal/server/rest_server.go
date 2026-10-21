@@ -211,7 +211,7 @@ func NewRestServer(
 	}
 	streamConfig := proto.Clone(cfg).(*conf.Bootstrap)
 	streamConfig.Server.Rest.Timeout = durationpb.New(0)
-	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter},
+	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, acceleratorInitializationHTTPFilter},
 		middlewares...,
 	)
 	if err != nil {

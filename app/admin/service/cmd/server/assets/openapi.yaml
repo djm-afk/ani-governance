@@ -407,6 +407,101 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorDevices'
+    /api/v1/admin/accelerator/discovered-nodes:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_ListDiscoveredNodes
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorDiscoveredNodes'
+    /api/v1/admin/accelerator/initialization:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_GetInitialization
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitialization'
+    /api/v1/admin/accelerator/initializations:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_CreateInitialization
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateAcceleratorInitializationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitializationOperation'
+    /api/v1/admin/accelerator/initializations/{operation_id}:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_GetInitializationOperation
+            parameters:
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitializationOperation'
+    /api/v1/admin/accelerator/initializations/{operation_id}:retry:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_RetryInitializationOperation
+            parameters:
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RetryAcceleratorInitializationOperationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitializationOperation'
     /api/v1/admin/accelerator/pools:
         get:
             tags:
@@ -9986,6 +10081,68 @@ components:
                         $ref: '#/components/schemas/AcceleratorDevice'
                 next_page_token:
                     type: string
+        AcceleratorDiscoveredBaseline:
+            type: object
+            properties:
+                baseline_ref:
+                    type: string
+                mode:
+                    type: string
+                source:
+                    type: string
+        AcceleratorDiscoveredGPU:
+            type: object
+            properties:
+                uuid:
+                    type: string
+                model_key:
+                    type: string
+                physical_memory_bytes:
+                    type: string
+                safe_memory_budget_mib:
+                    type: string
+                budget_reason:
+                    type: string
+        AcceleratorDiscoveredNode:
+            type: object
+            properties:
+                node:
+                    $ref: '#/components/schemas/AcceleratorNode'
+                group_id:
+                    type: string
+                gpus:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredGPU'
+                baselines:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredBaseline'
+                agent_online:
+                    type: boolean
+                agent_lease_expires_at:
+                    type: string
+                sources:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorNodeSource'
+                selectable:
+                    type: boolean
+                blocking_reasons:
+                    type: array
+                    items:
+                        type: string
+        AcceleratorDiscoveredNodes:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredNode'
+                total:
+                    type: string
+                discovery_revision:
+                    type: string
         AcceleratorGpuRequest:
             type: object
             properties:
@@ -10005,6 +10162,191 @@ components:
                     format: uint32
                 container_name:
                     type: string
+        AcceleratorInitialization:
+            type: object
+            properties:
+                registered:
+                    type: boolean
+                connection_ref:
+                    type: string
+                cluster_id:
+                    type: string
+                display_name:
+                    type: string
+                configuration_state:
+                    type: string
+                checks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationCheck'
+                latest_operation:
+                    $ref: '#/components/schemas/AcceleratorInitializationOperation'
+                configuration_complete:
+                    type: boolean
+        AcceleratorInitializationCheck:
+            type: object
+            properties:
+                key:
+                    type: string
+                source:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+        AcceleratorInitializationExistingGroup:
+            type: object
+            properties:
+                group_id:
+                    type: string
+                expected_version:
+                    type: string
+        AcceleratorInitializationGroupInput:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                existing_group:
+                    $ref: '#/components/schemas/AcceleratorInitializationExistingGroup'
+                new_group:
+                    $ref: '#/components/schemas/AcceleratorInitializationNewGroup'
+        AcceleratorInitializationGroupResult:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                group_id:
+                    type: string
+                recorded_group_version:
+                    type: string
+                auto_open_result:
+                    type: string
+                admission:
+                    type: string
+        AcceleratorInitializationNewGroup:
+            type: object
+            properties:
+                pool_key:
+                    type: string
+                display_name:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorNode'
+                baseline_ref:
+                    type: string
+                queue_name:
+                    type: string
+        AcceleratorInitializationNewPool:
+            type: object
+            properties:
+                display_name:
+                    type: string
+        AcceleratorInitializationOperation:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                version:
+                    type: string
+                state:
+                    type: string
+                created_at:
+                    type: string
+                updated_at:
+                    type: string
+                current_step:
+                    type: string
+                retryable:
+                    type: boolean
+                reason:
+                    type: string
+                required_actions:
+                    type: array
+                    items:
+                        type: string
+                cluster_id:
+                    type: string
+                pools:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationPoolResult'
+                groups:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationGroupResult'
+                profiles:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationProfileResult'
+                steps:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationStep'
+        AcceleratorInitializationPoolInput:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                existing_pool_id:
+                    type: string
+                new_pool:
+                    $ref: '#/components/schemas/AcceleratorInitializationNewPool'
+        AcceleratorInitializationPoolResult:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                pool_id:
+                    type: string
+        AcceleratorInitializationProfileInput:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                group_key:
+                    type: string
+                display_name:
+                    type: string
+                memory_mib_per_device:
+                    type: string
+                core_limit_percent:
+                    type: integer
+                    format: uint32
+                max_devices_per_replica:
+                    type: integer
+                    format: uint32
+        AcceleratorInitializationProfileResult:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                profile_id:
+                    type: string
+                recorded_revision:
+                    type: string
+                recorded_state:
+                    type: string
+        AcceleratorInitializationStep:
+            type: object
+            properties:
+                step_id:
+                    type: string
+                object_key:
+                    type: string
+                kind:
+                    type: string
+                state:
+                    type: string
+                resource_id:
+                    type: string
+                input_group_version:
+                    type: string
+                output_group_version:
+                    type: string
+                reason:
+                    type: string
         AcceleratorNode:
             type: object
             properties:
@@ -10012,6 +10354,21 @@ components:
                     type: string
                 name:
                     type: string
+        AcceleratorNodeSource:
+            type: object
+            properties:
+                source:
+                    type: string
+                observed_at:
+                    type: string
+                received_at:
+                    type: string
+                complete:
+                    type: boolean
+                issues:
+                    type: array
+                    items:
+                        type: string
         AcceleratorObservation:
             type: object
             properties:
@@ -10770,6 +11127,30 @@ components:
                     type: string
                     description: 任务执行类型名，例如 "send_email"、"generate_report" 等，用于区分不同类型的任务
             description: 控制调度任务 - 请求
+        CreateAcceleratorInitializationData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                discovery_revision:
+                    type: string
+                pools:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationPoolInput'
+                groups:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationGroupInput'
+                profiles:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationProfileInput'
+        CreateAcceleratorInitializationRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateAcceleratorInitializationData'
         CreateAcceleratorPoolData:
             type: object
             properties:
@@ -16944,6 +17325,20 @@ components:
                     type: integer
                     format: int32
             description: 重启调度任务 - 回应
+        RetryAcceleratorInitializationOperationData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                expected_version:
+                    type: string
+        RetryAcceleratorInitializationOperationRequest:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RetryAcceleratorInitializationOperationData'
         RetryImportTaskRequest:
             type: object
             properties:
