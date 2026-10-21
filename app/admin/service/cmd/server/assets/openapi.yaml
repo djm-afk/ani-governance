@@ -8555,6 +8555,29 @@ paths:
                                 $ref: '#/components/schemas/StopExecutionResponse'
             security:
                 - BearerAuth: []
+    /api/v1/modeldev/implementations:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListImplementations
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListImplementationsResponse'
     /api/v1/modeldev/input-versions:
         get:
             tags:
@@ -8600,29 +8623,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InputVersionView'
-    /api/v1/modeldev/presets:
-        get:
-            tags:
-                - ModelDevService
-            operationId: ModelDevService_ListPresets
-            parameters:
-                - name: page
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: pageSize
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/ListPresetsResponse'
     /api/v1/models:
         get:
             tags:
@@ -11140,8 +11140,10 @@ components:
             required:
                 - name
                 - kind
-                - preset_id
+                - implementation_id
+                - compute_preset_id
                 - dataset_version_id
+                - parameters
                 - idempotency_key
             type: object
             properties:
@@ -11149,46 +11151,34 @@ components:
                     type: string
                 kind:
                     type: string
-                    description: GENERAL_TRAINING or FINETUNING. Take the value from the preset's kind; never hardcode it.
-                preset_id:
-                    type: string
                 dataset_version_id:
                     type: string
                 idempotency_key:
                     type: string
-                image_version_id:
-                    type: string
-                general_parameters:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/GeneralParameter'
-                    description: Optional registered parameters; omitted and [] are distinct intents. Null is rejected. GENERAL_TRAINING only.
-                source_execution_id:
-                    type: string
-                    description: Reserved optional association. Currently rejected with 403 SOURCE_EXECUTION_UNAVAILABLE until source execution access can be verified. Omit this field.
                 base_model_version_id:
                     type: string
-                    description: 'Required for FINETUNING: immutable base model version ID the adapter is trained against.'
-                finetuning:
-                    $ref: '#/components/schemas/FinetuningParameters'
                 target_model_id:
                     type: string
-                    description: 'FINETUNING only: existing model to register the merged result under. Mutually exclusive with new_model_name.'
                 new_model_name:
                     type: string
-                    description: 'FINETUNING only: name for a newly created model for the merged result. Mutually exclusive with target_model_id.'
+                implementation_id:
+                    type: string
+                compute_preset_id:
+                    type: string
+                parameters:
+                    $ref: '#/components/schemas/ExecutionParameters'
+                timeout_seconds:
+                    type: integer
+                    format: uint64
             description: |-
-                CPU-P01 public intent. Shared canonicalization and immutable execution
-                 contracts are maintained by ani-modeldev-service/contract/cpup01.
-                 The HTTP adapter preserves omitted versus explicitly empty parameters.
+                The one active public execution intent. Identity comes from authentication.
+                 The custom HTTP adapter preserves optional fields and rejects duplicate keys.
         CreateExecutionResponse:
             type: object
             properties:
                 operation_id:
                     type: string
                 execution_id:
-                    type: string
-                resolved_release_id:
                     type: string
                 replayed:
                     type: boolean
@@ -12579,12 +12569,71 @@ components:
                     type: string
                 expiresAt:
                     type: string
+        ExecutionComputeView:
+            type: object
+            properties:
+                compute_preset_id:
+                    type: string
+                selection_digest:
+                    type: string
+                cpu_millis:
+                    type: string
+                memory_mib:
+                    type: string
+                device_mode:
+                    type: string
         ExecutionLogLine:
             type: object
             properties:
                 timestamp:
                     type: string
                 text:
+                    type: string
+        ExecutionParameters:
+            type: object
+            properties:
+                learning_rate:
+                    type: string
+                epochs:
+                    type: integer
+                    format: int64
+                batch_size:
+                    type: integer
+                    format: int64
+                seed:
+                    type: integer
+                    format: uint32
+                max_steps:
+                    type: integer
+                    format: int64
+                per_device_train_batch_size:
+                    type: integer
+                    format: int64
+                gradient_accumulation_steps:
+                    type: integer
+                    format: int64
+                cutoff_len:
+                    type: integer
+                    format: int64
+                lora_rank:
+                    type: integer
+                    format: int64
+                lora_alpha:
+                    type: integer
+                    format: int64
+                lora_dropout:
+                    type: string
+            description: |-
+                The implementation's strict parser selects its own typed parameters.
+                 Omitted fields use implementation defaults; null/unknown fields are rejected.
+        ExecutionTimingView:
+            type: object
+            properties:
+                execution_timeout_seconds:
+                    type: string
+                execution_timeout_max_seconds:
+                    type: string
+                step_timeout_seconds:
                     type: string
         ExecutionView:
             type: object
@@ -12597,10 +12646,24 @@ components:
                     type: string
                 kind:
                     type: string
-                preset_id:
+                implementation_id:
                     type: string
-                release_id:
+                compute_preset_id:
                     type: string
+                compute:
+                    $ref: '#/components/schemas/ExecutionComputeView'
+                resolved_parameters:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/GeneralParameter'
+                explicit_parameters:
+                    $ref: '#/components/schemas/ExecutionParameters'
+                parameter_contract_version:
+                    type: string
+                resolved_configuration_sha256:
+                    type: string
+                timing:
+                    $ref: '#/components/schemas/ExecutionTimingView'
                 input_version_id:
                     type: string
                 image_version_id:
@@ -12668,19 +12731,6 @@ components:
                 updated_at:
                     type: string
                     format: date-time
-        FinetuningParameters:
-            type: object
-            properties:
-                learning_rate:
-                    type: string
-                max_steps:
-                    type: integer
-                    description: 'Required for FINETUNING: step budget as a JSON number (e.g. 8), never a string. Program range [1, 200]; approved combinations come from the Release rules.'
-                    format: int64
-            description: |-
-                Registered LoRA SFT parameters. learning_rate is a decimal string and
-                 max_steps is an integer; program bounds and approved combinations are
-                 resolved against the Release.
         ForceLogoutSessionRequest:
             type: object
             properties:
@@ -12719,7 +12769,6 @@ components:
                     type: string
                 value:
                     type: string
-                    description: Values are strings, including INTEGER and DECIMAL parameters.
         GenerateCaptchaResponse:
             type: object
             properties:
@@ -13184,6 +13233,35 @@ components:
                 updatedAt:
                     type: string
                     format: date-time
+        ImplementationView:
+            type: object
+            properties:
+                name:
+                    type: string
+                kind:
+                    type: string
+                parameter_rules:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ParameterRule'
+                implementation_id:
+                    type: string
+                version:
+                    type: string
+                parameter_contract_version:
+                    type: string
+                supported_device_modes:
+                    type: array
+                    items:
+                        type: string
+                available:
+                    type: boolean
+                execution_timeout_default_seconds:
+                    type: string
+                execution_timeout_max_seconds:
+                    type: string
+                step_timeout_seconds:
+                    type: string
         ImportModelBundleData:
             type: object
             properties:
@@ -14176,6 +14254,15 @@ components:
                         $ref: '#/components/schemas/ImageRegistration'
                 nextCursor:
                     type: string
+                total:
+                    type: string
+        ListImplementationsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ImplementationView'
                 total:
                     type: string
         ListInferenceOperationsResponse:
@@ -16147,6 +16234,29 @@ components:
                     $ref: '#/components/schemas/Parameter'
                 reference:
                     $ref: '#/components/schemas/Reference'
+        ParameterRule:
+            type: object
+            properties:
+                name:
+                    type: string
+                type:
+                    type: string
+                required:
+                    type: boolean
+                default_value:
+                    $ref: '#/components/schemas/GeneralParameter'
+                allowed_values:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/GeneralParameter'
+                minimum:
+                    $ref: '#/components/schemas/GeneralParameter'
+                maximum:
+                    $ref: '#/components/schemas/GeneralParameter'
+                numeric_representation:
+                    type: string
+                validation_description:
+                    type: string
         PasswordLoginRequest:
             type: object
             properties:
