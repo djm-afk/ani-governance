@@ -128,7 +128,29 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	if p := execution.ExplicitFinetuning; p != nil {
 		out.ExplicitParameters = &modeldevv1.ExecutionParameters{LearningRate: p.LearningRate, MaxSteps: p.MaxSteps, PerDeviceTrainBatchSize: p.PerDeviceTrainBatchSize, GradientAccumulationSteps: p.GradientAccumulationSteps, CutoffLen: p.CutoffLen, LoraRank: p.LoraRank, LoraAlpha: p.LoraAlpha, LoraDropout: p.LoraDropout, Seed: p.Seed}
 	}
+	for _, step := range execution.Steps {
+		out.Steps = append(out.Steps, modelDevPublicStep(step))
+	}
+	for _, metric := range execution.Metrics {
+		out.Metrics = append(out.Metrics, &modeldevv1.ExecutionMetricView{Name: metric.Name, DecimalValue: metric.DecimalValue, Step: metric.Step})
+	}
 	return out
+}
+
+// modelDevPublicStep keeps the timeline facts ModelDev already derived. Absent
+// timestamps stay empty strings, matching every other time field here.
+func modelDevPublicStep(in *modeldevcontractv1.StepProgress) *modeldevv1.ExecutionStepView {
+	step := &modeldevv1.ExecutionStepView{Role: in.Role, State: in.State, ExitCode: in.ExitCode}
+	if in.StartedAt != nil {
+		step.StartedAt = in.StartedAt.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if in.FinishedAt != nil {
+		step.FinishedAt = in.FinishedAt.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if in.DeadlineAt != nil {
+		step.DeadlineAt = in.DeadlineAt.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	return step
 }
 
 func (s *ModelDevService) ListExecutionArtifacts(ctx context.Context, in *modeldevv1.ListExecutionArtifactsRequest) (*modeldevv1.ListExecutionArtifactsResponse, error) {

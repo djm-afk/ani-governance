@@ -196,6 +196,28 @@ message ExecutionView {
   string accepted_at = 16 [json_name = "accepted_at"];
   string deadline_at = 17 [json_name = "deadline_at"];
   string observed_at = 18 [json_name = "observed_at"];
+  // Mirrors ModelDev ExecutionView.steps (field 31). Role/state stay strings
+  // because the step set depends on kind.
+  repeated ExecutionStepView steps = 27 [json_name = "steps"];
+  // Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
+  // from the published METRICS artifact.
+  repeated ExecutionMetricView metrics = 28 [json_name = "metrics"];
+}
+// One ordered timeline entry. Extended facts mirror ModelDev StepProgress, which
+// uses a google.protobuf.Timestamp there; this contract keeps RFC3339 strings.
+message ExecutionStepView {
+  string role = 1;
+  string state = 2;
+  string started_at = 3 [json_name = "started_at"];
+  string finished_at = 4 [json_name = "finished_at"];
+  int32 exit_code = 5 [json_name = "exit_code"];
+  string deadline_at = 6 [json_name = "deadline_at"];
+}
+message ExecutionMetricView {
+  string name = 1;
+  // Bag of digits as emitted by ModelDev; parsed as a decimal string.
+  string decimal_value = 2 [json_name = "decimal_value"];
+  optional int64 step = 3;
 }
 message ExecutionComputeView {
   string compute_preset_id = 1 [json_name = "compute_preset_id"];

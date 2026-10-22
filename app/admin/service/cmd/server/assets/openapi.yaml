@@ -12221,6 +12221,16 @@ components:
                     type: string
                 text:
                     type: string
+        ExecutionMetricView:
+            type: object
+            properties:
+                name:
+                    type: string
+                decimal_value:
+                    type: string
+                    description: Bag of digits as emitted by ModelDev; parsed as a decimal string.
+                step:
+                    type: string
         ExecutionParameters:
             type: object
             properties:
@@ -12258,6 +12268,25 @@ components:
             description: |-
                 The implementation's strict parser selects its own typed parameters.
                  Omitted fields use implementation defaults; null/unknown fields are rejected.
+        ExecutionStepView:
+            type: object
+            properties:
+                role:
+                    type: string
+                state:
+                    type: string
+                started_at:
+                    type: string
+                finished_at:
+                    type: string
+                exit_code:
+                    type: integer
+                    format: int32
+                deadline_at:
+                    type: string
+            description: |-
+                One ordered timeline entry. Extended facts mirror ModelDev StepProgress, which
+                 uses a google.protobuf.Timestamp there; this contract keeps RFC3339 strings.
         ExecutionTimingView:
             type: object
             properties:
@@ -12320,6 +12349,20 @@ components:
                     type: string
                 observed_at:
                     type: string
+                steps:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionStepView'
+                    description: |-
+                        Mirrors ModelDev ExecutionView.steps (field 31). Role/state stay strings
+                         because the step set depends on kind.
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionMetricView'
+                    description: |-
+                        Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
+                         from the published METRICS artifact.
         Expression:
             type: object
             properties:

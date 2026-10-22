@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -59,7 +60,60 @@ func modelDevValidExecution(in *modeldevv1.ExecutionView) bool {
 		modelDevCanonicalUUID(in.Identity.OperationId) && modelDevDigest(in.Identity.ExecutionSpecHash) && in.States != nil &&
 		modelDevSupportedExecutionKind(in.Kind) &&
 		modelDevValidTimestamp(in.AcceptedAt) && modelDevValidTimestamp(in.DeadlineAt) && modelDevValidTimestamp(in.ObservedAt) &&
-		in.States.ComputeState != 0 && in.States.DeliveryState != 0 && in.States.CloseState != 0 && in.States.ResourceState != 0
+		in.States.ComputeState != 0 && in.States.DeliveryState != 0 && in.States.CloseState != 0 && in.States.ResourceState != 0 &&
+		modelDevValidSteps(in.Steps) && modelDevValidMetrics(in.Metrics)
+}
+
+// The timeline and curve are derived facts, but they still reach a public DTO.
+// Unknown roles, states or an unbounded list fail closed like every other field.
+func modelDevValidSteps(steps []*modeldevv1.StepProgress) bool {
+	if len(steps) > 16 {
+		return false
+	}
+	for _, step := range steps {
+		if step == nil || !modelDevStepRole(step.Role) || !modelDevStepState(step.State) || step.ExitCode < 0 ||
+			!modelDevOptionalTimestamp(step.StartedAt) || !modelDevOptionalTimestamp(step.FinishedAt) || !modelDevOptionalTimestamp(step.DeadlineAt) {
+			return false
+		}
+	}
+	return true
+}
+
+func modelDevStepRole(role string) bool {
+	switch role {
+	case "prepare", "train-wait", "export", "verify", "collect", "publish", "register", "close":
+		return true
+	}
+	return false
+}
+
+func modelDevStepState(state string) bool {
+	switch state {
+	case "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "STOPPED":
+		return true
+	}
+	return false
+}
+
+func modelDevValidMetrics(metrics []*trainingv1.Metric) bool {
+	if len(metrics) > 10000 {
+		return false
+	}
+	for _, metric := range metrics {
+		if metric == nil || metric.Name == "" || len(metric.Name) > 128 || metric.DecimalValue == "" || len(metric.DecimalValue) > 64 {
+			return false
+		}
+		if _, err := strconv.ParseFloat(metric.DecimalValue, 64); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// modelDevOptionalTimestamp accepts an absent observation; a present one must
+// still be a valid, non-zero instant.
+func modelDevOptionalTimestamp(value *timestamppb.Timestamp) bool {
+	return value == nil || modelDevValidTimestamp(value)
 }
 
 // Historical details carry the original frozen compute/timing observation.
