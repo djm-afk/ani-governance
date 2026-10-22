@@ -248,10 +248,11 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
-github.com/liangzai006/ani-inference-service/api v0.1.1 h1:bnBd0i+oUxX5svBMB8AgoQR1HOXJiU4PH3VBsAaN9S0=
-github.com/liangzai006/ani-inference-service/api v0.1.1/go.mod h1:kCxifBbREAjpKRUxGS+fDDKTXn/P6O/8MochJJr0xmQ=
-github.com/liangzai006/ani-model-service v0.0.0-20261017101444-a6c9c4dd2021 h1:2KTdC5aTpbEDr4VIXSpbGI1gl/KrMPVRDlDxxw/TyRw=
-github.com/liangzai006/ani-model-service v0.0.0-20261017101444-a6c9c4dd2021/go.mod h1:VevRKxXFVVH2NmUmWJTWcBWkZSiOJEYTRNGvQjlMxgs=
+github.com/liangzai006/ani-inference-service/api v0.1.2-0.20261021113945-1356085e3d92 h1:BkwF9VnE5Of8RBaWwXApl/Fy/Vo4V2Zo+SAw4b91+Og=
+github.com/liangzai006/ani-inference-service/api v0.1.2-0.20261021113945-1356085e3d92/go.mod h1:LL8ApWoysh2oFryZhi+2A07DfyVoIVd8m0Lpu1vCcbk=
+github.com/liangzai006/ani-model-service/api v0.0.0-20261021113912-a21befaaa5e5 h1:0VFzXXMs7dy9AmDMMqoD6UJZhjD7QNDrPAMKUY/Ytg0=
+github.com/liangzai006/ani-model-service/api v0.0.0-20261021113912-a21befaaa5e5/go.mod h1:JsFcJK23M4jXHkXdX9U28lEArWVkp9SS6h2hGroLjIM=
+
 github.com/lib/pq v1.12.3 h1:tTWxr2YLKwIvK90ZXEw8GP7UFHtcbTtty8zsI+YjrfQ=
 github.com/lib/pq v1.12.3/go.mod h1:/p+8NSbOcwzAEI7wiMXFlgydTwcgTr3OSKMsD2BitpA=
 github.com/lithammer/shortuuid/v4 v4.3.0 h1:XRr80OYPOlqxgnCv2/iuElkl/ZtXtPtLKk2AvpXGdWA=
