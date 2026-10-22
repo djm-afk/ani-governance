@@ -24,35 +24,38 @@ var (
 	ErrModelDevAuthorizationUnavailable = errors.New("modeldev create authorization unavailable")
 )
 
-const ModelDevManageReleaseBindingPermissionCode = "modeldev:manage_release_binding"
+const ModelDevManageInputPermissionCode = "modeldev:manage_input"
 const ModelDevManageExecutionPermissionCode = "modeldev:manage_execution"
 
 type modelDevAuthorizationAction uint8
 
 const (
 	modelDevCreateAction modelDevAuthorizationAction = iota + 1
-	modelDevManageReleaseBindingAction
+	modelDevManageInputAction
 	modelDevGetExecutionAction
 	modelDevListArtifactsAction
 	modelDevDownloadArtifactAction
 	modelDevStopAction
 	modelDevListExecutionsAction
 	modelDevGetExecutionLogsAction
-	modelDevListPresetsAction
+	modelDevListImplementationsAction
 	modelDevGetInputVersionAction
 	modelDevListInputVersionsAction
 	modelDevManageExecutionAction
+	modelDevFinetuningExistingModelAction
+	modelDevFinetuningNewModelAction
+	modelDevResumeRegistrationAction
 )
 
 const (
-	ModelDevGetExecutionPath      = "/api/v1/modeldev/executions/{execution_id}"
-	ModelDevListArtifactsPath     = "/api/v1/modeldev/executions/{execution_id}/artifacts"
-	ModelDevDownloadArtifactPath  = "/api/v1/modeldev/artifacts/{artifact_id}/content"
-	ModelDevListExecutionsPath    = "/api/v1/modeldev/executions"
-	ModelDevGetExecutionLogsPath  = "/api/v1/modeldev/executions/{execution_id}/logs"
-	ModelDevListPresetsPath       = "/api/v1/modeldev/presets"
-	ModelDevGetInputVersionPath   = "/api/v1/modeldev/input-versions/{input_version_id}"
-	ModelDevListInputVersionsPath = "/api/v1/modeldev/input-versions"
+	ModelDevGetExecutionPath        = "/api/v1/modeldev/executions/{execution_id}"
+	ModelDevListArtifactsPath       = "/api/v1/modeldev/executions/{execution_id}/artifacts"
+	ModelDevDownloadArtifactPath    = "/api/v1/modeldev/artifacts/{artifact_id}/content"
+	ModelDevListExecutionsPath      = "/api/v1/modeldev/executions"
+	ModelDevGetExecutionLogsPath    = "/api/v1/modeldev/executions/{execution_id}/logs"
+	ModelDevListImplementationsPath = "/api/v1/modeldev/implementations"
+	ModelDevGetInputVersionPath     = "/api/v1/modeldev/input-versions/{input_version_id}"
+	ModelDevListInputVersionsPath   = "/api/v1/modeldev/input-versions"
 )
 
 // AuthorizeQuery checks the current independent GET grant and ALL data scope.
@@ -70,8 +73,8 @@ func (r *ModelDevAuthorizationRepo) AuthorizeQuery(ctx context.Context, tenantID
 		action = modelDevListExecutionsAction
 	case ModelDevGetExecutionLogsPath:
 		action = modelDevGetExecutionLogsAction
-	case ModelDevListPresetsPath:
-		action = modelDevListPresetsAction
+	case ModelDevListImplementationsPath:
+		action = modelDevListImplementationsAction
 	case ModelDevGetInputVersionPath:
 		action = modelDevGetInputVersionAction
 	case ModelDevListInputVersionsPath:
@@ -83,7 +86,7 @@ func (r *ModelDevAuthorizationRepo) AuthorizeQuery(ctx context.Context, tenantID
 }
 
 // ModelDevAuthorizationRepo checks current database grants for the fixed
-// CPU-P01 create and release-binding management actions. It does not
+// CPU-P01 create and input management actions. It does not
 // authenticate a user or enable assets. Create's HTTP authentication,
 // TenantAccess and Casbin checks remain required before AuthorizeCreate.
 type ModelDevAuthorizationRepo struct {
@@ -106,15 +109,33 @@ func (r *ModelDevAuthorizationRepo) AuthorizeStop(ctx context.Context, tenantID,
 	return r.authorizeCurrent(ctx, tenantID, userID, modelDevStopAction)
 }
 
-// AuthorizeManageReleaseBinding requires trusted tenant/user IDs from the
+// AuthorizeManageInput requires trusted tenant/user IDs from the
 // verified Principal and the current, separate management permission. A create
 // API grant or a JWT's cached roles cannot authorize this action.
-func (r *ModelDevAuthorizationRepo) AuthorizeManageReleaseBinding(ctx context.Context, tenantID, userID uint32) error {
-	return r.authorizeCurrent(ctx, tenantID, userID, modelDevManageReleaseBindingAction)
+func (r *ModelDevAuthorizationRepo) AuthorizeManageInput(ctx context.Context, tenantID, userID uint32) error {
+	return r.authorizeCurrent(ctx, tenantID, userID, modelDevManageInputAction)
 }
 
 func (r *ModelDevAuthorizationRepo) AuthorizeManageExecution(ctx context.Context, tenantID, userID uint32) error {
 	return r.authorizeCurrent(ctx, tenantID, userID, modelDevManageExecutionAction)
+}
+
+func (r *ModelDevAuthorizationRepo) AuthorizeResume(ctx context.Context, tenantID, userID uint32) error {
+	if err := r.authorizeCurrent(ctx, tenantID, userID, modelDevResumeRegistrationAction); err != nil {
+		return err
+	}
+	return r.AuthorizeQuery(ctx, tenantID, userID, ModelDevGetExecutionPath)
+}
+
+// AuthorizeFinetuning complements the current ModelDev create grant with the
+// existing Model API grants. A trusted ModelDev service identity cannot grant
+// its submitting user permission to read model bytes or register a version.
+func (r *ModelDevAuthorizationRepo) AuthorizeFinetuning(ctx context.Context, tenantID, userID uint32, newModel bool) error {
+	action := modelDevFinetuningExistingModelAction
+	if newModel {
+		action = modelDevFinetuningNewModelAction
+	}
+	return r.authorizeCurrent(ctx, tenantID, userID, action)
 }
 
 func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenantID, userID uint32, action modelDevAuthorizationAction) (result error) {
@@ -217,11 +238,11 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 		permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil(),
 	)
 	switch action {
-	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListPresetsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction:
+	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListImplementationsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction:
 		// Create retains its permission-to-API check below.
-	case modelDevManageReleaseBindingAction:
-		permissionQuery.Where(permission.CodeEQ(ModelDevManageReleaseBindingPermissionCode))
-	case modelDevManageExecutionAction:
+	case modelDevManageInputAction:
+		permissionQuery.Where(permission.CodeEQ(ModelDevManageInputPermissionCode))
+	case modelDevManageExecutionAction, modelDevResumeRegistrationAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageExecutionPermissionCode))
 	default:
 		return ErrModelDevAuthorizationDenied
@@ -233,9 +254,11 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 	if len(permissionIDs) == 0 {
 		return ErrModelDevAuthorizationDenied
 	}
-	if action != modelDevManageReleaseBindingAction && action != modelDevManageExecutionAction {
+	if action != modelDevManageInputAction && action != modelDevManageExecutionAction {
 		path, method := "/api/v1/modeldev/executions", "POST"
 		switch action {
+		case modelDevResumeRegistrationAction:
+			path = ModelDevResumeModelRegistrationPath
 		case modelDevStopAction:
 			path = ModelDevStopExecutionPath
 		case modelDevGetExecutionAction:
@@ -248,12 +271,27 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 			path, method = ModelDevListExecutionsPath, "GET"
 		case modelDevGetExecutionLogsAction:
 			path, method = ModelDevGetExecutionLogsPath, "GET"
-		case modelDevListPresetsAction:
-			path, method = ModelDevListPresetsPath, "GET"
+		case modelDevListImplementationsAction:
+			path, method = ModelDevListImplementationsPath, "GET"
 		case modelDevGetInputVersionAction:
 			path, method = ModelDevGetInputVersionPath, "GET"
 		case modelDevListInputVersionsAction:
 			path, method = ModelDevListInputVersionsPath, "GET"
+		case modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction:
+			for _, required := range []struct{ path, method string }{
+				{"/api/v1/model-versions/{model_version_id}", "GET"},
+				{"/api/v1/model-versions/{model_version_id}/download-url", "GET"},
+				{"/api/v1/model-versions", "POST"},
+			} {
+				if err := authorizeModelDevAPI(ctx, tx, permissionIDs, required.path, required.method); err != nil {
+					return err
+				}
+			}
+			if action == modelDevFinetuningNewModelAction {
+				path, method = "/api/v1/models", "POST"
+			} else {
+				path, method = "/api/v1/models/{model_id}", "GET"
+			}
 		}
 		if err := authorizeModelDevAPI(ctx, tx, permissionIDs, path, method); err != nil {
 			return err

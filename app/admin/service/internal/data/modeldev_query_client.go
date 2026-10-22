@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"net/url"
@@ -12,10 +13,13 @@ import (
 	"github.com/google/uuid"
 	modeldevv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
 	trainingv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/training/v1"
+	"github.com/zhangzhe-ctrl/ani-modeldev-service/contract/cpup01"
+	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -51,11 +55,91 @@ func (c *ModelDevClient) GetExecution(ctx context.Context, scope ModelDevResolve
 }
 
 func modelDevValidExecution(in *modeldevv1.ExecutionView) bool {
-	return in != nil && in.Identity != nil && modelDevCanonicalUUID(in.Identity.ExecutionId) &&
+	return in != nil && modelDevValidExecutionPlan(in) && in.Identity != nil && modelDevCanonicalUUID(in.Identity.ExecutionId) &&
 		modelDevCanonicalUUID(in.Identity.OperationId) && modelDevDigest(in.Identity.ExecutionSpecHash) && in.States != nil &&
 		modelDevSupportedExecutionKind(in.Kind) &&
 		modelDevValidTimestamp(in.AcceptedAt) && modelDevValidTimestamp(in.DeadlineAt) && modelDevValidTimestamp(in.ObservedAt) &&
-		in.States.ComputeState != 0 && in.States.DeliveryState != 0 && in.States.CloseState != 0 && in.States.ResourceState != 0
+		in.States.ComputeState != 0 && in.States.DeliveryState != 0 && in.States.CloseState != 0 && in.States.ResourceState != 0 && modelDevValidModelRegistration(in) && modelDevValidExecutionHistory(in)
+}
+
+// Registration is an owner observation, never a conclusion inferred from
+// successful transport or artifact publication. No arbitrary backend error is
+// passed to the public DTO.
+func modelDevValidModelRegistration(in *modeldevv1.ExecutionView) bool {
+	r := in.ModelRegistration
+	if r == nil {
+		return true
+	}
+	if in.Kind != trainingv1.ExecutionKind_EXECUTION_KIND_FINETUNING {
+		return false
+	}
+	noIDs := r.RegistrationId == "" && r.ModelId == "" && r.ModelVersionId == ""
+	switch r.State {
+	case "PENDING":
+		return noIDs && r.FailureCode == ""
+	case "DEPENDENCY_UNAVAILABLE":
+		return noIDs && r.FailureCode == "MODEL_DEPENDENCY_UNAVAILABLE"
+	case "READY":
+		return r.FailureCode == "" && modelDevCanonicalUUID(r.RegistrationId) && modelDevCanonicalUUID(r.ModelId) && modelDevCanonicalUUID(r.ModelVersionId)
+	default:
+		return false
+	}
+}
+
+// History is the typed projection of the original owner's persisted close
+// evidence. A managed close may precede terminal controller evidence; absence
+// of terminal fields never implies a successful run or Workflow.
+func modelDevValidExecutionHistory(in *modeldevv1.ExecutionView) bool {
+	h := in.History
+	if h == nil {
+		return true
+	}
+	if !modelDevValidTimestamp(h.ObservedAt) || h.ObservedAt.AsTime().Before(in.AcceptedAt.AsTime()) {
+		return false
+	}
+	hasIDs := h.RunId != "" || h.WorkflowUid != ""
+	if hasIDs && (!modelDevCanonicalUUID(h.RunId) || !modelDevCanonicalUUID(h.WorkflowUid)) {
+		return false
+	}
+	if h.RunState == 0 && h.WorkflowPhase == 0 {
+		return h.RunFinishedAt == nil && h.WorkflowFinishedAt == nil && h.WorkflowResourceVersion == "" && h.WorkflowNodesSha256 == ""
+	}
+	if !hasIDs || h.RunState < modeldevv1.KfpRunTerminalState_KFP_RUN_TERMINAL_STATE_SUCCEEDED || h.RunState > modeldevv1.KfpRunTerminalState_KFP_RUN_TERMINAL_STATE_CANCELED || h.WorkflowPhase < modeldevv1.WorkflowTerminalPhase_WORKFLOW_TERMINAL_PHASE_SUCCEEDED || h.WorkflowPhase > modeldevv1.WorkflowTerminalPhase_WORKFLOW_TERMINAL_PHASE_ERROR || !modelDevValidTimestamp(h.RunFinishedAt) || !modelDevValidTimestamp(h.WorkflowFinishedAt) || h.WorkflowResourceVersion == "" || (h.WorkflowNodesSha256 != "" && !modelDevDigest(h.WorkflowNodesSha256)) {
+		return false
+	}
+	for _, r := range h.WorkflowResourceVersion {
+		if unicode.IsControl(r) || unicode.IsSpace(r) {
+			return false
+		}
+	}
+	accepted, observed := in.AcceptedAt.AsTime(), h.ObservedAt.AsTime()
+	return !h.RunFinishedAt.AsTime().Before(accepted) && !h.WorkflowFinishedAt.AsTime().Before(accepted) && !h.RunFinishedAt.AsTime().After(observed) && !h.WorkflowFinishedAt.AsTime().After(observed)
+}
+
+// Historical details carry the original frozen compute/timing observation.
+// Current catalogue defaults never repair an incomplete owner response.
+func modelDevValidExecutionPlan(in *modeldevv1.ExecutionView) bool {
+	if in == nil || in.ComputeOrigin == nil || in.Timing == nil || !modelDevValidTimestamp(in.Timing.AcceptedAt) || !modelDevValidTimestamp(in.Timing.ExecutionDeadlineAt) || !modelDevValidTimestamp(in.AcceptedAt) || !modelDevValidTimestamp(in.DeadlineAt) {
+		return false
+	}
+	if (in.Kind == trainingv1.ExecutionKind_EXECUTION_KIND_GENERAL_TRAINING && in.ImplementationId != "builtin.mlp") || (in.Kind == trainingv1.ExecutionKind_EXECUTION_KIND_FINETUNING && in.ImplementationId != "builtin.sft_lora") {
+		return false
+	}
+	origin := in.ComputeOrigin
+	var selection compute.ComputeSelection
+	if protojson.Unmarshal(origin.SelectionCanonical, &selection) != nil {
+		return false
+	}
+	selection.SelectionDigest = origin.SelectionDigest
+	if compute.ValidateSelection(&selection) != nil {
+		return false
+	}
+	canonical, err := compute.CanonicalSelection(&selection)
+	if err != nil || !bytes.Equal(canonical, origin.SelectionCanonical) || selection.PresetId != in.ComputePresetId || origin.ComputePresetId != selection.PresetId || origin.CpuMillis != selection.CpuMillis || origin.MemoryMib != selection.MemoryMib || (selection.Gpu == nil && origin.DeviceMode != "cpu") || (selection.Gpu != nil && origin.DeviceMode != "gpu") {
+		return false
+	}
+	timing := cpup01.Timing{AcceptedAt: in.Timing.AcceptedAt.AsTime(), ExecutionTimeoutSeconds: in.Timing.ExecutionTimeoutSeconds, ExecutionTimeoutMaxSeconds: in.Timing.ExecutionTimeoutMaxSeconds, StepTimeoutSeconds: in.Timing.StepTimeoutSeconds, ExecutionDeadlineAt: in.Timing.ExecutionDeadlineAt.AsTime()}
+	return timing.Validate() == nil && timing.AcceptedAt.Equal(in.AcceptedAt.AsTime()) && timing.ExecutionDeadlineAt.Equal(in.DeadlineAt.AsTime())
 }
 
 // The BFF passes through the shared execution contract unchanged; only the two

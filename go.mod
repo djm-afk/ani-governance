@@ -24,8 +24,8 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.12.1
 	github.com/xiaoqidun/entps v1.50.1
-	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261022031933-4a682ac73da1
-	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261019114539-40a12484258c
+	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261022092841-c8d761d4ff1a
+	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261022095305-2f020636785b
 	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1
 	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261022033025-3fa0c57b990b
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
