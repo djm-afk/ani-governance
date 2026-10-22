@@ -12,6 +12,7 @@ func TestResolveAuthoritativeCodes(t *testing.T) {
 		wantCode     string
 		wantSource   string
 	}{
+		{"GET", "/api/v1/models/{model_id}/operations", "model:service:read", SourceCapability},
 		{"GET", "/api/v1/admin/users", "user:view", SourceManagement},
 		{"POST", "/api/v1/admin/users/{user_id}/password", "user:reset-password", SourceManagement},
 		{"GET", "/api/v1/admin/dict/entries/by-type-code", "dict:entry:view", SourceManagement},
@@ -147,11 +148,11 @@ func TestNoConflicts(t *testing.T) {
 
 // TestCountsAndKeys 表体量与键集合自检，防止生成物与实现脱节。
 func TestCountsAndKeys(t *testing.T) {
-	if ManagementCount() != 195 {
-		t.Errorf("ManagementCount() = %d, want 195", ManagementCount())
+	if ManagementCount() != 199 {
+		t.Errorf("ManagementCount() = %d, want 199", ManagementCount())
 	}
-	if CapabilityCount() != 135 {
-		t.Errorf("CapabilityCount() = %d, want 135", CapabilityCount())
+	if CapabilityCount() != 140 {
+		t.Errorf("CapabilityCount() = %d, want 140", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
@@ -180,7 +181,7 @@ func TestLookup(t *testing.T) {
 	}
 	for _, route := range []struct{ method, path, code string }{
 		{"GET", "/api/v1/inference/services", "inference:service:read"},
-		{"POST", "/api/v1/inference/services/{data.resource_id}:delete", "inference:service:delete"},
+		{"POST", "/api/v1/inference/services/{resource_id}:delete", "inference:service:delete"},
 	} {
 		if code, ok := Lookup(route.method, route.path); !ok || code != route.code {
 			t.Errorf("Lookup(%s %s) = (%q,%v), want %q", route.method, route.path, code, ok, route.code)
