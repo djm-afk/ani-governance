@@ -1135,6 +1135,55 @@ x-ani-authz:
 
 ## 功能组：Accelerator v1.2 管理与租户 BFF（GOV-ACC-V12-01）
 
+### 节点发现与初始化增量（2026-10-21）
+
+| 编号 | 方法/路径 | 下游完整 RPC 后缀 / 语义 | 权限 |
+| --- | --- | --- | --- |
+| ACC-20 | GET /api/v1/admin/accelerator/initialization | GetInitialization；受管连接、登记状态、带来源检查项、配置完成及最新操作 | accelerator:initialization:read |
+| ACC-21 | GET /api/v1/admin/accelerator/discovered-nodes | ListDiscoveredNodes；只接受 page/pageSize，默认 1/20，pageSize 上限 200，按节点 name/UID 排序，items/total/discovery_revision | accelerator:discovery:list |
+| ACC-22 | POST /api/v1/admin/accelerator/initializations | CreateInitialization；data.idempotency_key/discovery_revision/pools/groups/profiles，一次持久受理 | accelerator:initialization:create + 实际组件能力 |
+| ACC-23 | GET /api/v1/admin/accelerator/initializations/{operation_id} | GetInitializationOperation；路径 ID 权威，持久操作及部分成功结果 | accelerator:initialization:read |
+| ACC-24 | POST /api/v1/admin/accelerator/initializations/{operation_id}:retry | RetryInitializationOperation；data.idempotency_key/expected_version，不修改原请求 | accelerator:initialization:retry + 冻结 required_actions |
+
+完整下游前缀固定 `/accelerator.v1.AcceleratorAdminService/`，调用者为唯一 DNS SAN
+`ani-governance`，接收者为受管 Accelerator 服务，全部属于平台用户委托。
+actor 从已认证平台 user Principal 构造，不发送租户身份或公网 Authorization。
+沿用现有 mTLS 客户端正超时（默认 3 秒）及父取消；不自动重试写入。
+新方法逐一登记客户端完整 RPC 分类，未知完整方法拒绝。
+
+平台角色/action 由现有 Authorizer.Engine 在 project=0 下检查。Create 按实际请求额外检查
+cluster:register（可信概况未登记时）、pool:create、supply-group:adopt、profile:publish，
+以及会自动 OPEN 的新组所需 supply-group:set-admission；以上短名均带 `accelerator:` 前缀。
+Retry 先读取原 operation 的 required_actions，再按固定 action→已登记 method/path 重新检查，
+不能把下游任意字符串解释成路由。权限登记不授予角色、不启用套餐、不创建额度。
+
+五方法成功均为 HTTP 200，直接返回 Proto JSON DTO；Create/Retry 的 200 表示受理，不能当作
+初始化完成。写请求保持 `{data:{...}}`，64 位整数为十进制字符串。
+仅新发现列表使用 page/pageSize；存量 ACC 列表仍 page_size/page_token。
+概况/操作 GET 及两个 POST 不接受 query；发现 GET 仅接受单值规范正整数 page/pageSize。
+路径 operation_id 不接受 query 覆盖，额外 body 字段不能进入可信下游上下文。
+下游服务拒绝仍映射 503 `ACCELERATOR_SERVICE_ACCESS_DENIED`；Gov 当前用户拒绝为 401/403。
+
+前端接入使用 `api/protos/catalog/service/v1/accelerator.proto` 及生成 OpenAPI 的独立 DTO：
+前两步检查/编辑草稿，第三步仅提交一次 CreateInitialization，并以 operation_id 恢复查询；
+BLOCKED 且 retryable 时用当前 version 和新幂等键显式 Retry，CONFLICT 不自动 rebase。
+operation 的历史配置完成、当前 Group admission 和容量分别展示；算力规格须在既有管理入口
+显式关联并启用。新组 2/4/8 等分仅使用相同且已知的逐卡安全预算，以整数计算绝对 MiB/core；
+已有组继续 PreviewProfile。本批前端由专人接入，不修改前端代码。
+
+联合验证复用 `TestAcceleratorJointHTTP` 的真实 JWT、会话缓存、数据库策略、Casbin 与生成
+HTTP handler；设置 `GOV_ACC_INITIALIZATION_JOINT_SEED_FILE` 时运行本增量，并将平台 fixture
+限定为实际所需八项权限。ACC 侧显式门控的 `TestPostgresInitializationJointHelper` 使用真实
+领域、受限 PG 运行身份、mTLS/委托和 worker，仅 Kubernetes 发现/标签是外部边界替身。
+联合用例观察同键重放、BLOCKED、显式 Retry、ACTIVE/OPEN 与最终概况，不将其算作实机验收。
+
+公共 ACC API 固定正式模块 `v0.0.0-20261021055754-9969638c907a`，Origin.Hash 为
+`9969638c907a806e895751ac71740d52f8592954`；使用 `GOWORK=off` 正常下载和校验，
+不提交 `replace` 或工作树依赖。Gov 构建基准升至 Go 1.26.10，避免旧标准库已知漏洞。
+
+本节登记合同与源码接点；正式 ACC 依赖版本、软件测试和真实环境部署按本批结果分别记录，
+不以本节存在宣称主链验收完成。
+
 2026-09-23 本批新增独立 `ACCELERATOR=13` 模块，保留旧枚举。正式依赖固定为
 `github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20260923100416-9f9712198488`；
 实际测试/后续升级版本以本批证据锁为准。以下为实现合同登记，运行通过状态须引用本批证据，不能继承历史 QUOTA-LAB 结论。

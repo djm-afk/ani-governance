@@ -24,6 +24,11 @@ func TestResolveAuthoritativeCodes(t *testing.T) {
 		{"GET", "/api/v1/admin/accelerator/profiles:preview", "accelerator:profile:preview", SourceCapability},
 		{"POST", "/api/v1/admin/accelerator/profiles/{profile_id}:set-state", "accelerator:profile:set-state", SourceCapability},
 		{"POST", "/api/v1/admin/accelerator/profiles/{profile_id}:delete", "accelerator:profile:delete", SourceCapability},
+		{"GET", "/api/v1/admin/accelerator/initialization", "accelerator:initialization:read", SourceManagement},
+		{"GET", "/api/v1/admin/accelerator/discovered-nodes", "accelerator:discovery:list", SourceManagement},
+		{"POST", "/api/v1/admin/accelerator/initializations", "accelerator:initialization:create", SourceManagement},
+		{"GET", "/api/v1/admin/accelerator/initializations/{operation_id}", "accelerator:initialization:read", SourceManagement},
+		{"POST", "/api/v1/admin/accelerator/initializations/{operation_id}:retry", "accelerator:initialization:retry", SourceManagement},
 	}
 	for _, tc := range cases {
 		exp, err := Resolve(tc.method, tc.path)
@@ -143,11 +148,11 @@ func TestNoConflicts(t *testing.T) {
 
 // TestCountsAndKeys 表体量与键集合自检，防止生成物与实现脱节。
 func TestCountsAndKeys(t *testing.T) {
-	if ManagementCount() != 194 {
-		t.Errorf("ManagementCount() = %d, want 194", ManagementCount())
+	if ManagementCount() != 199 {
+		t.Errorf("ManagementCount() = %d, want 199", ManagementCount())
 	}
-	if CapabilityCount() != 135 {
-		t.Errorf("CapabilityCount() = %d, want 135", CapabilityCount())
+	if CapabilityCount() != 140 {
+		t.Errorf("CapabilityCount() = %d, want 140", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
