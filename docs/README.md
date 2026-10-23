@@ -11,6 +11,7 @@
 | [服务间调用规范](contracts/service-to-service-calls.md) | 三种方向的统一调用要求、存量差异与迁移边界 |
 | [权限码规范](contracts/permission-code.md) | 权限码业务语义、命名、接口映射与目录校验；附[业务能力映射表](contracts/permission-code-capability-map.tsv)（各业务域+Quota 125 条）与[管理面权限映射表](contracts/permission-code-management-map.tsv)（管理接口 194 条） |
 | [业务服务接入](service-integration.md) | 当前客户端配置、手工装配与 API 登记 |
+| [Governance Inference 对接](contracts/inference-governance-integration.md) | Inference 管理、诊断、访问策略、下游 mTLS、权限和部署顺序 |
 | [接口集成登记](interface-integration-register.md) | 现行接口与问题，不因归档自动结项 |
 | [API 权限运维](api-role-permission-ops.md) | 目录同步、权限、套餐和策略 |
 | [管理员开通](onboarding.md) | 立即激活、邮件邀请与目标环境验收 |
