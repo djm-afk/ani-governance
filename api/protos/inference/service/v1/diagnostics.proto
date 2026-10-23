@@ -17,6 +17,7 @@ message RuntimeDiagnostics {
   google.protobuf.Timestamp runtime_observed_at = 4 [json_name = "runtime_observed_at"];
   repeated RuntimeInstance instances = 5;
   google.protobuf.Timestamp observed_at = 6 [json_name = "observed_at"];
+  string invocation_endpoint = 7 [json_name = "invocation_endpoint"];
 }
 message RuntimeLogsRequest {
   string resource_id = 1 [json_name = "resource_id"];
@@ -25,8 +26,10 @@ message RuntimeLogsRequest {
   google.protobuf.Timestamp since = 4;
   google.protobuf.Timestamp until = 5;
   int64 tail_lines = 6 [json_name = "tail_lines"];
+  string level = 7;
 }
 message RuntimeLogLine {
+  string level = 3;
   google.protobuf.Timestamp timestamp = 1;
   string message = 2;
 }
@@ -54,4 +57,26 @@ message RuntimeEvent {
 message ListRuntimeEventsResponse {
   repeated RuntimeEvent items = 1;
   int64 total = 2;
+}
+
+message InferenceMetricsRequest {
+  string resource_id = 1 [json_name = "resource_id"];
+  google.protobuf.Timestamp start = 2;
+  google.protobuf.Timestamp end = 3;
+  int32 step = 4;
+}
+message InferenceMetricPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double value = 2;
+}
+message InferenceMetricSeries {
+  string name = 1;
+  string unit = 2;
+  repeated InferenceMetricPoint points = 3;
+}
+message InferenceMetricsResponse {
+  repeated InferenceMetricSeries series = 1;
+  google.protobuf.Timestamp start = 2;
+  google.protobuf.Timestamp end = 3;
+  int32 step = 4;
 }

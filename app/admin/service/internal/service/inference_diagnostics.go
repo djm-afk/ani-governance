@@ -60,6 +60,7 @@ func (s *InferenceService) GetRuntimeDiagnostics(ctx context.Context, in *view.G
 	if err = projectInferenceDiagnostic(observed, out); err != nil {
 		return nil, err
 	}
+	out.InvocationEndpoint = s.invocationEndpoint
 	return out, nil
 }
 func inferenceLogsRequest(in *view.RuntimeLogsRequest) *runtimev1.RuntimeLogsRequest {
@@ -75,8 +76,12 @@ func (s *InferenceService) GetRuntimeLogs(ctx context.Context, in *view.RuntimeL
 		return nil, mapInferenceOwnerError(err)
 	}
 	out := new(view.RuntimeLogsResponse)
-	if err = projectInferenceDiagnostic(observed, out); err != nil {
-		return nil, err
+	out.Truncated = observed.Truncated
+	out.Items = make([]*view.RuntimeLogLine, 0, len(observed.Items))
+	for _, line := range observed.Items {
+		if item, keep := ProjectInferenceLog(line, in.Level); keep {
+			out.Items = append(out.Items, item)
+		}
 	}
 	return out, nil
 }

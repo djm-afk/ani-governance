@@ -1717,3 +1717,21 @@ owner 的 mTLS 和运行时状态，不能据此宣称推理数据面（Higress 
 报文、页码边界和事件结果语义见 [HTTP 合同](contracts/frontend-http-api.md)。
 新增 RPC 与服务端 Model migration 000009、API 版本发布和消费者版本更新需要
 同批交付；本地临时模块校验不代表已发布或集群已具备新接口。
+
+### GOV-MODEL-INF-20261012：服务访问策略（2026-10-22）
+
+已实现按服务查询和完整替换访问策略，通过已有 mTLS Inference API 调用，租户、
+actor 和 request ID 从可信上下文重建。HTTP 入口执行正常认证、权限和 INFERENCE
+模块闸门，并拒绝未知/重复字段、query、公网身份和路径冲突。
+合同和启用顺序见 [Inference 管理接口状态](contracts/inference-flat-api.md#服务访问策略)。
+
+运行部署以当前现场基线 `3806ae5` 的独立策略分支构建，保留该基线既有创建合同；
+本工作区的算力规格迁移没有随此次策略部署发布。源码与运行版本分别验证。
+
+### GOV-MODEL-INF-20261012：详情与查询修正（2026-10-22）
+
+模型详情 HTTP 直接返回 Model，内部 RPC 包装不变；版本与操作查询页码不再限制
+100，每页仍为 1..100，SQL offset 超过 int32 存储边界时拒绝。公开请求顶层字段
+不再使用 data 包装。真实环境复验使用模型 UUID：status=error 返回 total=0，
+status=ready 返回 total=1/ready，operations 返回 total=1。含斜杠的公开模型名不能
+替代 HTTP path 的资源 UUID。源码修改、部署与前端验收分别记录。

@@ -122,7 +122,7 @@ func _ModelService_GetModel0_HTTP_Handler(srv ModelServiceHTTPServer) func(ctx h
 			return err
 		}
 		reply := out.(*v1.GetModelResponse)
-		return ctx.Result(200, reply)
+		return ctx.Result(200, reply.Model)
 	}
 }
 
@@ -570,7 +570,7 @@ func (c *ModelServiceHTTPClientImpl) GetModel(ctx context.Context, in *v1.GetMod
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationModelServiceGetModel))
 	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Model, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,9 @@ import "inference/service/v1/diagnostics.proto";
 
 // Tenant-authenticated management diagnostics; inference calls remain on Higress.
 service InferenceDiagnosticsService {
+  rpc GetInferenceMetrics(inference.service.v1.InferenceMetricsRequest) returns (inference.service.v1.InferenceMetricsResponse) {
+    option (google.api.http) = { get: "/api/v1/inference/services/{resource_id}/metrics" };
+  }
   rpc GetRuntimeDiagnostics(inference.service.v1.GetRuntimeDiagnosticsRequest) returns (inference.service.v1.RuntimeDiagnostics) {
     option (google.api.http) = { get: "/api/v1/inference/services/{resource_id}/runtime" };
   }

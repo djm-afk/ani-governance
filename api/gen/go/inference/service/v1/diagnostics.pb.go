@@ -139,12 +139,13 @@ type RuntimeDiagnostics struct {
 	InvocationHealth string                 `protobuf:"bytes,1,opt,name=invocation_health,proto3" json:"invocation_health,omitempty"`
 	HealthReason     string                 `protobuf:"bytes,2,opt,name=health_reason,proto3" json:"health_reason,omitempty"`
 	// Absent until an invocation probe with its own timestamp is recorded.
-	HealthObservedAt  *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=health_observed_at,proto3" json:"health_observed_at,omitempty"`
-	RuntimeObservedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=runtime_observed_at,proto3" json:"runtime_observed_at,omitempty"`
-	Instances         []*RuntimeInstance     `protobuf:"bytes,5,rep,name=instances,proto3" json:"instances,omitempty"`
-	ObservedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	HealthObservedAt   *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=health_observed_at,proto3" json:"health_observed_at,omitempty"`
+	RuntimeObservedAt  *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=runtime_observed_at,proto3" json:"runtime_observed_at,omitempty"`
+	Instances          []*RuntimeInstance     `protobuf:"bytes,5,rep,name=instances,proto3" json:"instances,omitempty"`
+	ObservedAt         *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
+	InvocationEndpoint string                 `protobuf:"bytes,7,opt,name=invocation_endpoint,proto3" json:"invocation_endpoint,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *RuntimeDiagnostics) Reset() {
@@ -219,6 +220,13 @@ func (x *RuntimeDiagnostics) GetObservedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *RuntimeDiagnostics) GetInvocationEndpoint() string {
+	if x != nil {
+		return x.InvocationEndpoint
+	}
+	return ""
+}
+
 type RuntimeLogsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,proto3" json:"resource_id,omitempty"`
@@ -227,6 +235,7 @@ type RuntimeLogsRequest struct {
 	Since         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=since,proto3" json:"since,omitempty"`
 	Until         *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=until,proto3" json:"until,omitempty"`
 	TailLines     int64                  `protobuf:"varint,6,opt,name=tail_lines,proto3" json:"tail_lines,omitempty"`
+	Level         string                 `protobuf:"bytes,7,opt,name=level,proto3" json:"level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -303,8 +312,16 @@ func (x *RuntimeLogsRequest) GetTailLines() int64 {
 	return 0
 }
 
+func (x *RuntimeLogsRequest) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
 type RuntimeLogLine struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Level         string                 `protobuf:"bytes,3,opt,name=level,proto3" json:"level,omitempty"`
 	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -339,6 +356,13 @@ func (x *RuntimeLogLine) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RuntimeLogLine.ProtoReflect.Descriptor instead.
 func (*RuntimeLogLine) Descriptor() ([]byte, []int) {
 	return file_inference_service_v1_diagnostics_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RuntimeLogLine) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
 }
 
 func (x *RuntimeLogLine) GetTimestamp() *timestamppb.Timestamp {
@@ -635,6 +659,254 @@ func (x *ListRuntimeEventsResponse) GetTotal() int64 {
 	return 0
 }
 
+type InferenceMetricsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,proto3" json:"resource_id,omitempty"`
+	Start         *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	End           *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
+	Step          int32                  `protobuf:"varint,4,opt,name=step,proto3" json:"step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InferenceMetricsRequest) Reset() {
+	*x = InferenceMetricsRequest{}
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InferenceMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InferenceMetricsRequest) ProtoMessage() {}
+
+func (x *InferenceMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InferenceMetricsRequest.ProtoReflect.Descriptor instead.
+func (*InferenceMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_inference_service_v1_diagnostics_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *InferenceMetricsRequest) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *InferenceMetricsRequest) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Start
+	}
+	return nil
+}
+
+func (x *InferenceMetricsRequest) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.End
+	}
+	return nil
+}
+
+func (x *InferenceMetricsRequest) GetStep() int32 {
+	if x != nil {
+		return x.Step
+	}
+	return 0
+}
+
+type InferenceMetricPoint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Value         float64                `protobuf:"fixed64,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InferenceMetricPoint) Reset() {
+	*x = InferenceMetricPoint{}
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InferenceMetricPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InferenceMetricPoint) ProtoMessage() {}
+
+func (x *InferenceMetricPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InferenceMetricPoint.ProtoReflect.Descriptor instead.
+func (*InferenceMetricPoint) Descriptor() ([]byte, []int) {
+	return file_inference_service_v1_diagnostics_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *InferenceMetricPoint) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *InferenceMetricPoint) GetValue() float64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+type InferenceMetricSeries struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Name          string                  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Unit          string                  `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
+	Points        []*InferenceMetricPoint `protobuf:"bytes,3,rep,name=points,proto3" json:"points,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InferenceMetricSeries) Reset() {
+	*x = InferenceMetricSeries{}
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InferenceMetricSeries) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InferenceMetricSeries) ProtoMessage() {}
+
+func (x *InferenceMetricSeries) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InferenceMetricSeries.ProtoReflect.Descriptor instead.
+func (*InferenceMetricSeries) Descriptor() ([]byte, []int) {
+	return file_inference_service_v1_diagnostics_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *InferenceMetricSeries) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *InferenceMetricSeries) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *InferenceMetricSeries) GetPoints() []*InferenceMetricPoint {
+	if x != nil {
+		return x.Points
+	}
+	return nil
+}
+
+type InferenceMetricsResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Series        []*InferenceMetricSeries `protobuf:"bytes,1,rep,name=series,proto3" json:"series,omitempty"`
+	Start         *timestamppb.Timestamp   `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	End           *timestamppb.Timestamp   `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
+	Step          int32                    `protobuf:"varint,4,opt,name=step,proto3" json:"step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InferenceMetricsResponse) Reset() {
+	*x = InferenceMetricsResponse{}
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InferenceMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InferenceMetricsResponse) ProtoMessage() {}
+
+func (x *InferenceMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_service_v1_diagnostics_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InferenceMetricsResponse.ProtoReflect.Descriptor instead.
+func (*InferenceMetricsResponse) Descriptor() ([]byte, []int) {
+	return file_inference_service_v1_diagnostics_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *InferenceMetricsResponse) GetSeries() []*InferenceMetricSeries {
+	if x != nil {
+		return x.Series
+	}
+	return nil
+}
+
+func (x *InferenceMetricsResponse) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Start
+	}
+	return nil
+}
+
+func (x *InferenceMetricsResponse) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.End
+	}
+	return nil
+}
+
+func (x *InferenceMetricsResponse) GetStep() int32 {
+	if x != nil {
+		return x.Step
+	}
+	return 0
+}
+
 var File_inference_service_v1_diagnostics_proto protoreflect.FileDescriptor
 
 const file_inference_service_v1_diagnostics_proto_rawDesc = "" +
@@ -648,14 +920,15 @@ const file_inference_service_v1_diagnostics_proto_rawDesc = "" +
 	"\x05phase\x18\x03 \x01(\tR\x05phase\x12\x1e\n" +
 	"\n" +
 	"containers\x18\x04 \x03(\tR\n" +
-	"containers\"\x85\x03\n" +
+	"containers\"\xb7\x03\n" +
 	"\x12RuntimeDiagnostics\x12,\n" +
 	"\x11invocation_health\x18\x01 \x01(\tR\x11invocation_health\x12$\n" +
 	"\rhealth_reason\x18\x02 \x01(\tR\rhealth_reason\x12J\n" +
 	"\x12health_observed_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x12health_observed_at\x12L\n" +
 	"\x13runtime_observed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x13runtime_observed_at\x12C\n" +
 	"\tinstances\x18\x05 \x03(\v2%.inference.service.v1.RuntimeInstanceR\tinstances\x12<\n" +
-	"\vobserved_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vobserved_at\"\xf4\x01\n" +
+	"\vobserved_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vobserved_at\x120\n" +
+	"\x13invocation_endpoint\x18\a \x01(\tR\x13invocation_endpoint\"\x8a\x02\n" +
 	"\x12RuntimeLogsRequest\x12 \n" +
 	"\vresource_id\x18\x01 \x01(\tR\vresource_id\x12\x1a\n" +
 	"\binstance\x18\x02 \x01(\tR\binstance\x12\x1c\n" +
@@ -664,8 +937,10 @@ const file_inference_service_v1_diagnostics_proto_rawDesc = "" +
 	"\x05until\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x05until\x12\x1e\n" +
 	"\n" +
 	"tail_lines\x18\x06 \x01(\x03R\n" +
-	"tail_lines\"d\n" +
-	"\x0eRuntimeLogLine\x128\n" +
+	"tail_lines\x12\x14\n" +
+	"\x05level\x18\a \x01(\tR\x05level\"z\n" +
+	"\x0eRuntimeLogLine\x12\x14\n" +
+	"\x05level\x18\x03 \x01(\tR\x05level\x128\n" +
 	"\ttimestamp\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"o\n" +
 	"\x13RuntimeLogsResponse\x12:\n" +
@@ -688,7 +963,24 @@ const file_inference_service_v1_diagnostics_proto_rawDesc = "" +
 	"\x05count\x18\a \x01(\x03R\x05count\"k\n" +
 	"\x19ListRuntimeEventsResponse\x128\n" +
 	"\x05items\x18\x01 \x03(\v2\".inference.service.v1.RuntimeEventR\x05items\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x03R\x05totalB\xe0\x01\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xaf\x01\n" +
+	"\x17InferenceMetricsRequest\x12 \n" +
+	"\vresource_id\x18\x01 \x01(\tR\vresource_id\x120\n" +
+	"\x05start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +
+	"\x03end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x03end\x12\x12\n" +
+	"\x04step\x18\x04 \x01(\x05R\x04step\"f\n" +
+	"\x14InferenceMetricPoint\x128\n" +
+	"\ttimestamp\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value\"\x83\x01\n" +
+	"\x15InferenceMetricSeries\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04unit\x18\x02 \x01(\tR\x04unit\x12B\n" +
+	"\x06points\x18\x03 \x03(\v2*.inference.service.v1.InferenceMetricPointR\x06points\"\xd3\x01\n" +
+	"\x18InferenceMetricsResponse\x12C\n" +
+	"\x06series\x18\x01 \x03(\v2+.inference.service.v1.InferenceMetricSeriesR\x06series\x120\n" +
+	"\x05start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +
+	"\x03end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x03end\x12\x12\n" +
+	"\x04step\x18\x04 \x01(\x05R\x04stepB\xe0\x01\n" +
 	"\x18com.inference.service.v1B\x10DiagnosticsProtoP\x01Z@go-wind-admin/api/gen/go/inference/service/v1;inferenceservicepb\xa2\x02\x03ISX\xaa\x02\x14Inference.Service.V1\xca\x02\x14Inference\\Service\\V1\xe2\x02 Inference\\Service\\V1\\GPBMetadata\xea\x02\x16Inference::Service::V1b\x06proto3"
 
 var (
@@ -703,7 +995,7 @@ func file_inference_service_v1_diagnostics_proto_rawDescGZIP() []byte {
 	return file_inference_service_v1_diagnostics_proto_rawDescData
 }
 
-var file_inference_service_v1_diagnostics_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_inference_service_v1_diagnostics_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_inference_service_v1_diagnostics_proto_goTypes = []any{
 	(*GetRuntimeDiagnosticsRequest)(nil), // 0: inference.service.v1.GetRuntimeDiagnosticsRequest
 	(*RuntimeInstance)(nil),              // 1: inference.service.v1.RuntimeInstance
@@ -714,26 +1006,37 @@ var file_inference_service_v1_diagnostics_proto_goTypes = []any{
 	(*ListRuntimeEventsRequest)(nil),     // 6: inference.service.v1.ListRuntimeEventsRequest
 	(*RuntimeEvent)(nil),                 // 7: inference.service.v1.RuntimeEvent
 	(*ListRuntimeEventsResponse)(nil),    // 8: inference.service.v1.ListRuntimeEventsResponse
-	(*timestamppb.Timestamp)(nil),        // 9: google.protobuf.Timestamp
+	(*InferenceMetricsRequest)(nil),      // 9: inference.service.v1.InferenceMetricsRequest
+	(*InferenceMetricPoint)(nil),         // 10: inference.service.v1.InferenceMetricPoint
+	(*InferenceMetricSeries)(nil),        // 11: inference.service.v1.InferenceMetricSeries
+	(*InferenceMetricsResponse)(nil),     // 12: inference.service.v1.InferenceMetricsResponse
+	(*timestamppb.Timestamp)(nil),        // 13: google.protobuf.Timestamp
 }
 var file_inference_service_v1_diagnostics_proto_depIdxs = []int32{
-	9,  // 0: inference.service.v1.RuntimeDiagnostics.health_observed_at:type_name -> google.protobuf.Timestamp
-	9,  // 1: inference.service.v1.RuntimeDiagnostics.runtime_observed_at:type_name -> google.protobuf.Timestamp
+	13, // 0: inference.service.v1.RuntimeDiagnostics.health_observed_at:type_name -> google.protobuf.Timestamp
+	13, // 1: inference.service.v1.RuntimeDiagnostics.runtime_observed_at:type_name -> google.protobuf.Timestamp
 	1,  // 2: inference.service.v1.RuntimeDiagnostics.instances:type_name -> inference.service.v1.RuntimeInstance
-	9,  // 3: inference.service.v1.RuntimeDiagnostics.observed_at:type_name -> google.protobuf.Timestamp
-	9,  // 4: inference.service.v1.RuntimeLogsRequest.since:type_name -> google.protobuf.Timestamp
-	9,  // 5: inference.service.v1.RuntimeLogsRequest.until:type_name -> google.protobuf.Timestamp
-	9,  // 6: inference.service.v1.RuntimeLogLine.timestamp:type_name -> google.protobuf.Timestamp
+	13, // 3: inference.service.v1.RuntimeDiagnostics.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 4: inference.service.v1.RuntimeLogsRequest.since:type_name -> google.protobuf.Timestamp
+	13, // 5: inference.service.v1.RuntimeLogsRequest.until:type_name -> google.protobuf.Timestamp
+	13, // 6: inference.service.v1.RuntimeLogLine.timestamp:type_name -> google.protobuf.Timestamp
 	4,  // 7: inference.service.v1.RuntimeLogsResponse.items:type_name -> inference.service.v1.RuntimeLogLine
-	9,  // 8: inference.service.v1.ListRuntimeEventsRequest.since:type_name -> google.protobuf.Timestamp
-	9,  // 9: inference.service.v1.ListRuntimeEventsRequest.until:type_name -> google.protobuf.Timestamp
-	9,  // 10: inference.service.v1.RuntimeEvent.timestamp:type_name -> google.protobuf.Timestamp
+	13, // 8: inference.service.v1.ListRuntimeEventsRequest.since:type_name -> google.protobuf.Timestamp
+	13, // 9: inference.service.v1.ListRuntimeEventsRequest.until:type_name -> google.protobuf.Timestamp
+	13, // 10: inference.service.v1.RuntimeEvent.timestamp:type_name -> google.protobuf.Timestamp
 	7,  // 11: inference.service.v1.ListRuntimeEventsResponse.items:type_name -> inference.service.v1.RuntimeEvent
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	13, // 12: inference.service.v1.InferenceMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	13, // 13: inference.service.v1.InferenceMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	13, // 14: inference.service.v1.InferenceMetricPoint.timestamp:type_name -> google.protobuf.Timestamp
+	10, // 15: inference.service.v1.InferenceMetricSeries.points:type_name -> inference.service.v1.InferenceMetricPoint
+	11, // 16: inference.service.v1.InferenceMetricsResponse.series:type_name -> inference.service.v1.InferenceMetricSeries
+	13, // 17: inference.service.v1.InferenceMetricsResponse.start:type_name -> google.protobuf.Timestamp
+	13, // 18: inference.service.v1.InferenceMetricsResponse.end:type_name -> google.protobuf.Timestamp
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_inference_service_v1_diagnostics_proto_init() }
@@ -747,7 +1050,7 @@ func file_inference_service_v1_diagnostics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inference_service_v1_diagnostics_proto_rawDesc), len(file_inference_service_v1_diagnostics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -9,7 +9,8 @@ BEGIN
   ('GET','/api/v1/inference/services/{resource_id}/runtime','inference:service:read'),
   ('GET','/api/v1/inference/services/{resource_id}/logs','inference:service:read'),
   ('GET','/api/v1/inference/services/{resource_id}/logs:stream','inference:service:read'),
-  ('GET','/api/v1/inference/services/{resource_id}/events','inference:service:read')
+  ('GET','/api/v1/inference/services/{resource_id}/events','inference:service:read'),
+  ('GET','/api/v1/inference/services/{resource_id}/metrics','inference:service:read')
  ) AS routes(method,path,code) LOOP
   SELECT count(*),min(id) INTO route_count,aid FROM sys_apis
    WHERE path=r.path AND method=r.method AND module='InferenceDiagnosticsService'

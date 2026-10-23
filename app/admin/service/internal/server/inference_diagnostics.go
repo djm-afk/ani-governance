@@ -36,6 +36,9 @@ func RegisterInferenceDiagnosticsHTTP(server *khttp.Server, s *service.Inference
 		request           func() proto.Message
 		invoke            func(context.Context, proto.Message) (proto.Message, error)
 	}{
+		{"/metrics", "GetInferenceMetrics", func() proto.Message { return new(view.InferenceMetricsRequest) }, func(ctx context.Context, r proto.Message) (proto.Message, error) {
+			return s.GetInferenceMetrics(ctx, r.(*view.InferenceMetricsRequest))
+		}},
 		{"/runtime", "GetRuntimeDiagnostics", func() proto.Message { return new(view.GetRuntimeDiagnosticsRequest) }, func(ctx context.Context, r proto.Message) (proto.Message, error) {
 			return s.GetRuntimeDiagnostics(ctx, r.(*view.GetRuntimeDiagnosticsRequest))
 		}},
@@ -80,6 +83,8 @@ func decodeInferenceDiagnosticsQuery(r *nethttp.Request, id string, out proto.Me
 		return invalid
 	}
 	switch v := out.(type) {
+	case *view.InferenceMetricsRequest:
+		v.ResourceId = id
 	case *view.GetRuntimeDiagnosticsRequest:
 		v.ResourceId = id
 	case *view.RuntimeLogsRequest:
@@ -95,6 +100,34 @@ func decodeInferenceDiagnosticsQuery(r *nethttp.Request, id string, out proto.Me
 		}
 		value := vs[0]
 		switch key {
+		case "start", "end":
+			v, ok := out.(*view.InferenceMetricsRequest)
+			if !ok {
+				return invalid
+			}
+			t, e := time.Parse(time.RFC3339Nano, value)
+			if e != nil {
+				return invalid
+			}
+			stamp := timestamppb.New(t)
+			if stamp.CheckValid() != nil {
+				return invalid
+			}
+			if key == "start" {
+				v.Start = stamp
+			} else {
+				v.End = stamp
+			}
+		case "step":
+			v, ok := out.(*view.InferenceMetricsRequest)
+			if !ok {
+				return invalid
+			}
+			n, e := strconv.ParseInt(value, 10, 32)
+			if e != nil || n < 15 || n > 3600 || strconv.FormatInt(n, 10) != value {
+				return invalid
+			}
+			v.Step = int32(n)
 		case "since", "until":
 			parsed, err := time.Parse(time.RFC3339Nano, value)
 			if err != nil {
@@ -117,6 +150,17 @@ func decodeInferenceDiagnosticsQuery(r *nethttp.Request, id string, out proto.Me
 				} else {
 					v.Until = stamp
 				}
+			default:
+				return invalid
+			}
+		case "level":
+			v, ok := out.(*view.RuntimeLogsRequest)
+			if !ok {
+				return invalid
+			}
+			switch value {
+			case "trace", "debug", "info", "warn", "error", "fatal", "unknown":
+				v.Level = value
 			default:
 				return invalid
 			}
@@ -211,8 +255,16 @@ func (h *inferenceLogHTTP) stream(parent context.Context, w nethttp.ResponseWrit
 	go func() {
 		for {
 			line, e := session.Stream.Recv()
+			var projected proto.Message
+			if e == nil {
+				item, keep := service.ProjectInferenceLog(line, r.Level)
+				if !keep {
+					continue
+				}
+				projected = item
+			}
 			select {
-			case lines <- result{line, e}:
+			case lines <- result{projected, e}:
 			case <-ctx.Done():
 				return
 			}

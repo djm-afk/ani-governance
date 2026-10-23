@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	InferenceDiagnosticsService_GetInferenceMetrics_FullMethodName   = "/admin.service.v1.InferenceDiagnosticsService/GetInferenceMetrics"
 	InferenceDiagnosticsService_GetRuntimeDiagnostics_FullMethodName = "/admin.service.v1.InferenceDiagnosticsService/GetRuntimeDiagnostics"
 	InferenceDiagnosticsService_GetRuntimeLogs_FullMethodName        = "/admin.service.v1.InferenceDiagnosticsService/GetRuntimeLogs"
 	InferenceDiagnosticsService_StreamRuntimeLogs_FullMethodName     = "/admin.service.v1.InferenceDiagnosticsService/StreamRuntimeLogs"
@@ -32,6 +33,7 @@ const (
 //
 // Tenant-authenticated management diagnostics; inference calls remain on Higress.
 type InferenceDiagnosticsServiceClient interface {
+	GetInferenceMetrics(ctx context.Context, in *v1.InferenceMetricsRequest, opts ...grpc.CallOption) (*v1.InferenceMetricsResponse, error)
 	GetRuntimeDiagnostics(ctx context.Context, in *v1.GetRuntimeDiagnosticsRequest, opts ...grpc.CallOption) (*v1.RuntimeDiagnostics, error)
 	GetRuntimeLogs(ctx context.Context, in *v1.RuntimeLogsRequest, opts ...grpc.CallOption) (*v1.RuntimeLogsResponse, error)
 	// Served as bounded SSE by the custom HTTP handler.
@@ -45,6 +47,16 @@ type inferenceDiagnosticsServiceClient struct {
 
 func NewInferenceDiagnosticsServiceClient(cc grpc.ClientConnInterface) InferenceDiagnosticsServiceClient {
 	return &inferenceDiagnosticsServiceClient{cc}
+}
+
+func (c *inferenceDiagnosticsServiceClient) GetInferenceMetrics(ctx context.Context, in *v1.InferenceMetricsRequest, opts ...grpc.CallOption) (*v1.InferenceMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InferenceMetricsResponse)
+	err := c.cc.Invoke(ctx, InferenceDiagnosticsService_GetInferenceMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *inferenceDiagnosticsServiceClient) GetRuntimeDiagnostics(ctx context.Context, in *v1.GetRuntimeDiagnosticsRequest, opts ...grpc.CallOption) (*v1.RuntimeDiagnostics, error) {
@@ -93,6 +105,7 @@ func (c *inferenceDiagnosticsServiceClient) ListRuntimeEvents(ctx context.Contex
 //
 // Tenant-authenticated management diagnostics; inference calls remain on Higress.
 type InferenceDiagnosticsServiceServer interface {
+	GetInferenceMetrics(context.Context, *v1.InferenceMetricsRequest) (*v1.InferenceMetricsResponse, error)
 	GetRuntimeDiagnostics(context.Context, *v1.GetRuntimeDiagnosticsRequest) (*v1.RuntimeDiagnostics, error)
 	GetRuntimeLogs(context.Context, *v1.RuntimeLogsRequest) (*v1.RuntimeLogsResponse, error)
 	// Served as bounded SSE by the custom HTTP handler.
@@ -108,6 +121,9 @@ type InferenceDiagnosticsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedInferenceDiagnosticsServiceServer struct{}
 
+func (UnimplementedInferenceDiagnosticsServiceServer) GetInferenceMetrics(context.Context, *v1.InferenceMetricsRequest) (*v1.InferenceMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInferenceMetrics not implemented")
+}
 func (UnimplementedInferenceDiagnosticsServiceServer) GetRuntimeDiagnostics(context.Context, *v1.GetRuntimeDiagnosticsRequest) (*v1.RuntimeDiagnostics, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRuntimeDiagnostics not implemented")
 }
@@ -140,6 +156,24 @@ func RegisterInferenceDiagnosticsServiceServer(s grpc.ServiceRegistrar, srv Infe
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&InferenceDiagnosticsService_ServiceDesc, srv)
+}
+
+func _InferenceDiagnosticsService_GetInferenceMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.InferenceMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InferenceDiagnosticsServiceServer).GetInferenceMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InferenceDiagnosticsService_GetInferenceMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InferenceDiagnosticsServiceServer).GetInferenceMetrics(ctx, req.(*v1.InferenceMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _InferenceDiagnosticsService_GetRuntimeDiagnostics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -221,6 +255,10 @@ var InferenceDiagnosticsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.InferenceDiagnosticsService",
 	HandlerType: (*InferenceDiagnosticsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetInferenceMetrics",
+			Handler:    _InferenceDiagnosticsService_GetInferenceMetrics_Handler,
+		},
 		{
 			MethodName: "GetRuntimeDiagnostics",
 			Handler:    _InferenceDiagnosticsService_GetRuntimeDiagnostics_Handler,

@@ -43,7 +43,7 @@ func validateModelQuery(r *http.Request, versions bool) error {
 		switch key {
 		case "page", "pageSize":
 			n, err := strconv.ParseInt(value, 10, 32)
-			if err != nil || n < 1 || strconv.FormatInt(n, 10) != value || n > 100 {
+			if err != nil || n < 1 || strconv.FormatInt(n, 10) != value || (key == "pageSize" && n > 100) {
 				return invalid()
 			}
 		case "status":

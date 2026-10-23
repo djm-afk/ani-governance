@@ -27,10 +27,10 @@ var File_admin_service_v1_i_model_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_model_proto_rawDesc = "" +
 	"\n" +
-	"\x1eadmin/service/v1/i_model.proto\x12\x10admin.service.v1\x1a\x1ecatalog/service/v1/model.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto2\xe4\x13\n" +
+	"\x1eadmin/service/v1/i_model.proto\x12\x10admin.service.v1\x1a\x1ecatalog/service/v1/model.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto2\xeb\x13\n" +
 	"\fModelService\x12y\n" +
-	"\vCreateModel\x12&.catalog.service.v1.CreateModelRequest\x1a'.catalog.service.v1.CreateModelResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/api/v1/models\x12x\n" +
-	"\bGetModel\x12#.catalog.service.v1.GetModelRequest\x1a$.catalog.service.v1.GetModelResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/models/{model_id}\x12s\n" +
+	"\vCreateModel\x12&.catalog.service.v1.CreateModelRequest\x1a'.catalog.service.v1.CreateModelResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/api/v1/models\x12\x7f\n" +
+	"\bGetModel\x12#.catalog.service.v1.GetModelRequest\x1a$.catalog.service.v1.GetModelResponse\"(\x82\xd3\xe4\x93\x02\"b\x05model\x12\x19/api/v1/models/{model_id}\x12s\n" +
 	"\n" +
 	"ListModels\x12%.catalog.service.v1.ListModelsRequest\x1a&.catalog.service.v1.ListModelsResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/models\x12\x98\x01\n" +
 	"\x14SearchExternalModels\x12/.catalog.service.v1.SearchExternalModelsRequest\x1a0.catalog.service.v1.SearchExternalModelsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/v1/models:search\x12p\n" +

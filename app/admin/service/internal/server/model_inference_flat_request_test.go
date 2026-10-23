@@ -109,3 +109,17 @@ func TestModelWritesRejectLegacyEnvelope(t *testing.T) {
 		})
 	}
 }
+
+func TestModelDetailHTTPReturnsResource(t *testing.T) {
+	srv := khttp.NewServer(khttp.Middleware(func(next middleware.Handler) middleware.Handler {
+		return func(context.Context, interface{}) (interface{}, error) {
+			return &catalog.GetModelResponse{Model: &catalog.Model{Id: "model-1", Name: "qwen"}}, nil
+		}
+	}))
+	admin.RegisterModelServiceHTTPServer(srv, nil)
+	response := httptest.NewRecorder()
+	srv.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/models/model-1", nil))
+	require.Equal(t, 200, response.Code)
+	require.Contains(t, response.Body.String(), `"id":"model-1"`)
+	require.NotContains(t, response.Body.String(), `"model":`)
+}

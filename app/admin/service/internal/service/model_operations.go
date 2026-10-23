@@ -17,8 +17,8 @@ func (s *ModelService) ListModelOperations(ctx context.Context, in *catalogv1.Li
 	if in == nil || strings.TrimSpace(in.ModelId) == "" {
 		return nil, kratoserrors.BadRequest("INVALID_MODEL_REQUEST", "model_id is required")
 	}
-	if (in.Page != nil && (*in.Page < 1 || *in.Page > 100)) || (in.PageSize != nil && (*in.PageSize < 1 || *in.PageSize > 100)) {
-		return nil, kratoserrors.BadRequest("INVALID_MODEL_REQUEST", "page and pageSize must be between 1 and 100")
+	if (in.Page != nil && *in.Page < 1) || (in.PageSize != nil && (*in.PageSize < 1 || *in.PageSize > 100)) {
+		return nil, kratoserrors.BadRequest("INVALID_MODEL_REQUEST", "page must be positive and pageSize must be between 1 and 100")
 	}
 	tenant, actor, err := s.trustedModelOperator(ctx)
 	if err != nil {

@@ -108,6 +108,10 @@ bootstrap:
 
 downstream:
   inference:
+    # Optional management diagnostics. Never expose Prometheus to the browser.
+    prometheusURL: ""
+    runtimeNamespace: ani-system
+    invocationEndpoint: ""
     enabled: false
     address: ""
     serverName: ""

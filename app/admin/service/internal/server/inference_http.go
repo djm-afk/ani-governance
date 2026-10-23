@@ -24,6 +24,7 @@ import (
 // permissive generated HTTP decoder. The normal authentication, tenant gate,
 // Casbin and audit middleware still execute through ctx.Middleware.
 func RegisterInferenceHTTPServer(server *http.Server, inference *service.InferenceService) {
+	registerInferencePolicyHTTP(server, inference)
 	server.Route("/").GET("/api/v1/inference/services", func(ctx http.Context) error {
 		http.SetOperation(ctx, admin.OperationInferenceServiceListInference)
 		request := new(view.ListInferenceRequest)

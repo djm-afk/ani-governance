@@ -74,6 +74,12 @@ spec:
               value: /service-identity/model/tls.key
             {{- end }}
             {{- if .Values.downstream.inference.enabled }}
+            - name: ANI_INFERENCE_PROMETHEUS_URL
+              value: {{ .Values.downstream.inference.prometheusURL | quote }}
+            - name: ANI_INFERENCE_RUNTIME_NAMESPACE
+              value: {{ .Values.downstream.inference.runtimeNamespace | quote }}
+            - name: ANI_INFERENCE_INVOCATION_ENDPOINT
+              value: {{ .Values.downstream.inference.invocationEndpoint | quote }}
             - name: ANI_INFERENCE_ADDR
               value: {{ required "downstream.inference.address is required" .Values.downstream.inference.address | quote }}
             - name: ANI_INFERENCE_SERVER_NAME

@@ -199,6 +199,8 @@ func quotaActorString(actor QuotaActor) string {
 }
 
 type InferenceService struct {
+	invocationEndpoint string
+	metrics            InferenceMetricsReader
 	admin.UnimplementedInferenceServiceServer
 	acceptance InferenceGpuAcceptance
 	owner      InferenceOwnerClient

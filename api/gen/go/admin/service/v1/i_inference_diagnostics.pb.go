@@ -26,8 +26,9 @@ var File_admin_service_v1_i_inference_diagnostics_proto protoreflect.FileDescrip
 
 const file_admin_service_v1_i_inference_diagnostics_proto_rawDesc = "" +
 	"\n" +
-	".admin/service/v1/i_inference_diagnostics.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a&inference/service/v1/diagnostics.proto2\xc2\x05\n" +
-	"\x1bInferenceDiagnosticsService\x12\xaf\x01\n" +
+	".admin/service/v1/i_inference_diagnostics.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a&inference/service/v1/diagnostics.proto2\xf3\x06\n" +
+	"\x1bInferenceDiagnosticsService\x12\xae\x01\n" +
+	"\x13GetInferenceMetrics\x12-.inference.service.v1.InferenceMetricsRequest\x1a..inference.service.v1.InferenceMetricsResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/inference/services/{resource_id}/metrics\x12\xaf\x01\n" +
 	"\x15GetRuntimeDiagnostics\x122.inference.service.v1.GetRuntimeDiagnosticsRequest\x1a(.inference.service.v1.RuntimeDiagnostics\"8\x82\xd3\xe4\x93\x022\x120/api/v1/inference/services/{resource_id}/runtime\x12\x9c\x01\n" +
 	"\x0eGetRuntimeLogs\x12(.inference.service.v1.RuntimeLogsRequest\x1a).inference.service.v1.RuntimeLogsResponse\"5\x82\xd3\xe4\x93\x02/\x12-/api/v1/inference/services/{resource_id}/logs\x12\xa1\x01\n" +
 	"\x11StreamRuntimeLogs\x12(.inference.service.v1.RuntimeLogsRequest\x1a$.inference.service.v1.RuntimeLogLine\"<\x82\xd3\xe4\x93\x026\x124/api/v1/inference/services/{resource_id}/logs:stream\x12\xad\x01\n" +
@@ -35,25 +36,29 @@ const file_admin_service_v1_i_inference_diagnostics_proto_rawDesc = "" +
 	"\x14com.admin.service.v1B\x1aIInferenceDiagnosticsProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var file_admin_service_v1_i_inference_diagnostics_proto_goTypes = []any{
-	(*v1.GetRuntimeDiagnosticsRequest)(nil), // 0: inference.service.v1.GetRuntimeDiagnosticsRequest
-	(*v1.RuntimeLogsRequest)(nil),           // 1: inference.service.v1.RuntimeLogsRequest
-	(*v1.ListRuntimeEventsRequest)(nil),     // 2: inference.service.v1.ListRuntimeEventsRequest
-	(*v1.RuntimeDiagnostics)(nil),           // 3: inference.service.v1.RuntimeDiagnostics
-	(*v1.RuntimeLogsResponse)(nil),          // 4: inference.service.v1.RuntimeLogsResponse
-	(*v1.RuntimeLogLine)(nil),               // 5: inference.service.v1.RuntimeLogLine
-	(*v1.ListRuntimeEventsResponse)(nil),    // 6: inference.service.v1.ListRuntimeEventsResponse
+	(*v1.InferenceMetricsRequest)(nil),      // 0: inference.service.v1.InferenceMetricsRequest
+	(*v1.GetRuntimeDiagnosticsRequest)(nil), // 1: inference.service.v1.GetRuntimeDiagnosticsRequest
+	(*v1.RuntimeLogsRequest)(nil),           // 2: inference.service.v1.RuntimeLogsRequest
+	(*v1.ListRuntimeEventsRequest)(nil),     // 3: inference.service.v1.ListRuntimeEventsRequest
+	(*v1.InferenceMetricsResponse)(nil),     // 4: inference.service.v1.InferenceMetricsResponse
+	(*v1.RuntimeDiagnostics)(nil),           // 5: inference.service.v1.RuntimeDiagnostics
+	(*v1.RuntimeLogsResponse)(nil),          // 6: inference.service.v1.RuntimeLogsResponse
+	(*v1.RuntimeLogLine)(nil),               // 7: inference.service.v1.RuntimeLogLine
+	(*v1.ListRuntimeEventsResponse)(nil),    // 8: inference.service.v1.ListRuntimeEventsResponse
 }
 var file_admin_service_v1_i_inference_diagnostics_proto_depIdxs = []int32{
-	0, // 0: admin.service.v1.InferenceDiagnosticsService.GetRuntimeDiagnostics:input_type -> inference.service.v1.GetRuntimeDiagnosticsRequest
-	1, // 1: admin.service.v1.InferenceDiagnosticsService.GetRuntimeLogs:input_type -> inference.service.v1.RuntimeLogsRequest
-	1, // 2: admin.service.v1.InferenceDiagnosticsService.StreamRuntimeLogs:input_type -> inference.service.v1.RuntimeLogsRequest
-	2, // 3: admin.service.v1.InferenceDiagnosticsService.ListRuntimeEvents:input_type -> inference.service.v1.ListRuntimeEventsRequest
-	3, // 4: admin.service.v1.InferenceDiagnosticsService.GetRuntimeDiagnostics:output_type -> inference.service.v1.RuntimeDiagnostics
-	4, // 5: admin.service.v1.InferenceDiagnosticsService.GetRuntimeLogs:output_type -> inference.service.v1.RuntimeLogsResponse
-	5, // 6: admin.service.v1.InferenceDiagnosticsService.StreamRuntimeLogs:output_type -> inference.service.v1.RuntimeLogLine
-	6, // 7: admin.service.v1.InferenceDiagnosticsService.ListRuntimeEvents:output_type -> inference.service.v1.ListRuntimeEventsResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	0, // 0: admin.service.v1.InferenceDiagnosticsService.GetInferenceMetrics:input_type -> inference.service.v1.InferenceMetricsRequest
+	1, // 1: admin.service.v1.InferenceDiagnosticsService.GetRuntimeDiagnostics:input_type -> inference.service.v1.GetRuntimeDiagnosticsRequest
+	2, // 2: admin.service.v1.InferenceDiagnosticsService.GetRuntimeLogs:input_type -> inference.service.v1.RuntimeLogsRequest
+	2, // 3: admin.service.v1.InferenceDiagnosticsService.StreamRuntimeLogs:input_type -> inference.service.v1.RuntimeLogsRequest
+	3, // 4: admin.service.v1.InferenceDiagnosticsService.ListRuntimeEvents:input_type -> inference.service.v1.ListRuntimeEventsRequest
+	4, // 5: admin.service.v1.InferenceDiagnosticsService.GetInferenceMetrics:output_type -> inference.service.v1.InferenceMetricsResponse
+	5, // 6: admin.service.v1.InferenceDiagnosticsService.GetRuntimeDiagnostics:output_type -> inference.service.v1.RuntimeDiagnostics
+	6, // 7: admin.service.v1.InferenceDiagnosticsService.GetRuntimeLogs:output_type -> inference.service.v1.RuntimeLogsResponse
+	7, // 8: admin.service.v1.InferenceDiagnosticsService.StreamRuntimeLogs:output_type -> inference.service.v1.RuntimeLogLine
+	8, // 9: admin.service.v1.InferenceDiagnosticsService.ListRuntimeEvents:output_type -> inference.service.v1.ListRuntimeEventsResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

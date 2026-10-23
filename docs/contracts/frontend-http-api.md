@@ -155,10 +155,13 @@ Gov 通过 [go.mod](https://github.com/zhangzhe-ctrl/ani-governance/blob/ba7db4c
   项字段为 `id`、`model_id`、`model_version_id`、`action`、`actor`、`result`、
   `before_state`、`after_state`、`error_class`、`request_id`、`created_at`、`task_id`。
   时间为 RFC 3339，`total` 为十进制字符串。按创建时间、唯一 ID 倒序。
-- 这两个 Model 查询的页码和页大小均为 `1..100`，缺省 `1/20`，不接受其他查询
+- 这两个 Model 查询的页码为正 int32，页大小为 `1..100`，缺省 `1/20`，不接受其他查询
   参数、重复参数、空值、前导零或查询请求体。操作历史不支持 `status` 筛选。
 - `result=accepted` 表示异步导入已受理，不能显示成导入成功；`succeeded` 和
   `failed` 表示该条已记录动作的结果。任务当前结果仍以任务查询为准。历史记录
   仅覆盖 Model 实际产生并能关联到模型的审计事件，不补造未记录的删除等动作。
 - 两个入口均经过 Governance 用户认证、`model:service:read` 和 `MODEL` 套餐闸门。
   模型归属由 Model 验证；前端不能指定租户或操作人。
+
+模型详情 `GET /api/v1/models/{model_id}` 的 HTTP 响应直接返回 Model 资源，
+没有 `model` 外层；内部 RPC 的 GetModelResponse 保持原形状。

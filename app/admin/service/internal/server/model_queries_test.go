@@ -21,7 +21,7 @@ func TestModelQueriesHTTPContract(t *testing.T) {
 			switch in := req.(type) {
 			case *catalog.ListModelOperationsRequest:
 				require.Equal(t, "qwen", in.ModelId)
-				require.Equal(t, int32(3), in.GetPage())
+				require.Equal(t, int32(101), in.GetPage())
 				require.Equal(t, int32(2), in.GetPageSize())
 				return &catalog.ListModelOperationsResponse{Items: []*catalog.ModelOperation{{Id: "event-1", ModelId: "qwen", Result: "accepted"}}, Total: 12}, nil
 			case *catalog.ListModelVersionsRequest:
@@ -34,14 +34,14 @@ func TestModelQueriesHTTPContract(t *testing.T) {
 		}
 	}))
 	admin.RegisterModelServiceHTTPServer(srv, nil)
-	for _, path := range []string{"/api/v1/models/qwen/operations?page=3&pageSize=2", "/api/v1/models/qwen/versions?status=failed"} {
+	for _, path := range []string{"/api/v1/models/qwen/operations?page=101&pageSize=2", "/api/v1/models/qwen/versions?status=failed"} {
 		r := httptest.NewRecorder()
 		srv.ServeHTTP(r, httptest.NewRequest(http.MethodGet, path, nil))
 		require.Equal(t, 200, r.Code, r.Body.String())
 		require.Contains(t, r.Body.String(), `"total":"`)
 	}
 	require.Equal(t, 2, calls)
-	for _, query := range []string{"page=0", "page=101", "pageSize=101", "page=01", "page=1&page=2", "pageSize=", "tenant_id=forged", "model_id=other", "status=ready", "unknown=1", "page_size=2"} {
+	for _, query := range []string{"page=0", "page=2147483648", "pageSize=101", "page=01", "page=1&page=2", "pageSize=", "tenant_id=forged", "model_id=other", "status=ready", "unknown=1", "page_size=2"} {
 		r := httptest.NewRecorder()
 		srv.ServeHTTP(r, httptest.NewRequest(http.MethodGet, "/api/v1/models/qwen/operations?"+query, nil))
 		require.Equal(t, 400, r.Code, query+": "+r.Body.String())

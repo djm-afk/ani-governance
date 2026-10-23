@@ -20,12 +20,14 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
+const OperationInferenceDiagnosticsServiceGetInferenceMetrics = "/admin.service.v1.InferenceDiagnosticsService/GetInferenceMetrics"
 const OperationInferenceDiagnosticsServiceGetRuntimeDiagnostics = "/admin.service.v1.InferenceDiagnosticsService/GetRuntimeDiagnostics"
 const OperationInferenceDiagnosticsServiceGetRuntimeLogs = "/admin.service.v1.InferenceDiagnosticsService/GetRuntimeLogs"
 const OperationInferenceDiagnosticsServiceListRuntimeEvents = "/admin.service.v1.InferenceDiagnosticsService/ListRuntimeEvents"
 const OperationInferenceDiagnosticsServiceStreamRuntimeLogs = "/admin.service.v1.InferenceDiagnosticsService/StreamRuntimeLogs"
 
 type InferenceDiagnosticsServiceHTTPServer interface {
+	GetInferenceMetrics(context.Context, *v1.InferenceMetricsRequest) (*v1.InferenceMetricsResponse, error)
 	GetRuntimeDiagnostics(context.Context, *v1.GetRuntimeDiagnosticsRequest) (*v1.RuntimeDiagnostics, error)
 	GetRuntimeLogs(context.Context, *v1.RuntimeLogsRequest) (*v1.RuntimeLogsResponse, error)
 	ListRuntimeEvents(context.Context, *v1.ListRuntimeEventsRequest) (*v1.ListRuntimeEventsResponse, error)
@@ -35,10 +37,33 @@ type InferenceDiagnosticsServiceHTTPServer interface {
 
 func RegisterInferenceDiagnosticsServiceHTTPServer(s *http.Server, srv InferenceDiagnosticsServiceHTTPServer) {
 	r := s.Route("/")
+	r.GET("/api/v1/inference/services/{resource_id}/metrics", _InferenceDiagnosticsService_GetInferenceMetrics0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services/{resource_id}/runtime", _InferenceDiagnosticsService_GetRuntimeDiagnostics0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services/{resource_id}/logs", _InferenceDiagnosticsService_GetRuntimeLogs0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services/{resource_id}/logs:stream", _InferenceDiagnosticsService_StreamRuntimeLogs0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services/{resource_id}/events", _InferenceDiagnosticsService_ListRuntimeEvents0_HTTP_Handler(srv))
+}
+
+func _InferenceDiagnosticsService_GetInferenceMetrics0_HTTP_Handler(srv InferenceDiagnosticsServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.InferenceMetricsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInferenceDiagnosticsServiceGetInferenceMetrics)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetInferenceMetrics(ctx, req.(*v1.InferenceMetricsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.InferenceMetricsResponse)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _InferenceDiagnosticsService_GetRuntimeDiagnostics0_HTTP_Handler(srv InferenceDiagnosticsServiceHTTPServer) func(ctx http.Context) error {
@@ -130,6 +155,7 @@ func _InferenceDiagnosticsService_ListRuntimeEvents0_HTTP_Handler(srv InferenceD
 }
 
 type InferenceDiagnosticsServiceHTTPClient interface {
+	GetInferenceMetrics(ctx context.Context, req *v1.InferenceMetricsRequest, opts ...http.CallOption) (rsp *v1.InferenceMetricsResponse, err error)
 	GetRuntimeDiagnostics(ctx context.Context, req *v1.GetRuntimeDiagnosticsRequest, opts ...http.CallOption) (rsp *v1.RuntimeDiagnostics, err error)
 	GetRuntimeLogs(ctx context.Context, req *v1.RuntimeLogsRequest, opts ...http.CallOption) (rsp *v1.RuntimeLogsResponse, err error)
 	ListRuntimeEvents(ctx context.Context, req *v1.ListRuntimeEventsRequest, opts ...http.CallOption) (rsp *v1.ListRuntimeEventsResponse, err error)
@@ -143,6 +169,19 @@ type InferenceDiagnosticsServiceHTTPClientImpl struct {
 
 func NewInferenceDiagnosticsServiceHTTPClient(client *http.Client) InferenceDiagnosticsServiceHTTPClient {
 	return &InferenceDiagnosticsServiceHTTPClientImpl{client}
+}
+
+func (c *InferenceDiagnosticsServiceHTTPClientImpl) GetInferenceMetrics(ctx context.Context, in *v1.InferenceMetricsRequest, opts ...http.CallOption) (*v1.InferenceMetricsResponse, error) {
+	var out v1.InferenceMetricsResponse
+	pattern := "/api/v1/inference/services/{resource_id}/metrics"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationInferenceDiagnosticsServiceGetInferenceMetrics))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 func (c *InferenceDiagnosticsServiceHTTPClientImpl) GetRuntimeDiagnostics(ctx context.Context, in *v1.GetRuntimeDiagnosticsRequest, opts ...http.CallOption) (*v1.RuntimeDiagnostics, error) {

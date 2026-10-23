@@ -383,6 +383,18 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	inferenceService := service.NewInferenceServiceWithOwnerAndModel(inferenceAcceptance, inferenceClient, tenantRepo, modelClient)
+	metricsClient, err := data.NewInferenceMetricsClient(os.Getenv("ANI_INFERENCE_PROMETHEUS_URL"), os.Getenv("ANI_INFERENCE_RUNTIME_NAMESPACE"))
+	if err != nil {
+		return nil, nil, err
+	}
+	var metricsReader service.InferenceMetricsReader
+	if metricsClient != nil {
+		metricsReader = metricsClient
+	}
+	if err := inferenceService.ConfigureDiagnostics(os.Getenv("ANI_INFERENCE_INVOCATION_ENDPOINT"), metricsReader); err != nil {
+		return nil, nil, err
+	}
+
 	modelService := service.NewModelService(modelClient, tenantRepo)
 	instanceAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, gpuPlans, instanceBinding, quotaWorker)
 	if err != nil {

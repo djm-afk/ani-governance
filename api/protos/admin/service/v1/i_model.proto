@@ -13,7 +13,7 @@ service ModelService {
     option (google.api.http) = { post: "/api/v1/models" body: "*" };
   }
   rpc GetModel(catalog.service.v1.GetModelRequest) returns (catalog.service.v1.GetModelResponse) {
-    option (google.api.http) = { get: "/api/v1/models/{model_id}" };
+    option (google.api.http) = { get: "/api/v1/models/{model_id}" response_body: "model" };
   }
   rpc ListModels(catalog.service.v1.ListModelsRequest) returns (catalog.service.v1.ListModelsResponse) {
     option (google.api.http) = { get: "/api/v1/models" };

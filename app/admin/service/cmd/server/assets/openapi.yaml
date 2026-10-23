@@ -8017,6 +8017,10 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: level
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -8058,6 +8062,10 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: level
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -8065,6 +8073,39 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/RuntimeLogLine'
+    /api/v1/inference/services/{resource_id}/metrics:
+        get:
+            tags:
+                - InferenceDiagnosticsService
+            operationId: InferenceDiagnosticsService_GetInferenceMetrics
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: step
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceMetricsResponse'
     /api/v1/inference/services/{resource_id}/operations:
         get:
             tags:
@@ -8093,6 +8134,49 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ListInferenceOperationsResponse'
+    /api/v1/inference/services/{resource_id}/policy:
+        get:
+            tags:
+                - InferenceService
+            description: Requires inference:policy:read and an active INFERENCE subscription.
+            operationId: InferenceService_GetServicePolicy
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetServicePolicyResponse'
+        put:
+            tags:
+                - InferenceService
+            description: Requires inference:policy:update. Full replacement; empty allowlist denies all.
+            operationId: InferenceService_UpdateServicePolicy
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateServicePolicyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateServicePolicyResponse'
     /api/v1/inference/services/{resource_id}/runtime:
         get:
             tags:
@@ -13479,6 +13563,11 @@ components:
             properties:
                 credential:
                     $ref: '#/components/schemas/PublisherCredential'
+        GetServicePolicyResponse:
+            type: object
+            properties:
+                policy:
+                    $ref: '#/components/schemas/ServicePolicy'
         GetSubnetResponse:
             type: object
             properties:
@@ -13925,6 +14014,42 @@ components:
                     description: Durable Governance admission; this is not model readiness.
                 dispatch_operation_id:
                     type: string
+        InferenceMetricPoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                value:
+                    type: number
+                    format: double
+        InferenceMetricSeries:
+            type: object
+            properties:
+                name:
+                    type: string
+                unit:
+                    type: string
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InferenceMetricPoint'
+        InferenceMetricsResponse:
+            type: object
+            properties:
+                series:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InferenceMetricSeries'
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                step:
+                    type: integer
+                    format: int32
         InferenceServiceCommandRequest:
             type: object
             properties:
@@ -18246,6 +18371,8 @@ components:
                 observed_at:
                     type: string
                     format: date-time
+                invocation_endpoint:
+                    type: string
         RuntimeEvent:
             type: object
             properties:
@@ -18280,6 +18407,8 @@ components:
         RuntimeLogLine:
             type: object
             properties:
+                level:
+                    type: string
                 timestamp:
                     type: string
                     format: date-time
@@ -18606,6 +18735,31 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/NamedServerVariable'
+        ServicePolicy:
+            type: object
+            properties:
+                resource_id:
+                    type: string
+                allowed_tenants:
+                    type: array
+                    items:
+                        type: string
+                rate_limits:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/ServiceRateLimit'
+                updated_at:
+                    type: string
+                    format: date-time
+        ServiceRateLimit:
+            type: object
+            properties:
+                requests_per_minute:
+                    type: integer
+                    format: int32
+                requests_per_hour:
+                    type: integer
+                    format: int32
         SetAcceleratorAdmissionData:
             type: object
             properties:
@@ -19632,6 +19786,19 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/SchedulerConfigData'
+        UpdateServicePolicyRequest:
+            type: object
+            properties:
+                resource_id:
+                    type: string
+                policy:
+                    $ref: '#/components/schemas/ServicePolicy'
+            description: Replaces the whole policy bound to this service. Empty allowlist denies all.
+        UpdateServicePolicyResponse:
+            type: object
+            properties:
+                policy:
+                    $ref: '#/components/schemas/ServicePolicy'
         UpdateTaskRequest:
             type: object
             properties:

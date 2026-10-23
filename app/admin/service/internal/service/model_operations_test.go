@@ -69,7 +69,7 @@ func TestModelQueriesForwardTrustedIdentityAndPagination(t *testing.T) {
 	require.NotNil(t, versions.Items)
 	p.operations = nil
 	p.reply = &modelv1.ListModelOperationsResponse{Total: 12}
-	empty, err := s.ListModelOperations(ctx, &catalogv1.ListModelOperationsRequest{ModelId: "qwen", Page: proto.Int32(99)})
+	empty, err := s.ListModelOperations(ctx, &catalogv1.ListModelOperationsRequest{ModelId: "qwen", Page: proto.Int32(101)})
 	require.NoError(t, err)
 	require.NotNil(t, empty.Items)
 	require.Empty(t, empty.Items)
