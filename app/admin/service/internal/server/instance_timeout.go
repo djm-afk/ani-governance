@@ -8,6 +8,7 @@ import (
 )
 
 var instanceLogsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs$`)
+
 // The training log stream is the second long-lived SSE channel. Its own handler
 // owns the bounded lifetime, so the shared ordinary timeout must not cut it.
 var modelDevLogStreamHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs/stream$`)

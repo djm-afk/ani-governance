@@ -17,6 +17,11 @@ func TestInstanceLogTimeoutKeepsOrdinaryDeadlineAndClientCancellation(t *testing
 		{"GET", "/api/v1/instances/10000000-0000-4000-8000-000000000001/logs", false},
 		{"POST", "/api/v1/instances/10000000-0000-4000-8000-000000000001/logs", true},
 		{"GET", "/api/v1/instances/10000000-0000-4000-8000-000000000001/runtime", true},
+		// The training log stream owns its bounded lifetime, exactly like the
+		// instance log channel; the shared ordinary timeout must not cut it.
+		{"GET", "/api/v1/modeldev/executions/20000000-0000-4000-8000-000000000002/logs/stream", false},
+		{"POST", "/api/v1/modeldev/executions/20000000-0000-4000-8000-000000000002/logs/stream", true},
+		{"GET", "/api/v1/modeldev/executions/20000000-0000-4000-8000-000000000002/logs", true},
 	} {
 		t.Run(tc.method+tc.path, func(t *testing.T) {
 			parent, cancel := context.WithCancel(context.Background())
