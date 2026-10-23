@@ -131,7 +131,13 @@ func (s *ModelDevService) CreateExecution(ctx context.Context, in ModelDevCreate
 		return nil, modelDevCreateUnavailable()
 	}
 	if normalized.Kind == "FINETUNING" {
-		if err := s.authorization.AuthorizeFinetuning(ctx, principal.TenantID, principal.ID, normalized.NewModelName != nil); err != nil {
+		var err error
+		if normalized.NewModelName == nil && normalized.TargetModelID == nil {
+			err = s.authorization.AuthorizeFinetuningArtifacts(ctx, principal.TenantID, principal.ID)
+		} else {
+			err = s.authorization.AuthorizeFinetuning(ctx, principal.TenantID, principal.ID, normalized.NewModelName != nil)
+		}
+		if err != nil {
 			return nil, modelDevCreateFailure(err)
 		}
 	}

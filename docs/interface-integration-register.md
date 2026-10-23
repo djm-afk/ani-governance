@@ -1331,6 +1331,13 @@ Image AK 使用现有 ANI-HMAC-SHA256 七行形式：算法、HTTP method、规�
 
 当前活动合同为单一typed Intent，规则查询与请求见[前端合同](frontend-cpu-training-handoff.md)。同键原意图重放先于新目录解析；当前授权→固定候选 operation/execution/accepted_at→Res TRAINING→ModelDev Prepare/Finalize→Gov单事务持久受理及唯一ModelDevDispatch。网络不进入受理事务，CPU不写GPU原账。
 
+FINETUNING 同时省略 `new_model_name` 与 `target_model_id` 表示仅发布训练产物，
+该省略状态进入原 Intent/Snapshot/hash，不增加跳过字段，也不修改已受理意图。
+仍须真实基模版本 READY、当前版本 GET/download-url GET 及训练创建权限；
+无目标不要求模型 POST、版本 POST 或目标模型 GET。恰一目标沿用原登记和写权限，
+同时提交两个目标仍拒绝。仅产物执行没有可恢复的 Model 登记，Resume 返回 412，
+不会发起 ModelDev 登记 RPC；不将 publication 成功表述为 Model READY。
+
 | 编号 | 入口/职责 | 当前合同 |
 | --- | --- | --- |
 | MODELDEV-01 | 创建执行 | implementation/compute/typed parameters/总时长；拒绝旧Release字段；202为持久受理 |
