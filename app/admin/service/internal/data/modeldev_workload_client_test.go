@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 // workloadPeer substitutes only the external RPC. Delegation metadata, response
@@ -161,9 +162,9 @@ func TestListExecutionEventsValidatesProjection(t *testing.T) {
 		{"non-uuid involved uid", func(e *modeldevv1.EventView) { e.InvolvedUid = "pod-name" }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			event := *valid
-			test.mutate(&event)
-			peer.events = &modeldevv1.ListExecutionEventsResponse{ObservedAt: timestamppb.Now(), Events: []*modeldevv1.EventView{&event}}
+			event := proto.Clone(valid).(*modeldevv1.EventView)
+			test.mutate(event)
+			peer.events = &modeldevv1.ListExecutionEventsResponse{ObservedAt: timestamppb.Now(), Events: []*modeldevv1.EventView{event}}
 			_, err := client.ListExecutionEvents(context.Background(), scope, id, EventScopeKey)
 			require.Equal(t, codes.Unavailable, status.Code(err))
 		})
@@ -199,7 +200,7 @@ func TestLogSourceBinding(t *testing.T) {
 	require.True(t, modelDevValidLogSource(step, LogSelection{PodUID: podUID, Container: "main"}))
 	require.False(t, modelDevValidLogSource(step, LogSelection{}))
 
-	unknown := *worker
+	unknown := proto.Clone(worker).(*modeldevv1.GetExecutionLogsResponse)
 	unknown.SourceKind = modeldevv1.LogSourceKind_LOG_SOURCE_KIND_UNSPECIFIED
-	require.False(t, modelDevValidLogSource(&unknown, LogSelection{}))
+	require.False(t, modelDevValidLogSource(unknown, LogSelection{}))
 }
