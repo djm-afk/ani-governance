@@ -390,12 +390,12 @@ github.com/zclconf/go-cty-yaml v1.2.0 h1:GDyL4+e/Qe/S0B7YaecMLbVvAR/Mp21CXMOSiCT
 github.com/zclconf/go-cty-yaml v1.2.0/go.mod h1:9YLUH4g7lOhVWqUbctnVlZ5KLpg7JAprQNgxSZ1Gyxs=
 github.com/zeebo/xxh3 v1.1.0 h1:s7DLGDK45Dyfg7++yxI0khrfwq9661w9EN78eP/UZVs=
 github.com/zeebo/xxh3 v1.1.0/go.mod h1:IisAie1LELR4xhVinxWS5+zf1lA4p0MW4T+w+W07F5s=
-github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261021185941-10a73f7ef24e h1:ZXXXlpRGqoMZJ2cH2IQ+JATMZsOlgy4/DvXkVFJqBPw=
-github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261021185941-10a73f7ef24e/go.mod h1:epbyAatyaY5TF8TqOA6WdwnwvLBfqXXSHmAod91kloQ=
+github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261021231649-b51b9c135728 h1:RhjyhxdW1KtoyLJVffEBoNA0ZqTKq+sqqgC4iVyzcxc=
+github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261021231649-b51b9c135728/go.mod h1:epbyAatyaY5TF8TqOA6WdwnwvLBfqXXSHmAod91kloQ=
 github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88 h1:U+d42xSPXbOP8hssY4GNoKhoSUe2RiI3sMuz3JxmBq0=
 github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88/go.mod h1:OmpTNUUTOEMzeXx5cOUdOYqNxrmA+KBthlt44mfZ4s8=
-github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261021184454-44188466290f h1:wDQZaeyRKeeqpKc8sGqXcNB6qaIHLC0WnWmo1zhG6k8=
-github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261021184454-44188466290f/go.mod h1:zjkvQlkz+7uRuCWqfGr9AT/mFnjmMQ9Ho/Fj0UluAc0=
+github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261021233353-ea047cc3029f h1:FuKR2tCKmV5VDvLXUxhv++3Gq3yaYEtYQHxMHO99zgE=
+github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261021233353-ea047cc3029f/go.mod h1:QgtF4otGrWIL6EDsparyvGPzQHwzkg/bgoWVah1YSPs=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1 h1:SEr70/++V17GJrSzZMG6pEChKj+y9R7kThLe0bYmewQ=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1/go.mod h1:a+WDRsjGC2HUmncHBgkHfUKaRfsfMqvFr+uJzJW2T4A=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019174951-733f625995f8 h1:EohHkLtEobLRQAEH3MT64z6Y/3nosH8+9tsy4QQsKZU=

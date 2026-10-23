@@ -44,6 +44,7 @@ const (
 	modelDevManageExecutionAction
 	modelDevFinetuningExistingModelAction
 	modelDevFinetuningNewModelAction
+	modelDevResumeRegistrationAction
 )
 
 const (
@@ -117,6 +118,13 @@ func (r *ModelDevAuthorizationRepo) AuthorizeManageInput(ctx context.Context, te
 
 func (r *ModelDevAuthorizationRepo) AuthorizeManageExecution(ctx context.Context, tenantID, userID uint32) error {
 	return r.authorizeCurrent(ctx, tenantID, userID, modelDevManageExecutionAction)
+}
+
+func (r *ModelDevAuthorizationRepo) AuthorizeResume(ctx context.Context, tenantID, userID uint32) error {
+	if err := r.authorizeCurrent(ctx, tenantID, userID, modelDevResumeRegistrationAction); err != nil {
+		return err
+	}
+	return r.AuthorizeQuery(ctx, tenantID, userID, ModelDevGetExecutionPath)
 }
 
 // AuthorizeFinetuning complements the current ModelDev create grant with the
@@ -234,7 +242,7 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 		// Create retains its permission-to-API check below.
 	case modelDevManageInputAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageInputPermissionCode))
-	case modelDevManageExecutionAction:
+	case modelDevManageExecutionAction, modelDevResumeRegistrationAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageExecutionPermissionCode))
 	default:
 		return ErrModelDevAuthorizationDenied
@@ -249,6 +257,8 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 	if action != modelDevManageInputAction && action != modelDevManageExecutionAction {
 		path, method := "/api/v1/modeldev/executions", "POST"
 		switch action {
+		case modelDevResumeRegistrationAction:
+			path = ModelDevResumeModelRegistrationPath
 		case modelDevStopAction:
 			path = ModelDevStopExecutionPath
 		case modelDevGetExecutionAction:
