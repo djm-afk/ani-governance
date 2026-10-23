@@ -20,11 +20,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// executionLogOpener is the one capability the transport needs: authorize and
+// open the upstream frame stream. Narrowing it keeps the HTTP/SSE code testable
+// with a substituted upstream while the authorization stays in the service.
+type executionLogOpener interface {
+	OpenExecutionLogStream(context.Context, *modeldevcontractv1.GetExecutionLogStreamRequest) (*service.ExecutionLogSession, error)
+}
+
 // executionLogLimits reuses the instance-log transport protection. Only the
 // gate key differs: a training log stream is counted per execution, not per
 // instance, because one execution may span several worker Pods.
 type executionLogHTTP struct {
-	service *service.ModelDevService
+	opener  executionLogOpener
 	limits  InstanceLogLimits
 	mu      sync.Mutex
 	active  int
@@ -40,7 +47,10 @@ func RegisterExecutionLogStreamHTTP(server *khttp.Server, s *service.ModelDevSer
 	if err := limits.validate(); err != nil {
 		panic(err)
 	}
-	h := &executionLogHTTP{service: s, limits: limits, tenants: map[string]int{}, targets: map[string]int{}}
+	h := &executionLogHTTP{limits: limits, tenants: map[string]int{}, targets: map[string]int{}}
+	if s != nil {
+		h.opener = s
+	}
 	server.Route("/").GET(data.ModelDevExecutionLogStreamPath, h.handle)
 }
 
@@ -110,12 +120,27 @@ func (h *executionLogHTTP) handle(ctx khttp.Context) error {
 		return nil, h.stream(call, ctx.Response(), in.(*modeldevcontractv1.GetExecutionLogStreamRequest))
 	})(ctx, request)
 	if err != nil {
-		if status.Code(err) == codes.ResourceExhausted {
-			return kratoserrors.New(429, "EXECUTION_LOG_CONNECTION_LIMIT", "execution log connection limit reached")
-		}
-		return err
+		return executionLogHTTPError(err)
 	}
 	return nil
+}
+
+// executionLogHTTPError keeps a pre-stream failure an HTTP status the client can
+// act on. Only the reviewed reasons reach the body; an upstream message never
+// does.
+func executionLogHTTPError(err error) error {
+	switch status.Code(err) {
+	case codes.ResourceExhausted:
+		return kratoserrors.New(429, "EXECUTION_LOG_CONNECTION_LIMIT", "execution log connection limit reached")
+	case codes.FailedPrecondition:
+		return kratoserrors.New(412, executionLogPublicReason(err), "execution log unavailable")
+	case codes.InvalidArgument:
+		return kratoserrors.BadRequest("INVALID_MODELDEV_QUERY", "invalid modeldev query")
+	case codes.NotFound:
+		return kratoserrors.NotFound("RESOURCE_NOT_FOUND", "resource unavailable")
+	default:
+		return err
+	}
 }
 
 func (h *executionLogHTTP) reserveOpen() (func(), error) {
@@ -160,7 +185,7 @@ type executionLogRead struct {
 }
 
 func (h *executionLogHTTP) stream(parent context.Context, w http.ResponseWriter, r *modeldevcontractv1.GetExecutionLogStreamRequest) error {
-	if h.service == nil {
+	if h.opener == nil {
 		return status.Error(codes.Unavailable, "EXECUTION_LOG_UPSTREAM_UNAVAILABLE")
 	}
 	releaseOpening, err := h.reserveOpen()
@@ -173,12 +198,14 @@ func (h *executionLogHTTP) stream(parent context.Context, w http.ResponseWriter,
 	var expired atomic.Bool
 	opening := time.AfterFunc(h.limits.OpenTimeout, func() { expired.Store(true); cancel() })
 	defer opening.Stop()
-	session, err := h.service.OpenExecutionLogStream(call, r)
+	session, err := h.opener.OpenExecutionLogStream(call, r)
 	if err != nil {
 		if expired.Load() {
 			return status.Error(codes.Unavailable, "EXECUTION_LOG_OPEN_TIMEOUT")
 		}
-		return err
+		// Nothing has been written to the client yet, so an upstream failure
+		// must stay an HTTP error and must not echo an upstream message.
+		return executionLogOpenError(err)
 	}
 	release, err := h.acquire(session.TenantID, r.ExecutionId)
 	releaseOpening()
