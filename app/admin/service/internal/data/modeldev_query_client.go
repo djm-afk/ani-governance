@@ -39,6 +39,23 @@ func (c *ModelDevClient) queryContext(ctx context.Context, scope ModelDevResolve
 		"x-ani-request-id", uuid.NewString(), "x-ani-authorized-method", method, "x-ani-data-scope", "tenant-all")), cancel, nil
 }
 
+// streamContext rebuilds outgoing metadata for a long-lived stream. Unlike a
+// unary call it installs no total deadline: the caller owns the bounded
+// lifetime and the upstream must be able to idle between log lines.
+func (c *ModelDevClient) streamContext(ctx context.Context, scope ModelDevResolveScope, method string) (context.Context, error) {
+	if c == nil || c.connection == nil {
+		return nil, modelDevQueryUnavailable()
+	}
+	if !modelDevCanonicalUUID(scope.ResourceTenantID) || !validModelDevClientActor(scope.Actor) {
+		return nil, modelDevQueryUnavailable()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
+	}
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs("x-ani-tenant-id", scope.ResourceTenantID, "x-ani-actor", scope.Actor,
+		"x-ani-request-id", uuid.NewString(), "x-ani-authorized-method", method, "x-ani-data-scope", "tenant-all")), nil
+}
+
 func (c *ModelDevClient) GetExecution(ctx context.Context, scope ModelDevResolveScope, id string) (*modeldevv1.GetExecutionResponse, error) {
 	call, cancel, err := c.queryContext(ctx, scope, modeldevv1.ModelDevQueryService_GetExecution_FullMethodName)
 	if err != nil {

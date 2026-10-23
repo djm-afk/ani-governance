@@ -52,7 +52,18 @@ func TestModelDevListAndLogRejectUnboundedSelectors(t *testing.T) {
 		{"/api/v1/modeldev/executions/id/logs?pod=other", ""},
 		{"/api/v1/modeldev/executions/id/logs?log_id=other", ""},
 		{"/api/v1/modeldev/executions/id/logs?follow=true", ""},
+		{"/api/v1/modeldev/executions/id/logs?podUid=not-a-uuid", ""},
+		{"/api/v1/modeldev/executions/id/logs?container=Node", ""},
+		{"/api/v1/modeldev/executions/id/logs?container=", ""},
+		{"/api/v1/modeldev/executions/id/logs?previous=1", ""},
 		{"/api/v1/modeldev/executions/id/logs", "{}"},
+		{"/api/v1/modeldev/executions/id/pods?layer=other", ""},
+		{"/api/v1/modeldev/executions/id/pods?includeRecycled=yes", ""},
+		{"/api/v1/modeldev/executions/id/pods?podUid=" + strings.Repeat("a", 36), ""},
+		{"/api/v1/modeldev/executions/id/events?scope=other", ""},
+		{"/api/v1/modeldev/executions/id/events?warning_only=true", ""},
+		{"/api/v1/modeldev/executions/id/pods", "{}"},
+		{"/api/v1/modeldev/executions/id/events", "{}"},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			request, err := http.NewRequest(http.MethodGet, web.URL+test.path, strings.NewReader(test.body))
@@ -70,6 +81,9 @@ func TestModelDevListAndLogRoutesEnterAuthentication(t *testing.T) {
 	testModelDevAuthenticatedRoutes(t, []string{
 		"/api/v1/modeldev/executions",
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/logs",
+		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/pods",
+		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/events",
+		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/logs/stream",
 	})
 }
 

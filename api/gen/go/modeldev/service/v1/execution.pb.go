@@ -1428,10 +1428,17 @@ func (x *ListExecutionsResponse) GetTotal() uint64 {
 }
 
 type GetExecutionLogsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ExecutionId   string                 `protobuf:"bytes,1,opt,name=execution_id,proto3" json:"execution_id,omitempty"`
-	TailLines     uint32                 `protobuf:"varint,2,opt,name=tail_lines,proto3" json:"tail_lines,omitempty"`
-	MaxBytes      uint32                 `protobuf:"varint,3,opt,name=max_bytes,proto3" json:"max_bytes,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ExecutionId string                 `protobuf:"bytes,1,opt,name=execution_id,proto3" json:"execution_id,omitempty"`
+	TailLines   uint32                 `protobuf:"varint,2,opt,name=tail_lines,proto3" json:"tail_lines,omitempty"`
+	MaxBytes    uint32                 `protobuf:"varint,3,opt,name=max_bytes,proto3" json:"max_bytes,omitempty"`
+	// Opaque owner-issued log ID; container selection stays a separate field.
+	LogId *string `protobuf:"bytes,4,opt,name=log_id,proto3,oneof" json:"log_id,omitempty"`
+	// Absent keeps the original single-worker behaviour.
+	PodUid    *string `protobuf:"bytes,5,opt,name=pod_uid,proto3,oneof" json:"pod_uid,omitempty"`
+	Container *string `protobuf:"bytes,6,opt,name=container,proto3,oneof" json:"container,omitempty"`
+	// Reads the last terminated instance of the same container.
+	Previous      *bool `protobuf:"varint,7,opt,name=previous,proto3,oneof" json:"previous,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1487,13 +1494,46 @@ func (x *GetExecutionLogsRequest) GetMaxBytes() uint32 {
 	return 0
 }
 
+func (x *GetExecutionLogsRequest) GetLogId() string {
+	if x != nil && x.LogId != nil {
+		return *x.LogId
+	}
+	return ""
+}
+
+func (x *GetExecutionLogsRequest) GetPodUid() string {
+	if x != nil && x.PodUid != nil {
+		return *x.PodUid
+	}
+	return ""
+}
+
+func (x *GetExecutionLogsRequest) GetContainer() string {
+	if x != nil && x.Container != nil {
+		return *x.Container
+	}
+	return ""
+}
+
+func (x *GetExecutionLogsRequest) GetPrevious() bool {
+	if x != nil && x.Previous != nil {
+		return *x.Previous
+	}
+	return false
+}
+
 // Bounded actual training output. Pod identity and selectors remain internal.
 type GetExecutionLogsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LogId         string                 `protobuf:"bytes,1,opt,name=log_id,proto3" json:"log_id,omitempty"`
-	Lines         []*ExecutionLogLine    `protobuf:"bytes,2,rep,name=lines,proto3" json:"lines,omitempty"`
-	Truncated     bool                   `protobuf:"varint,3,opt,name=truncated,proto3" json:"truncated,omitempty"`
-	ObservedAt    string                 `protobuf:"bytes,4,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	LogId      string                 `protobuf:"bytes,1,opt,name=log_id,proto3" json:"log_id,omitempty"`
+	Lines      []*ExecutionLogLine    `protobuf:"bytes,2,rep,name=lines,proto3" json:"lines,omitempty"`
+	Truncated  bool                   `protobuf:"varint,3,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	ObservedAt string                 `protobuf:"bytes,4,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
+	// TRAINER or KFP_STEP; decides which plane produced these lines.
+	SourceKind    string `protobuf:"bytes,5,opt,name=source_kind,proto3" json:"source_kind,omitempty"`
+	ContainerName string `protobuf:"bytes,6,opt,name=container_name,proto3" json:"container_name,omitempty"`
+	Previous      bool   `protobuf:"varint,7,opt,name=previous,proto3" json:"previous,omitempty"`
+	Available     bool   `protobuf:"varint,8,opt,name=available,proto3" json:"available,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1556,6 +1596,34 @@ func (x *GetExecutionLogsResponse) GetObservedAt() string {
 	return ""
 }
 
+func (x *GetExecutionLogsResponse) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+func (x *GetExecutionLogsResponse) GetContainerName() string {
+	if x != nil {
+		return x.ContainerName
+	}
+	return ""
+}
+
+func (x *GetExecutionLogsResponse) GetPrevious() bool {
+	if x != nil {
+		return x.Previous
+	}
+	return false
+}
+
+func (x *GetExecutionLogsResponse) GetAvailable() bool {
+	if x != nil {
+		return x.Available
+	}
+	return false
+}
+
 type ExecutionLogLine struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Timestamp     string                 `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
@@ -1608,6 +1676,715 @@ func (x *ExecutionLogLine) GetText() string {
 	return ""
 }
 
+// One container instance as Kubernetes reports it. Display strings keep the
+// BFF free of Kubernetes enum packages; unknown values fail closed downstream.
+type ExecutionContainerView struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// container / init_container / ephemeral
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// running / waiting / terminated / unknown
+	State         string                  `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	Reason        string                  `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message       string                  `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
+	RestartCount  int32                   `protobuf:"varint,6,opt,name=restart_count,proto3" json:"restart_count,omitempty"`
+	ExitCode      *int32                  `protobuf:"varint,7,opt,name=exit_code,proto3,oneof" json:"exit_code,omitempty"`
+	StartedAt     string                  `protobuf:"bytes,8,opt,name=started_at,proto3" json:"started_at,omitempty"`
+	FinishedAt    string                  `protobuf:"bytes,9,opt,name=finished_at,proto3" json:"finished_at,omitempty"`
+	LastState     *ExecutionContainerView `protobuf:"bytes,10,opt,name=last_state,proto3" json:"last_state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecutionContainerView) Reset() {
+	*x = ExecutionContainerView{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionContainerView) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionContainerView) ProtoMessage() {}
+
+func (x *ExecutionContainerView) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionContainerView.ProtoReflect.Descriptor instead.
+func (*ExecutionContainerView) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ExecutionContainerView) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetRestartCount() int32 {
+	if x != nil {
+		return x.RestartCount
+	}
+	return 0
+}
+
+func (x *ExecutionContainerView) GetExitCode() int32 {
+	if x != nil && x.ExitCode != nil {
+		return *x.ExitCode
+	}
+	return 0
+}
+
+func (x *ExecutionContainerView) GetStartedAt() string {
+	if x != nil {
+		return x.StartedAt
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetFinishedAt() string {
+	if x != nil {
+		return x.FinishedAt
+	}
+	return ""
+}
+
+func (x *ExecutionContainerView) GetLastState() *ExecutionContainerView {
+	if x != nil {
+		return x.LastState
+	}
+	return nil
+}
+
+type ExecutionPodView struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	PodName string                 `protobuf:"bytes,1,opt,name=pod_name,proto3" json:"pod_name,omitempty"`
+	PodUid  string                 `protobuf:"bytes,2,opt,name=pod_uid,proto3" json:"pod_uid,omitempty"`
+	PodIp   string                 `protobuf:"bytes,3,opt,name=pod_ip,proto3" json:"pod_ip,omitempty"`
+	// Kubernetes phase only; recycled and never-created stay in availability.
+	Phase             string `protobuf:"bytes,4,opt,name=phase,proto3" json:"phase,omitempty"`
+	Ready             bool   `protobuf:"varint,5,opt,name=ready,proto3" json:"ready,omitempty"`
+	NodeName          string `protobuf:"bytes,6,opt,name=node_name,proto3" json:"node_name,omitempty"`
+	Restarts          int32  `protobuf:"varint,7,opt,name=restarts,proto3" json:"restarts,omitempty"`
+	CreatedAt         string `protobuf:"bytes,8,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	StartTime         string `protobuf:"bytes,9,opt,name=start_time,proto3" json:"start_time,omitempty"`
+	DeletionTimestamp string `protobuf:"bytes,10,opt,name=deletion_timestamp,proto3" json:"deletion_timestamp,omitempty"`
+	// TRAINER / PIPELINE
+	Layer string `protobuf:"bytes,11,opt,name=layer,proto3" json:"layer,omitempty"`
+	// LIVE / RECYCLED / NEVER_CREATED / REJECTED / ORPHANED / CREATION_PENDING
+	Availability        string                    `protobuf:"bytes,12,opt,name=availability,proto3" json:"availability,omitempty"`
+	StepName            string                    `protobuf:"bytes,13,opt,name=step_name,proto3" json:"step_name,omitempty"`
+	Attempt             int32                     `protobuf:"varint,14,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	JobIndex            int32                     `protobuf:"varint,15,opt,name=job_index,proto3" json:"job_index,omitempty"`
+	LogId               string                    `protobuf:"bytes,16,opt,name=log_id,proto3" json:"log_id,omitempty"`
+	LogAvailable        bool                      `protobuf:"varint,17,opt,name=log_available,proto3" json:"log_available,omitempty"`
+	Containers          []*ExecutionContainerView `protobuf:"bytes,18,rep,name=containers,proto3" json:"containers,omitempty"`
+	InitContainers      []*ExecutionContainerView `protobuf:"bytes,19,rep,name=init_containers,proto3" json:"init_containers,omitempty"`
+	ApiPresent          bool                      `protobuf:"varint,20,opt,name=api_present,proto3" json:"api_present,omitempty"`
+	ExitCode            *int32                    `protobuf:"varint,21,opt,name=exit_code,proto3,oneof" json:"exit_code,omitempty"`
+	EphemeralContainers []*ExecutionContainerView `protobuf:"bytes,22,rep,name=ephemeral_containers,proto3" json:"ephemeral_containers,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *ExecutionPodView) Reset() {
+	*x = ExecutionPodView{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionPodView) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionPodView) ProtoMessage() {}
+
+func (x *ExecutionPodView) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionPodView.ProtoReflect.Descriptor instead.
+func (*ExecutionPodView) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ExecutionPodView) GetPodName() string {
+	if x != nil {
+		return x.PodName
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetPodUid() string {
+	if x != nil {
+		return x.PodUid
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetPodIp() string {
+	if x != nil {
+		return x.PodIp
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetPhase() string {
+	if x != nil {
+		return x.Phase
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetReady() bool {
+	if x != nil {
+		return x.Ready
+	}
+	return false
+}
+
+func (x *ExecutionPodView) GetNodeName() string {
+	if x != nil {
+		return x.NodeName
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetRestarts() int32 {
+	if x != nil {
+		return x.Restarts
+	}
+	return 0
+}
+
+func (x *ExecutionPodView) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetStartTime() string {
+	if x != nil {
+		return x.StartTime
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetDeletionTimestamp() string {
+	if x != nil {
+		return x.DeletionTimestamp
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetLayer() string {
+	if x != nil {
+		return x.Layer
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetAvailability() string {
+	if x != nil {
+		return x.Availability
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetStepName() string {
+	if x != nil {
+		return x.StepName
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetAttempt() int32 {
+	if x != nil {
+		return x.Attempt
+	}
+	return 0
+}
+
+func (x *ExecutionPodView) GetJobIndex() int32 {
+	if x != nil {
+		return x.JobIndex
+	}
+	return 0
+}
+
+func (x *ExecutionPodView) GetLogId() string {
+	if x != nil {
+		return x.LogId
+	}
+	return ""
+}
+
+func (x *ExecutionPodView) GetLogAvailable() bool {
+	if x != nil {
+		return x.LogAvailable
+	}
+	return false
+}
+
+func (x *ExecutionPodView) GetContainers() []*ExecutionContainerView {
+	if x != nil {
+		return x.Containers
+	}
+	return nil
+}
+
+func (x *ExecutionPodView) GetInitContainers() []*ExecutionContainerView {
+	if x != nil {
+		return x.InitContainers
+	}
+	return nil
+}
+
+func (x *ExecutionPodView) GetApiPresent() bool {
+	if x != nil {
+		return x.ApiPresent
+	}
+	return false
+}
+
+func (x *ExecutionPodView) GetExitCode() int32 {
+	if x != nil && x.ExitCode != nil {
+		return *x.ExitCode
+	}
+	return 0
+}
+
+func (x *ExecutionPodView) GetEphemeralContainers() []*ExecutionContainerView {
+	if x != nil {
+		return x.EphemeralContainers
+	}
+	return nil
+}
+
+type ExecutionEventView struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Type              string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Reason            string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message           string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	FirstTimestamp    string                 `protobuf:"bytes,4,opt,name=first_timestamp,proto3" json:"first_timestamp,omitempty"`
+	LastTimestamp     string                 `protobuf:"bytes,5,opt,name=last_timestamp,proto3" json:"last_timestamp,omitempty"`
+	Count             int32                  `protobuf:"varint,6,opt,name=count,proto3" json:"count,omitempty"`
+	Source            string                 `protobuf:"bytes,7,opt,name=source,proto3" json:"source,omitempty"`
+	InvolvedKind      string                 `protobuf:"bytes,8,opt,name=involved_kind,proto3" json:"involved_kind,omitempty"`
+	InvolvedName      string                 `protobuf:"bytes,9,opt,name=involved_name,proto3" json:"involved_name,omitempty"`
+	InvolvedUid       string                 `protobuf:"bytes,10,opt,name=involved_uid,proto3" json:"involved_uid,omitempty"`
+	FieldPath         string                 `protobuf:"bytes,11,opt,name=field_path,proto3" json:"field_path,omitempty"`
+	ReportingInstance string                 `protobuf:"bytes,12,opt,name=reporting_instance,proto3" json:"reporting_instance,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ExecutionEventView) Reset() {
+	*x = ExecutionEventView{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionEventView) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionEventView) ProtoMessage() {}
+
+func (x *ExecutionEventView) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionEventView.ProtoReflect.Descriptor instead.
+func (*ExecutionEventView) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ExecutionEventView) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetFirstTimestamp() string {
+	if x != nil {
+		return x.FirstTimestamp
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetLastTimestamp() string {
+	if x != nil {
+		return x.LastTimestamp
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *ExecutionEventView) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetInvolvedKind() string {
+	if x != nil {
+		return x.InvolvedKind
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetInvolvedName() string {
+	if x != nil {
+		return x.InvolvedName
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetInvolvedUid() string {
+	if x != nil {
+		return x.InvolvedUid
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetFieldPath() string {
+	if x != nil {
+		return x.FieldPath
+	}
+	return ""
+}
+
+func (x *ExecutionEventView) GetReportingInstance() string {
+	if x != nil {
+		return x.ReportingInstance
+	}
+	return ""
+}
+
+type ListExecutionPodsRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ExecutionId string                 `protobuf:"bytes,1,opt,name=execution_id,proto3" json:"execution_id,omitempty"`
+	// all / trainer / pipeline; absent behaves as all.
+	Layer           *string `protobuf:"bytes,2,opt,name=layer,proto3,oneof" json:"layer,omitempty"`
+	IncludeRecycled *bool   `protobuf:"varint,3,opt,name=include_recycled,proto3,oneof" json:"include_recycled,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListExecutionPodsRequest) Reset() {
+	*x = ListExecutionPodsRequest{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExecutionPodsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExecutionPodsRequest) ProtoMessage() {}
+
+func (x *ListExecutionPodsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExecutionPodsRequest.ProtoReflect.Descriptor instead.
+func (*ListExecutionPodsRequest) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ListExecutionPodsRequest) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *ListExecutionPodsRequest) GetLayer() string {
+	if x != nil && x.Layer != nil {
+		return *x.Layer
+	}
+	return ""
+}
+
+func (x *ListExecutionPodsRequest) GetIncludeRecycled() bool {
+	if x != nil && x.IncludeRecycled != nil {
+		return *x.IncludeRecycled
+	}
+	return false
+}
+
+type ListExecutionPodsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pods          []*ExecutionPodView    `protobuf:"bytes,1,rep,name=pods,proto3" json:"pods,omitempty"`
+	ObservedAt    string                 `protobuf:"bytes,2,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
+	Availability  string                 `protobuf:"bytes,3,opt,name=availability,proto3" json:"availability,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExecutionPodsResponse) Reset() {
+	*x = ListExecutionPodsResponse{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExecutionPodsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExecutionPodsResponse) ProtoMessage() {}
+
+func (x *ListExecutionPodsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExecutionPodsResponse.ProtoReflect.Descriptor instead.
+func (*ListExecutionPodsResponse) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListExecutionPodsResponse) GetPods() []*ExecutionPodView {
+	if x != nil {
+		return x.Pods
+	}
+	return nil
+}
+
+func (x *ListExecutionPodsResponse) GetObservedAt() string {
+	if x != nil {
+		return x.ObservedAt
+	}
+	return ""
+}
+
+func (x *ListExecutionPodsResponse) GetAvailability() string {
+	if x != nil {
+		return x.Availability
+	}
+	return ""
+}
+
+type ListExecutionEventsRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ExecutionId string                 `protobuf:"bytes,1,opt,name=execution_id,proto3" json:"execution_id,omitempty"`
+	// key / all / warning; absent behaves as key.
+	Scope         *string `protobuf:"bytes,2,opt,name=scope,proto3,oneof" json:"scope,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExecutionEventsRequest) Reset() {
+	*x = ListExecutionEventsRequest{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExecutionEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExecutionEventsRequest) ProtoMessage() {}
+
+func (x *ListExecutionEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExecutionEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListExecutionEventsRequest) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListExecutionEventsRequest) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *ListExecutionEventsRequest) GetScope() string {
+	if x != nil && x.Scope != nil {
+		return *x.Scope
+	}
+	return ""
+}
+
+type ListExecutionEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*ExecutionEventView  `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	ObservedAt    string                 `protobuf:"bytes,2,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
+	RetentionHint string                 `protobuf:"bytes,3,opt,name=retention_hint,proto3" json:"retention_hint,omitempty"`
+	Truncated     bool                   `protobuf:"varint,4,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExecutionEventsResponse) Reset() {
+	*x = ListExecutionEventsResponse{}
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExecutionEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExecutionEventsResponse) ProtoMessage() {}
+
+func (x *ListExecutionEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExecutionEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListExecutionEventsResponse) Descriptor() ([]byte, []int) {
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListExecutionEventsResponse) GetEvents() []*ExecutionEventView {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *ListExecutionEventsResponse) GetObservedAt() string {
+	if x != nil {
+		return x.ObservedAt
+	}
+	return ""
+}
+
+func (x *ListExecutionEventsResponse) GetRetentionHint() string {
+	if x != nil {
+		return x.RetentionHint
+	}
+	return ""
+}
+
+func (x *ListExecutionEventsResponse) GetTruncated() bool {
+	if x != nil {
+		return x.Truncated
+	}
+	return false
+}
+
 type ExecutionView struct {
 	state                       protoimpl.MessageState `protogen:"open.v1"`
 	OperationId                 string                 `protobuf:"bytes,1,opt,name=operation_id,proto3" json:"operation_id,omitempty"`
@@ -1648,7 +2425,7 @@ type ExecutionView struct {
 
 func (x *ExecutionView) Reset() {
 	*x = ExecutionView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[23]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1660,7 +2437,7 @@ func (x *ExecutionView) String() string {
 func (*ExecutionView) ProtoMessage() {}
 
 func (x *ExecutionView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[23]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1673,7 +2450,7 @@ func (x *ExecutionView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionView.ProtoReflect.Descriptor instead.
 func (*ExecutionView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{23}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ExecutionView) GetOperationId() string {
@@ -1888,7 +2665,7 @@ type ExecutionStepView struct {
 
 func (x *ExecutionStepView) Reset() {
 	*x = ExecutionStepView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[24]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1900,7 +2677,7 @@ func (x *ExecutionStepView) String() string {
 func (*ExecutionStepView) ProtoMessage() {}
 
 func (x *ExecutionStepView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[24]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1913,7 +2690,7 @@ func (x *ExecutionStepView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionStepView.ProtoReflect.Descriptor instead.
 func (*ExecutionStepView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{24}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ExecutionStepView) GetRole() string {
@@ -1970,7 +2747,7 @@ type ExecutionMetricView struct {
 
 func (x *ExecutionMetricView) Reset() {
 	*x = ExecutionMetricView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[25]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1982,7 +2759,7 @@ func (x *ExecutionMetricView) String() string {
 func (*ExecutionMetricView) ProtoMessage() {}
 
 func (x *ExecutionMetricView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[25]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1995,7 +2772,7 @@ func (x *ExecutionMetricView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionMetricView.ProtoReflect.Descriptor instead.
 func (*ExecutionMetricView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{25}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ExecutionMetricView) GetName() string {
@@ -2032,7 +2809,7 @@ type ExecutionComputeView struct {
 
 func (x *ExecutionComputeView) Reset() {
 	*x = ExecutionComputeView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[26]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2044,7 +2821,7 @@ func (x *ExecutionComputeView) String() string {
 func (*ExecutionComputeView) ProtoMessage() {}
 
 func (x *ExecutionComputeView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[26]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2057,7 +2834,7 @@ func (x *ExecutionComputeView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionComputeView.ProtoReflect.Descriptor instead.
 func (*ExecutionComputeView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{26}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ExecutionComputeView) GetComputePresetId() string {
@@ -2106,7 +2883,7 @@ type ExecutionTimingView struct {
 
 func (x *ExecutionTimingView) Reset() {
 	*x = ExecutionTimingView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[27]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2118,7 +2895,7 @@ func (x *ExecutionTimingView) String() string {
 func (*ExecutionTimingView) ProtoMessage() {}
 
 func (x *ExecutionTimingView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[27]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2131,7 +2908,7 @@ func (x *ExecutionTimingView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionTimingView.ProtoReflect.Descriptor instead.
 func (*ExecutionTimingView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{27}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ExecutionTimingView) GetExecutionTimeoutSeconds() uint64 {
@@ -2170,7 +2947,7 @@ type ModelRegistrationView struct {
 
 func (x *ModelRegistrationView) Reset() {
 	*x = ModelRegistrationView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[28]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2182,7 +2959,7 @@ func (x *ModelRegistrationView) String() string {
 func (*ModelRegistrationView) ProtoMessage() {}
 
 func (x *ModelRegistrationView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[28]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2195,7 +2972,7 @@ func (x *ModelRegistrationView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelRegistrationView.ProtoReflect.Descriptor instead.
 func (*ModelRegistrationView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{28}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ModelRegistrationView) GetState() string {
@@ -2244,7 +3021,7 @@ type ListExecutionArtifactsRequest struct {
 
 func (x *ListExecutionArtifactsRequest) Reset() {
 	*x = ListExecutionArtifactsRequest{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[29]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2256,7 +3033,7 @@ func (x *ListExecutionArtifactsRequest) String() string {
 func (*ListExecutionArtifactsRequest) ProtoMessage() {}
 
 func (x *ListExecutionArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[29]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2269,7 +3046,7 @@ func (x *ListExecutionArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExecutionArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*ListExecutionArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{29}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListExecutionArtifactsRequest) GetExecutionId() string {
@@ -2303,7 +3080,7 @@ type ListExecutionArtifactsResponse struct {
 
 func (x *ListExecutionArtifactsResponse) Reset() {
 	*x = ListExecutionArtifactsResponse{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[30]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2315,7 +3092,7 @@ func (x *ListExecutionArtifactsResponse) String() string {
 func (*ListExecutionArtifactsResponse) ProtoMessage() {}
 
 func (x *ListExecutionArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[30]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2328,7 +3105,7 @@ func (x *ListExecutionArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExecutionArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*ListExecutionArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{30}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListExecutionArtifactsResponse) GetItems() []*ArtifactView {
@@ -2361,7 +3138,7 @@ type ArtifactView struct {
 
 func (x *ArtifactView) Reset() {
 	*x = ArtifactView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[31]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2373,7 +3150,7 @@ func (x *ArtifactView) String() string {
 func (*ArtifactView) ProtoMessage() {}
 
 func (x *ArtifactView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[31]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2386,7 +3163,7 @@ func (x *ArtifactView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArtifactView.ProtoReflect.Descriptor instead.
 func (*ArtifactView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{31}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ArtifactView) GetArtifactId() string {
@@ -2454,7 +3231,7 @@ type AuthorizeArtifactDownloadRequest struct {
 
 func (x *AuthorizeArtifactDownloadRequest) Reset() {
 	*x = AuthorizeArtifactDownloadRequest{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[32]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2466,7 +3243,7 @@ func (x *AuthorizeArtifactDownloadRequest) String() string {
 func (*AuthorizeArtifactDownloadRequest) ProtoMessage() {}
 
 func (x *AuthorizeArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[32]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2479,7 +3256,7 @@ func (x *AuthorizeArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthorizeArtifactDownloadRequest.ProtoReflect.Descriptor instead.
 func (*AuthorizeArtifactDownloadRequest) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{32}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *AuthorizeArtifactDownloadRequest) GetArtifactId() string {
@@ -2501,7 +3278,7 @@ type AuthorizeArtifactDownloadResponse struct {
 
 func (x *AuthorizeArtifactDownloadResponse) Reset() {
 	*x = AuthorizeArtifactDownloadResponse{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[33]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2513,7 +3290,7 @@ func (x *AuthorizeArtifactDownloadResponse) String() string {
 func (*AuthorizeArtifactDownloadResponse) ProtoMessage() {}
 
 func (x *AuthorizeArtifactDownloadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[33]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2526,7 +3303,7 @@ func (x *AuthorizeArtifactDownloadResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AuthorizeArtifactDownloadResponse.ProtoReflect.Descriptor instead.
 func (*AuthorizeArtifactDownloadResponse) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{33}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *AuthorizeArtifactDownloadResponse) GetArtifact() *ArtifactView {
@@ -2569,7 +3346,7 @@ type ExecutionHistoryView struct {
 
 func (x *ExecutionHistoryView) Reset() {
 	*x = ExecutionHistoryView{}
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[34]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2581,7 +3358,7 @@ func (x *ExecutionHistoryView) String() string {
 func (*ExecutionHistoryView) ProtoMessage() {}
 
 func (x *ExecutionHistoryView) ProtoReflect() protoreflect.Message {
-	mi := &file_modeldev_service_v1_execution_proto_msgTypes[34]
+	mi := &file_modeldev_service_v1_execution_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2594,7 +3371,7 @@ func (x *ExecutionHistoryView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionHistoryView.ProtoReflect.Descriptor instead.
 func (*ExecutionHistoryView) Descriptor() ([]byte, []int) {
-	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{34}
+	return file_modeldev_service_v1_execution_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ExecutionHistoryView) GetRunId() string {
@@ -2813,21 +3590,120 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"_page_sizeJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"{\n" +
 	"\x16ListExecutionsResponse\x128\n" +
 	"\x05items\x18\x01 \x03(\v2\".modeldev.service.v1.ExecutionViewR\x05items\x12\x14\n" +
-	"\x05total\x18\x03 \x01(\x04R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"{\n" +
+	"\x05total\x18\x03 \x01(\x04R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\xad\x02\n" +
 	"\x17GetExecutionLogsRequest\x12\"\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\fexecution_id\x12\x1e\n" +
 	"\n" +
 	"tail_lines\x18\x02 \x01(\rR\n" +
 	"tail_lines\x12\x1c\n" +
-	"\tmax_bytes\x18\x03 \x01(\rR\tmax_bytes\"\xaf\x01\n" +
+	"\tmax_bytes\x18\x03 \x01(\rR\tmax_bytes\x12\x1b\n" +
+	"\x06log_id\x18\x04 \x01(\tH\x00R\x06log_id\x88\x01\x01\x12\x1d\n" +
+	"\apod_uid\x18\x05 \x01(\tH\x01R\apod_uid\x88\x01\x01\x12!\n" +
+	"\tcontainer\x18\x06 \x01(\tH\x02R\tcontainer\x88\x01\x01\x12\x1f\n" +
+	"\bprevious\x18\a \x01(\bH\x03R\bprevious\x88\x01\x01B\t\n" +
+	"\a_log_idB\n" +
+	"\n" +
+	"\b_pod_uidB\f\n" +
+	"\n" +
+	"_containerB\v\n" +
+	"\t_previous\"\xb3\x02\n" +
 	"\x18GetExecutionLogsResponse\x12\x16\n" +
 	"\x06log_id\x18\x01 \x01(\tR\x06log_id\x12;\n" +
 	"\x05lines\x18\x02 \x03(\v2%.modeldev.service.v1.ExecutionLogLineR\x05lines\x12\x1c\n" +
 	"\ttruncated\x18\x03 \x01(\bR\ttruncated\x12 \n" +
-	"\vobserved_at\x18\x04 \x01(\tR\vobserved_at\"D\n" +
+	"\vobserved_at\x18\x04 \x01(\tR\vobserved_at\x12 \n" +
+	"\vsource_kind\x18\x05 \x01(\tR\vsource_kind\x12&\n" +
+	"\x0econtainer_name\x18\x06 \x01(\tR\x0econtainer_name\x12\x1a\n" +
+	"\bprevious\x18\a \x01(\bR\bprevious\x12\x1c\n" +
+	"\tavailable\x18\b \x01(\bR\tavailable\"D\n" +
 	"\x10ExecutionLogLine\x12\x1c\n" +
 	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\xb1\v\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\xee\x02\n" +
+	"\x16ExecutionContainerView\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x14\n" +
+	"\x05state\x18\x03 \x01(\tR\x05state\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x18\n" +
+	"\amessage\x18\x05 \x01(\tR\amessage\x12$\n" +
+	"\rrestart_count\x18\x06 \x01(\x05R\rrestart_count\x12!\n" +
+	"\texit_code\x18\a \x01(\x05H\x00R\texit_code\x88\x01\x01\x12\x1e\n" +
+	"\n" +
+	"started_at\x18\b \x01(\tR\n" +
+	"started_at\x12 \n" +
+	"\vfinished_at\x18\t \x01(\tR\vfinished_at\x12K\n" +
+	"\n" +
+	"last_state\x18\n" +
+	" \x01(\v2+.modeldev.service.v1.ExecutionContainerViewR\n" +
+	"last_stateB\f\n" +
+	"\n" +
+	"_exit_code\"\xdc\x06\n" +
+	"\x10ExecutionPodView\x12\x1a\n" +
+	"\bpod_name\x18\x01 \x01(\tR\bpod_name\x12\x18\n" +
+	"\apod_uid\x18\x02 \x01(\tR\apod_uid\x12\x16\n" +
+	"\x06pod_ip\x18\x03 \x01(\tR\x06pod_ip\x12\x14\n" +
+	"\x05phase\x18\x04 \x01(\tR\x05phase\x12\x14\n" +
+	"\x05ready\x18\x05 \x01(\bR\x05ready\x12\x1c\n" +
+	"\tnode_name\x18\x06 \x01(\tR\tnode_name\x12\x1a\n" +
+	"\brestarts\x18\a \x01(\x05R\brestarts\x12\x1e\n" +
+	"\n" +
+	"created_at\x18\b \x01(\tR\n" +
+	"created_at\x12\x1e\n" +
+	"\n" +
+	"start_time\x18\t \x01(\tR\n" +
+	"start_time\x12.\n" +
+	"\x12deletion_timestamp\x18\n" +
+	" \x01(\tR\x12deletion_timestamp\x12\x14\n" +
+	"\x05layer\x18\v \x01(\tR\x05layer\x12\"\n" +
+	"\favailability\x18\f \x01(\tR\favailability\x12\x1c\n" +
+	"\tstep_name\x18\r \x01(\tR\tstep_name\x12\x18\n" +
+	"\aattempt\x18\x0e \x01(\x05R\aattempt\x12\x1c\n" +
+	"\tjob_index\x18\x0f \x01(\x05R\tjob_index\x12\x16\n" +
+	"\x06log_id\x18\x10 \x01(\tR\x06log_id\x12$\n" +
+	"\rlog_available\x18\x11 \x01(\bR\rlog_available\x12K\n" +
+	"\n" +
+	"containers\x18\x12 \x03(\v2+.modeldev.service.v1.ExecutionContainerViewR\n" +
+	"containers\x12U\n" +
+	"\x0finit_containers\x18\x13 \x03(\v2+.modeldev.service.v1.ExecutionContainerViewR\x0finit_containers\x12 \n" +
+	"\vapi_present\x18\x14 \x01(\bR\vapi_present\x12!\n" +
+	"\texit_code\x18\x15 \x01(\x05H\x00R\texit_code\x88\x01\x01\x12_\n" +
+	"\x14ephemeral_containers\x18\x16 \x03(\v2+.modeldev.service.v1.ExecutionContainerViewR\x14ephemeral_containersB\f\n" +
+	"\n" +
+	"_exit_code\"\x9a\x03\n" +
+	"\x12ExecutionEventView\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12(\n" +
+	"\x0ffirst_timestamp\x18\x04 \x01(\tR\x0ffirst_timestamp\x12&\n" +
+	"\x0elast_timestamp\x18\x05 \x01(\tR\x0elast_timestamp\x12\x14\n" +
+	"\x05count\x18\x06 \x01(\x05R\x05count\x12\x16\n" +
+	"\x06source\x18\a \x01(\tR\x06source\x12$\n" +
+	"\rinvolved_kind\x18\b \x01(\tR\rinvolved_kind\x12$\n" +
+	"\rinvolved_name\x18\t \x01(\tR\rinvolved_name\x12\"\n" +
+	"\finvolved_uid\x18\n" +
+	" \x01(\tR\finvolved_uid\x12\x1e\n" +
+	"\n" +
+	"field_path\x18\v \x01(\tR\n" +
+	"field_path\x12.\n" +
+	"\x12reporting_instance\x18\f \x01(\tR\x12reporting_instance\"\xa9\x01\n" +
+	"\x18ListExecutionPodsRequest\x12\"\n" +
+	"\fexecution_id\x18\x01 \x01(\tR\fexecution_id\x12\x19\n" +
+	"\x05layer\x18\x02 \x01(\tH\x00R\x05layer\x88\x01\x01\x12/\n" +
+	"\x10include_recycled\x18\x03 \x01(\bH\x01R\x10include_recycled\x88\x01\x01B\b\n" +
+	"\x06_layerB\x13\n" +
+	"\x11_include_recycled\"\x9c\x01\n" +
+	"\x19ListExecutionPodsResponse\x129\n" +
+	"\x04pods\x18\x01 \x03(\v2%.modeldev.service.v1.ExecutionPodViewR\x04pods\x12 \n" +
+	"\vobserved_at\x18\x02 \x01(\tR\vobserved_at\x12\"\n" +
+	"\favailability\x18\x03 \x01(\tR\favailability\"e\n" +
+	"\x1aListExecutionEventsRequest\x12\"\n" +
+	"\fexecution_id\x18\x01 \x01(\tR\fexecution_id\x12\x19\n" +
+	"\x05scope\x18\x02 \x01(\tH\x00R\x05scope\x88\x01\x01B\b\n" +
+	"\x06_scope\"\xc6\x01\n" +
+	"\x1bListExecutionEventsResponse\x12?\n" +
+	"\x06events\x18\x01 \x03(\v2'.modeldev.service.v1.ExecutionEventViewR\x06events\x12 \n" +
+	"\vobserved_at\x18\x02 \x01(\tR\vobserved_at\x12&\n" +
+	"\x0eretention_hint\x18\x03 \x01(\tR\x0eretention_hint\x12\x1c\n" +
+	"\ttruncated\x18\x04 \x01(\bR\ttruncated\"\xb1\v\n" +
 	"\rExecutionView\x12\"\n" +
 	"\foperation_id\x18\x01 \x01(\tR\foperation_id\x12\"\n" +
 	"\fexecution_id\x18\x02 \x01(\tR\fexecution_id\x12\x12\n" +
@@ -2946,7 +3822,7 @@ func file_modeldev_service_v1_execution_proto_rawDescGZIP() []byte {
 	return file_modeldev_service_v1_execution_proto_rawDescData
 }
 
-var file_modeldev_service_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_modeldev_service_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_modeldev_service_v1_execution_proto_goTypes = []any{
 	(*CreateExecutionRequest)(nil),            // 0: modeldev.service.v1.CreateExecutionRequest
 	(*ExecutionParameters)(nil),               // 1: modeldev.service.v1.ExecutionParameters
@@ -2971,18 +3847,25 @@ var file_modeldev_service_v1_execution_proto_goTypes = []any{
 	(*GetExecutionLogsRequest)(nil),           // 20: modeldev.service.v1.GetExecutionLogsRequest
 	(*GetExecutionLogsResponse)(nil),          // 21: modeldev.service.v1.GetExecutionLogsResponse
 	(*ExecutionLogLine)(nil),                  // 22: modeldev.service.v1.ExecutionLogLine
-	(*ExecutionView)(nil),                     // 23: modeldev.service.v1.ExecutionView
-	(*ExecutionStepView)(nil),                 // 24: modeldev.service.v1.ExecutionStepView
-	(*ExecutionMetricView)(nil),               // 25: modeldev.service.v1.ExecutionMetricView
-	(*ExecutionComputeView)(nil),              // 26: modeldev.service.v1.ExecutionComputeView
-	(*ExecutionTimingView)(nil),               // 27: modeldev.service.v1.ExecutionTimingView
-	(*ModelRegistrationView)(nil),             // 28: modeldev.service.v1.ModelRegistrationView
-	(*ListExecutionArtifactsRequest)(nil),     // 29: modeldev.service.v1.ListExecutionArtifactsRequest
-	(*ListExecutionArtifactsResponse)(nil),    // 30: modeldev.service.v1.ListExecutionArtifactsResponse
-	(*ArtifactView)(nil),                      // 31: modeldev.service.v1.ArtifactView
-	(*AuthorizeArtifactDownloadRequest)(nil),  // 32: modeldev.service.v1.AuthorizeArtifactDownloadRequest
-	(*AuthorizeArtifactDownloadResponse)(nil), // 33: modeldev.service.v1.AuthorizeArtifactDownloadResponse
-	(*ExecutionHistoryView)(nil),              // 34: modeldev.service.v1.ExecutionHistoryView
+	(*ExecutionContainerView)(nil),            // 23: modeldev.service.v1.ExecutionContainerView
+	(*ExecutionPodView)(nil),                  // 24: modeldev.service.v1.ExecutionPodView
+	(*ExecutionEventView)(nil),                // 25: modeldev.service.v1.ExecutionEventView
+	(*ListExecutionPodsRequest)(nil),          // 26: modeldev.service.v1.ListExecutionPodsRequest
+	(*ListExecutionPodsResponse)(nil),         // 27: modeldev.service.v1.ListExecutionPodsResponse
+	(*ListExecutionEventsRequest)(nil),        // 28: modeldev.service.v1.ListExecutionEventsRequest
+	(*ListExecutionEventsResponse)(nil),       // 29: modeldev.service.v1.ListExecutionEventsResponse
+	(*ExecutionView)(nil),                     // 30: modeldev.service.v1.ExecutionView
+	(*ExecutionStepView)(nil),                 // 31: modeldev.service.v1.ExecutionStepView
+	(*ExecutionMetricView)(nil),               // 32: modeldev.service.v1.ExecutionMetricView
+	(*ExecutionComputeView)(nil),              // 33: modeldev.service.v1.ExecutionComputeView
+	(*ExecutionTimingView)(nil),               // 34: modeldev.service.v1.ExecutionTimingView
+	(*ModelRegistrationView)(nil),             // 35: modeldev.service.v1.ModelRegistrationView
+	(*ListExecutionArtifactsRequest)(nil),     // 36: modeldev.service.v1.ListExecutionArtifactsRequest
+	(*ListExecutionArtifactsResponse)(nil),    // 37: modeldev.service.v1.ListExecutionArtifactsResponse
+	(*ArtifactView)(nil),                      // 38: modeldev.service.v1.ArtifactView
+	(*AuthorizeArtifactDownloadRequest)(nil),  // 39: modeldev.service.v1.AuthorizeArtifactDownloadRequest
+	(*AuthorizeArtifactDownloadResponse)(nil), // 40: modeldev.service.v1.AuthorizeArtifactDownloadResponse
+	(*ExecutionHistoryView)(nil),              // 41: modeldev.service.v1.ExecutionHistoryView
 }
 var file_modeldev_service_v1_execution_proto_depIdxs = []int32{
 	1,  // 0: modeldev.service.v1.CreateExecutionRequest.parameters:type_name -> modeldev.service.v1.ExecutionParameters
@@ -2994,24 +3877,30 @@ var file_modeldev_service_v1_execution_proto_depIdxs = []int32{
 	2,  // 6: modeldev.service.v1.ParameterRule.maximum:type_name -> modeldev.service.v1.GeneralParameter
 	11, // 7: modeldev.service.v1.GetInputVersionResponse.input_version:type_name -> modeldev.service.v1.InputVersionView
 	11, // 8: modeldev.service.v1.ListInputVersionsResponse.items:type_name -> modeldev.service.v1.InputVersionView
-	23, // 9: modeldev.service.v1.GetExecutionResponse.execution:type_name -> modeldev.service.v1.ExecutionView
-	23, // 10: modeldev.service.v1.ListExecutionsResponse.items:type_name -> modeldev.service.v1.ExecutionView
+	30, // 9: modeldev.service.v1.GetExecutionResponse.execution:type_name -> modeldev.service.v1.ExecutionView
+	30, // 10: modeldev.service.v1.ListExecutionsResponse.items:type_name -> modeldev.service.v1.ExecutionView
 	22, // 11: modeldev.service.v1.GetExecutionLogsResponse.lines:type_name -> modeldev.service.v1.ExecutionLogLine
-	26, // 12: modeldev.service.v1.ExecutionView.compute:type_name -> modeldev.service.v1.ExecutionComputeView
-	2,  // 13: modeldev.service.v1.ExecutionView.resolved_parameters:type_name -> modeldev.service.v1.GeneralParameter
-	1,  // 14: modeldev.service.v1.ExecutionView.explicit_parameters:type_name -> modeldev.service.v1.ExecutionParameters
-	27, // 15: modeldev.service.v1.ExecutionView.timing:type_name -> modeldev.service.v1.ExecutionTimingView
-	28, // 16: modeldev.service.v1.ExecutionView.model_registration:type_name -> modeldev.service.v1.ModelRegistrationView
-	34, // 17: modeldev.service.v1.ExecutionView.history:type_name -> modeldev.service.v1.ExecutionHistoryView
-	24, // 18: modeldev.service.v1.ExecutionView.steps:type_name -> modeldev.service.v1.ExecutionStepView
-	25, // 19: modeldev.service.v1.ExecutionView.metrics:type_name -> modeldev.service.v1.ExecutionMetricView
-	31, // 20: modeldev.service.v1.ListExecutionArtifactsResponse.items:type_name -> modeldev.service.v1.ArtifactView
-	31, // 21: modeldev.service.v1.AuthorizeArtifactDownloadResponse.artifact:type_name -> modeldev.service.v1.ArtifactView
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	23, // 12: modeldev.service.v1.ExecutionContainerView.last_state:type_name -> modeldev.service.v1.ExecutionContainerView
+	23, // 13: modeldev.service.v1.ExecutionPodView.containers:type_name -> modeldev.service.v1.ExecutionContainerView
+	23, // 14: modeldev.service.v1.ExecutionPodView.init_containers:type_name -> modeldev.service.v1.ExecutionContainerView
+	23, // 15: modeldev.service.v1.ExecutionPodView.ephemeral_containers:type_name -> modeldev.service.v1.ExecutionContainerView
+	24, // 16: modeldev.service.v1.ListExecutionPodsResponse.pods:type_name -> modeldev.service.v1.ExecutionPodView
+	25, // 17: modeldev.service.v1.ListExecutionEventsResponse.events:type_name -> modeldev.service.v1.ExecutionEventView
+	33, // 18: modeldev.service.v1.ExecutionView.compute:type_name -> modeldev.service.v1.ExecutionComputeView
+	2,  // 19: modeldev.service.v1.ExecutionView.resolved_parameters:type_name -> modeldev.service.v1.GeneralParameter
+	1,  // 20: modeldev.service.v1.ExecutionView.explicit_parameters:type_name -> modeldev.service.v1.ExecutionParameters
+	34, // 21: modeldev.service.v1.ExecutionView.timing:type_name -> modeldev.service.v1.ExecutionTimingView
+	35, // 22: modeldev.service.v1.ExecutionView.model_registration:type_name -> modeldev.service.v1.ModelRegistrationView
+	41, // 23: modeldev.service.v1.ExecutionView.history:type_name -> modeldev.service.v1.ExecutionHistoryView
+	31, // 24: modeldev.service.v1.ExecutionView.steps:type_name -> modeldev.service.v1.ExecutionStepView
+	32, // 25: modeldev.service.v1.ExecutionView.metrics:type_name -> modeldev.service.v1.ExecutionMetricView
+	38, // 26: modeldev.service.v1.ListExecutionArtifactsResponse.items:type_name -> modeldev.service.v1.ArtifactView
+	38, // 27: modeldev.service.v1.AuthorizeArtifactDownloadResponse.artifact:type_name -> modeldev.service.v1.ArtifactView
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_modeldev_service_v1_execution_proto_init() }
@@ -3024,15 +3913,20 @@ func file_modeldev_service_v1_execution_proto_init() {
 	file_modeldev_service_v1_execution_proto_msgTypes[3].OneofWrappers = []any{}
 	file_modeldev_service_v1_execution_proto_msgTypes[9].OneofWrappers = []any{}
 	file_modeldev_service_v1_execution_proto_msgTypes[18].OneofWrappers = []any{}
-	file_modeldev_service_v1_execution_proto_msgTypes[25].OneofWrappers = []any{}
-	file_modeldev_service_v1_execution_proto_msgTypes[29].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[20].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[23].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[24].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[26].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[28].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[32].OneofWrappers = []any{}
+	file_modeldev_service_v1_execution_proto_msgTypes[36].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_modeldev_service_v1_execution_proto_rawDesc), len(file_modeldev_service_v1_execution_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   35,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
