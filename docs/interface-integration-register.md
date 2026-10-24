@@ -1735,3 +1735,17 @@ actor 和 request ID 从可信上下文重建。HTTP 入口执行正常认证、
 不再使用 data 包装。真实环境复验使用模型 UUID：status=error 返回 total=0，
 status=ready 返回 total=1/ready，operations 返回 total=1。含斜杠的公开模型名不能
 替代 HTTP path 的资源 UUID。源码修改、部署与前端验收分别记录。
+
+## VM-MVP-20261023：虚拟机 BFF
+
+正式请求/响应及路由输入为 `api/protos/vm/service/v1/vm.proto`、`api/protos/admin/service/v1/i_vm.proto`。Module `VIRTUAL_MACHINE=17`；权限登记复用 [能力映射](contracts/permission-code-capability-map.tsv)，显式目录准备使用 `scripts/ops/sql/register-vm-permissions.sql`，不自动授予角色、套餐或资源额度。共享 compute 路径按 `usage=VIRTUAL_MACHINE` 检查 `vm:compute-preset:read` 及该模块资格。
+
+创建/删除沿已有 Gov operation/事务/worker，VM 空 items/charges；其他业务变更由当前授权后直接调用 Resource。所有直达新变更及新 console 会话在精确原 VM CREATE→VM DELETE 持久受理栅栏后拒绝；只读 Resource/SG 原键重放先于该栅栏，异意图冲突保持原错误。操作查询先读 Gov 待投递记录，不将 owner 尚未接收误报为资源从未存在。DELETE expected_version 冻结后不得更新为当前版本；明确 owner 冲突保持原 operation/error，不把受理或永久拒绝写成删除完成。
+
+Linux `DISK_IMAGE` 仅在 Resource 媒体目录 `initializationCapability=CLOUD_INIT_NOCLOUD` 且 `initializationVerified=true` 时接受可选 `guestInitialization`（用户名、控制台密码、用户提供的 SSH 公钥）；ISO、未知能力及未验证媒体拒绝。公开 DTO 不提供方法切换、密钥对生成或私钥管理。路径专用只读请求的 JSON 名显式保持 Proto 路径变量，避免生成目录 `{vmId}` 与实际鉴权 `{vm_id}` 分裂。
+
+密码不进入普通 Resource CreateSpec、operation 查询或日志。Gov 使用既有强制副本共享的 AccessKeyCipher 主密钥分别派生凭据意图 HMAC 和 AES-GCM 子密钥；普通 intent 仅含 PasswordSet 与 HMAC，私密 payload 在受理事务内加密进原 outbox canonical，AAD 绑定可信 tenant、actor、原 operation/resource 与冻结 spec digest。进程重开从同一持久记录解密后，仅随 mTLS AcceptCreate 的独立 guest_credentials 参数投递；原键重放保留原 ciphertext 与原结果，改变密码仍是异意图冲突。DELETE 不解密密码。现有主密钥是该持久 outbox 的恢复依赖，不能在仍有待投递记录时丢失或任意替换。
+
+实际 CODE/PG/BOUNDARY/LIVE/GUEST/BROWSER 结果统一见 Resource `docs/execution/status.md#vm-mvp` 及 `docs/execution/records/VM-MVP/`；此登记不是执行通过记录。
+
+组合编译核验发现既有 ModelDev 根 SDK `v0.0.0-20261021184454-44188466290f` 仍引入 Model 根 SDK `v0.0.0-20261013092523-8951c85bc150`，其 `api/model/v1` 与本仓已固定的 Model/api 子模块同路径冲突。Gov 显式将该间接父模块固定到与现有 Model/api 同一提交的 `v0.0.0-20261021113912-a21befaaa5e5`；该提交含 `api/go.mod`，父模块不再导出该子树。不更改 Model/ModelDev 源码，不回退既有 API，也不以本地 replace 作为正式依赖修复。

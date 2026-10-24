@@ -122,7 +122,7 @@ func TestComputePresetPlatformPermissions(t *testing.T) {
 	if _, err := Resolve("GET", "/api/v1/instance-presets"); err == nil {
 		t.Fatal("removed route remains in permission table")
 	}
-	for _, usage := range []string{"CONTAINER_INSTANCE", "TRAINING", "INFERENCE"} {
+	for _, usage := range []string{"CONTAINER_INSTANCE", "TRAINING", "INFERENCE", "VIRTUAL_MACHINE"} {
 		module, code, ok := ComputeCatalogGrant(usage)
 		if !ok || module == "" || code == "" {
 			t.Fatal("missing usage grant", usage)
@@ -173,8 +173,8 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 199 {
 		t.Errorf("ManagementCount() = %d, want 199", ManagementCount())
 	}
-	if CapabilityCount() != 140 {
-		t.Errorf("CapabilityCount() = %d, want 140", CapabilityCount())
+	if CapabilityCount() != 165 {
+		t.Errorf("CapabilityCount() = %d, want 165", CapabilityCount())
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {

@@ -7519,13 +7519,14 @@ paths:
                 - name: usage
                   in: query
                   required: true
-                  description: 'Required: CONTAINER_INSTANCE, TRAINING (including fine-tuning), or INFERENCE.'
+                  description: 'Required: CONTAINER_INSTANCE, TRAINING (including fine-tuning), INFERENCE, or VIRTUAL_MACHINE.'
                   schema:
                     type: string
                     enum:
                         - CONTAINER_INSTANCE
                         - TRAINING
                         - INFERENCE
+                        - VIRTUAL_MACHINE
                 - name: page
                   in: query
                   schema:
@@ -10286,6 +10287,707 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/virtual-machine-media:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMMedia
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListMediaResponse'
+    /api/v1/virtual-machines:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMs
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVMsResponse'
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVM
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+    /api/v1/virtual-machines/{data.vm_id}:
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_DeleteVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+    /api/v1/virtual-machines/{data.vm_id}/boot:
+        put:
+            tags:
+                - VMService
+            operationId: VMService_SetVMBootDevice
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/console-sessions:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVMConsoleSession
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMConsoleSession'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMConsoleSession'
+    /api/v1/virtual-machines/{data.vm_id}/disks:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}:
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_DeleteVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.disk_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/attach:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_AttachVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.disk_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/detach:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_DetachVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.disk_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/force-stop:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_ForceStopVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/media/{data.slot}:
+        put:
+            tags:
+                - VMService
+            operationId: VMService_SetVMMedia
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.slot
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_EjectVMMedia
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.slot
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/restart:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_RestartVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVMSnapshot
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}:
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_DeleteVMSnapshot
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}/restore:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_RestoreVMSnapshot
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}/restore-preview:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_PreviewVMRestore
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMRestorePreview'
+    /api/v1/virtual-machines/{data.vm_id}/start:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_StartVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/stop:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_StopVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{vm_id}:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVM
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VirtualMachine'
+    /api/v1/virtual-machines/{vm_id}/disks:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMDisks
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListDisksResponse'
+    /api/v1/virtual-machines/{vm_id}/operations/{operation_id}:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMOperation
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{vm_id}/snapshots:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMSnapshots
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListSnapshotsResponse'
+    /api/v1/virtual-machines/{vm_id}/snapshots/{snapshot_id}:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMSnapshot
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMSnapshot'
     /api/v1/instances/{instance_id}/logs:
         get:
             tags:
@@ -11213,6 +11915,7 @@ components:
                         - IMAGE
                         - INFERENCE
                         - INSTANCE
+                        - VIRTUAL_MACHINE
                     type: string
                     description: 所属业务功能模块（用于套餐白名单过滤）
                     format: enum
@@ -11495,6 +12198,40 @@ components:
                     type: string
                     description: 新密码
             description: 修改用户密码（需要验证旧密码） - 请求
+        ChangeVMData:
+            type: object
+            properties:
+                vmId:
+                    type: string
+                idempotencyKey:
+                    type: string
+                expectedVersion:
+                    type: string
+                destructiveConfirmation:
+                    type: boolean
+                diskId:
+                    type: string
+                guestPreparedConfirmation:
+                    type: boolean
+                name:
+                    type: string
+                sizeGb:
+                    type: string
+                slot:
+                    type: string
+                mediaKey:
+                    type: string
+                bootDevice:
+                    type: string
+                snapshotId:
+                    type: string
+                previewDigest:
+                    type: string
+        ChangeVMRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/ChangeVMData'
         CleanupTenantDataRequest:
             type: object
             properties:
@@ -11834,6 +12571,15 @@ components:
             description: |-
                 Returned only after Governance has durably accepted the frozen intent.
                  Acceptance does not establish a KFP Run or successful training.
+        CreateGuestInitialization:
+            type: object
+            properties:
+                username:
+                    type: string
+                password:
+                    type: string
+                sshPublicKey:
+                    type: string
         CreateInferenceRequest:
             example: {"idempotency_key": "req-001", "name": "qwen-inference", "model_version_id": "version-1", "served_model_name": "qwen2.5-1.5b-instruct", "engine_image": "registry.example/vllm:latest", "engine_type": "vllm", "command": "exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096", "cpu": "8", "memory": "32Gi", "replicas": 1, "preset_id": "40000000-0000-4000-8000-000000000001"}
             type: object
@@ -12237,6 +12983,36 @@ components:
                     type: string
                     format: enum
             description: 创建用户 - 请求
+        CreateVMData:
+            type: object
+            properties:
+                idempotencyKey:
+                    type: string
+                name:
+                    type: string
+                presetId:
+                    type: string
+                sourceKind:
+                    type: string
+                mediaKey:
+                    type: string
+                systemDiskSizeGb:
+                    type: string
+                dataDisks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InitialDataDisk'
+                network:
+                    $ref: '#/components/schemas/VMNetworkSelection'
+                startAfterCreate:
+                    type: boolean
+                guestInitialization:
+                    $ref: '#/components/schemas/CreateGuestInitialization'
+        CreateVMRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVMData'
         CreateVPCRequest:
             type: object
             properties:
@@ -14153,6 +14929,15 @@ components:
                     type: array
                     items:
                         type: string
+        InitialDataDisk:
+            type: object
+            properties:
+                clientDiskKey:
+                    type: string
+                name:
+                    type: string
+                sizeGb:
+                    type: string
         InputVersionView:
             type: object
             properties:
@@ -14841,6 +15626,13 @@ components:
                 total:
                     type: string
             description: 查询字典类型列表 - 回应
+        ListDisksResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMDisk'
         ListEIPsResponse:
             type: object
             properties:
@@ -15016,6 +15808,13 @@ components:
                 total:
                     type: string
             description: 查询登录策略列表 - 回应
+        ListMediaResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMMedia'
         ListMenuResponse:
             type: object
             properties:
@@ -15269,6 +16068,13 @@ components:
                         $ref: '#/components/schemas/RuntimeEvent'
                 total:
                     type: string
+        ListSnapshotsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMSnapshot'
         ListSubnetsResponse:
             type: object
             properties:
@@ -15341,6 +16147,15 @@ components:
                     type: string
                     description: 下一页游标：有下一页时返回，末页为空。客户端原样回传，不得解析或修改。
             description: 获取用户列表 - 答复
+        ListVMsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualMachine'
+                total:
+                    type: string
         ListVPCCIDRPresetsResponse:
             type: object
             properties:
@@ -16016,6 +16831,7 @@ components:
                         - IMAGE
                         - INFERENCE
                         - INSTANCE
+                        - VIRTUAL_MACHINE
                     type: string
                     description: 所属业务功能模块
                     format: enum
@@ -17307,6 +18123,7 @@ components:
                         - IMAGE
                         - INFERENCE
                         - INSTANCE
+                        - VIRTUAL_MACHINE
                     type: string
                     description: 功能模块
                     format: enum
@@ -20020,6 +20837,189 @@ components:
                 exist:
                     type: boolean
             description: 用户是否存在 - 答复
+        VMAcceptance:
+            type: object
+            properties:
+                operationId:
+                    type: string
+                resourceId:
+                    type: string
+                replayed:
+                    type: boolean
+                result:
+                    type: string
+        VMConsoleSession:
+            type: object
+            properties:
+                sessionId:
+                    type: string
+                wsUrl:
+                    type: string
+                expiresAt:
+                    type: string
+        VMCurrentAddress:
+            type: object
+            properties:
+                nicName:
+                    type: string
+                address:
+                    type: string
+                observedAt:
+                    type: string
+        VMDisk:
+            type: object
+            properties:
+                diskId:
+                    type: string
+                role:
+                    type: string
+                name:
+                    type: string
+                sizeGb:
+                    type: string
+                requestedBytes:
+                    type: string
+                observedCapacityBytes:
+                    type: string
+                volumeName:
+                    type: string
+                serial:
+                    type: string
+                attached:
+                    type: boolean
+                preparationState:
+                    type: string
+                reason:
+                    type: string
+        VMMedia:
+            type: object
+            properties:
+                mediaKey:
+                    type: string
+                name:
+                    type: string
+                kind:
+                    type: string
+                osFamily:
+                    type: string
+                osVersion:
+                    type: string
+                architecture:
+                    type: string
+                firmware:
+                    type: string
+                rootBus:
+                    type: string
+                dataBus:
+                    type: string
+                nicModel:
+                    type: string
+                persistentTpm:
+                    type: boolean
+                persistentUefi:
+                    type: boolean
+                driverMediaKey:
+                    type: string
+                virtualCapacityBytes:
+                    type: string
+                initializationCapability:
+                    type: string
+                initializationVerified:
+                    type: boolean
+        VMMediaState:
+            type: object
+            properties:
+                slot:
+                    type: string
+                desiredMedia:
+                    type: string
+                observedMedia:
+                    type: string
+                effectiveNow:
+                    type: boolean
+                pendingRestart:
+                    type: boolean
+        VMNetworkSelection:
+            type: object
+            properties:
+                vpcId:
+                    type: string
+                subnetId:
+                    type: string
+        VMOperation:
+            type: object
+            properties:
+                id:
+                    type: string
+                vmId:
+                    type: string
+                action:
+                    type: string
+                intentVersion:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                observedAt:
+                    type: string
+        VMRestoreDiskImpact:
+            type: object
+            properties:
+                diskId:
+                    type: string
+                action:
+                    type: string
+                reason:
+                    type: string
+        VMRestorePreview:
+            type: object
+            properties:
+                version:
+                    type: string
+                snapshotId:
+                    type: string
+                snapshotUid:
+                    type: string
+                disks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMRestoreDiskImpact'
+                previewDigest:
+                    type: string
+        VMSnapshot:
+            type: object
+            properties:
+                snapshotId:
+                    type: string
+                sourceVmId:
+                    type: string
+                sourceVmUid:
+                    type: string
+                ready:
+                    type: boolean
+                completeness:
+                    type: string
+                included:
+                    type: array
+                    items:
+                        type: string
+                excluded:
+                    type: array
+                    items:
+                        type: string
+                indications:
+                    type: array
+                    items:
+                        type: string
+                disks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMDisk'
+                observedAt:
+                    type: string
+                reason:
+                    type: string
         VPC:
             type: object
             properties:
@@ -20129,6 +21129,57 @@ components:
                 webauthn:
                     $ref: '#/components/schemas/WebAuthnAssertion'
                 backupCode:
+                    type: string
+        VirtualMachine:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                version:
+                    type: string
+                osFamily:
+                    type: string
+                osVersion:
+                    type: string
+                desiredState:
+                    type: string
+                observedState:
+                    type: string
+                reason:
+                    type: string
+                observedAt:
+                    type: string
+                addresses:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMCurrentAddress'
+                lastOperationId:
+                    type: string
+                closing:
+                    type: boolean
+                disks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMDisk'
+                media:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMMediaState'
+                bootDevice:
+                    type: string
+                presetId:
+                    type: string
+                cpuMillis:
+                    type: string
+                memoryMib:
+                    type: string
+                systemDiskSizeGb:
+                    type: string
+                sourceKind:
+                    type: string
+                mediaKey:
                     type: string
         VirtualSwitch:
             type: object
@@ -20406,3 +21457,4 @@ tags:
       description: 用户个人资料服务
     - name: UserService
       description: 用户管理服务
+    - name: VMService
