@@ -12,6 +12,7 @@ const (
 	ResourceKindInstance  = "container"
 	ResourceKindVM        = "virtual_machine"
 	ResourceKindInference = "inference"
+	ResourceKindModelDev  = "modeldev"
 	PhaseCreate           = "create"
 	PhaseDelete           = "delete"
 )
@@ -23,6 +24,7 @@ var managedActions = [...]ActionDefinition{
 	{InstanceOwner, VMDeleteAction, ResourceKindVM, PhaseDelete, "VIRTUAL_MACHINE", "vm-v1"},
 	{InferenceOwner, InferenceCreateAction, ResourceKindInference, PhaseCreate, "INFERENCE", InferenceSchema},
 	{InferenceOwner, InferenceDeleteAction, ResourceKindInference, PhaseDelete, "INFERENCE", InferenceSchema},
+	{ModelDevOwner, ModelDevCreateAction, ResourceKindModelDev, PhaseCreate, ModelDevUsage, ModelDevGPUSchema},
 }
 
 func LookupAction(owner, action string) (ActionDefinition, bool) {

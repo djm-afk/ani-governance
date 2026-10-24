@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/xiaoqidun/entps v1.50.1
 	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261022031933-4a682ac73da1
-	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261021184454-44188466290f
+	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261022185239-0814ae3ef0b7
 	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1
 	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261024051201-01c079f1787f
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c

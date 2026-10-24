@@ -48,8 +48,10 @@ type Facts struct {
 	VM              *VMCanonical
 }
 
-func Invalid(reason string) error    { return quota.ErrorInvalidQuotaRequest("%s", reason) }
-func ManagedOwner(owner string) bool { return owner == InstanceOwner || owner == InferenceOwner }
+func Invalid(reason string) error { return quota.ErrorInvalidQuotaRequest("%s", reason) }
+func ManagedOwner(owner string) bool {
+	return owner == InstanceOwner || owner == InferenceOwner || owner == ModelDevOwner
+}
 func ValidateStoredCommand(in StoredCommand) (*Facts, error) {
 	definition, ok := LookupAction(in.Owner, in.Action)
 	if !ok {
@@ -97,6 +99,8 @@ func ValidateStoredCommand(in StoredCommand) (*Facts, error) {
 		return &Facts{BusinessPayload: c.BusinessPayload, GpuRequest: c.GpuRequest, Execution: business.GpuExecution, Display: business.GpuDisplay, QuotaItems: items}, nil
 	case ResourceKindInference:
 		return validateInferenceStored(in)
+	case ResourceKindModelDev:
+		return ValidateModelDevStoredCommand(in)
 	default:
 		return nil, Invalid("unsupported managed owner")
 	}
