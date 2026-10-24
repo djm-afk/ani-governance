@@ -1,0 +1,22 @@
+syntax = "proto3";
+package inference.service.v1;
+import "google/protobuf/timestamp.proto";
+
+message GetServicePolicyRequest { string resource_id = 1 [json_name="resource_id"]; }
+message GetServicePolicyResponse { ServicePolicy policy = 1; }
+// Replaces the whole policy bound to this service. Empty allowlist denies all.
+message UpdateServicePolicyRequest {
+ string resource_id = 1 [json_name="resource_id"];
+ ServicePolicy policy = 2;
+}
+message UpdateServicePolicyResponse { ServicePolicy policy = 1; }
+message ServicePolicy {
+ string resource_id = 1 [json_name="resource_id"];
+ repeated string allowed_tenants = 2 [json_name="allowed_tenants"];
+ map<string,ServiceRateLimit> rate_limits = 3 [json_name="rate_limits"];
+ google.protobuf.Timestamp updated_at = 4 [json_name="updated_at"];
+}
+message ServiceRateLimit {
+ int32 requests_per_minute = 1 [json_name="requests_per_minute"];
+ int32 requests_per_hour = 2 [json_name="requests_per_hour"];
+}

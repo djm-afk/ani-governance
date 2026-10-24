@@ -25,38 +25,46 @@ const OperationInferenceServiceCreateInference = "/admin.service.v1.InferenceSer
 const OperationInferenceServiceDeleteInference = "/admin.service.v1.InferenceService/DeleteInference"
 const OperationInferenceServiceGetInference = "/admin.service.v1.InferenceService/GetInference"
 const OperationInferenceServiceGetInferenceOperation = "/admin.service.v1.InferenceService/GetInferenceOperation"
+const OperationInferenceServiceGetServicePolicy = "/admin.service.v1.InferenceService/GetServicePolicy"
 const OperationInferenceServiceListInference = "/admin.service.v1.InferenceService/ListInference"
 const OperationInferenceServiceListInferenceOperations = "/admin.service.v1.InferenceService/ListInferenceOperations"
 const OperationInferenceServiceRestartInference = "/admin.service.v1.InferenceService/RestartInference"
 const OperationInferenceServiceStartInference = "/admin.service.v1.InferenceService/StartInference"
 const OperationInferenceServiceStopInference = "/admin.service.v1.InferenceService/StopInference"
 const OperationInferenceServiceUpdateInference = "/admin.service.v1.InferenceService/UpdateInference"
+const OperationInferenceServiceUpdateServicePolicy = "/admin.service.v1.InferenceService/UpdateServicePolicy"
 
 type InferenceServiceHTTPServer interface {
 	CreateInference(context.Context, *v1.CreateInferenceRequest) (*v1.InferenceAcceptance, error)
 	DeleteInference(context.Context, *v1.DeleteInferenceRequest) (*v1.InferenceAcceptance, error)
 	GetInference(context.Context, *v1.GetInferenceRequest) (*v1.InferenceView, error)
 	GetInferenceOperation(context.Context, *v1.GetInferenceOperationRequest) (*v11.Operation, error)
+	// GetServicePolicy Requires inference:policy:read and an active INFERENCE subscription.
+	GetServicePolicy(context.Context, *v1.GetServicePolicyRequest) (*v1.GetServicePolicyResponse, error)
 	ListInference(context.Context, *v1.ListInferenceRequest) (*v1.ListInferenceResponse, error)
 	ListInferenceOperations(context.Context, *v1.ListInferenceOperationsRequest) (*v1.ListInferenceOperationsResponse, error)
 	RestartInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error)
 	StartInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error)
 	StopInference(context.Context, *v1.InferenceServiceCommandRequest) (*v1.InferenceAcceptance, error)
 	UpdateInference(context.Context, *v1.UpdateInferenceRequest) (*v1.InferenceAcceptance, error)
+	// UpdateServicePolicy Requires inference:policy:update. Full replacement; empty allowlist denies all.
+	UpdateServicePolicy(context.Context, *v1.UpdateServicePolicyRequest) (*v1.UpdateServicePolicyResponse, error)
 }
 
 func RegisterInferenceServiceHTTPServer(s *http.Server, srv InferenceServiceHTTPServer) {
 	r := s.Route("/")
 	r.POST("/api/v1/inference/services", _InferenceService_CreateInference0_HTTP_Handler(srv))
-	r.POST("/api/v1/inference/services/{data.resource_id}:delete", _InferenceService_DeleteInference0_HTTP_Handler(srv))
+	r.POST("/api/v1/inference/services/{resource_id}:delete", _InferenceService_DeleteInference0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services/{resource_id}", _InferenceService_GetInference0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services", _InferenceService_ListInference0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/operations/{operation_id}", _InferenceService_GetInferenceOperation0_HTTP_Handler(srv))
-	r.POST("/api/v1/inference/services/{data.resource_id}:update", _InferenceService_UpdateInference0_HTTP_Handler(srv))
-	r.POST("/api/v1/inference/services/{data.resource_id}:start", _InferenceService_StartInference0_HTTP_Handler(srv))
-	r.POST("/api/v1/inference/services/{data.resource_id}:stop", _InferenceService_StopInference0_HTTP_Handler(srv))
-	r.POST("/api/v1/inference/services/{data.resource_id}:restart", _InferenceService_RestartInference0_HTTP_Handler(srv))
+	r.POST("/api/v1/inference/services/{resource_id}:update", _InferenceService_UpdateInference0_HTTP_Handler(srv))
+	r.POST("/api/v1/inference/services/{resource_id}:start", _InferenceService_StartInference0_HTTP_Handler(srv))
+	r.POST("/api/v1/inference/services/{resource_id}:stop", _InferenceService_StopInference0_HTTP_Handler(srv))
+	r.POST("/api/v1/inference/services/{resource_id}:restart", _InferenceService_RestartInference0_HTTP_Handler(srv))
 	r.GET("/api/v1/inference/services/{resource_id}/operations", _InferenceService_ListInferenceOperations0_HTTP_Handler(srv))
+	r.GET("/api/v1/inference/services/{resource_id}/policy", _InferenceService_GetServicePolicy0_HTTP_Handler(srv))
+	r.PUT("/api/v1/inference/services/{resource_id}/policy", _InferenceService_UpdateServicePolicy0_HTTP_Handler(srv))
 }
 
 func _InferenceService_CreateInference0_HTTP_Handler(srv InferenceServiceHTTPServer) func(ctx http.Context) error {
@@ -291,17 +299,68 @@ func _InferenceService_ListInferenceOperations0_HTTP_Handler(srv InferenceServic
 	}
 }
 
+func _InferenceService_GetServicePolicy0_HTTP_Handler(srv InferenceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetServicePolicyRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInferenceServiceGetServicePolicy)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetServicePolicy(ctx, req.(*v1.GetServicePolicyRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetServicePolicyResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _InferenceService_UpdateServicePolicy0_HTTP_Handler(srv InferenceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.UpdateServicePolicyRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInferenceServiceUpdateServicePolicy)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateServicePolicy(ctx, req.(*v1.UpdateServicePolicyRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.UpdateServicePolicyResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 type InferenceServiceHTTPClient interface {
 	CreateInference(ctx context.Context, req *v1.CreateInferenceRequest, opts ...http.CallOption) (rsp *v1.InferenceAcceptance, err error)
 	DeleteInference(ctx context.Context, req *v1.DeleteInferenceRequest, opts ...http.CallOption) (rsp *v1.InferenceAcceptance, err error)
 	GetInference(ctx context.Context, req *v1.GetInferenceRequest, opts ...http.CallOption) (rsp *v1.InferenceView, err error)
 	GetInferenceOperation(ctx context.Context, req *v1.GetInferenceOperationRequest, opts ...http.CallOption) (rsp *v11.Operation, err error)
+	// GetServicePolicy Requires inference:policy:read and an active INFERENCE subscription.
+	GetServicePolicy(ctx context.Context, req *v1.GetServicePolicyRequest, opts ...http.CallOption) (rsp *v1.GetServicePolicyResponse, err error)
 	ListInference(ctx context.Context, req *v1.ListInferenceRequest, opts ...http.CallOption) (rsp *v1.ListInferenceResponse, err error)
 	ListInferenceOperations(ctx context.Context, req *v1.ListInferenceOperationsRequest, opts ...http.CallOption) (rsp *v1.ListInferenceOperationsResponse, err error)
 	RestartInference(ctx context.Context, req *v1.InferenceServiceCommandRequest, opts ...http.CallOption) (rsp *v1.InferenceAcceptance, err error)
 	StartInference(ctx context.Context, req *v1.InferenceServiceCommandRequest, opts ...http.CallOption) (rsp *v1.InferenceAcceptance, err error)
 	StopInference(ctx context.Context, req *v1.InferenceServiceCommandRequest, opts ...http.CallOption) (rsp *v1.InferenceAcceptance, err error)
 	UpdateInference(ctx context.Context, req *v1.UpdateInferenceRequest, opts ...http.CallOption) (rsp *v1.InferenceAcceptance, err error)
+	// UpdateServicePolicy Requires inference:policy:update. Full replacement; empty allowlist denies all.
+	UpdateServicePolicy(ctx context.Context, req *v1.UpdateServicePolicyRequest, opts ...http.CallOption) (rsp *v1.UpdateServicePolicyResponse, err error)
 }
 
 type InferenceServiceHTTPClientImpl struct {
@@ -327,7 +386,7 @@ func (c *InferenceServiceHTTPClientImpl) CreateInference(ctx context.Context, in
 
 func (c *InferenceServiceHTTPClientImpl) DeleteInference(ctx context.Context, in *v1.DeleteInferenceRequest, opts ...http.CallOption) (*v1.InferenceAcceptance, error) {
 	var out v1.InferenceAcceptance
-	pattern := "/api/v1/inference/services/{data.resource_id}:delete"
+	pattern := "/api/v1/inference/services/{resource_id}:delete"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInferenceServiceDeleteInference))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -364,6 +423,20 @@ func (c *InferenceServiceHTTPClientImpl) GetInferenceOperation(ctx context.Conte
 	return &out, nil
 }
 
+// GetServicePolicy Requires inference:policy:read and an active INFERENCE subscription.
+func (c *InferenceServiceHTTPClientImpl) GetServicePolicy(ctx context.Context, in *v1.GetServicePolicyRequest, opts ...http.CallOption) (*v1.GetServicePolicyResponse, error) {
+	var out v1.GetServicePolicyResponse
+	pattern := "/api/v1/inference/services/{resource_id}/policy"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationInferenceServiceGetServicePolicy))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *InferenceServiceHTTPClientImpl) ListInference(ctx context.Context, in *v1.ListInferenceRequest, opts ...http.CallOption) (*v1.ListInferenceResponse, error) {
 	var out v1.ListInferenceResponse
 	pattern := "/api/v1/inference/services"
@@ -392,7 +465,7 @@ func (c *InferenceServiceHTTPClientImpl) ListInferenceOperations(ctx context.Con
 
 func (c *InferenceServiceHTTPClientImpl) RestartInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...http.CallOption) (*v1.InferenceAcceptance, error) {
 	var out v1.InferenceAcceptance
-	pattern := "/api/v1/inference/services/{data.resource_id}:restart"
+	pattern := "/api/v1/inference/services/{resource_id}:restart"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInferenceServiceRestartInference))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -405,7 +478,7 @@ func (c *InferenceServiceHTTPClientImpl) RestartInference(ctx context.Context, i
 
 func (c *InferenceServiceHTTPClientImpl) StartInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...http.CallOption) (*v1.InferenceAcceptance, error) {
 	var out v1.InferenceAcceptance
-	pattern := "/api/v1/inference/services/{data.resource_id}:start"
+	pattern := "/api/v1/inference/services/{resource_id}:start"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInferenceServiceStartInference))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -418,7 +491,7 @@ func (c *InferenceServiceHTTPClientImpl) StartInference(ctx context.Context, in 
 
 func (c *InferenceServiceHTTPClientImpl) StopInference(ctx context.Context, in *v1.InferenceServiceCommandRequest, opts ...http.CallOption) (*v1.InferenceAcceptance, error) {
 	var out v1.InferenceAcceptance
-	pattern := "/api/v1/inference/services/{data.resource_id}:stop"
+	pattern := "/api/v1/inference/services/{resource_id}:stop"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInferenceServiceStopInference))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -431,11 +504,25 @@ func (c *InferenceServiceHTTPClientImpl) StopInference(ctx context.Context, in *
 
 func (c *InferenceServiceHTTPClientImpl) UpdateInference(ctx context.Context, in *v1.UpdateInferenceRequest, opts ...http.CallOption) (*v1.InferenceAcceptance, error) {
 	var out v1.InferenceAcceptance
-	pattern := "/api/v1/inference/services/{data.resource_id}:update"
+	pattern := "/api/v1/inference/services/{resource_id}:update"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInferenceServiceUpdateInference))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateServicePolicy Requires inference:policy:update. Full replacement; empty allowlist denies all.
+func (c *InferenceServiceHTTPClientImpl) UpdateServicePolicy(ctx context.Context, in *v1.UpdateServicePolicyRequest, opts ...http.CallOption) (*v1.UpdateServicePolicyResponse, error) {
+	var out v1.UpdateServicePolicyResponse
+	pattern := "/api/v1/inference/services/{resource_id}/policy"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationInferenceServiceUpdateServicePolicy))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

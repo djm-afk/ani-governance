@@ -219,7 +219,7 @@ func NewRestServer(
 	if err != nil || modelConfig.Timeout > 24*time.Hour {
 		return nil, fmt.Errorf("invalid bounded model import HTTP budget")
 	}
-	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, acceleratorInitializationHTTPFilter},
+	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter},
 		middlewares...,
 	)
 	if err != nil {
@@ -290,6 +290,7 @@ func NewRestServer(
 	registerModelDevHTTP(srv, modeldevService)
 	if inferenceService != nil {
 		RegisterInferenceHTTPServer(srv, inferenceService)
+		RegisterInferenceDiagnosticsHTTP(srv, inferenceService)
 	}
 	if modelService != nil {
 		adminV1.RegisterModelServiceHTTPServer(srv, modelService)

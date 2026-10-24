@@ -27,24 +27,28 @@ func TestModelDevCreateOpenAPIContract(t *testing.T) {
 	require.Equal(t, "#/components/schemas/CreateExecutionRequest", object(body["schema"])["$ref"])
 	schemas := object(object(document["components"])["schemas"])
 	request := object(schemas["CreateExecutionRequest"])
-	require.ElementsMatch(t, []any{"name", "kind", "preset_id", "dataset_version_id", "idempotency_key"}, request["required"])
+	require.ElementsMatch(t, []any{"name", "kind", "implementation_id", "compute_preset_id", "dataset_version_id", "parameters", "idempotency_key"}, request["required"])
 	fields := object(request["properties"])
-	require.Len(t, fields, 8, "only CPU-P01 intent and idempotency fields are public")
-	for _, forbidden := range []string{"data", "tenant_id", "actor", "namespace", "command", "snapshot", "gpu"} {
+	require.Len(t, fields, 11, "only the active typed execution intent fields are public")
+	for _, forbidden := range []string{"data", "tenant_id", "actor", "namespace", "command", "snapshot", "gpu", "preset_id", "image_version_id", "general_parameters", "source_execution_id", "finetuning"} {
 		require.NotContains(t, fields, forbidden)
 	}
-	parameters := object(fields["general_parameters"])
-	require.Equal(t, "array", parameters["type"])
-	require.NotEqual(t, true, parameters["nullable"])
-	require.Equal(t, "#/components/schemas/GeneralParameter", object(parameters["items"])["$ref"])
-	for _, name := range []string{"name", "type", "value"} {
-		require.Equal(t, "string", object(object(object(schemas["GeneralParameter"])["properties"])[name])["type"])
+	require.Equal(t, "#/components/schemas/ExecutionParameters", object(fields["parameters"])["$ref"])
+	parameters := object(object(schemas["ExecutionParameters"])["properties"])
+	for _, name := range []string{"learning_rate", "lora_dropout"} {
+		require.Equal(t, "string", object(parameters[name])["type"])
+	}
+	for _, name := range []string{"epochs", "batch_size", "seed", "max_steps", "per_device_train_batch_size", "gradient_accumulation_steps", "cutoff_len", "lora_rank", "lora_alpha"} {
+		require.Equal(t, "integer", object(parameters[name])["type"])
 	}
 	reply := object(object(responses["202"])["content"])
 	require.Equal(t, "#/components/schemas/CreateExecutionResponse", object(object(reply["application/json"])["schema"])["$ref"])
 	responseFields := object(object(schemas["CreateExecutionResponse"])["properties"])
-	for _, name := range []string{"operation_id", "execution_id", "resolved_release_id", "compute_state", "delivery_state", "close_state", "resource_state"} {
+	for _, name := range []string{"operation_id", "execution_id", "compute_state", "delivery_state", "close_state", "resource_state"} {
 		require.Equal(t, "string", object(responseFields[name])["type"])
 	}
+	require.NotContains(t, responseFields, "resolved_release_id")
 	require.Equal(t, "boolean", object(responseFields["replayed"])["type"])
+	require.Contains(t, schemas, "ModelOperation")
+	require.Contains(t, schemas, "ModelRegistrationView")
 }
