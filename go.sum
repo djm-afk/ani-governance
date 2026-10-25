@@ -398,6 +398,8 @@ github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c79
 github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88/go.mod h1:OmpTNUUTOEMzeXx5cOUdOYqNxrmA+KBthlt44mfZ4s8=
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261022095305-2f020636785b h1:oggrYppu7/xrUzfhi1g4UgPfwXhUj9lKq/HsGk0EoB0=
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261022095305-2f020636785b/go.mod h1:W2DxXnHHbN01EZBWbpFn+O6qEBhcHub/VTX0fyT04II=
+github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261022185239-0814ae3ef0b7 h1:m/3QQ2iSvuUn+BJNBc9kjohUf724WoYwSR3NN5A1jzA=
+github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261022185239-0814ae3ef0b7/go.mod h1:TGZCuPqFHcVLsc7mdSqTHMqXJ5oOFywcnkftloYzC3c=
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261023050121-af7f9e989473 h1:dXfE3wETFDY8NmV7Gj2gZ9a4qmeJSoDOUf5tY94T5DU=
 github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261023050121-af7f9e989473/go.mod h1:DG2lo50+/K24/hDVw2aY8yjPIv594A0tSRYgZ8/6654=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1 h1:SEr70/++V17GJrSzZMG6pEChKj+y9R7kThLe0bYmewQ=
@@ -406,10 +408,14 @@ github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261022033025-3fa0c57b990b
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261022033025-3fa0c57b990b/go.mod h1:MerthCBRdW7VKRwhM3tgi+5Z8/jDzj8QMCDDACvH/D4=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261022081320-13fa2b465960 h1:E8WpFjnZvlxedsQ4h2BidYoD/rEnoi5XmK59IFRP7Q0=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261022081320-13fa2b465960/go.mod h1:Wvk2KPLU/rhe/62nB1a52LJlayj7oPe4gzCOMsV5kPU=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261024051201-01c079f1787f h1:GXeHnyrnb98cucVbqj9xmNb+pjtOiyxIhGDwJW4NyEw=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261024051201-01c079f1787f/go.mod h1:cgx1BbE7BtNXjEHoWThNBdWTw5+e7slcCFneCl88Sp0=
 github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c h1:+Z/R4AX9U0RpY+smnrCO9cVFTxLqjjp0r7NbUWdchNE=
 github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c/go.mod h1:8N+MSiQHH8SrwQ6HOvEunPq37KNHiTr2/78mhzraFSw=
-github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261013075651-d889f9490b84 h1:vDyRdhm+Pwoq+hF5sUftZYx25UasOel0lGoUaB7kjfM=
-github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261013075651-d889f9490b84/go.mod h1:zB5aVBBS5ukGLMfjo5FBv1y1803va4mvYf0iPYNoeeY=
+github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f h1:dC5v8SPszcnt5W0pl5rBOSCL85nDJnQJkjy1YcWFZLs=
+github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f/go.mod h1:aFsjlMnejbYpMPxuooE0xAmyzwcjyDRjZAjS2YoroE8=
+github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261024051540-811cc3839244 h1:OBfuKBJM/sPd3W9pIcFdVaaYQakVWljq3Pf/R13xBiU=
+github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261024051540-811cc3839244/go.mod h1:UkqQImej+6VSty5W5AZv55scFHNrZR1qoTDy/8IdVbA=
 go.einride.tech/aip v0.86.3 h1:jg80Ec4XBPYg1i7avzrl3MJol/dUwmMMLHtcmEMyxgM=
 go.einride.tech/aip v0.86.3/go.mod h1:dZuN/0sXeoscfWqsW8QLcLrGZdvsCC1B2R2CZ4kHmao=
 go.mongodb.org/mongo-driver/v2 v2.9.0 h1:e2mQdOmbkiYz+dj3faM7lVDwl7WdnRD+g5VicafMhL0=
