@@ -69,5 +69,8 @@ func TestModelDevCreateOpenAPIContract(t *testing.T) {
 	for _, name := range []string{"operation_id", "execution_id", "compute_state", "delivery_state", "close_state", "resource_state"} {
 		require.Equal(t, "string", object(responseFields[name])["type"])
 	}
+	require.NotContains(t, responseFields, "resolved_release_id")
 	require.Equal(t, "boolean", object(responseFields["replayed"])["type"])
+	require.Contains(t, schemas, "ModelOperation")
+	require.Contains(t, schemas, "ModelRegistrationView")
 }
