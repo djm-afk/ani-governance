@@ -35,6 +35,56 @@ func (x *VMNetworkSelection) Redact() {
 	// Safe field: SubnetId
 }
 
+// Ensure VMDNSSelection implements the Redactor interface at compile time.
+var _ redact.Redactor = (*VMDNSSelection)(nil)
+
+// Redact method implementation for VMDNSSelection
+func (x *VMDNSSelection) Redact() {
+	if x == nil {
+		return
+	}
+
+	// Safe field: Mode
+
+	// Safe field: Nameservers
+}
+
+// Ensure VMFrozenDNS implements the Redactor interface at compile time.
+var _ redact.Redactor = (*VMFrozenDNS)(nil)
+
+// Redact method implementation for VMFrozenDNS
+func (x *VMFrozenDNS) Redact() {
+	if x == nil {
+		return
+	}
+
+	// Safe field: Mode
+
+	// Safe field: Nameservers
+}
+
+// Ensure GetDNSDefaultsRequest implements the Redactor interface at compile time.
+var _ redact.Redactor = (*GetDNSDefaultsRequest)(nil)
+
+// Redact method implementation for GetDNSDefaultsRequest
+func (x *GetDNSDefaultsRequest) Redact() {
+	if x == nil {
+		return
+	}
+}
+
+// Ensure DNSDefaults implements the Redactor interface at compile time.
+var _ redact.Redactor = (*DNSDefaults)(nil)
+
+// Redact method implementation for DNSDefaults
+func (x *DNSDefaults) Redact() {
+	if x == nil {
+		return
+	}
+
+	// Safe field: Nameservers
+}
+
 // Ensure InitialDataDisk implements the Redactor interface at compile time.
 var _ redact.Redactor = (*InitialDataDisk)(nil)
 
@@ -79,6 +129,8 @@ func (x *CreateVMData) Redact() {
 	// Safe field: StartAfterCreate
 
 	// Safe field: GuestInitialization
+
+	// Safe field: Dns
 }
 
 // Ensure CreateGuestInitialization implements the Redactor interface at compile time.
@@ -330,6 +382,8 @@ func (x *VirtualMachine) Redact() {
 	// Safe field: SourceKind
 
 	// Safe field: MediaKey
+
+	// Safe field: Dns
 }
 
 // Ensure ListVMsResponse implements the Redactor interface at compile time.

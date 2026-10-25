@@ -12,6 +12,7 @@ const VMGetPath = "/api/v1/virtual-machines/{vm_id}"
 const VMDeletePath = "/api/v1/virtual-machines/{data.vm_id}"
 const VMOperationPath = "/api/v1/virtual-machines/{vm_id}/operations/{operation_id}"
 const VMMediaPath = "/api/v1/virtual-machine-media"
+const VMDNSDefaultsPath = "/api/v1/virtual-machine-dns-defaults"
 
 type VMRoute struct{ Path, Method string }
 
@@ -28,6 +29,7 @@ var vmRoutes = map[string]VMRoute{
 	"detach-disk":      {"/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/detach", "POST"},
 	"delete-disk":      {"/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}", "DELETE"},
 	"media":            {VMMediaPath, "GET"},
+	"dns-defaults":     {VMDNSDefaultsPath, "GET"},
 	"set-media":        {"/api/v1/virtual-machines/{data.vm_id}/media/{data.slot}", "PUT"},
 	"eject-media":      {"/api/v1/virtual-machines/{data.vm_id}/media/{data.slot}", "DELETE"},
 	"set-boot":         {"/api/v1/virtual-machines/{data.vm_id}/boot", "PUT"},

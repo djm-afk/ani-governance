@@ -80,6 +80,9 @@ func vmSummary(spec *vm.CreateSpec, out *view.VirtualMachine) {
 		out.CpuMillis = spec.Compute.CpuMillis
 		out.MemoryMib = spec.Compute.MemoryMib
 	}
+	if spec.Dns != nil {
+		out.Dns = &view.VMFrozenDNS{Mode: spec.Dns.Mode, Nameservers: append([]string(nil), spec.Dns.Nameservers...)}
+	}
 	if spec.Intent != nil {
 		out.SystemDiskSizeGb = spec.Intent.SystemDiskSizeGb
 		out.SourceKind = spec.Intent.SourceKind
@@ -92,6 +95,13 @@ func (s *VMService) CreateVM(ctx context.Context, r *view.CreateVMRequest) (*vie
 	}
 	d := r.Data
 	intent := &vm.CreateVMData{Name: d.Name, PresetId: d.PresetId, SourceKind: d.SourceKind, MediaKey: d.MediaKey, SystemDiskSizeGb: d.SystemDiskSizeGb, StartAfterCreate: d.StartAfterCreate}
+	if d.Dns != nil {
+		var err error
+		intent.Dns, err = vm.NormalizeDNSSelection(&vm.DNSSelection{Mode: d.Dns.Mode, Nameservers: d.Dns.Nameservers})
+		if err != nil {
+			return nil, vmInvalid()
+		}
+	}
 	if d.Network != nil {
 		intent.Network = &vm.NetworkSelection{VpcId: d.Network.VpcId, SubnetId: d.Network.SubnetId}
 	}
@@ -430,7 +440,7 @@ func (s *VMService) RestoreVMSnapshot(c context.Context, r *view.ChangeVMRequest
 	return s.change(c, r, "restore-snapshot")
 }
 func (s *VMService) read(ctx context.Context, action, id, snapshot string, out proto.Message) error {
-	if action != "media" && !canonicalCatalogUUID(id) {
+	if action != "media" && action != "dns-defaults" && !canonicalCatalogUUID(id) {
 		return vmInvalid()
 	}
 	tenant, actor, err := s.scope(ctx, action)
@@ -449,6 +459,14 @@ func (s *VMService) ListVMDisks(c context.Context, r *view.GetVMRequest) (*view.
 	}
 	out := new(view.ListDisksResponse)
 	err := s.read(c, "disks", r.VmId, "", out)
+	return out, err
+}
+func (s *VMService) GetVMDNSDefaults(c context.Context, r *view.GetDNSDefaultsRequest) (*view.DNSDefaults, error) {
+	if r == nil {
+		return nil, vmInvalid()
+	}
+	out := new(view.DNSDefaults)
+	err := s.read(c, "dns-defaults", "", "", out)
 	return out, err
 }
 func (s *VMService) ListVMMedia(c context.Context, r *view.ListMediaRequest) (*view.ListMediaResponse, error) {
