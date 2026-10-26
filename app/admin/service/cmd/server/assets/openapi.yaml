@@ -10307,6 +10307,18 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/virtual-machine-dns-defaults:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMDNSDefaults
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DNSDefaults'
     /api/v1/virtual-machine-media:
         get:
             tags:
@@ -13028,6 +13040,8 @@ components:
                     type: boolean
                 guestInitialization:
                     $ref: '#/components/schemas/CreateGuestInitialization'
+                dns:
+                    $ref: '#/components/schemas/VMDNSSelection'
         CreateVMRequest:
             type: object
             properties:
@@ -13123,6 +13137,13 @@ components:
                     type: string
                     description: 绑定当前逻辑会话的 CSRF 证明，写请求时放入 X-CSRF-Token 头；不含身份授权
             description: 获取 CSRF 证明 - 回应
+        DNSDefaults:
+            type: object
+            properties:
+                nameservers:
+                    type: array
+                    items:
+                        type: string
         DashboardOverviewResponse:
             type: object
             properties:
@@ -20930,6 +20951,16 @@ components:
                     type: string
                 observedAt:
                     type: string
+        VMDNSSelection:
+            type: object
+            properties:
+                mode:
+                    type: string
+                nameservers:
+                    type: array
+                    items:
+                        type: string
+            description: The platform resolves default addresses; callers may only supply a selection.
         VMDisk:
             type: object
             properties:
@@ -20955,6 +20986,15 @@ components:
                     type: string
                 reason:
                     type: string
+        VMFrozenDNS:
+            type: object
+            properties:
+                mode:
+                    type: string
+                nameservers:
+                    type: array
+                    items:
+                        type: string
         VMMedia:
             type: object
             properties:
@@ -21245,6 +21285,8 @@ components:
                     type: string
                 mediaKey:
                     type: string
+                dns:
+                    $ref: '#/components/schemas/VMFrozenDNS'
         VirtualSwitch:
             type: object
             properties:

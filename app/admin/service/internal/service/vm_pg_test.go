@@ -27,6 +27,7 @@ import (
 	"go-wind-admin/pkg/middleware/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"strconv"
 	"sync"
@@ -38,10 +39,12 @@ import (
 // tenant mapping, admission, transactions, charges, and delete fence use real Gov.
 type vmPGPeer struct {
 	vmResolvePeer
-	id, replayKey    string
-	canonical        []byte
-	changes, targets int
-	currentVersion   int64
+	id, replayKey       string
+	canonical           []byte
+	changes, targets    int
+	currentVersion      int64
+	dnsReads            int
+	dnsTenant, dnsActor string
 }
 
 func (p *vmPGPeer) Get(context.Context, string, string, string) (*vm.VirtualMachine, error) {
@@ -50,6 +53,14 @@ func (p *vmPGPeer) Get(context.Context, string, string, string) (*vm.VirtualMach
 		version = 1
 	}
 	return &vm.VirtualMachine{Id: p.id, Version: version}, nil
+}
+func (p *vmPGPeer) Read(_ context.Context, tenant, actor, action, _, _ string) (proto.Message, error) {
+	if action != "dns-defaults" {
+		return nil, status.Error(codes.Unimplemented, "unexpected read")
+	}
+	p.dnsReads++
+	p.dnsTenant, p.dnsActor = tenant, actor
+	return &vm.DNSDefaults{Nameservers: []string{"223.5.5.5"}}, nil
 }
 func (p *vmPGPeer) Delete(context.Context, string, string, *vm.AcceptDeleteRequest) (*vm.Acceptance, error) {
 	return nil, status.Error(codes.Aborted, "VM_VERSION_CONFLICT")
@@ -124,8 +135,36 @@ func TestVMPostgresUnmeteredDeleteFenceAndOriginalReplay(t *testing.T) {
 	sessions := &vmPGSessions{key: uuid.NewString()}
 	service := NewVMService(acceptance, binding, resolver, ledger, sessions)
 	key := uuid.NewString()
+	// DNS discovery is not allowed until its exact route is cataloged and granted.
+	_, err = service.GetVMDNSDefaults(request, &view.GetDNSDefaultsRequest{})
+	require.Error(t, err)
+	require.Zero(t, peer.dnsReads)
+	dnsAPI, err := client.Client().Api.Query().Where(api.PathEQ(data.VMDNSDefaultsPath), api.MethodEQ("GET"), api.ModuleEQ("VMService"), api.ScopeEQ(api.ScopeAdmin)).Only(sys)
+	if ent.IsNotFound(err) {
+		dnsAPI, err = client.Client().Api.Create().SetModule("VMService").SetPath(data.VMDNSDefaultsPath).SetMethod("GET").SetScope(api.ScopeAdmin).SetBusinessModule(api.BusinessModuleVirtualMachine).SetStatus(api.StatusOn).Save(sys)
+	}
+	require.NoError(t, err)
+	require.NoError(t, client.Client().PermissionApi.Create().SetPermissionID(perm.ID).SetAPIID(dnsAPI.ID).Exec(sys))
+	defaults, err := service.GetVMDNSDefaults(request, &view.GetDNSDefaultsRequest{})
+	require.NoError(t, err)
+	require.Equal(t, []string{"223.5.5.5"}, defaults.Nameservers)
+	require.Equal(t, tenant.ResourceTenantID, peer.dnsTenant)
+	require.Equal(t, "governance:user:"+strconv.FormatUint(uint64(operator.ID), 10), peer.dnsActor)
+	spec.Intent.Dns = &vm.DNSSelection{Mode: vm.DNSCustom, Nameservers: []string{"223.5.5.5", "2001:4860:4860::8888"}}
+	spec.Dns = &vm.FrozenDNS{Mode: vm.DNSCustom, Nameservers: append([]string(nil), spec.Intent.Dns.Nameservers...)}
+	created, err := service.CreateVM(request, &view.CreateVMRequest{Data: &view.CreateVMData{
+		IdempotencyKey: key, Name: spec.Intent.Name, PresetId: spec.Intent.PresetId, SourceKind: spec.Intent.SourceKind, MediaKey: spec.Intent.MediaKey, SystemDiskSizeGb: spec.Intent.SystemDiskSizeGb, StartAfterCreate: spec.Intent.StartAfterCreate,
+		Network: &view.VMNetworkSelection{VpcId: spec.Intent.Network.VpcId, SubnetId: spec.Intent.Network.SubnetId},
+		Dns:     &view.VMDNSSelection{Mode: vm.DNSCustom, Nameservers: []string{"223.5.5.5", "2001:4860:4860:0:0:0:0:8888", "223.5.5.5"}},
+	}})
+	require.NoError(t, err)
+	require.False(t, created.Replayed)
+	// The public request and its canonical normalized form replay the same acceptance.
 	first, err := acceptance.AcceptGpuCreate(request, key, nil, spec.Intent)
 	require.NoError(t, err)
+	require.True(t, first.Replayed)
+	require.Equal(t, created.OperationId, first.OperationID)
+	require.Equal(t, created.ResourceId, first.ResourceID)
 	peer.id = first.ResourceID
 	require.Empty(t, first.ChargeIDs)
 	require.Equal(t, 1, peer.calls)
@@ -136,7 +175,15 @@ func TestVMPostgresUnmeteredDeleteFenceAndOriginalReplay(t *testing.T) {
 	require.True(t, replay.Replayed)
 	require.Equal(t, first.OperationID, replay.OperationID)
 	require.Equal(t, 1, peer.calls)
+	changedDNS := proto.Clone(spec.Intent).(*vm.CreateVMData)
+	changedDNS.Dns.Nameservers[0] = "1.1.1.1"
+	_, err = acceptance.AcceptGpuCreate(request, key, nil, changedDNS)
+	require.Error(t, err, "DNS changes cannot replay the original create key")
+	require.Equal(t, 1, peer.calls, "conflicting intent must not resolve a new spec")
 	require.NoError(t, client.Client().RolePermission.UpdateOneID(grant.ID).SetStatus(rolepermission.StatusOff).Exec(sys))
+	_, err = service.GetVMDNSDefaults(request, &view.GetDNSDefaultsRequest{})
+	require.Error(t, err, "DNS discovery still requires current route permission")
+	require.Equal(t, 1, peer.dnsReads)
 	_, err = acceptance.AcceptGpuCreate(request, key, nil, spec.Intent)
 	require.Error(t, err, "replay still requires current authorization")
 	require.NoError(t, client.Client().RolePermission.UpdateOneID(grant.ID).SetStatus(rolepermission.StatusOn).Exec(sys))

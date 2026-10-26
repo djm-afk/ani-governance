@@ -24,6 +24,7 @@ BEGIN
  ('POST','/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/detach','vm:disk:write'),
  ('DELETE','/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}','vm:disk:write'),
  ('GET','/api/v1/virtual-machine-media','vm:read'),
+ ('GET','/api/v1/virtual-machine-dns-defaults','vm:create'),
  ('PUT','/api/v1/virtual-machines/{data.vm_id}/media/{data.slot}','vm:media:write'),
  ('DELETE','/api/v1/virtual-machines/{data.vm_id}/media/{data.slot}','vm:media:write'),
  ('PUT','/api/v1/virtual-machines/{data.vm_id}/boot','vm:media:write'),

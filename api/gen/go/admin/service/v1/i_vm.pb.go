@@ -27,7 +27,7 @@ var File_admin_service_v1_i_vm_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_vm_proto_rawDesc = "" +
 	"\n" +
-	"\x1badmin/service/v1/i_vm.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\x16vm/service/v1/vm.proto2\x96'\n" +
+	"\x1badmin/service/v1/i_vm.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\x16vm/service/v1/vm.proto2\x9b(\n" +
 	"\tVMService\x12\xc5\x01\n" +
 	"\bCreateVM\x12\x1e.vm.service.v1.CreateVMRequest\x1a\x1b.vm.service.v1.VMAcceptance\"|\xbaGVBT\x12R\n" +
 	"\x03202\x12K\n" +
@@ -137,7 +137,8 @@ const file_admin_service_v1_i_vm_proto_rawDesc = "" +
 	":\n" +
 	"\x10application/json\x12&\n" +
 	"$\x12\"\n" +
-	" #/components/schemas/VMOperation\x82\xd3\xe4\x93\x02/:\x01*\x1a*/api/v1/virtual-machines/{data.vm_id}/boot\x12w\n" +
+	" #/components/schemas/VMOperation\x82\xd3\xe4\x93\x02/:\x01*\x1a*/api/v1/virtual-machines/{data.vm_id}/boot\x12\x82\x01\n" +
+	"\x10GetVMDNSDefaults\x12$.vm.service.v1.GetDNSDefaultsRequest\x1a\x1a.vm.service.v1.DNSDefaults\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/virtual-machine-dns-defaults\x12w\n" +
 	"\vListVMMedia\x12\x1f.vm.service.v1.ListMediaRequest\x1a .vm.service.v1.ListMediaResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/virtual-machine-media\x12\x88\x01\n" +
 	"\x0fListVMSnapshots\x12\x1b.vm.service.v1.GetVMRequest\x1a$.vm.service.v1.ListSnapshotsResponse\"2\x82\xd3\xe4\x93\x02,\x12*/api/v1/virtual-machines/{vm_id}/snapshots\x12\x8f\x01\n" +
 	"\rGetVMSnapshot\x12!.vm.service.v1.GetSnapshotRequest\x1a\x19.vm.service.v1.VMSnapshot\"@\x82\xd3\xe4\x93\x02:\x128/api/v1/virtual-machines/{vm_id}/snapshots/{snapshot_id}\x12\xe3\x01\n" +
@@ -182,18 +183,20 @@ var file_admin_service_v1_i_vm_proto_goTypes = []any{
 	(*v1.GetVMRequest)(nil),          // 2: vm.service.v1.GetVMRequest
 	(*v1.ChangeVMRequest)(nil),       // 3: vm.service.v1.ChangeVMRequest
 	(*v1.GetOperationRequest)(nil),   // 4: vm.service.v1.GetOperationRequest
-	(*v1.ListMediaRequest)(nil),      // 5: vm.service.v1.ListMediaRequest
-	(*v1.GetSnapshotRequest)(nil),    // 6: vm.service.v1.GetSnapshotRequest
-	(*v1.VMAcceptance)(nil),          // 7: vm.service.v1.VMAcceptance
-	(*v1.ListVMsResponse)(nil),       // 8: vm.service.v1.ListVMsResponse
-	(*v1.VirtualMachine)(nil),        // 9: vm.service.v1.VirtualMachine
-	(*v1.VMOperation)(nil),           // 10: vm.service.v1.VMOperation
-	(*v1.ListDisksResponse)(nil),     // 11: vm.service.v1.ListDisksResponse
-	(*v1.ListMediaResponse)(nil),     // 12: vm.service.v1.ListMediaResponse
-	(*v1.ListSnapshotsResponse)(nil), // 13: vm.service.v1.ListSnapshotsResponse
-	(*v1.VMSnapshot)(nil),            // 14: vm.service.v1.VMSnapshot
-	(*v1.VMRestorePreview)(nil),      // 15: vm.service.v1.VMRestorePreview
-	(*v1.VMConsoleSession)(nil),      // 16: vm.service.v1.VMConsoleSession
+	(*v1.GetDNSDefaultsRequest)(nil), // 5: vm.service.v1.GetDNSDefaultsRequest
+	(*v1.ListMediaRequest)(nil),      // 6: vm.service.v1.ListMediaRequest
+	(*v1.GetSnapshotRequest)(nil),    // 7: vm.service.v1.GetSnapshotRequest
+	(*v1.VMAcceptance)(nil),          // 8: vm.service.v1.VMAcceptance
+	(*v1.ListVMsResponse)(nil),       // 9: vm.service.v1.ListVMsResponse
+	(*v1.VirtualMachine)(nil),        // 10: vm.service.v1.VirtualMachine
+	(*v1.VMOperation)(nil),           // 11: vm.service.v1.VMOperation
+	(*v1.ListDisksResponse)(nil),     // 12: vm.service.v1.ListDisksResponse
+	(*v1.DNSDefaults)(nil),           // 13: vm.service.v1.DNSDefaults
+	(*v1.ListMediaResponse)(nil),     // 14: vm.service.v1.ListMediaResponse
+	(*v1.ListSnapshotsResponse)(nil), // 15: vm.service.v1.ListSnapshotsResponse
+	(*v1.VMSnapshot)(nil),            // 16: vm.service.v1.VMSnapshot
+	(*v1.VMRestorePreview)(nil),      // 17: vm.service.v1.VMRestorePreview
+	(*v1.VMConsoleSession)(nil),      // 18: vm.service.v1.VMConsoleSession
 }
 var file_admin_service_v1_i_vm_proto_depIdxs = []int32{
 	0,  // 0: admin.service.v1.VMService.CreateVM:input_type -> vm.service.v1.CreateVMRequest
@@ -213,41 +216,43 @@ var file_admin_service_v1_i_vm_proto_depIdxs = []int32{
 	3,  // 14: admin.service.v1.VMService.SetVMMedia:input_type -> vm.service.v1.ChangeVMRequest
 	3,  // 15: admin.service.v1.VMService.EjectVMMedia:input_type -> vm.service.v1.ChangeVMRequest
 	3,  // 16: admin.service.v1.VMService.SetVMBootDevice:input_type -> vm.service.v1.ChangeVMRequest
-	5,  // 17: admin.service.v1.VMService.ListVMMedia:input_type -> vm.service.v1.ListMediaRequest
-	2,  // 18: admin.service.v1.VMService.ListVMSnapshots:input_type -> vm.service.v1.GetVMRequest
-	6,  // 19: admin.service.v1.VMService.GetVMSnapshot:input_type -> vm.service.v1.GetSnapshotRequest
-	3,  // 20: admin.service.v1.VMService.CreateVMSnapshot:input_type -> vm.service.v1.ChangeVMRequest
-	3,  // 21: admin.service.v1.VMService.DeleteVMSnapshot:input_type -> vm.service.v1.ChangeVMRequest
-	3,  // 22: admin.service.v1.VMService.PreviewVMRestore:input_type -> vm.service.v1.ChangeVMRequest
-	3,  // 23: admin.service.v1.VMService.RestoreVMSnapshot:input_type -> vm.service.v1.ChangeVMRequest
-	3,  // 24: admin.service.v1.VMService.CreateVMConsoleSession:input_type -> vm.service.v1.ChangeVMRequest
-	7,  // 25: admin.service.v1.VMService.CreateVM:output_type -> vm.service.v1.VMAcceptance
-	8,  // 26: admin.service.v1.VMService.ListVMs:output_type -> vm.service.v1.ListVMsResponse
-	9,  // 27: admin.service.v1.VMService.GetVM:output_type -> vm.service.v1.VirtualMachine
-	7,  // 28: admin.service.v1.VMService.DeleteVM:output_type -> vm.service.v1.VMAcceptance
-	10, // 29: admin.service.v1.VMService.GetVMOperation:output_type -> vm.service.v1.VMOperation
-	10, // 30: admin.service.v1.VMService.StartVM:output_type -> vm.service.v1.VMOperation
-	10, // 31: admin.service.v1.VMService.StopVM:output_type -> vm.service.v1.VMOperation
-	10, // 32: admin.service.v1.VMService.ForceStopVM:output_type -> vm.service.v1.VMOperation
-	10, // 33: admin.service.v1.VMService.RestartVM:output_type -> vm.service.v1.VMOperation
-	11, // 34: admin.service.v1.VMService.ListVMDisks:output_type -> vm.service.v1.ListDisksResponse
-	10, // 35: admin.service.v1.VMService.CreateVMDisk:output_type -> vm.service.v1.VMOperation
-	10, // 36: admin.service.v1.VMService.AttachVMDisk:output_type -> vm.service.v1.VMOperation
-	10, // 37: admin.service.v1.VMService.DetachVMDisk:output_type -> vm.service.v1.VMOperation
-	10, // 38: admin.service.v1.VMService.DeleteVMDisk:output_type -> vm.service.v1.VMOperation
-	10, // 39: admin.service.v1.VMService.SetVMMedia:output_type -> vm.service.v1.VMOperation
-	10, // 40: admin.service.v1.VMService.EjectVMMedia:output_type -> vm.service.v1.VMOperation
-	10, // 41: admin.service.v1.VMService.SetVMBootDevice:output_type -> vm.service.v1.VMOperation
-	12, // 42: admin.service.v1.VMService.ListVMMedia:output_type -> vm.service.v1.ListMediaResponse
-	13, // 43: admin.service.v1.VMService.ListVMSnapshots:output_type -> vm.service.v1.ListSnapshotsResponse
-	14, // 44: admin.service.v1.VMService.GetVMSnapshot:output_type -> vm.service.v1.VMSnapshot
-	10, // 45: admin.service.v1.VMService.CreateVMSnapshot:output_type -> vm.service.v1.VMOperation
-	10, // 46: admin.service.v1.VMService.DeleteVMSnapshot:output_type -> vm.service.v1.VMOperation
-	15, // 47: admin.service.v1.VMService.PreviewVMRestore:output_type -> vm.service.v1.VMRestorePreview
-	10, // 48: admin.service.v1.VMService.RestoreVMSnapshot:output_type -> vm.service.v1.VMOperation
-	16, // 49: admin.service.v1.VMService.CreateVMConsoleSession:output_type -> vm.service.v1.VMConsoleSession
-	25, // [25:50] is the sub-list for method output_type
-	0,  // [0:25] is the sub-list for method input_type
+	5,  // 17: admin.service.v1.VMService.GetVMDNSDefaults:input_type -> vm.service.v1.GetDNSDefaultsRequest
+	6,  // 18: admin.service.v1.VMService.ListVMMedia:input_type -> vm.service.v1.ListMediaRequest
+	2,  // 19: admin.service.v1.VMService.ListVMSnapshots:input_type -> vm.service.v1.GetVMRequest
+	7,  // 20: admin.service.v1.VMService.GetVMSnapshot:input_type -> vm.service.v1.GetSnapshotRequest
+	3,  // 21: admin.service.v1.VMService.CreateVMSnapshot:input_type -> vm.service.v1.ChangeVMRequest
+	3,  // 22: admin.service.v1.VMService.DeleteVMSnapshot:input_type -> vm.service.v1.ChangeVMRequest
+	3,  // 23: admin.service.v1.VMService.PreviewVMRestore:input_type -> vm.service.v1.ChangeVMRequest
+	3,  // 24: admin.service.v1.VMService.RestoreVMSnapshot:input_type -> vm.service.v1.ChangeVMRequest
+	3,  // 25: admin.service.v1.VMService.CreateVMConsoleSession:input_type -> vm.service.v1.ChangeVMRequest
+	8,  // 26: admin.service.v1.VMService.CreateVM:output_type -> vm.service.v1.VMAcceptance
+	9,  // 27: admin.service.v1.VMService.ListVMs:output_type -> vm.service.v1.ListVMsResponse
+	10, // 28: admin.service.v1.VMService.GetVM:output_type -> vm.service.v1.VirtualMachine
+	8,  // 29: admin.service.v1.VMService.DeleteVM:output_type -> vm.service.v1.VMAcceptance
+	11, // 30: admin.service.v1.VMService.GetVMOperation:output_type -> vm.service.v1.VMOperation
+	11, // 31: admin.service.v1.VMService.StartVM:output_type -> vm.service.v1.VMOperation
+	11, // 32: admin.service.v1.VMService.StopVM:output_type -> vm.service.v1.VMOperation
+	11, // 33: admin.service.v1.VMService.ForceStopVM:output_type -> vm.service.v1.VMOperation
+	11, // 34: admin.service.v1.VMService.RestartVM:output_type -> vm.service.v1.VMOperation
+	12, // 35: admin.service.v1.VMService.ListVMDisks:output_type -> vm.service.v1.ListDisksResponse
+	11, // 36: admin.service.v1.VMService.CreateVMDisk:output_type -> vm.service.v1.VMOperation
+	11, // 37: admin.service.v1.VMService.AttachVMDisk:output_type -> vm.service.v1.VMOperation
+	11, // 38: admin.service.v1.VMService.DetachVMDisk:output_type -> vm.service.v1.VMOperation
+	11, // 39: admin.service.v1.VMService.DeleteVMDisk:output_type -> vm.service.v1.VMOperation
+	11, // 40: admin.service.v1.VMService.SetVMMedia:output_type -> vm.service.v1.VMOperation
+	11, // 41: admin.service.v1.VMService.EjectVMMedia:output_type -> vm.service.v1.VMOperation
+	11, // 42: admin.service.v1.VMService.SetVMBootDevice:output_type -> vm.service.v1.VMOperation
+	13, // 43: admin.service.v1.VMService.GetVMDNSDefaults:output_type -> vm.service.v1.DNSDefaults
+	14, // 44: admin.service.v1.VMService.ListVMMedia:output_type -> vm.service.v1.ListMediaResponse
+	15, // 45: admin.service.v1.VMService.ListVMSnapshots:output_type -> vm.service.v1.ListSnapshotsResponse
+	16, // 46: admin.service.v1.VMService.GetVMSnapshot:output_type -> vm.service.v1.VMSnapshot
+	11, // 47: admin.service.v1.VMService.CreateVMSnapshot:output_type -> vm.service.v1.VMOperation
+	11, // 48: admin.service.v1.VMService.DeleteVMSnapshot:output_type -> vm.service.v1.VMOperation
+	17, // 49: admin.service.v1.VMService.PreviewVMRestore:output_type -> vm.service.v1.VMRestorePreview
+	11, // 50: admin.service.v1.VMService.RestoreVMSnapshot:output_type -> vm.service.v1.VMOperation
+	18, // 51: admin.service.v1.VMService.CreateVMConsoleSession:output_type -> vm.service.v1.VMConsoleSession
+	26, // [26:52] is the sub-list for method output_type
+	0,  // [0:26] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

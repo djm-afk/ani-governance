@@ -33,6 +33,7 @@ func RegisterVMHTTPServer(server *http.Server, s *service.VMService) {
 		{"start", "StartVM", change}, {"stop", "StopVM", change}, {"restart", "RestartVM", change}, {"force-stop", "ForceStopVM", change},
 		{"disks", "ListVMDisks", get}, {"create-disk", "CreateVMDisk", change}, {"attach-disk", "AttachVMDisk", change}, {"detach-disk", "DetachVMDisk", change}, {"delete-disk", "DeleteVMDisk", change},
 		{"media", "ListVMMedia", func() proto.Message { return new(view.ListMediaRequest) }},
+		{"dns-defaults", "GetVMDNSDefaults", func() proto.Message { return new(view.GetDNSDefaultsRequest) }},
 		{"set-media", "SetVMMedia", change}, {"eject-media", "EjectVMMedia", change}, {"set-boot", "SetVMBootDevice", change},
 		{"snapshots", "ListVMSnapshots", get}, {"snapshot", "GetVMSnapshot", func() proto.Message { return new(view.GetSnapshotRequest) }},
 		{"create-snapshot", "CreateVMSnapshot", change}, {"delete-snapshot", "DeleteVMSnapshot", change}, {"preview-restore", "PreviewVMRestore", change}, {"restore-snapshot", "RestoreVMSnapshot", change}, {"console", "CreateVMConsoleSession", change},
@@ -195,6 +196,8 @@ func invokeVMHTTP(ctx context.Context, s *service.VMService, action string, in p
 		return s.DeleteVMDisk(ctx, in.(*view.ChangeVMRequest))
 	case "media":
 		return s.ListVMMedia(ctx, in.(*view.ListMediaRequest))
+	case "dns-defaults":
+		return s.GetVMDNSDefaults(ctx, in.(*view.GetDNSDefaultsRequest))
 	case "set-media":
 		return s.SetVMMedia(ctx, in.(*view.ChangeVMRequest))
 	case "eject-media":

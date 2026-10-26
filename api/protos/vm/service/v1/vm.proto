@@ -3,12 +3,18 @@ package vm.service.v1;
 import "redact/v1/redact.proto";
 
 message VMNetworkSelection { string vpc_id=1; string subnet_id=2; }
+// The platform resolves default addresses; callers may only supply a selection.
+message VMDNSSelection { string mode=1; repeated string nameservers=2; }
+message VMFrozenDNS { string mode=1; repeated string nameservers=2; }
+message GetDNSDefaultsRequest {}
+message DNSDefaults { repeated string nameservers=1; }
 message InitialDataDisk { string client_disk_key=1; string name=2; int64 size_gb=3; }
 message CreateVMData {
  string idempotency_key=1; string name=2; string preset_id=3; string source_kind=4;
  string media_key=5; int64 system_disk_size_gb=6; repeated InitialDataDisk data_disks=7;
  VMNetworkSelection network=8; optional bool start_after_create=9;
  CreateGuestInitialization guest_initialization=10;
+ VMDNSSelection dns=11;
 }
 message CreateGuestInitialization { string username=1; string password=2 [(redact.value).string=""]; string ssh_public_key=3; }
 message CreateVMRequest { CreateVMData data=1; }
@@ -34,6 +40,7 @@ message VirtualMachine {
  repeated VMDisk disks=13; repeated VMMediaState media=14; string boot_device=15;
  string preset_id=16; int64 cpu_millis=17; int64 memory_mib=18;
  int64 system_disk_size_gb=19; string source_kind=20; string media_key=21;
+ VMFrozenDNS dns=22;
 }
 message ListVMsResponse { repeated VirtualMachine items=1; int64 total=2; }
 message VMDisk {
