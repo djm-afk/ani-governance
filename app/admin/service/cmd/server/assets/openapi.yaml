@@ -407,6 +407,101 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorDevices'
+    /api/v1/admin/accelerator/discovered-nodes:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_ListDiscoveredNodes
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorDiscoveredNodes'
+    /api/v1/admin/accelerator/initialization:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_GetInitialization
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitialization'
+    /api/v1/admin/accelerator/initializations:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_CreateInitialization
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateAcceleratorInitializationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitializationOperation'
+    /api/v1/admin/accelerator/initializations/{operation_id}:
+        get:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_GetInitializationOperation
+            parameters:
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitializationOperation'
+    /api/v1/admin/accelerator/initializations/{operation_id}:retry:
+        post:
+            tags:
+                - AcceleratorAdminService
+            operationId: AcceleratorAdminService_RetryInitializationOperation
+            parameters:
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RetryAcceleratorInitializationOperationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorInitializationOperation'
     /api/v1/admin/accelerator/pools:
         get:
             tags:
@@ -3209,6 +3304,71 @@ paths:
                                 $ref: '#/components/schemas/GetPlatformNetworkCapabilitiesResponse'
             security:
                 - BearerAuth: []
+    /api/v1/admin/networks/default-vpc-egresses:
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateDefaultVPCEgress
+            description: Requires platform user JWT and network:platform:default-egress:create. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness.
+            operationId: PlatformNetworkService_CreateDefaultVPCEgress
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateDefaultVPCEgressRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/default-vpc-egresses/{egress_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetDefaultVPCEgress
+            description: Requires platform user JWT and network:platform:default-egress:get. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness.
+            operationId: PlatformNetworkService_GetDefaultVPCEgress
+            parameters:
+                - name: egress_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteDefaultVPCEgress
+            description: Requires platform user JWT and network:platform:default-egress:delete. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness.
+            operationId: PlatformNetworkService_DeleteDefaultVPCEgress
+            parameters:
+                - name: egress_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
     /api/v1/admin/networks/devices:
         post:
             tags:
@@ -3251,6 +3411,55 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetNetworkDeviceResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/devices/{device_id}/retirement:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetNetworkDeviceRetirement
+            description: Requires platform user JWT and network:platform:device-retirement:get. Restricted legacy registration closure preserves history and fencing; blocked or unknown outcomes are not completion. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetNetworkDeviceRetirement
+            parameters:
+                - name: device_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetNetworkDeviceRetirementResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: RetireNetworkDevice
+            description: Requires platform user JWT and network:platform:device-retirement:create. Restricted legacy registration closure preserves history and fencing; blocked or unknown outcomes are not completion. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_RetireNetworkDevice
+            parameters:
+                - name: device_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RetireNetworkDeviceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RetireNetworkDeviceResponse'
             security:
                 - BearerAuth: []
     /api/v1/admin/networks/egress-gateways:
@@ -3545,6 +3754,14 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: cluster_id
+                  in: query
+                  schema:
+                    type: string
+                - name: virtual_switch_id
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -3756,6 +3973,105 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/RecordPublicPoolVerificationResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/virtual-switches:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListVirtualSwitches
+            description: Requires platform user JWT and network:platform:virtual-switch:list. Lists use page/pageSize with direct items/total; total is a decimal string. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListVirtualSwitches
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVirtualSwitchesResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - PlatformNetworkService
+            summary: CreateVirtualSwitch
+            description: Requires platform user JWT and network:platform:virtual-switch:create. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_CreateVirtualSwitch
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVirtualSwitchRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateVirtualSwitchResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/virtual-switches/{virtual_switch_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetVirtualSwitch
+            description: Requires platform user JWT and network:platform:virtual-switch:get. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetVirtualSwitch
+            parameters:
+                - name: virtual_switch_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetVirtualSwitchResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: DeleteVirtualSwitch
+            description: Requires platform user JWT and network:platform:virtual-switch:delete. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_DeleteVirtualSwitch
+            parameters:
+                - name: virtual_switch_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteVirtualSwitchResponse'
             security:
                 - BearerAuth: []
     /api/v1/admin/networks/vlan-networks:
@@ -7203,13 +7519,14 @@ paths:
                 - name: usage
                   in: query
                   required: true
-                  description: 'Required: CONTAINER_INSTANCE, TRAINING (including fine-tuning), or INFERENCE.'
+                  description: 'Required: CONTAINER_INSTANCE, TRAINING (including fine-tuning), INFERENCE, or VIRTUAL_MACHINE.'
                   schema:
                     type: string
                     enum:
                         - CONTAINER_INSTANCE
                         - TRAINING
                         - INFERENCE
+                        - VIRTUAL_MACHINE
                 - name: page
                   in: query
                   schema:
@@ -7608,126 +7925,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InferenceAcceptance'
-    /api/v1/inference/services/{data.resource_id}:delete:
-        post:
-            tags:
-                - InferenceService
-            operationId: InferenceService_DeleteInference
-            parameters:
-                - name: data.resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/DeleteInferenceRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/InferenceAcceptance'
-    /api/v1/inference/services/{data.resource_id}:restart:
-        post:
-            tags:
-                - InferenceService
-            operationId: InferenceService_RestartInference
-            parameters:
-                - name: data.resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/InferenceAcceptance'
-    /api/v1/inference/services/{data.resource_id}:start:
-        post:
-            tags:
-                - InferenceService
-            operationId: InferenceService_StartInference
-            parameters:
-                - name: data.resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/InferenceAcceptance'
-    /api/v1/inference/services/{data.resource_id}:stop:
-        post:
-            tags:
-                - InferenceService
-            operationId: InferenceService_StopInference
-            parameters:
-                - name: data.resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/InferenceAcceptance'
-    /api/v1/inference/services/{data.resource_id}:update:
-        post:
-            tags:
-                - InferenceService
-            operationId: InferenceService_UpdateInference
-            parameters:
-                - name: data.resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/UpdateInferenceRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/InferenceAcceptance'
     /api/v1/inference/services/{resource_id}:
         get:
             tags:
@@ -7746,6 +7943,170 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InferenceView'
+    /api/v1/inference/services/{resource_id}/events:
+        get:
+            tags:
+                - InferenceDiagnosticsService
+            operationId: InferenceDiagnosticsService_ListRuntimeEvents
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: since
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: until
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: type
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListRuntimeEventsResponse'
+    /api/v1/inference/services/{resource_id}/logs:
+        get:
+            tags:
+                - InferenceDiagnosticsService
+            operationId: InferenceDiagnosticsService_GetRuntimeLogs
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: instance
+                  in: query
+                  schema:
+                    type: string
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: since
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: until
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: tail_lines
+                  in: query
+                  schema:
+                    type: string
+                - name: level
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RuntimeLogsResponse'
+    /api/v1/inference/services/{resource_id}/logs:stream:
+        get:
+            tags:
+                - InferenceDiagnosticsService
+            description: Served as bounded SSE by the custom HTTP handler.
+            operationId: InferenceDiagnosticsService_StreamRuntimeLogs
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: instance
+                  in: query
+                  schema:
+                    type: string
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: since
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: until
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: tail_lines
+                  in: query
+                  schema:
+                    type: string
+                - name: level
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RuntimeLogLine'
+    /api/v1/inference/services/{resource_id}/metrics:
+        get:
+            tags:
+                - InferenceDiagnosticsService
+            operationId: InferenceDiagnosticsService_GetInferenceMetrics
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: step
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceMetricsResponse'
     /api/v1/inference/services/{resource_id}/operations:
         get:
             tags:
@@ -7774,6 +8135,187 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ListInferenceOperationsResponse'
+    /api/v1/inference/services/{resource_id}/policy:
+        get:
+            tags:
+                - InferenceService
+            description: Requires inference:policy:read and an active INFERENCE subscription.
+            operationId: InferenceService_GetServicePolicy
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetServicePolicyResponse'
+        put:
+            tags:
+                - InferenceService
+            description: Requires inference:policy:update. Full replacement; empty allowlist denies all.
+            operationId: InferenceService_UpdateServicePolicy
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateServicePolicyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateServicePolicyResponse'
+    /api/v1/inference/services/{resource_id}/runtime:
+        get:
+            tags:
+                - InferenceDiagnosticsService
+            operationId: InferenceDiagnosticsService_GetRuntimeDiagnostics
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RuntimeDiagnostics'
+    /api/v1/inference/services/{resource_id}:delete:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_DeleteInference
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteInferenceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{resource_id}:restart:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_RestartInference
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{resource_id}:start:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_StartInference
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{resource_id}:stop:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_StopInference
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InferenceServiceCommandRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
+    /api/v1/inference/services/{resource_id}:update:
+        post:
+            tags:
+                - InferenceService
+            operationId: InferenceService_UpdateInference
+            parameters:
+                - name: resource_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateInferenceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceAcceptance'
     /api/v1/instance-operations/{operation_id}:
         get:
             tags:
@@ -8570,6 +9112,37 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/models/{model_id}/operations:
+        get:
+            tags:
+                - ModelService
+            description: |-
+                Authenticated tenant principal, model:service:read and MODEL plan required.
+                 Model verifies ownership; inaccessible models return 404.
+            operationId: ModelService_ListModelOperations
+            parameters:
+                - name: model_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListModelOperationsResponse'
     /api/v1/models/{model_id}/upload-url:
         post:
             tags:
@@ -8615,6 +9188,10 @@ paths:
                   schema:
                     type: integer
                     format: int32
+                - name: status
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -9730,6 +10307,707 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/virtual-machine-media:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMMedia
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListMediaResponse'
+    /api/v1/virtual-machines:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMs
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVMsResponse'
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVM
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+    /api/v1/virtual-machines/{data.vm_id}:
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_DeleteVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMAcceptance'
+    /api/v1/virtual-machines/{data.vm_id}/boot:
+        put:
+            tags:
+                - VMService
+            operationId: VMService_SetVMBootDevice
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/console-sessions:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVMConsoleSession
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMConsoleSession'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMConsoleSession'
+    /api/v1/virtual-machines/{data.vm_id}/disks:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}:
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_DeleteVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.disk_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/attach:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_AttachVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.disk_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/detach:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_DetachVMDisk
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.disk_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/force-stop:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_ForceStopVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/media/{data.slot}:
+        put:
+            tags:
+                - VMService
+            operationId: VMService_SetVMMedia
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.slot
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_EjectVMMedia
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.slot
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/restart:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_RestartVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_CreateVMSnapshot
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}:
+        delete:
+            tags:
+                - VMService
+            operationId: VMService_DeleteVMSnapshot
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}/restore:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_RestoreVMSnapshot
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}/restore-preview:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_PreviewVMRestore
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: data.snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMRestorePreview'
+    /api/v1/virtual-machines/{data.vm_id}/start:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_StartVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{data.vm_id}/stop:
+        post:
+            tags:
+                - VMService
+            operationId: VMService_StopVM
+            parameters:
+                - name: data.vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeVMRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{vm_id}:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVM
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VirtualMachine'
+    /api/v1/virtual-machines/{vm_id}/disks:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMDisks
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListDisksResponse'
+    /api/v1/virtual-machines/{vm_id}/operations/{operation_id}:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMOperation
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{vm_id}/snapshots:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_ListVMSnapshots
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListSnapshotsResponse'
+    /api/v1/virtual-machines/{vm_id}/snapshots/{snapshot_id}:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMSnapshot
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: snapshot_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMSnapshot'
     /api/v1/instances/{instance_id}/logs:
         get:
             tags:
@@ -10006,6 +11284,68 @@ components:
                         $ref: '#/components/schemas/AcceleratorDevice'
                 next_page_token:
                     type: string
+        AcceleratorDiscoveredBaseline:
+            type: object
+            properties:
+                baseline_ref:
+                    type: string
+                mode:
+                    type: string
+                source:
+                    type: string
+        AcceleratorDiscoveredGPU:
+            type: object
+            properties:
+                uuid:
+                    type: string
+                model_key:
+                    type: string
+                physical_memory_bytes:
+                    type: string
+                safe_memory_budget_mib:
+                    type: string
+                budget_reason:
+                    type: string
+        AcceleratorDiscoveredNode:
+            type: object
+            properties:
+                node:
+                    $ref: '#/components/schemas/AcceleratorNode'
+                group_id:
+                    type: string
+                gpus:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredGPU'
+                baselines:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredBaseline'
+                agent_online:
+                    type: boolean
+                agent_lease_expires_at:
+                    type: string
+                sources:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorNodeSource'
+                selectable:
+                    type: boolean
+                blocking_reasons:
+                    type: array
+                    items:
+                        type: string
+        AcceleratorDiscoveredNodes:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredNode'
+                total:
+                    type: string
+                discovery_revision:
+                    type: string
         AcceleratorGpuRequest:
             type: object
             properties:
@@ -10025,6 +11365,191 @@ components:
                     format: uint32
                 container_name:
                     type: string
+        AcceleratorInitialization:
+            type: object
+            properties:
+                registered:
+                    type: boolean
+                connection_ref:
+                    type: string
+                cluster_id:
+                    type: string
+                display_name:
+                    type: string
+                configuration_state:
+                    type: string
+                checks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationCheck'
+                latest_operation:
+                    $ref: '#/components/schemas/AcceleratorInitializationOperation'
+                configuration_complete:
+                    type: boolean
+        AcceleratorInitializationCheck:
+            type: object
+            properties:
+                key:
+                    type: string
+                source:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+        AcceleratorInitializationExistingGroup:
+            type: object
+            properties:
+                group_id:
+                    type: string
+                expected_version:
+                    type: string
+        AcceleratorInitializationGroupInput:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                existing_group:
+                    $ref: '#/components/schemas/AcceleratorInitializationExistingGroup'
+                new_group:
+                    $ref: '#/components/schemas/AcceleratorInitializationNewGroup'
+        AcceleratorInitializationGroupResult:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                group_id:
+                    type: string
+                recorded_group_version:
+                    type: string
+                auto_open_result:
+                    type: string
+                admission:
+                    type: string
+        AcceleratorInitializationNewGroup:
+            type: object
+            properties:
+                pool_key:
+                    type: string
+                display_name:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorNode'
+                baseline_ref:
+                    type: string
+                queue_name:
+                    type: string
+        AcceleratorInitializationNewPool:
+            type: object
+            properties:
+                display_name:
+                    type: string
+        AcceleratorInitializationOperation:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                version:
+                    type: string
+                state:
+                    type: string
+                created_at:
+                    type: string
+                updated_at:
+                    type: string
+                current_step:
+                    type: string
+                retryable:
+                    type: boolean
+                reason:
+                    type: string
+                required_actions:
+                    type: array
+                    items:
+                        type: string
+                cluster_id:
+                    type: string
+                pools:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationPoolResult'
+                groups:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationGroupResult'
+                profiles:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationProfileResult'
+                steps:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationStep'
+        AcceleratorInitializationPoolInput:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                existing_pool_id:
+                    type: string
+                new_pool:
+                    $ref: '#/components/schemas/AcceleratorInitializationNewPool'
+        AcceleratorInitializationPoolResult:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                pool_id:
+                    type: string
+        AcceleratorInitializationProfileInput:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                group_key:
+                    type: string
+                display_name:
+                    type: string
+                memory_mib_per_device:
+                    type: string
+                core_limit_percent:
+                    type: integer
+                    format: uint32
+                max_devices_per_replica:
+                    type: integer
+                    format: uint32
+        AcceleratorInitializationProfileResult:
+            type: object
+            properties:
+                client_key:
+                    type: string
+                profile_id:
+                    type: string
+                recorded_revision:
+                    type: string
+                recorded_state:
+                    type: string
+        AcceleratorInitializationStep:
+            type: object
+            properties:
+                step_id:
+                    type: string
+                object_key:
+                    type: string
+                kind:
+                    type: string
+                state:
+                    type: string
+                resource_id:
+                    type: string
+                input_group_version:
+                    type: string
+                output_group_version:
+                    type: string
+                reason:
+                    type: string
         AcceleratorNode:
             type: object
             properties:
@@ -10032,6 +11557,21 @@ components:
                     type: string
                 name:
                     type: string
+        AcceleratorNodeSource:
+            type: object
+            properties:
+                source:
+                    type: string
+                observed_at:
+                    type: string
+                received_at:
+                    type: string
+                complete:
+                    type: boolean
+                issues:
+                    type: array
+                    items:
+                        type: string
         AcceleratorObservation:
             type: object
             properties:
@@ -10395,6 +11935,7 @@ components:
                         - IMAGE
                         - INFERENCE
                         - INSTANCE
+                        - VIRTUAL_MACHINE
                     type: string
                     description: 所属业务功能模块（用于套餐白名单过滤）
                     format: enum
@@ -10677,6 +12218,40 @@ components:
                     type: string
                     description: 新密码
             description: 修改用户密码（需要验证旧密码） - 请求
+        ChangeVMData:
+            type: object
+            properties:
+                vmId:
+                    type: string
+                idempotencyKey:
+                    type: string
+                expectedVersion:
+                    type: string
+                destructiveConfirmation:
+                    type: boolean
+                diskId:
+                    type: string
+                guestPreparedConfirmation:
+                    type: boolean
+                name:
+                    type: string
+                sizeGb:
+                    type: string
+                slot:
+                    type: string
+                mediaKey:
+                    type: string
+                bootDevice:
+                    type: string
+                snapshotId:
+                    type: string
+                previewDigest:
+                    type: string
+        ChangeVMRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/ChangeVMData'
         CleanupTenantDataRequest:
             type: object
             properties:
@@ -10790,6 +12365,30 @@ components:
                     type: string
                     description: 任务执行类型名，例如 "send_email"、"generate_report" 等，用于区分不同类型的任务
             description: 控制调度任务 - 请求
+        CreateAcceleratorInitializationData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                discovery_revision:
+                    type: string
+                pools:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationPoolInput'
+                groups:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationGroupInput'
+                profiles:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorInitializationProfileInput'
+        CreateAcceleratorInitializationRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateAcceleratorInitializationData'
         CreateAcceleratorPoolData:
             type: object
             properties:
@@ -10871,6 +12470,25 @@ components:
                 data:
                     $ref: '#/components/schemas/Config'
             description: 创建系统参数 - 请求
+        CreateDefaultVPCEgressData:
+            type: object
+            properties:
+                name:
+                    type: string
+                pool_id:
+                    type: string
+                idempotency_key:
+                    type: string
+        CreateDefaultVPCEgressRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateDefaultVPCEgressData'
+        CreateDefaultVPCEgressResponse:
+            type: object
+            properties:
+                egress:
+                    $ref: '#/components/schemas/DefaultVPCEgress'
         CreateDictEntryRequest:
             type: object
             properties:
@@ -10973,7 +12591,17 @@ components:
             description: |-
                 Returned only after Governance has durably accepted the frozen intent.
                  Acceptance does not establish a KFP Run or successful training.
-        CreateInferenceData:
+        CreateGuestInitialization:
+            type: object
+            properties:
+                username:
+                    type: string
+                password:
+                    type: string
+                sshPublicKey:
+                    type: string
+        CreateInferenceRequest:
+            example: {"idempotency_key": "req-001", "name": "qwen-inference", "model_version_id": "version-1", "served_model_name": "qwen2.5-1.5b-instruct", "engine_image": "registry.example/vllm:latest", "engine_type": "vllm", "command": "exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096", "cpu": "8", "memory": "32Gi", "replicas": 1, "preset_id": "40000000-0000-4000-8000-000000000001"}
             type: object
             properties:
                 idempotency_key:
@@ -11011,13 +12639,7 @@ components:
                     format: int32
                 preset_id:
                     type: string
-                    description: Required for new managed creates. Legacy resource fields remain reserved input and are rejected.
-        CreateInferenceRequest:
-            example: {"data": {"idempotency_key": "20000000-0000-4000-8000-000000000001", "name": "qwen-inference", "model_version_id": "30000000-0000-4000-8000-000000000001", "served_model_name": "qwen2.5-1.5b-instruct", "engine_image": "registry.example/vllm:latest", "engine_type": "vllm", "command": "exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096", "replicas": 1, "preset_id": "40000000-0000-4000-8000-000000000001"}}
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/CreateInferenceData'
+                    description: Required for new managed creates. Legacy resource fields remain rejected.
             description: |-
                 Public user intent. Trusted attachments, charges, identity and destination
                  are assembled by Governance and have no representation in this DTO.
@@ -11164,7 +12786,7 @@ components:
                 data:
                     $ref: '#/components/schemas/Menu'
             description: 创建菜单 - 请求
-        CreateModelData:
+        CreateModelRequest:
             type: object
             properties:
                 name:
@@ -11181,17 +12803,12 @@ components:
                     type: string
                 model_id:
                     type: string
-        CreateModelRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/CreateModelData'
         CreateModelResponse:
             type: object
             properties:
                 model:
                     $ref: '#/components/schemas/Model'
-        CreateModelVersionData:
+        CreateModelVersionRequest:
             type: object
             properties:
                 model_id:
@@ -11220,11 +12837,6 @@ components:
                     type: string
                 engine_image:
                     type: string
-        CreateModelVersionRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/CreateModelVersionData'
         CreateModelVersionResponse:
             type: object
             properties:
@@ -11391,6 +13003,36 @@ components:
                     type: string
                     format: enum
             description: 创建用户 - 请求
+        CreateVMData:
+            type: object
+            properties:
+                idempotencyKey:
+                    type: string
+                name:
+                    type: string
+                presetId:
+                    type: string
+                sourceKind:
+                    type: string
+                mediaKey:
+                    type: string
+                systemDiskSizeGb:
+                    type: string
+                dataDisks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InitialDataDisk'
+                network:
+                    $ref: '#/components/schemas/VMNetworkSelection'
+                startAfterCreate:
+                    type: boolean
+                guestInitialization:
+                    $ref: '#/components/schemas/CreateGuestInitialization'
+        CreateVMRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVMData'
         CreateVPCRequest:
             type: object
             properties:
@@ -11407,6 +13049,23 @@ components:
             properties:
                 vpc:
                     $ref: '#/components/schemas/VPC'
+        CreateVirtualSwitchData:
+            type: object
+            properties:
+                name:
+                    type: string
+                idempotency_key:
+                    type: string
+        CreateVirtualSwitchRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVirtualSwitchData'
+        CreateVirtualSwitchResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/VirtualSwitch'
         CreateVlanNetworkData:
             type: object
             properties:
@@ -11420,6 +13079,13 @@ components:
                     type: integer
                     format: int32
                 idempotency_key:
+                    type: string
+                cluster_id:
+                    type: string
+                    description: Legacy device_id and the three v2 fields are mutually exclusive.
+                virtual_switch_id:
+                    type: string
+                device_name:
                     type: string
         CreateVlanNetworkRequest:
             type: object
@@ -11623,6 +13289,69 @@ components:
                     type: boolean
                 string:
                     type: string
+        DefaultVPCEgress:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                pool_id:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                version:
+                    type: string
+                last_operation_id:
+                    type: string
+                operation_state:
+                    type: string
+                phase:
+                    type: string
+                pending_unknown:
+                    type: boolean
+                address:
+                    type: string
+                eip_provider_name:
+                    type: string
+                eip_provider_uid:
+                    type: string
+                snat_provider_name:
+                    type: string
+                snat_provider_uid:
+                    type: string
+                desired_enabled:
+                    type: boolean
+                applied_enabled:
+                    type: boolean
+                cluster_id:
+                    type: string
+                cluster_uid:
+                    type: string
+                default_vpc_namespace:
+                    type: string
+                default_vpc_name:
+                    type: string
+                default_vpc_uid:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                observed_at:
+                    type: string
+                    format: date-time
+                target_generation:
+                    type: string
+                pending_action:
+                    type: string
+                observation_stale:
+                    type: boolean
+            description: The system VPC identity is output-only and fixed by Resource configuration.
         DeleteAcceleratorProfileData:
             type: object
             properties:
@@ -11642,6 +13371,11 @@ components:
             properties:
                 status:
                     type: string
+        DeleteDefaultVPCEgressResponse:
+            type: object
+            properties:
+                egress:
+                    $ref: '#/components/schemas/DefaultVPCEgress'
         DeleteEIPResponse:
             type: object
             properties:
@@ -11652,7 +13386,7 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
-        DeleteInferenceData:
+        DeleteInferenceRequest:
             type: object
             properties:
                 idempotency_key:
@@ -11661,11 +13395,6 @@ components:
                     type: string
                 expected_generation:
                     type: string
-        DeleteInferenceRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/DeleteInferenceData'
         DeleteIntranetAddressPoolResponse:
             type: object
             properties:
@@ -11711,6 +13440,11 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        DeleteVirtualSwitchResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/VirtualSwitch'
         DeleteVlanNetworkResponse:
             type: object
             properties:
@@ -11802,6 +13536,37 @@ components:
                     type: string
                     description: 内核版本
             description: 设备信息
+        DeviceRetirement:
+            type: object
+            properties:
+                device_id:
+                    type: string
+                operation_id:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                version:
+                    type: string
+                expected_version:
+                    type: string
+                config_uid:
+                    type: string
+                fence_version:
+                    type: string
+                pending_unknown:
+                    type: boolean
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                completed_at:
+                    type: string
+                    format: date-time
+            description: A restricted legacy registration closure has a durable fence and keeps history.
         DictEntry:
             type: object
             properties:
@@ -12501,6 +14266,11 @@ components:
                 imageBase64:
                     type: string
                     description: 验证码图片的Base64编码字符串，客户端可以解码并显示给用户
+        GetDefaultVPCEgressResponse:
+            type: object
+            properties:
+                egress:
+                    $ref: '#/components/schemas/DefaultVPCEgress'
         GetEIPResponse:
             type: object
             properties:
@@ -12630,6 +14400,11 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        GetNetworkDeviceRetirementResponse:
+            type: object
+            properties:
+                retirement:
+                    $ref: '#/components/schemas/DeviceRetirement'
         GetOperationResponse:
             type: object
             properties:
@@ -12655,6 +14430,11 @@ components:
             properties:
                 credential:
                     $ref: '#/components/schemas/PublisherCredential'
+        GetServicePolicyResponse:
+            type: object
+            properties:
+                policy:
+                    $ref: '#/components/schemas/ServicePolicy'
         GetSubnetResponse:
             type: object
             properties:
@@ -12713,6 +14493,11 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        GetVirtualSwitchResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/VirtualSwitch'
         GetVlanNetworkResponse:
             type: object
             properties:
@@ -12970,17 +14755,6 @@ components:
                     type: string
                 step_timeout_seconds:
                     type: string
-        ImportModelBundleData:
-            type: object
-            properties:
-                idempotency_key:
-                    type: string
-                model:
-                    $ref: '#/components/schemas/ImportModelBundleModelData'
-                version:
-                    $ref: '#/components/schemas/ImportModelBundleVersionData'
-                source:
-                    $ref: '#/components/schemas/ImportModelBundleSourceData'
         ImportModelBundleModelData:
             type: object
             properties:
@@ -13003,8 +14777,14 @@ components:
         ImportModelBundleRequest:
             type: object
             properties:
-                data:
-                    $ref: '#/components/schemas/ImportModelBundleData'
+                idempotency_key:
+                    type: string
+                model:
+                    $ref: '#/components/schemas/ImportModelBundleModelData'
+                version:
+                    $ref: '#/components/schemas/ImportModelBundleVersionData'
+                source:
+                    $ref: '#/components/schemas/ImportModelBundleSourceData'
         ImportModelBundleResponse:
             type: object
             properties:
@@ -13036,7 +14816,7 @@ components:
                     type: string
                 startup_command:
                     type: string
-        ImportModelData:
+        ImportModelRequest:
             type: object
             properties:
                 source:
@@ -13053,11 +14833,6 @@ components:
                     type: string
                 model_version_id:
                     type: string
-        ImportModelRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/ImportModelData'
         ImportModelResponse:
             type: object
             properties:
@@ -13106,7 +14881,43 @@ components:
                     description: Durable Governance admission; this is not model readiness.
                 dispatch_operation_id:
                     type: string
-        InferenceServiceCommandData:
+        InferenceMetricPoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                value:
+                    type: number
+                    format: double
+        InferenceMetricSeries:
+            type: object
+            properties:
+                name:
+                    type: string
+                unit:
+                    type: string
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InferenceMetricPoint'
+        InferenceMetricsResponse:
+            type: object
+            properties:
+                series:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InferenceMetricSeries'
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                step:
+                    type: integer
+                    format: int32
+        InferenceServiceCommandRequest:
             type: object
             properties:
                 idempotency_key:
@@ -13115,11 +14926,6 @@ components:
                     type: string
                 expected_generation:
                     type: string
-        InferenceServiceCommandRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/InferenceServiceCommandData'
         InferenceView:
             type: object
             properties:
@@ -13181,10 +14987,6 @@ components:
                     type: string
                 selection_digest:
                     type: string
-            description: |-
-                InferenceView is the Governance-owned read projection for UI consumers.
-                 It intentionally keeps the business-facing flat fields while hiding
-                 Inference's resource, runtime, engine, artifact and admission internals.
         InfoEntry:
             type: object
             properties:
@@ -13218,6 +15020,15 @@ components:
                     type: array
                     items:
                         type: string
+        InitialDataDisk:
+            type: object
+            properties:
+                clientDiskKey:
+                    type: string
+                name:
+                    type: string
+                sizeGb:
+                    type: string
         InputVersionView:
             type: object
             properties:
@@ -13906,6 +15717,13 @@ components:
                 total:
                     type: string
             description: 查询字典类型列表 - 回应
+        ListDisksResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMDisk'
         ListEIPsResponse:
             type: object
             properties:
@@ -14081,6 +15899,13 @@ components:
                 total:
                     type: string
             description: 查询登录策略列表 - 回应
+        ListMediaResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMMedia'
         ListMenuResponse:
             type: object
             properties:
@@ -14091,6 +15916,15 @@ components:
                 total:
                     type: string
             description: 查询菜单列表 - 回应
+        ListModelOperationsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ModelOperation'
+                total:
+                    type: string
         ListModelVersionsResponse:
             type: object
             properties:
@@ -14316,6 +16150,22 @@ components:
                     items:
                         $ref: '#/components/schemas/MenuRouteItem'
             description: 查询路由列表 - 回应
+        ListRuntimeEventsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RuntimeEvent'
+                total:
+                    type: string
+        ListSnapshotsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMSnapshot'
         ListSubnetsResponse:
             type: object
             properties:
@@ -14388,6 +16238,15 @@ components:
                     type: string
                     description: 下一页游标：有下一页时返回，末页为空。客户端原样回传，不得解析或修改。
             description: 获取用户列表 - 答复
+        ListVMsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualMachine'
+                total:
+                    type: string
         ListVPCCIDRPresetsResponse:
             type: object
             properties:
@@ -14402,6 +16261,15 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/VPC'
+                total:
+                    type: string
+        ListVirtualSwitchesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualSwitch'
                 total:
                     type: string
         ListVlanNetworksResponse:
@@ -15054,6 +16922,7 @@ components:
                         - IMAGE
                         - INFERENCE
                         - INSTANCE
+                        - VIRTUAL_MACHINE
                     type: string
                     description: 所属业务功能模块
                     format: enum
@@ -15240,6 +17109,34 @@ components:
                     type: string
                     format: date-time
                 model_id:
+                    type: string
+        ModelOperation:
+            type: object
+            properties:
+                id:
+                    type: string
+                model_id:
+                    type: string
+                model_version_id:
+                    type: string
+                action:
+                    type: string
+                actor:
+                    type: string
+                result:
+                    type: string
+                before_state:
+                    type: string
+                after_state:
+                    type: string
+                error_class:
+                    type: string
+                request_id:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                task_id:
                     type: string
         ModelRegistrationView:
             type: object
@@ -16333,6 +18230,7 @@ components:
                         - IMAGE
                         - INFERENCE
                         - INSTANCE
+                        - VIRTUAL_MACHINE
                     type: string
                     description: 功能模块
                     format: enum
@@ -17161,6 +19059,39 @@ components:
                     type: integer
                     format: int32
             description: 重启调度任务 - 回应
+        RetireNetworkDeviceData:
+            type: object
+            properties:
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        RetireNetworkDeviceRequest:
+            type: object
+            properties:
+                device_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RetireNetworkDeviceData'
+        RetireNetworkDeviceResponse:
+            type: object
+            properties:
+                retirement:
+                    $ref: '#/components/schemas/DeviceRetirement'
+        RetryAcceleratorInitializationOperationData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                expected_version:
+                    type: string
+        RetryAcceleratorInitializationOperationRequest:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RetryAcceleratorInitializationOperationData'
         RetryImportTaskRequest:
             type: object
             properties:
@@ -17343,6 +19274,79 @@ components:
                         type: string
                     description: 隐藏字段列表（proto 字段 json_name，如 email）
             description: 角色字段权限条目：角色在某资源上隐藏的字段集（黑名单语义）
+        RuntimeDiagnostics:
+            type: object
+            properties:
+                invocation_health:
+                    type: string
+                health_reason:
+                    type: string
+                health_observed_at:
+                    type: string
+                    description: Absent until an invocation probe with its own timestamp is recorded.
+                    format: date-time
+                runtime_observed_at:
+                    type: string
+                    format: date-time
+                instances:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RuntimeInstance'
+                observed_at:
+                    type: string
+                    format: date-time
+                invocation_endpoint:
+                    type: string
+        RuntimeEvent:
+            type: object
+            properties:
+                id:
+                    type: string
+                type:
+                    type: string
+                reason:
+                    type: string
+                message:
+                    type: string
+                timestamp:
+                    type: string
+                    format: date-time
+                instance:
+                    type: string
+                count:
+                    type: string
+        RuntimeInstance:
+            type: object
+            properties:
+                name:
+                    type: string
+                uid:
+                    type: string
+                phase:
+                    type: string
+                containers:
+                    type: array
+                    items:
+                        type: string
+        RuntimeLogLine:
+            type: object
+            properties:
+                level:
+                    type: string
+                timestamp:
+                    type: string
+                    format: date-time
+                message:
+                    type: string
+        RuntimeLogsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RuntimeLogLine'
+                truncated:
+                    type: boolean
         RuntimeMount:
             type: object
             properties:
@@ -17655,6 +19659,31 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/NamedServerVariable'
+        ServicePolicy:
+            type: object
+            properties:
+                resource_id:
+                    type: string
+                allowed_tenants:
+                    type: array
+                    items:
+                        type: string
+                rate_limits:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/ServiceRateLimit'
+                updated_at:
+                    type: string
+                    format: date-time
+        ServiceRateLimit:
+            type: object
+            properties:
+                requests_per_minute:
+                    type: integer
+                    format: int32
+                requests_per_hour:
+                    type: integer
+                    format: int32
         SetAcceleratorAdmissionData:
             type: object
             properties:
@@ -18349,7 +20378,7 @@ components:
             properties:
                 image:
                     $ref: '#/components/schemas/ImageRegistration'
-        UpdateInferenceData:
+        UpdateInferenceRequest:
             type: object
             properties:
                 idempotency_key:
@@ -18390,15 +20419,8 @@ components:
                 worker_replicas:
                     type: integer
                     format: int32
-        UpdateInferenceRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/UpdateInferenceData'
-            description: |-
-                UpdateInferenceRequest is the tenant-facing partial update. Fields named by
-                 update_mask are forwarded as supplied; Governance never derives or edits an
-                 engine command.
+                preset_id:
+                    type: string
         UpdateInstanceSchedulingSettingsRequest:
             type: object
             properties:
@@ -18688,6 +20710,19 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/SchedulerConfigData'
+        UpdateServicePolicyRequest:
+            type: object
+            properties:
+                resource_id:
+                    type: string
+                policy:
+                    $ref: '#/components/schemas/ServicePolicy'
+            description: Replaces the whole policy bound to this service. Empty allowlist denies all.
+        UpdateServicePolicyResponse:
+            type: object
+            properties:
+                policy:
+                    $ref: '#/components/schemas/ServicePolicy'
         UpdateTaskRequest:
             type: object
             properties:
@@ -18909,6 +20944,189 @@ components:
                 exist:
                     type: boolean
             description: 用户是否存在 - 答复
+        VMAcceptance:
+            type: object
+            properties:
+                operationId:
+                    type: string
+                resourceId:
+                    type: string
+                replayed:
+                    type: boolean
+                result:
+                    type: string
+        VMConsoleSession:
+            type: object
+            properties:
+                sessionId:
+                    type: string
+                wsUrl:
+                    type: string
+                expiresAt:
+                    type: string
+        VMCurrentAddress:
+            type: object
+            properties:
+                nicName:
+                    type: string
+                address:
+                    type: string
+                observedAt:
+                    type: string
+        VMDisk:
+            type: object
+            properties:
+                diskId:
+                    type: string
+                role:
+                    type: string
+                name:
+                    type: string
+                sizeGb:
+                    type: string
+                requestedBytes:
+                    type: string
+                observedCapacityBytes:
+                    type: string
+                volumeName:
+                    type: string
+                serial:
+                    type: string
+                attached:
+                    type: boolean
+                preparationState:
+                    type: string
+                reason:
+                    type: string
+        VMMedia:
+            type: object
+            properties:
+                mediaKey:
+                    type: string
+                name:
+                    type: string
+                kind:
+                    type: string
+                osFamily:
+                    type: string
+                osVersion:
+                    type: string
+                architecture:
+                    type: string
+                firmware:
+                    type: string
+                rootBus:
+                    type: string
+                dataBus:
+                    type: string
+                nicModel:
+                    type: string
+                persistentTpm:
+                    type: boolean
+                persistentUefi:
+                    type: boolean
+                driverMediaKey:
+                    type: string
+                virtualCapacityBytes:
+                    type: string
+                initializationCapability:
+                    type: string
+                initializationVerified:
+                    type: boolean
+        VMMediaState:
+            type: object
+            properties:
+                slot:
+                    type: string
+                desiredMedia:
+                    type: string
+                observedMedia:
+                    type: string
+                effectiveNow:
+                    type: boolean
+                pendingRestart:
+                    type: boolean
+        VMNetworkSelection:
+            type: object
+            properties:
+                vpcId:
+                    type: string
+                subnetId:
+                    type: string
+        VMOperation:
+            type: object
+            properties:
+                id:
+                    type: string
+                vmId:
+                    type: string
+                action:
+                    type: string
+                intentVersion:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                observedAt:
+                    type: string
+        VMRestoreDiskImpact:
+            type: object
+            properties:
+                diskId:
+                    type: string
+                action:
+                    type: string
+                reason:
+                    type: string
+        VMRestorePreview:
+            type: object
+            properties:
+                version:
+                    type: string
+                snapshotId:
+                    type: string
+                snapshotUid:
+                    type: string
+                disks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMRestoreDiskImpact'
+                previewDigest:
+                    type: string
+        VMSnapshot:
+            type: object
+            properties:
+                snapshotId:
+                    type: string
+                sourceVmId:
+                    type: string
+                sourceVmUid:
+                    type: string
+                ready:
+                    type: boolean
+                completeness:
+                    type: string
+                included:
+                    type: array
+                    items:
+                        type: string
+                excluded:
+                    type: array
+                    items:
+                        type: string
+                indications:
+                    type: array
+                    items:
+                        type: string
+                disks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMDisk'
+                observedAt:
+                    type: string
+                reason:
+                    type: string
         VPC:
             type: object
             properties:
@@ -19019,6 +21237,111 @@ components:
                     $ref: '#/components/schemas/WebAuthnAssertion'
                 backupCode:
                     type: string
+        VirtualMachine:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                version:
+                    type: string
+                osFamily:
+                    type: string
+                osVersion:
+                    type: string
+                desiredState:
+                    type: string
+                observedState:
+                    type: string
+                reason:
+                    type: string
+                observedAt:
+                    type: string
+                addresses:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMCurrentAddress'
+                lastOperationId:
+                    type: string
+                closing:
+                    type: boolean
+                disks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMDisk'
+                media:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VMMediaState'
+                bootDevice:
+                    type: string
+                presetId:
+                    type: string
+                cpuMillis:
+                    type: string
+                memoryMib:
+                    type: string
+                systemDiskSizeGb:
+                    type: string
+                sourceKind:
+                    type: string
+                mediaKey:
+                    type: string
+        VirtualSwitch:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                reason_message:
+                    type: string
+                version:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                last_operation_id:
+                    type: string
+                cluster_id:
+                    type: string
+                group_name:
+                    type: string
+                binding_state:
+                    type: string
+                binding_version:
+                    type: string
+                membership_fingerprint:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualSwitchNode'
+            description: A persisted platform switch has no Provider object or cluster before first use.
+        VirtualSwitchNode:
+            type: object
+            properties:
+                node_name:
+                    type: string
+                node_uid:
+                    type: string
+                mac:
+                    type: string
+                priority:
+                    type: integer
+                    format: int32
+                state:
+                    type: string
+                reason:
+                    type: string
         VlanNetwork:
             type: object
             properties:
@@ -19027,6 +21350,16 @@ components:
                 vlan_id:
                     type: integer
                     format: int32
+                virtual_switch_id:
+                    type: string
+                device_name:
+                    type: string
+                group_name:
+                    type: string
+                nodes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VirtualSwitchNode'
         VolumeMount:
             type: object
             properties:
@@ -19149,12 +21482,14 @@ tags:
     - name: DictTypeService
       description: 数据字典分类管理服务
     - name: ImageService
+    - name: InferenceDiagnosticsService
+      description: Tenant-authenticated management diagnostics; inference calls remain on Higress.
     - name: InferenceService
       description: |-
         Requires trusted tenant-user Principal, active tenant and the separately
          registered INFERENCE module/action/role/plan grants. Accelerator read grants
-         cannot admit inference commands. CREATE requires preset_id; only model,
-         served name and whole engine patches may be updated. CRUD retains data.
+         cannot admit inference commands. CREATE requires preset_id; public business
+         fields are top-level and CRUD retains durable resource data.
     - name: InstanceService
     - name: InternalMessageCategoryService
       description: 站内信消息分类管理服务
@@ -19229,3 +21564,4 @@ tags:
       description: 用户个人资料服务
     - name: UserService
       description: 用户管理服务
+    - name: VMService

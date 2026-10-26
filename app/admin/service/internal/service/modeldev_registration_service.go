@@ -54,7 +54,8 @@ func (s *ModelDevService) ResumeModelRegistration(ctx context.Context, in *model
 	if original == nil || original.Scope.TenantID != principal.TenantID || original.Scope.ResourceTenantID != tenant || original.ExecutionID != in.ExecutionId {
 		return nil, modelDevRegistrationFailure(nil)
 	}
-	if original.Intent.Kind != "FINETUNING" || original.Snapshot.Finetuning == nil {
+	if original.Intent.Kind != "FINETUNING" || original.Snapshot.Finetuning == nil ||
+		original.Intent.NewModelName == nil && original.Intent.TargetModelID == nil {
 		return nil, errors.New(412, "MODEL_REGISTRATION_UNAVAILABLE", "model registration unavailable")
 	}
 	if err := s.authorization.AuthorizeFinetuning(ctx, principal.TenantID, principal.ID, original.Intent.NewModelName != nil); err != nil {

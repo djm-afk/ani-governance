@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	modeldevv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
@@ -297,11 +298,24 @@ func modelDevValidTimestamp(value *timestamppb.Timestamp) bool {
 	return value != nil && value.CheckValid() == nil && !value.AsTime().IsZero()
 }
 func modelDevValidArtifact(value *modeldevv1.ArtifactView) bool {
-	if value == nil || !modelDevCanonicalUUID(value.ArtifactId) || !modelDevCanonicalUUID(value.ExecutionId) || value.Filename == "" || path.Base(value.Filename) != value.Filename || value.Filename == "." || value.Filename == ".." || strings.Contains(value.Filename, "\\") || value.SizeBytes < 0 || !modelDevDigest(value.Sha256) ||
+	if value == nil || !modelDevCanonicalUUID(value.ArtifactId) || !modelDevCanonicalUUID(value.ExecutionId) || !modelDevArtifactRelativePath(value.Filename) || value.SizeBytes < 0 || !modelDevDigest(value.Sha256) ||
 		value.Role == trainingv1.FileRole_FILE_ROLE_UNSPECIFIED || value.DeliveryState != modeldevv1.DeliveryState_DELIVERY_STATE_PUBLISHED || !modelDevValidTimestamp(value.VerifiedAt) {
 		return false
 	}
-	for _, character := range value.Filename {
+	return true
+}
+
+// Published artifacts keep the owner's canonical, slash-separated relative path.
+func modelDevArtifactRelativePath(value string) bool {
+	if value == "" || !utf8.ValidString(value) || path.IsAbs(value) || path.Clean(value) != value || strings.Contains(value, "\\") {
+		return false
+	}
+	for _, segment := range strings.Split(value, "/") {
+		if segment == "." || segment == ".." {
+			return false
+		}
+	}
+	for _, character := range value {
 		if unicode.IsControl(character) {
 			return false
 		}

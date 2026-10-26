@@ -16,20 +16,21 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/jinzhu/inflection v1.0.0
-	github.com/liangzai006/ani-inference-service/api v0.1.1
-	github.com/liangzai006/ani-model-service v0.0.0-20261017101444-a6c9c4dd2021
+	github.com/liangzai006/ani-inference-service/api v0.1.2-0.20261021113945-1356085e3d92
+	github.com/liangzai006/ani-model-service/api v0.0.0-20261021113912-a21befaaa5e5
 	github.com/lib/pq v1.12.3
 	github.com/mileusna/useragent v1.3.5
 	github.com/pquerna/otp v1.5.0
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.12.1
 	github.com/xiaoqidun/entps v1.50.1
-	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261021231649-b51b9c135728
-	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261021233353-ea047cc3029f
+	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261022092841-c8d761d4ff1a
+	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261023050121-af7f9e989473
 	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.1
-	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261019174951-733f625995f8
+	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261024051201-01c079f1787f
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
-	github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261013075651-d889f9490b84
+	github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f
+	github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261024051540-811cc3839244
 	go.opentelemetry.io/otel/trace v1.46.0
 	golang.org/x/net v0.60.0
 	google.golang.org/genproto v0.0.0-20260908043556-f8649ddbbfe6

@@ -116,7 +116,7 @@ func TestModelDevGPUStoredCommandBindsOriginalIdentityActorAndAllCharges(t *test
 		t.Fatal(err)
 	}
 	base := StoredCommand{Owner: ModelDevOwner, Action: ModelDevCreateAction, TenantID: envelope.TenantID, ResourceID: envelope.ExecutionID, OperationID: envelope.OperationID, ActorType: "user", ActorID: "42", Canonical: raw, RequireChargeIDs: true, Charges: []ChargeRef{{ChargeID: "original-charge", QuotaCode: GpuSharedQuotaCode, ChargedUnits: 2048}}}
-	if !ManagedOwner(base.Owner) || Usage(base.Owner) != "TRAINING" {
+	if !ManagedOwner(base.Owner) || Usage(base.Owner, base.Action) != "TRAINING" {
 		t.Fatal("original ModelDev operation is not registered as training")
 	}
 	facts, err := ValidateStoredCommand(base)
@@ -127,7 +127,7 @@ func TestModelDevGPUStoredCommandBindsOriginalIdentityActorAndAllCharges(t *test
 		t.Fatal("registered validation changed the original owner payload or ACC facts")
 	}
 	for _, owner := range []string{"", "ani-modeldev", "ani-modeldev-service-extra"} {
-		if ManagedOwner(owner) || Usage(owner) != "" {
+		if ManagedOwner(owner) || Usage(owner, ModelDevCreateAction) != "" {
 			t.Fatal("unregistered ModelDev owner alias accepted")
 		}
 		foreign := base

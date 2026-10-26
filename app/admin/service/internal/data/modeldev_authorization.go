@@ -48,6 +48,7 @@ const (
 	modelDevFinetuningExistingModelAction
 	modelDevFinetuningNewModelAction
 	modelDevResumeRegistrationAction
+	modelDevFinetuningArtifactsAction
 )
 
 const (
@@ -150,6 +151,12 @@ func (r *ModelDevAuthorizationRepo) AuthorizeFinetuning(ctx context.Context, ten
 	return r.authorizeCurrent(ctx, tenantID, userID, action)
 }
 
+// AuthorizeFinetuningArtifacts requires current access to the real base model
+// bytes without granting any target-model write authority.
+func (r *ModelDevAuthorizationRepo) AuthorizeFinetuningArtifacts(ctx context.Context, tenantID, userID uint32) error {
+	return r.authorizeCurrent(ctx, tenantID, userID, modelDevFinetuningArtifactsAction)
+}
+
 func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenantID, userID uint32, action modelDevAuthorizationAction) (result error) {
 	// Cancellation remains distinguishable from a denied grant or failed store,
 	// including cancellation during transaction completion or cleanup.
@@ -250,7 +257,7 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 		permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil(),
 	)
 	switch action {
-	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListExecutionPodsAction, modelDevListExecutionEventsAction, modelDevExecutionLogStreamAction, modelDevListImplementationsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction:
+	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListExecutionPodsAction, modelDevListExecutionEventsAction, modelDevExecutionLogStreamAction, modelDevListImplementationsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction, modelDevFinetuningArtifactsAction:
 		// Create retains its permission-to-API check below.
 	case modelDevManageInputAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageInputPermissionCode))
@@ -295,6 +302,11 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 			path, method = ModelDevGetInputVersionPath, "GET"
 		case modelDevListInputVersionsAction:
 			path, method = ModelDevListInputVersionsPath, "GET"
+		case modelDevFinetuningArtifactsAction:
+			if err := authorizeModelDevAPI(ctx, tx, permissionIDs, "/api/v1/model-versions/{model_version_id}", "GET"); err != nil {
+				return err
+			}
+			path, method = "/api/v1/model-versions/{model_version_id}/download-url", "GET"
 		case modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction:
 			for _, required := range []struct{ path, method string }{
 				{"/api/v1/model-versions/{model_version_id}", "GET"},

@@ -15,7 +15,7 @@
 
 创建提交JSON对象：`name`、`kind`、`implementation_id`、`compute_preset_id`、`dataset_version_id`、必填对象 `parameters`、`idempotency_key`；`timeout_seconds`可省略，省略才采用冻结材料默认。普通训练唯一组合为 `GENERAL_TRAINING / builtin.mlp`，参数支持 `learning_rate`（非指数十进制字符串）、`epochs`、`batch_size`（正整数）和 `seed`（uint32）。参数对象允许 `{}`，重复键/未知键/null/错误类型拒绝；字段省略与显式默认保留为不同原意图。
 
-微调唯一组合为 `FINETUNING / builtin.sft_lora`，另需 `base_model_version_id`，以及 `target_model_id` / `new_model_name` 二选一。参数支持 `learning_rate`、`max_steps`、`per_device_train_batch_size`、`gradient_accumulation_steps`、`cutoff_len`、`lora_rank`、`lora_alpha`、`lora_dropout`、`seed`；具体默认、数值表示和模型边界来自规则响应。用户不提交镜像/command/env、worker、重试、步骤时限或租户/actor身份。
+微调唯一组合为 `FINETUNING / builtin.sft_lora`，另需 `base_model_version_id`。同时省略 `target_model_id` 与 `new_model_name` 时仅发布训练产物；需要向 Model 登记时二选一，同时提交仍拒绝。无目标仍校验真实 READY 基模并要求当前版本读取和下载权限，不要求模型创建、版本写入或目标模型读取权限，也没有可 Resume 的登记。参数支持 `learning_rate`、`max_steps`、`per_device_train_batch_size`、`gradient_accumulation_steps`、`cutoff_len`、`lora_rank`、`lora_alpha`、`lora_dropout`、`seed`；具体默认、数值表示和模型边界来自规则响应。用户不提交镜像/command/env、worker、重试、步骤时限或租户/actor身份。
 
 实现目录返回实现版本、参数合同版本、规则、支持设备、当前可用性及默认/最大总时长、统一步骤上限。公共算力目录的可见性不代替创建资格。历史详情显示受理时固定的 implementation/compute 和原数值，不查询当前目录重建历史。训练 Release/preset/binding、组合审批和旧解码请求已退出当前产品。
 

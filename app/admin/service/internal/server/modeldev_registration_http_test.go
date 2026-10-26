@@ -29,6 +29,7 @@ import (
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
+	"github.com/go-kratos/kratos/v2/errors"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -121,6 +122,7 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 		{"/api/v1/models/{model_id}", "GET", 0},
 		{"/api/v1/models", "POST", 0},
 		{data.ModelDevGetExecutionPath, "GET", 0},
+		{"/api/v1/modeldev/executions", "POST", 0},
 	}
 	for i := range routes {
 		code := "registration." + uuid.NewString()
@@ -177,7 +179,7 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 		return e
 	})
 	originalActor := "governance:user:" + strconv.FormatUint(uint64(operator.ID)+1000, 10)
-	freeze := func(newModel bool, internalTenantID uint32, resourceTenantID string) (*data.ModelDevAcceptance, cpup01.Snapshot) {
+	freeze := func(newModel bool, internalTenantID uint32, resourceTenantID string, artifactsOnly ...bool) (*data.ModelDevAcceptance, cpup01.Snapshot) {
 		snapshot, intent := conformance.FinetuningSnapshotV1(), conformance.FinetuningIntentV1()
 		snapshot.IdentityRef.ExecutionID, snapshot.IdentityRef.OperationID = uuid.NewString(), uuid.NewString()
 		selection := &compute.ComputeSelection{SchemaVersion: compute.SelectionSchemaVersion, PresetId: intent.ComputePresetID, Code: "cpu-small", Name: "CPU small", ComputeType: "cpu", CpuMillis: 1000, MemoryMib: 1024}
@@ -200,10 +202,17 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 			snapshot.Finetuning.TargetModelID = nil
 			snapshot.Finetuning.NewModelName = &name
 		}
+		if len(artifactsOnly) == 1 && artifactsOnly[0] {
+			intent.TargetModelID, intent.NewModelName = nil, nil
+			snapshot.Finetuning.TargetModelID, snapshot.Finetuning.NewModelName = nil, nil
+		}
 		acceptedAt := time.Now().UTC().Truncate(time.Microsecond)
 		_, hash, e := cpup01.CanonicalIntent(intent)
 		require.NoError(t, e)
 		snapshot.IdentityRef.TenantID, snapshot.IdentityRef.Actor, snapshot.IdentityRef.IntentHash = resourceTenantID, originalActor, hash
+		if len(artifactsOnly) == 1 && artifactsOnly[0] {
+			snapshot.IdentityRef.Actor = "governance:user:" + strconv.FormatUint(uint64(operator.ID), 10)
+		}
 		snapshot.Timing.AcceptedAt = acceptedAt
 		snapshot.Timing.ExecutionDeadlineAt = acceptedAt.Add(time.Duration(snapshot.Timing.ExecutionTimeoutSeconds) * time.Second)
 		snapshot.DeadlineAt = snapshot.Timing.ExecutionDeadlineAt
@@ -364,6 +373,48 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 	require.Equal(t, accepted.Scope, actualSource.Scope)
 	require.Equal(t, accepted.IntentHash, actualSource.IntentHash)
 	require.Equal(t, accepted.ExecutionSpecHash, actualSource.ExecutionSpecHash)
+
+	// An omitted target is a distinct frozen intent. It keeps the real base
+	// read grants while requiring no target-model writes, even on replay.
+	artifactAcceptance, artifactSnapshot := freeze(false, owner.ID, owner.ResourceTenantID, true)
+	require.Nil(t, artifactSnapshot.Finetuning.NewModelName)
+	require.Nil(t, artifactSnapshot.Finetuning.TargetModelID)
+	for _, index := range []int{3, 4, 5} {
+		require.NoError(t, writer.Client().RolePermission.UpdateOneID(routes[index].id).SetStatus(rolepermission.StatusOff).Exec(sys))
+	}
+	valid, claims := checker.IsValidAccessToken(ctx, token, false)
+	require.True(t, valid)
+	requestContext := auth.NewContext(sys, claims)
+	input := service.ModelDevCreateInput{Intent: artifactAcceptance.Intent, IdempotencyKey: artifactAcceptance.Scope.IdempotencyKey}
+	replayed, err := bff.CreateExecution(requestContext, input)
+	require.NoError(t, err)
+	require.True(t, replayed.Replayed)
+	require.Equal(t, artifactAcceptance.ExecutionID, replayed.ExecutionId)
+	changed := input
+	changed.Intent.Name += "-different"
+	_, err = bff.CreateExecution(requestContext, changed)
+	require.Error(t, err)
+	require.Equal(t, int32(http.StatusConflict), errors.FromError(err).Code, "the same key cannot replace the frozen intent")
+	before = peer.calls.Load()
+	code, _ = post(artifactAcceptance.ExecutionID, "", "", token)
+	require.Equal(t, http.StatusPreconditionFailed, code, "artifact-only output has no registration to resume")
+	require.Equal(t, before, peer.calls.Load())
+	for _, index := range []int{1, 2} {
+		require.NoError(t, writer.Client().RolePermission.UpdateOneID(routes[index].id).SetStatus(rolepermission.StatusOff).Exec(sys))
+		_, err = bff.CreateExecution(requestContext, input)
+		require.Error(t, err)
+		require.Equal(t, int32(http.StatusForbidden), errors.FromError(err).Code, "a frozen key cannot bypass current base-model read access")
+		require.NoError(t, writer.Client().RolePermission.UpdateOneID(routes[index].id).SetStatus(rolepermission.StatusOn).Exec(sys))
+	}
+	for _, index := range []int{3, 4, 5} {
+		require.NoError(t, writer.Client().RolePermission.UpdateOneID(routes[index].id).SetStatus(rolepermission.StatusOn).Exec(sys))
+	}
+	withTarget := input
+	name := "late-registration-target"
+	withTarget.Intent.NewModelName = &name
+	_, err = bff.CreateExecution(requestContext, withTarget)
+	require.Error(t, err)
+	require.Equal(t, int32(http.StatusConflict), errors.FromError(err).Code, "current write authority cannot add a target to an already accepted artifact-only intent")
 	t.Log("normal JWT/Redis/Casbin, current PG grants, original frozen FT source, strict HTTP and mTLS boundary passed; actual provider Resume remains separate")
 }
 

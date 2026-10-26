@@ -9,7 +9,7 @@ Governance 当前通过 BFF 提供 Inference 管理接口。普通和 GPU 推理
 `inference:service:create`；GPU 新建另外检查当前 `ACCELERATOR` 资格。
 当前公网管理接口只接受租户用户 JWT，签名 API Key 仍返回 `USER_REQUIRED`。
 
-`POST /api/v1/inference/services` 保持 `{data:{...}}`。data 必须带 UUID
+`POST /api/v1/inference/services` 接受扁平 JSON 请求体，字段直接位于顶层，不接受 `data` 包装。必须带 UUID
 `idempotency_key`、UUID `preset_id`、`name`、`model_version_id`、
 `served_model_name`、`engine_image`、`engine_type`、完整 `command` 和正数
 `replicas`。`runtime_mode` 默认 Deployment；`worker_replicas` 由正式 Inference
@@ -22,7 +22,7 @@ CPU 无 charges、GPU Usage 或退款；GPU 仅按 ACC 返回的唯一计量向�
 同键同意图复用原身份与快照，不重新访问 Res、Model 或新 GPU 资格。
 202 和 owner 的 durable ACK 均不表示 Ready。
 
-`POST /api/v1/inference/services/{resource_id}:update` 的 data 必填
+`POST /api/v1/inference/services/{resource_id}:update` 的顶层字段必填
 `idempotency_key/resource_id/expected_generation/update_mask`。mask 只允许
 `model_version_id`、`served_model_name`、`engine`；engine 是
 `engine_image/engine_type/command` 三项整体替换。选中的值不可为空，mask 不可为空、
@@ -56,3 +56,23 @@ Inference 仅按 `inference-managed-v2` schema 解释。历史普通资源没有
 与报告已持久化、通知仍待本地收敛，`complete` 表示 owner 最终完成。
 Gov 不用这些字符串计算退款；例如通知 ACK 丢失时允许 owner 尚在
 `report_resource_released` 而 Gov `refund_state=APPLIED`，原事件重试不会二次退款。
+
+## 服务访问策略
+
+`GET /api/v1/inference/services/{resource_id}/policy` 返回 `{policy:{resource_id,
+allowed_tenants,rate_limits,updated_at}}`；`PUT` 同一路径接受
+`{policy:{allowed_tenants:["<resource-tenant-uuid>"],rate_limits:{"<resource-tenant-uuid>":
+{requests_per_minute:2,requests_per_hour:30}}}}`。顶层 resource_id 可省略，由路径绑定；
+存在时必须匹配，policy.resource_id 同样不得冲突，updated_at 只读。拒绝未知字段、
+重复 JSON 键、query 和公网身份 header。
+
+PUT 完整替换并直接绑定该服务：空白名单拒绝所有调用，省略 rate_limits 移除服务
+额度。尚未保存时默认只允许所属租户。额度按服务和调用方租户共享，0 表示不限，
+同时受 AK 自身范围和额度限制。修改不重置已经记录的固定窗口桶。
+此合同未提供独立策略目录、乐观版本或幂等字段，前端不得自行添加 token。
+
+接口要求 `inference:policy:read` / `inference:policy:update`、当前租户 INFERENCE
+资格；租户和 actor 由 Governance 重建，经现有 mTLS 调用正式 Inference RPC。
+更新没有额外占退额。管理权限始终仅覆盖服务所属租户；白名单允许的是推理数据面。
+先执行 API dry-run 和同步，再执行 `register-inference-policy-permissions.sql`，
+最后按明确 tenant/role/plan 执行 `enable-inference-policy-access.sql`；目录同步不授权。

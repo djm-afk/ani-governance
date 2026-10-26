@@ -27,18 +27,20 @@ var File_admin_service_v1_i_inference_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_inference_proto_rawDesc = "" +
 	"\n" +
-	"\"admin/service/v1/i_inference.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a inference/service/v1/owner.proto\x1a\x1cinference/view/v1/view.proto2\xa9\r\n" +
+	"\"admin/service/v1/i_inference.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a inference/service/v1/owner.proto\x1a)inference/service/v1/service_policy.proto\x1a\x1cinference/view/v1/view.proto2\xf6\x0f\n" +
 	"\x10InferenceService\x12\x91\x01\n" +
-	"\x0fCreateInference\x12,.inference.service.v1.CreateInferenceRequest\x1a).inference.service.v1.InferenceAcceptance\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/inference/services\x12\xab\x01\n" +
-	"\x0fDeleteInference\x12,.inference.service.v1.DeleteInferenceRequest\x1a).inference.service.v1.InferenceAcceptance\"?\x82\xd3\xe4\x93\x029:\x01*\"4/api/v1/inference/services/{data.resource_id}:delete\x12\x90\x01\n" +
+	"\x0fCreateInference\x12,.inference.service.v1.CreateInferenceRequest\x1a).inference.service.v1.InferenceAcceptance\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/inference/services\x12\xa6\x01\n" +
+	"\x0fDeleteInference\x12,.inference.service.v1.DeleteInferenceRequest\x1a).inference.service.v1.InferenceAcceptance\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/inference/services/{resource_id}:delete\x12\x90\x01\n" +
 	"\fGetInference\x12).inference.service.v1.GetInferenceRequest\x1a#.inference.service.v1.InferenceView\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/inference/services/{resource_id}\x12\x8c\x01\n" +
 	"\rListInference\x12*.inference.service.v1.ListInferenceRequest\x1a+.inference.service.v1.ListInferenceResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/v1/inference/services\x12\x9e\x01\n" +
-	"\x15GetInferenceOperation\x122.inference.service.v1.GetInferenceOperationRequest\x1a\x1c.inference.view.v1.Operation\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/inference/operations/{operation_id}\x12\xab\x01\n" +
-	"\x0fUpdateInference\x12,.inference.service.v1.UpdateInferenceRequest\x1a).inference.service.v1.InferenceAcceptance\"?\x82\xd3\xe4\x93\x029:\x01*\"4/api/v1/inference/services/{data.resource_id}:update\x12\xb1\x01\n" +
-	"\x0eStartInference\x124.inference.service.v1.InferenceServiceCommandRequest\x1a).inference.service.v1.InferenceAcceptance\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/inference/services/{data.resource_id}:start\x12\xaf\x01\n" +
-	"\rStopInference\x124.inference.service.v1.InferenceServiceCommandRequest\x1a).inference.service.v1.InferenceAcceptance\"=\x82\xd3\xe4\x93\x027:\x01*\"2/api/v1/inference/services/{data.resource_id}:stop\x12\xb5\x01\n" +
-	"\x10RestartInference\x124.inference.service.v1.InferenceServiceCommandRequest\x1a).inference.service.v1.InferenceAcceptance\"@\x82\xd3\xe4\x93\x02::\x01*\"5/api/v1/inference/services/{data.resource_id}:restart\x12\xc3\x01\n" +
-	"\x17ListInferenceOperations\x124.inference.service.v1.ListInferenceOperationsRequest\x1a5.inference.service.v1.ListInferenceOperationsResponse\";\x82\xd3\xe4\x93\x025\x123/api/v1/inference/services/{resource_id}/operationsB\xbc\x01\n" +
+	"\x15GetInferenceOperation\x122.inference.service.v1.GetInferenceOperationRequest\x1a\x1c.inference.view.v1.Operation\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/inference/operations/{operation_id}\x12\xa6\x01\n" +
+	"\x0fUpdateInference\x12,.inference.service.v1.UpdateInferenceRequest\x1a).inference.service.v1.InferenceAcceptance\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/inference/services/{resource_id}:update\x12\xac\x01\n" +
+	"\x0eStartInference\x124.inference.service.v1.InferenceServiceCommandRequest\x1a).inference.service.v1.InferenceAcceptance\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/inference/services/{resource_id}:start\x12\xaa\x01\n" +
+	"\rStopInference\x124.inference.service.v1.InferenceServiceCommandRequest\x1a).inference.service.v1.InferenceAcceptance\"8\x82\xd3\xe4\x93\x022:\x01*\"-/api/v1/inference/services/{resource_id}:stop\x12\xb0\x01\n" +
+	"\x10RestartInference\x124.inference.service.v1.InferenceServiceCommandRequest\x1a).inference.service.v1.InferenceAcceptance\";\x82\xd3\xe4\x93\x025:\x01*\"0/api/v1/inference/services/{resource_id}:restart\x12\xc3\x01\n" +
+	"\x17ListInferenceOperations\x124.inference.service.v1.ListInferenceOperationsRequest\x1a5.inference.service.v1.ListInferenceOperationsResponse\";\x82\xd3\xe4\x93\x025\x123/api/v1/inference/services/{resource_id}/operations\x12\xaa\x01\n" +
+	"\x10GetServicePolicy\x12-.inference.service.v1.GetServicePolicyRequest\x1a..inference.service.v1.GetServicePolicyResponse\"7\x82\xd3\xe4\x93\x021\x12//api/v1/inference/services/{resource_id}/policy\x12\xb6\x01\n" +
+	"\x13UpdateServicePolicy\x120.inference.service.v1.UpdateServicePolicyRequest\x1a1.inference.service.v1.UpdateServicePolicyResponse\":\x82\xd3\xe4\x93\x024:\x01*\x1a//api/v1/inference/services/{resource_id}/policyB\xbc\x01\n" +
 	"\x14com.admin.service.v1B\x0fIInferenceProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var file_admin_service_v1_i_inference_proto_goTypes = []any{
@@ -50,11 +52,15 @@ var file_admin_service_v1_i_inference_proto_goTypes = []any{
 	(*v1.UpdateInferenceRequest)(nil),          // 5: inference.service.v1.UpdateInferenceRequest
 	(*v1.InferenceServiceCommandRequest)(nil),  // 6: inference.service.v1.InferenceServiceCommandRequest
 	(*v1.ListInferenceOperationsRequest)(nil),  // 7: inference.service.v1.ListInferenceOperationsRequest
-	(*v1.InferenceAcceptance)(nil),             // 8: inference.service.v1.InferenceAcceptance
-	(*v1.InferenceView)(nil),                   // 9: inference.service.v1.InferenceView
-	(*v1.ListInferenceResponse)(nil),           // 10: inference.service.v1.ListInferenceResponse
-	(*v11.Operation)(nil),                      // 11: inference.view.v1.Operation
-	(*v1.ListInferenceOperationsResponse)(nil), // 12: inference.service.v1.ListInferenceOperationsResponse
+	(*v1.GetServicePolicyRequest)(nil),         // 8: inference.service.v1.GetServicePolicyRequest
+	(*v1.UpdateServicePolicyRequest)(nil),      // 9: inference.service.v1.UpdateServicePolicyRequest
+	(*v1.InferenceAcceptance)(nil),             // 10: inference.service.v1.InferenceAcceptance
+	(*v1.InferenceView)(nil),                   // 11: inference.service.v1.InferenceView
+	(*v1.ListInferenceResponse)(nil),           // 12: inference.service.v1.ListInferenceResponse
+	(*v11.Operation)(nil),                      // 13: inference.view.v1.Operation
+	(*v1.ListInferenceOperationsResponse)(nil), // 14: inference.service.v1.ListInferenceOperationsResponse
+	(*v1.GetServicePolicyResponse)(nil),        // 15: inference.service.v1.GetServicePolicyResponse
+	(*v1.UpdateServicePolicyResponse)(nil),     // 16: inference.service.v1.UpdateServicePolicyResponse
 }
 var file_admin_service_v1_i_inference_proto_depIdxs = []int32{
 	0,  // 0: admin.service.v1.InferenceService.CreateInference:input_type -> inference.service.v1.CreateInferenceRequest
@@ -67,18 +73,22 @@ var file_admin_service_v1_i_inference_proto_depIdxs = []int32{
 	6,  // 7: admin.service.v1.InferenceService.StopInference:input_type -> inference.service.v1.InferenceServiceCommandRequest
 	6,  // 8: admin.service.v1.InferenceService.RestartInference:input_type -> inference.service.v1.InferenceServiceCommandRequest
 	7,  // 9: admin.service.v1.InferenceService.ListInferenceOperations:input_type -> inference.service.v1.ListInferenceOperationsRequest
-	8,  // 10: admin.service.v1.InferenceService.CreateInference:output_type -> inference.service.v1.InferenceAcceptance
-	8,  // 11: admin.service.v1.InferenceService.DeleteInference:output_type -> inference.service.v1.InferenceAcceptance
-	9,  // 12: admin.service.v1.InferenceService.GetInference:output_type -> inference.service.v1.InferenceView
-	10, // 13: admin.service.v1.InferenceService.ListInference:output_type -> inference.service.v1.ListInferenceResponse
-	11, // 14: admin.service.v1.InferenceService.GetInferenceOperation:output_type -> inference.view.v1.Operation
-	8,  // 15: admin.service.v1.InferenceService.UpdateInference:output_type -> inference.service.v1.InferenceAcceptance
-	8,  // 16: admin.service.v1.InferenceService.StartInference:output_type -> inference.service.v1.InferenceAcceptance
-	8,  // 17: admin.service.v1.InferenceService.StopInference:output_type -> inference.service.v1.InferenceAcceptance
-	8,  // 18: admin.service.v1.InferenceService.RestartInference:output_type -> inference.service.v1.InferenceAcceptance
-	12, // 19: admin.service.v1.InferenceService.ListInferenceOperations:output_type -> inference.service.v1.ListInferenceOperationsResponse
-	10, // [10:20] is the sub-list for method output_type
-	0,  // [0:10] is the sub-list for method input_type
+	8,  // 10: admin.service.v1.InferenceService.GetServicePolicy:input_type -> inference.service.v1.GetServicePolicyRequest
+	9,  // 11: admin.service.v1.InferenceService.UpdateServicePolicy:input_type -> inference.service.v1.UpdateServicePolicyRequest
+	10, // 12: admin.service.v1.InferenceService.CreateInference:output_type -> inference.service.v1.InferenceAcceptance
+	10, // 13: admin.service.v1.InferenceService.DeleteInference:output_type -> inference.service.v1.InferenceAcceptance
+	11, // 14: admin.service.v1.InferenceService.GetInference:output_type -> inference.service.v1.InferenceView
+	12, // 15: admin.service.v1.InferenceService.ListInference:output_type -> inference.service.v1.ListInferenceResponse
+	13, // 16: admin.service.v1.InferenceService.GetInferenceOperation:output_type -> inference.view.v1.Operation
+	10, // 17: admin.service.v1.InferenceService.UpdateInference:output_type -> inference.service.v1.InferenceAcceptance
+	10, // 18: admin.service.v1.InferenceService.StartInference:output_type -> inference.service.v1.InferenceAcceptance
+	10, // 19: admin.service.v1.InferenceService.StopInference:output_type -> inference.service.v1.InferenceAcceptance
+	10, // 20: admin.service.v1.InferenceService.RestartInference:output_type -> inference.service.v1.InferenceAcceptance
+	14, // 21: admin.service.v1.InferenceService.ListInferenceOperations:output_type -> inference.service.v1.ListInferenceOperationsResponse
+	15, // 22: admin.service.v1.InferenceService.GetServicePolicy:output_type -> inference.service.v1.GetServicePolicyResponse
+	16, // 23: admin.service.v1.InferenceService.UpdateServicePolicy:output_type -> inference.service.v1.UpdateServicePolicyResponse
+	12, // [12:24] is the sub-list for method output_type
+	0,  // [0:12] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

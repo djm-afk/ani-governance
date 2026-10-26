@@ -108,6 +108,10 @@ bootstrap:
 
 downstream:
   inference:
+    # Optional management diagnostics. Never expose Prometheus to the browser.
+    prometheusURL: ""
+    runtimeNamespace: ani-system
+    invocationEndpoint: ""
     enabled: false
     address: ""
     serverName: ""
@@ -136,5 +140,8 @@ certificate:
   secretName: governance-client-tls
   dnsNames:
     - ani-governance
-  duration: 72h
-  renewBefore: 24h
+  # 10 years. A 72h duration renewed every 48h rotated this client certificate
+  # out from under the running process, which loads the key pair once at
+  # startup and never reloads it, breaking every downstream mTLS call.
+  duration: 87600h
+  renewBefore: 720h

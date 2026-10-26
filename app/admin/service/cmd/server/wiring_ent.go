@@ -241,8 +241,26 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	}
 	instanceScheduling := service.NewInstanceSchedulingPolicy(configRepo, tenantRepo, instanceCluster, os.Getenv("ANI_INSTANCE_CLUSTER_ID"))
 	instanceBinding := service.NewInstanceGpuBinding(instanceClient, data.NewInstanceAuthorizationRepo(entClient), os.Getenv("ANI_INSTANCE_CLUSTER_ID"), instanceScheduling)
+	var vmClient service.VMOwnerClient
+	if instanceOwner != nil {
+		vmClient = instanceOwner.VM()
+	}
+	vmGuestCipher, err := crypto.NewVMGuestCipher(accessKeyCipher)
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	vmBinding := service.NewVMBinding(vmClient, data.NewVMAuthorizationRepo(entClient), os.Getenv("ANI_INSTANCE_CLUSTER_ID"), vmGuestCipher)
+	var dispatchInstance *service.InstanceGpuBinding
+	var dispatchVM service.QuotaDispatchAdapter
 	if instanceClient != nil && data.InstanceModuleRegistered() {
-		if err = quotaRegistry.Register(instanceBinding); err != nil {
+		dispatchInstance = instanceBinding
+	}
+	if vmClient != nil && data.VMModuleRegistered() {
+		dispatchVM = vmBinding
+	}
+	if dispatchInstance != nil || dispatchVM != nil {
+		if err = quotaRegistry.Register(service.NewResourceDispatchAdapter(dispatchInstance, dispatchVM)); err != nil {
 			rollback()
 			return nil, nil, err
 		}
@@ -372,7 +390,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		acceleratorClient = client
 	}
 	gpuBffLedger := service.NewGpuBffLedgerBridge(quotaLedgerRepo, quotaAdminRepo)
-	acceleratorService := service.NewAcceleratorService(acceleratorClient, tenantRepo, gpuBffLedger, gpuBffLedger, quotaAdminRepo, quotaRegistry)
+	acceleratorService := service.NewAcceleratorService(acceleratorClient, tenantRepo, gpuBffLedger, gpuBffLedger, quotaAdminRepo, quotaRegistry, authz.Engine())
 	var gpuPlans service.GpuPlanResolver
 	if acceleratorClient != nil {
 		gpuPlans = acceleratorClient.Catalog
@@ -383,6 +401,18 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	inferenceService := service.NewInferenceServiceWithOwnerAndModel(inferenceAcceptance, inferenceClient, tenantRepo, modelClient)
+	metricsClient, err := data.NewInferenceMetricsClient(os.Getenv("ANI_INFERENCE_PROMETHEUS_URL"), os.Getenv("ANI_INFERENCE_RUNTIME_NAMESPACE"))
+	if err != nil {
+		return nil, nil, err
+	}
+	var metricsReader service.InferenceMetricsReader
+	if metricsClient != nil {
+		metricsReader = metricsClient
+	}
+	if err := inferenceService.ConfigureDiagnostics(os.Getenv("ANI_INFERENCE_INVOCATION_ENDPOINT"), metricsReader); err != nil {
+		return nil, nil, err
+	}
+
 	modelService := service.NewModelService(modelClient, tenantRepo)
 	instanceAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, gpuPlans, instanceBinding, quotaWorker)
 	if err != nil {
@@ -414,6 +444,16 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		computeCatalog.Catalog = acceleratorClient.Catalog
 	}
 	instanceService := service.NewInstanceService(instanceAcceptance, instanceBinding, tenantRepo, quotaLedgerRepo, instanceSessions, instanceCatalog)
+	vmAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, nil, vmBinding, quotaWorker)
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	var vmSessions service.VMSessionClient
+	if instanceSession != nil {
+		vmSessions = instanceSession
+	}
+	vmService := service.NewVMService(vmAcceptance, vmBinding, tenantRepo, quotaLedgerRepo, vmSessions)
 	computeService := service.NewComputePresetService(computeClient, computeCatalog)
 	modeldevGPU := service.ModelDevGPUAdmission{Eligibility: data.NewGpuUseAuthorizationRepo(entClient)}
 	if acceleratorClient != nil {
@@ -466,7 +506,9 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		rollback()
 		return nil, nil, err
 	}
-
+	if restServer != nil {
+		server.RegisterVMHTTPServer(restServer, vmService)
+	}
 	asynqServer, err := server.NewAsynqServer(ctx, taskService, internalMessageService)
 	if err != nil {
 		rollback()

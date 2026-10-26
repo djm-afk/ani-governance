@@ -13,7 +13,7 @@ service ModelService {
     option (google.api.http) = { post: "/api/v1/models" body: "*" };
   }
   rpc GetModel(catalog.service.v1.GetModelRequest) returns (catalog.service.v1.GetModelResponse) {
-    option (google.api.http) = { get: "/api/v1/models/{model_id}" };
+    option (google.api.http) = { get: "/api/v1/models/{model_id}" response_body: "model" };
   }
   rpc ListModels(catalog.service.v1.ListModelsRequest) returns (catalog.service.v1.ListModelsResponse) {
     option (google.api.http) = { get: "/api/v1/models" };
@@ -32,6 +32,11 @@ service ModelService {
   }
   rpc ListModelVersions(catalog.service.v1.ListModelVersionsRequest) returns (catalog.service.v1.ListModelVersionsResponse) {
     option (google.api.http) = { get: "/api/v1/models/{model_id}/versions" };
+  }
+  // Authenticated tenant principal, model:service:read and MODEL plan required.
+  // Model verifies ownership; inaccessible models return 404.
+  rpc ListModelOperations(catalog.service.v1.ListModelOperationsRequest) returns (catalog.service.v1.ListModelOperationsResponse) {
+    option (google.api.http) = { get: "/api/v1/models/{model_id}/operations" };
   }
   rpc DeleteModelVersion(catalog.service.v1.DeleteModelVersionRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = { delete: "/api/v1/model-versions/{model_version_id}" };

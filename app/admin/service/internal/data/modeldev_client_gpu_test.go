@@ -116,6 +116,51 @@ func TestModelDevGPUPreparedClientPreservesOriginalWholeAndSharedFacts(t *testin
 	}
 }
 
+func TestModelDevGPUPreparedClientKeepsFactor10RuntimePlacementAndMiBLedger(t *testing.T) {
+	f, original := modelDevGPUResponseFixture(t, acc.SupplyMode_SHARED_FIXED)
+	f.selection.Gpu.MemoryMibPerDevice = 3840
+	var err error
+	f.selection.SelectionDigest, err = compute.SelectionDigest(f.selection)
+	require.NoError(t, err)
+	raw, err := compute.CanonicalSelection(f.selection)
+	require.NoError(t, err)
+	f.candidate.Snapshot.ComputeOrigin, err = contractpb.DecodeComputeSelection(raw, f.selection.SelectionDigest)
+	require.NoError(t, err)
+	f.candidate.GPURequest, err = cpup01.GPURequestFor(f.candidate.Snapshot.ComputeOrigin)
+	require.NoError(t, err)
+	original.Execution.Resources["volcano.sh/vgpu-memory"] = "384"
+	original.Execution.PodAnnotations["accelerator.ani.io/memory-block-mib"] = "10"
+	original.Execution.NodeSelector["kubernetes.io/hostname"] = "node3"
+	original.Execution.ExecutionDigest, err = gpuprotocol.GpuExecutionDigest(original.Execution)
+	require.NoError(t, err)
+	original.QuotaItems[0].Units = 3840
+	execution, display, err := contractpb.EncodeGPUPlanCanonical(original.Execution, original.Selection)
+	require.NoError(t, err)
+	final, err := contractpb.DecodeSnapshot(f.response.Snapshot)
+	require.NoError(t, err)
+	final.ComputeOrigin = f.candidate.Snapshot.ComputeOrigin
+	final.GPU, err = contractpb.DecodeGPUPlanCanonical(execution, display)
+	require.NoError(t, err)
+	f.response.Snapshot, err = contractpb.EncodeSnapshot(final)
+	require.NoError(t, err)
+	f.response.ExecutionSpecHash, err = final.Digest()
+	require.NoError(t, err)
+	config, peer := startModelDevPlanPeer(t, []string{"ani-modeldev-service"}, f, nil, nil)
+	got, err := newModelDevBoundaryClient(t, config).ResolvePreparedWithGPU(context.Background(), f.scope, f.intent, f.identity, f.selection, f.acceptedAt, func(context.Context, *cpup01.GPURequest) (*acc.ResolvedGpuRequest, error) {
+		return original, nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, int32(1), peer.finalizeCalls.Load())
+	require.True(t, proto.Equal(original, got.ResolvedGPU))
+	require.Equal(t, "384", got.Snapshot.GPU.Execution.Resources["volcano.sh/vgpu-memory"])
+	require.Equal(t, "10", got.Snapshot.GPU.Execution.PodAnnotations["accelerator.ani.io/memory-block-mib"])
+	require.Equal(t, "node3", got.Snapshot.GPU.Execution.NodeSelector["kubernetes.io/hostname"])
+	envelope := cpup01.AdmissionEnvelope{TenantID: f.identity.TenantID, Actor: f.identity.Actor, OperationID: f.identity.OperationID, ExecutionID: f.identity.ExecutionID, Intent: f.intent, IntentHash: f.identity.IntentHash, Snapshot: got.Snapshot, SpecHash: got.ExecutionSpecHash, AcceptedAt: f.acceptedAt}
+	ledger, err := commandcontract.NewModelDevGPUCanonical(envelope, got.ResolvedGPU)
+	require.NoError(t, err)
+	require.Equal(t, []commandcontract.GpuQuotaItem{{QuotaCode: commandcontract.GpuSharedQuotaCode, Units: 3840}}, ledger.QuotaItems)
+}
+
 func TestModelDevGPUPreparedClientCPUDoesNotResolveOrCreateGPUFacts(t *testing.T) {
 	f := modelDevResponseFixture(t)
 	config, peer := startModelDevPlanPeer(t, []string{"ani-modeldev-service"}, f, nil, nil)
