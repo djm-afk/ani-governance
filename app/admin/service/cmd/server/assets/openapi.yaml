@@ -8828,6 +8828,29 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ListExecutionArtifactsResponse'
+    /api/v1/modeldev/executions/{execution_id}/events:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListExecutionEvents
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: scope
+                  in: query
+                  description: key / all / warning; absent behaves as key.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListExecutionEventsResponse'
     /api/v1/modeldev/executions/{execution_id}/logs:
         get:
             tags:
@@ -8849,6 +8872,25 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: log_id
+                  in: query
+                  description: Opaque owner-issued log ID; container selection stays a separate field.
+                  schema:
+                    type: string
+                - name: pod_uid
+                  in: query
+                  description: Absent keeps the original single-worker behaviour.
+                  schema:
+                    type: string
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: previous
+                  in: query
+                  description: Reads the last terminated instance of the same container.
+                  schema:
+                    type: boolean
             responses:
                 "200":
                     description: OK
@@ -8856,6 +8898,33 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetExecutionLogsResponse'
+    /api/v1/modeldev/executions/{execution_id}/pods:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListExecutionPods
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: layer
+                  in: query
+                  description: all / trainer / pipeline; absent behaves as all.
+                  schema:
+                    type: string
+                - name: include_recycled
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListExecutionPodsResponse'
     /api/v1/modeldev/executions/{execution_id}:resume-model-registration:
         post:
             tags:
@@ -11052,6 +11121,60 @@ paths:
                     description: Connection limit reached
                 "503":
                     description: Diagnostic target or upstream unavailable before READY
+    /api/v1/modeldev/executions/{execution_id}/logs/stream:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_StreamExecutionLogs
+            description: Follow one container of one execution. READY is verified before HTTP headers; later failures arrive as control frames. Reconnect with the server-issued sinceBytes offset.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+                - name: podUid
+                  in: query
+                  schema:
+                    type: string
+                    format: uuid
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: previous
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+                - name: sinceBytes
+                  in: query
+                  schema:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    maximum: 1073741824
+                    default: 0
+            responses:
+                "200":
+                    description: SSE READY/DATA/CLOSED/REJECTED frames with comment heartbeats; no-store and proxy buffering disabled.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                "400":
+                    description: Invalid query
+                "403":
+                    description: Execution access denied
+                "404":
+                    description: Execution or selected Pod absent
+                "429":
+                    description: Connection limit reached
+                "503":
+                    description: Upstream frame stream unavailable before READY
 components:
     schemas:
         NetworkOperation:
@@ -13999,6 +14122,64 @@ components:
                     type: string
                 device_mode:
                     type: string
+        ExecutionContainerView:
+            type: object
+            properties:
+                name:
+                    type: string
+                type:
+                    type: string
+                    description: container / init_container / ephemeral
+                state:
+                    type: string
+                    description: running / waiting / terminated / unknown
+                reason:
+                    type: string
+                message:
+                    type: string
+                restart_count:
+                    type: integer
+                    format: int32
+                exit_code:
+                    type: integer
+                    format: int32
+                started_at:
+                    type: string
+                finished_at:
+                    type: string
+                last_state:
+                    $ref: '#/components/schemas/ExecutionContainerView'
+            description: |-
+                One container instance as Kubernetes reports it. Display strings keep the
+                 BFF free of Kubernetes enum packages; unknown values fail closed downstream.
+        ExecutionEventView:
+            type: object
+            properties:
+                type:
+                    type: string
+                reason:
+                    type: string
+                message:
+                    type: string
+                first_timestamp:
+                    type: string
+                last_timestamp:
+                    type: string
+                count:
+                    type: integer
+                    format: int32
+                source:
+                    type: string
+                involved_kind:
+                    type: string
+                involved_name:
+                    type: string
+                involved_uid:
+                    type: string
+                field_path:
+                    type: string
+                reporting_instance:
+                    type: string
         ExecutionHistoryView:
             type: object
             properties:
@@ -14077,6 +14258,66 @@ components:
             description: |-
                 The implementation's strict parser selects its own typed parameters.
                  Omitted fields use implementation defaults; null/unknown fields are rejected.
+        ExecutionPodView:
+            type: object
+            properties:
+                pod_name:
+                    type: string
+                pod_uid:
+                    type: string
+                pod_ip:
+                    type: string
+                phase:
+                    type: string
+                    description: Kubernetes phase only; recycled and never-created stay in availability.
+                ready:
+                    type: boolean
+                node_name:
+                    type: string
+                restarts:
+                    type: integer
+                    format: int32
+                created_at:
+                    type: string
+                start_time:
+                    type: string
+                deletion_timestamp:
+                    type: string
+                layer:
+                    type: string
+                    description: TRAINER / PIPELINE
+                availability:
+                    type: string
+                    description: LIVE / RECYCLED / NEVER_CREATED / REJECTED / ORPHANED / CREATION_PENDING
+                step_name:
+                    type: string
+                attempt:
+                    type: integer
+                    format: int32
+                job_index:
+                    type: integer
+                    format: int32
+                log_id:
+                    type: string
+                log_available:
+                    type: boolean
+                containers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionContainerView'
+                init_containers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionContainerView'
+                api_present:
+                    type: boolean
+                exit_code:
+                    type: integer
+                    format: int32
+                ephemeral_containers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionContainerView'
         ExecutionStepView:
             type: object
             properties:
@@ -14294,6 +14535,15 @@ components:
                     type: boolean
                 observed_at:
                     type: string
+                source_kind:
+                    type: string
+                    description: TRAINER or KFP_STEP; decides which plane produced these lines.
+                container_name:
+                    type: string
+                previous:
+                    type: boolean
+                available:
+                    type: boolean
             description: Bounded actual training output. Pod identity and selectors remain internal.
         GetExecutionResponse:
             type: object
@@ -15761,6 +16011,30 @@ components:
                     items:
                         $ref: '#/components/schemas/ArtifactView'
                 total:
+                    type: string
+        ListExecutionEventsResponse:
+            type: object
+            properties:
+                events:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionEventView'
+                observed_at:
+                    type: string
+                retention_hint:
+                    type: string
+                truncated:
+                    type: boolean
+        ListExecutionPodsResponse:
+            type: object
+            properties:
+                pods:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionPodView'
+                observed_at:
+                    type: string
+                availability:
                     type: string
         ListExecutionsResponse:
             type: object
