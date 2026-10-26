@@ -10,6 +10,7 @@ import (
 	contractv1 "github.com/liangzai006/ani-inference-service/api/inference/contract/v1"
 	runtimev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	protocol "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -97,7 +98,7 @@ func DecodeInferenceCanonical(raw []byte) (*InferenceCanonical, error) {
 		if _, e = GpuResolvedQuota(&acc.ResolvedGpuRequest{Execution: business.GpuExecution, Selection: business.GpuDisplay, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: q.QuotaCode, Units: q.Units}}}, r); e != nil {
 			return nil, e
 		}
-		memory, e := strconv.ParseInt(business.GpuExecution.Resources["volcano.sh/vgpu-memory"], 10, 64)
+		memory, e := protocol.GpuMemoryMiBPerDevice(business.GpuExecution)
 		if business.GpuExecution.Resources["volcano.sh/vgpu-cores"] != strconv.FormatUint(uint64(g.CoreLimitPercent), 10) {
 			return nil, Invalid("inference GPU core limit mismatch")
 		}

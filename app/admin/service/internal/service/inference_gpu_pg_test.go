@@ -4,18 +4,25 @@ package service
 
 import (
 	"context"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	inferencev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
 	"github.com/stretchr/testify/require"
+	protocol "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
+	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	view "go-wind-admin/api/gen/go/inference/service/v1"
+	"go-wind-admin/app/admin/service/internal/commandcontract"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/internal/data/ent"
 	"go-wind-admin/app/admin/service/internal/data/ent/api"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
+	"go-wind-admin/app/admin/service/internal/data/ent/plan"
 	"go-wind-admin/app/admin/service/internal/data/ent/planmodule"
+	"go-wind-admin/app/admin/service/internal/data/ent/planquota"
 	"go-wind-admin/app/admin/service/internal/data/ent/quotadefinition"
 	"go-wind-admin/app/admin/service/internal/data/ent/role"
 	"go-wind-admin/app/admin/service/internal/data/ent/rolepermission"
@@ -28,6 +35,77 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func TestInferenceGPUBlockMemoryReadAndDeleteKeepsOriginalCharge(t *testing.T) {
+	f := newInferenceGPUFixture(t)
+	sys := appViewer.NewSystemViewerContext(context.Background())
+	require.NoError(t, f.client.PlanQuota.Update().Where(planquota.HasPlanWith(plan.IDEQ(f.planID))).SetQuotaValue(30000).Exec(sys))
+	principal, err := auth.PrincipalFromContext(f.ctx)
+	require.NoError(t, err)
+	tenant, actor := f.model.response.Model.TenantId, strconv.FormatUint(uint64(principal.ID), 10)
+	intent := inferencePublicIntent()
+	intent.ModelVersionId = f.model.response.Version.Id
+	fixture, _, _ := gpuVector(t)
+	fixture.Request.ContainerName = "kserve-container"
+	fixture.Resolved.Execution.Resources["volcano.sh/vgpu-memory"] = "2457"
+	fixture.Resolved.Execution.Resources["volcano.sh/vgpu-cores"] = "50"
+	fixture.Resolved.Execution.PodAnnotations["accelerator.ani.io/memory-block-mib"] = "10"
+	fixture.Resolved.Execution.ExecutionDigest, err = protocol.GpuExecutionDigest(fixture.Resolved.Execution)
+	require.NoError(t, err)
+	fixture.Resolved.QuotaItems[0].Units = 24570
+	selection := inferenceCPUSelection(t)
+	selection.ComputeType = "gpu"
+	selection.Gpu = &compute.GpuSelection{ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion, SpecDigest: fixture.Profile.SpecDigest, DevicesPerUnit: 1, ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, Mode: fixture.Resolved.Selection.Mode, ModelKey: fixture.Resolved.Selection.ModelKey, MemoryMibPerDevice: 24570, CoreLimitPercent: 50}
+	selection.SelectionDigest, err = compute.SelectionDigest(selection)
+	require.NoError(t, err)
+	oldBinding := f.service.acceptance.(*GpuAcceptance).binding.(*InferenceGpuBinding)
+	binding := NewInferenceComputeBinding(f.owner, oldBinding.authorization, f.model, &inferenceComputeProbe{selection: selection})
+	prepared, err := binding.PrepareManagedBusiness(f.ctx, principal, tenant, intent)
+	require.NoError(t, err)
+	createID, resourceID := uuid.NewString(), uuid.NewString()
+	raw, err := prepared.freeze(tenant, "user", actor, createID, resourceID, fixture.Resolved)
+	require.NoError(t, err)
+	// Seed the accepted original through the real quota ledger, then record the
+	// external owner's ACK through its existing fenced transition.
+	_, err = f.ledger.Occupy(f.ctx, &data.QuotaOccupyInput{TenantID: f.tenantID, ResourceTenantID: tenant, ResourceID: resourceID, OperationID: createID, ActorType: "user", ActorID: actor, OwnerService: commandcontract.InferenceOwner, Action: InferenceCreateAction, IdempotencyKey: uuid.NewString(), RequestHash: "block-memory-original", CanonicalRequest: string(raw), Items: []data.QuotaOccupyItem{{QuotaCode: GpuSharedQuotaCode, Units: 24570}}})
+	require.NoError(t, err)
+	claims, err := f.ledger.ClaimDispatchable(sys, "block-memory-owner", time.Minute, 1)
+	require.NoError(t, err)
+	require.Len(t, claims, 1)
+	acked, err := f.ledger.AckDispatched(sys, f.tenantID, createID, claims[0].LeaseGeneration, `{"accepted":true}`)
+	require.NoError(t, err)
+	require.True(t, acked)
+	f.owner.service = &inferencev1.InferenceService{Id: resourceID, Generation: 1, ModelVersionId: intent.ModelVersionId, Resource: &inferencev1.ResourceSpec{Gpu: &inferencev1.GpuRequest{ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion}}}
+	visible, err := f.service.GetInference(f.ctx, &view.GetInferenceRequest{ResourceId: resourceID})
+	require.NoError(t, err, "the original block-unit execution remains readable")
+	require.Equal(t, resourceID, visible.Id)
+	require.Equal(t, selection.PresetId, visible.PresetId)
+	before, err := f.ledger.GetChargesForOperation(sys, f.tenantID, createID)
+	require.NoError(t, err)
+	require.Len(t, before, 1)
+	require.EqualValues(t, 24570, before[0].OriginalUnits)
+	request := &view.DeleteInferenceRequest{IdempotencyKey: uuid.NewString(), ResourceId: resourceID, ExpectedGeneration: 1}
+	deleted, err := f.service.DeleteInference(f.ctx, request)
+	require.NoError(t, err)
+	replay, err := f.service.DeleteInference(f.ctx, request)
+	require.NoError(t, err)
+	require.Equal(t, deleted.OperationId, replay.OperationId)
+	close, err := f.ledger.GetOperationForUser(sys, f.tenantID, deleted.OperationId)
+	require.NoError(t, err)
+	require.NotNil(t, close.CreateOperationID)
+	require.Equal(t, createID, *close.CreateOperationID)
+	_, err = f.service.GetInferenceOperation(f.ctx, &view.GetInferenceOperationRequest{OperationId: deleted.OperationId})
+	require.NoError(t, err)
+	original, err := f.ledger.GetOperationForUser(sys, f.tenantID, createID)
+	require.NoError(t, err)
+	require.Equal(t, string(raw), original.CanonicalRequest, "DELETE must preserve original bytes and hashes")
+	after, err := f.ledger.GetChargesForOperation(sys, f.tenantID, createID)
+	require.NoError(t, err)
+	require.Len(t, after, 1)
+	require.Equal(t, before[0].ChargeID, after[0].ChargeID)
+	require.EqualValues(t, 24570, after[0].OriginalUnits)
+	require.Zero(t, after[0].ReleasedUnits, "DELETE acceptance is not release evidence")
+}
 
 // Only Model, Accelerator and Inference RPCs are boundary substitutes. The BFF,
 // current route authorization, acceptance and PostgreSQL ledger are real.
