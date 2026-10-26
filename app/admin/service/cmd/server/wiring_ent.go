@@ -413,7 +413,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 
-	modelService := service.NewModelService(modelClient, tenantRepo)
+	modelService := service.NewModelService(modelClient, tenantRepo, imageClient)
 	instanceAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, gpuPlans, instanceBinding, quotaWorker)
 	if err != nil {
 		rollback()

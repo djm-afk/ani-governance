@@ -21,6 +21,8 @@ message ModelVersion {
   string startup_command = 14 [json_name = "startup_command"];
   reserved 15;
   string engine_image = 16 [json_name = "engine_image"];
+  string recommended_image_id = 17 [json_name = "recommended_image_id"];
+  string recommended_image_scope = 18 [json_name = "recommended_image_scope"];
 }
 
 message Model {
@@ -166,6 +168,8 @@ message CreateModelVersionRequest {
   string startup_command = 13 [json_name = "startup_command"];
   reserved 14;
   string engine_image = 15 [json_name = "engine_image"];
+  string recommended_image_id = 16 [json_name = "recommended_image_id"];
+  string recommended_image_scope = 17 [json_name = "recommended_image_scope"];
 }
 message CreateModelVersionResponse { ModelVersion version = 1; }
 
@@ -223,6 +227,8 @@ message ImportModelBundleVersionData {
   string engine_type = 3 [json_name = "engine_type"];
   string engine_image = 4 [json_name = "engine_image"];
   string startup_command = 5 [json_name = "startup_command"];
+  string recommended_image_id = 6 [json_name = "recommended_image_id"];
+  string recommended_image_scope = 7 [json_name = "recommended_image_scope"];
 }
 
 message ImportModelBundleSourceData {

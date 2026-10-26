@@ -23,24 +23,26 @@ const (
 )
 
 type ModelVersion struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ModelId        string                 `protobuf:"bytes,2,opt,name=model_id,proto3" json:"model_id,omitempty"`
-	Version        string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
-	Format         string                 `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
-	IsEncrypted    bool                   `protobuf:"varint,5,opt,name=is_encrypted,proto3" json:"is_encrypted,omitempty"`
-	EncryptAlgo    string                 `protobuf:"bytes,6,opt,name=encrypt_algo,proto3" json:"encrypt_algo,omitempty"`
-	EncryptHint    string                 `protobuf:"bytes,7,opt,name=encrypt_hint,proto3" json:"encrypt_hint,omitempty"`
-	SizeBytes      int64                  `protobuf:"varint,8,opt,name=size_bytes,proto3" json:"size_bytes,omitempty"`
-	ChecksumSha256 string                 `protobuf:"bytes,9,opt,name=checksum_sha256,proto3" json:"checksum_sha256,omitempty"`
-	StoragePath    string                 `protobuf:"bytes,10,opt,name=storage_path,proto3" json:"storage_path,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,proto3" json:"created_at,omitempty"`
-	Status         string                 `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
-	EngineType     string                 `protobuf:"bytes,13,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
-	StartupCommand string                 `protobuf:"bytes,14,opt,name=startup_command,proto3" json:"startup_command,omitempty"`
-	EngineImage    string                 `protobuf:"bytes,16,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ModelId               string                 `protobuf:"bytes,2,opt,name=model_id,proto3" json:"model_id,omitempty"`
+	Version               string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	Format                string                 `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
+	IsEncrypted           bool                   `protobuf:"varint,5,opt,name=is_encrypted,proto3" json:"is_encrypted,omitempty"`
+	EncryptAlgo           string                 `protobuf:"bytes,6,opt,name=encrypt_algo,proto3" json:"encrypt_algo,omitempty"`
+	EncryptHint           string                 `protobuf:"bytes,7,opt,name=encrypt_hint,proto3" json:"encrypt_hint,omitempty"`
+	SizeBytes             int64                  `protobuf:"varint,8,opt,name=size_bytes,proto3" json:"size_bytes,omitempty"`
+	ChecksumSha256        string                 `protobuf:"bytes,9,opt,name=checksum_sha256,proto3" json:"checksum_sha256,omitempty"`
+	StoragePath           string                 `protobuf:"bytes,10,opt,name=storage_path,proto3" json:"storage_path,omitempty"`
+	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	Status                string                 `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
+	EngineType            string                 `protobuf:"bytes,13,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
+	StartupCommand        string                 `protobuf:"bytes,14,opt,name=startup_command,proto3" json:"startup_command,omitempty"`
+	EngineImage           string                 `protobuf:"bytes,16,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
+	RecommendedImageId    string                 `protobuf:"bytes,17,opt,name=recommended_image_id,proto3" json:"recommended_image_id,omitempty"`
+	RecommendedImageScope string                 `protobuf:"bytes,18,opt,name=recommended_image_scope,proto3" json:"recommended_image_scope,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ModelVersion) Reset() {
@@ -174,6 +176,20 @@ func (x *ModelVersion) GetStartupCommand() string {
 func (x *ModelVersion) GetEngineImage() string {
 	if x != nil {
 		return x.EngineImage
+	}
+	return ""
+}
+
+func (x *ModelVersion) GetRecommendedImageId() string {
+	if x != nil {
+		return x.RecommendedImageId
+	}
+	return ""
+}
+
+func (x *ModelVersion) GetRecommendedImageScope() string {
+	if x != nil {
+		return x.RecommendedImageScope
 	}
 	return ""
 }
@@ -1491,22 +1507,24 @@ func (x *GetModelDownloadURLResponse) GetExpiresAt() *timestamppb.Timestamp {
 }
 
 type CreateModelVersionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ModelId        string                 `protobuf:"bytes,2,opt,name=model_id,proto3" json:"model_id,omitempty"`
-	Version        string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
-	Format         string                 `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
-	StoragePath    string                 `protobuf:"bytes,5,opt,name=storage_path,proto3" json:"storage_path,omitempty"`
-	ChecksumSha256 string                 `protobuf:"bytes,6,opt,name=checksum_sha256,proto3" json:"checksum_sha256,omitempty"`
-	SizeBytes      int64                  `protobuf:"varint,7,opt,name=size_bytes,proto3" json:"size_bytes,omitempty"`
-	IsEncrypted    bool                   `protobuf:"varint,8,opt,name=is_encrypted,proto3" json:"is_encrypted,omitempty"`
-	EncryptAlgo    string                 `protobuf:"bytes,9,opt,name=encrypt_algo,proto3" json:"encrypt_algo,omitempty"`
-	EncryptHint    string                 `protobuf:"bytes,10,opt,name=encrypt_hint,proto3" json:"encrypt_hint,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,11,opt,name=idempotency_key,proto3" json:"idempotency_key,omitempty"`
-	EngineType     string                 `protobuf:"bytes,12,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
-	StartupCommand string                 `protobuf:"bytes,13,opt,name=startup_command,proto3" json:"startup_command,omitempty"`
-	EngineImage    string                 `protobuf:"bytes,15,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	ModelId               string                 `protobuf:"bytes,2,opt,name=model_id,proto3" json:"model_id,omitempty"`
+	Version               string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	Format                string                 `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
+	StoragePath           string                 `protobuf:"bytes,5,opt,name=storage_path,proto3" json:"storage_path,omitempty"`
+	ChecksumSha256        string                 `protobuf:"bytes,6,opt,name=checksum_sha256,proto3" json:"checksum_sha256,omitempty"`
+	SizeBytes             int64                  `protobuf:"varint,7,opt,name=size_bytes,proto3" json:"size_bytes,omitempty"`
+	IsEncrypted           bool                   `protobuf:"varint,8,opt,name=is_encrypted,proto3" json:"is_encrypted,omitempty"`
+	EncryptAlgo           string                 `protobuf:"bytes,9,opt,name=encrypt_algo,proto3" json:"encrypt_algo,omitempty"`
+	EncryptHint           string                 `protobuf:"bytes,10,opt,name=encrypt_hint,proto3" json:"encrypt_hint,omitempty"`
+	IdempotencyKey        string                 `protobuf:"bytes,11,opt,name=idempotency_key,proto3" json:"idempotency_key,omitempty"`
+	EngineType            string                 `protobuf:"bytes,12,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
+	StartupCommand        string                 `protobuf:"bytes,13,opt,name=startup_command,proto3" json:"startup_command,omitempty"`
+	EngineImage           string                 `protobuf:"bytes,15,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
+	RecommendedImageId    string                 `protobuf:"bytes,16,opt,name=recommended_image_id,proto3" json:"recommended_image_id,omitempty"`
+	RecommendedImageScope string                 `protobuf:"bytes,17,opt,name=recommended_image_scope,proto3" json:"recommended_image_scope,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateModelVersionRequest) Reset() {
@@ -1626,6 +1644,20 @@ func (x *CreateModelVersionRequest) GetStartupCommand() string {
 func (x *CreateModelVersionRequest) GetEngineImage() string {
 	if x != nil {
 		return x.EngineImage
+	}
+	return ""
+}
+
+func (x *CreateModelVersionRequest) GetRecommendedImageId() string {
+	if x != nil {
+		return x.RecommendedImageId
+	}
+	return ""
+}
+
+func (x *CreateModelVersionRequest) GetRecommendedImageScope() string {
+	if x != nil {
+		return x.RecommendedImageScope
 	}
 	return ""
 }
@@ -2122,14 +2154,16 @@ func (x *ImportModelBundleModelData) GetExternalModelId() string {
 }
 
 type ImportModelBundleVersionData struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Version        string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	Format         string                 `protobuf:"bytes,2,opt,name=format,proto3" json:"format,omitempty"`
-	EngineType     string                 `protobuf:"bytes,3,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
-	EngineImage    string                 `protobuf:"bytes,4,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
-	StartupCommand string                 `protobuf:"bytes,5,opt,name=startup_command,proto3" json:"startup_command,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Version               string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Format                string                 `protobuf:"bytes,2,opt,name=format,proto3" json:"format,omitempty"`
+	EngineType            string                 `protobuf:"bytes,3,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
+	EngineImage           string                 `protobuf:"bytes,4,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
+	StartupCommand        string                 `protobuf:"bytes,5,opt,name=startup_command,proto3" json:"startup_command,omitempty"`
+	RecommendedImageId    string                 `protobuf:"bytes,6,opt,name=recommended_image_id,proto3" json:"recommended_image_id,omitempty"`
+	RecommendedImageScope string                 `protobuf:"bytes,7,opt,name=recommended_image_scope,proto3" json:"recommended_image_scope,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ImportModelBundleVersionData) Reset() {
@@ -2193,6 +2227,20 @@ func (x *ImportModelBundleVersionData) GetEngineImage() string {
 func (x *ImportModelBundleVersionData) GetStartupCommand() string {
 	if x != nil {
 		return x.StartupCommand
+	}
+	return ""
+}
+
+func (x *ImportModelBundleVersionData) GetRecommendedImageId() string {
+	if x != nil {
+		return x.RecommendedImageId
+	}
+	return ""
+}
+
+func (x *ImportModelBundleVersionData) GetRecommendedImageScope() string {
+	if x != nil {
+		return x.RecommendedImageScope
 	}
 	return ""
 }
@@ -2923,7 +2971,7 @@ var File_catalog_service_v1_model_proto protoreflect.FileDescriptor
 
 const file_catalog_service_v1_model_proto_rawDesc = "" +
 	"\n" +
-	"\x1ecatalog/service/v1/model.proto\x12\x12catalog.service.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x90\x04\n" +
+	"\x1ecatalog/service/v1/model.proto\x12\x12catalog.service.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfe\x04\n" +
 	"\fModelVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bmodel_id\x18\x02 \x01(\tR\bmodel_id\x12\x18\n" +
@@ -2944,7 +2992,9 @@ const file_catalog_service_v1_model_proto_rawDesc = "" +
 	"\x06status\x18\f \x01(\tR\x06status\x12 \n" +
 	"\vengine_type\x18\r \x01(\tR\vengine_type\x12(\n" +
 	"\x0fstartup_command\x18\x0e \x01(\tR\x0fstartup_command\x12\"\n" +
-	"\fengine_image\x18\x10 \x01(\tR\fengine_imageJ\x04\b\x0f\x10\x10\"\x91\x04\n" +
+	"\fengine_image\x18\x10 \x01(\tR\fengine_image\x122\n" +
+	"\x14recommended_image_id\x18\x11 \x01(\tR\x14recommended_image_id\x128\n" +
+	"\x17recommended_image_scope\x18\x12 \x01(\tR\x17recommended_image_scopeJ\x04\b\x0f\x10\x10\"\x91\x04\n" +
 	"\x05Model\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\"\n" +
@@ -3077,7 +3127,7 @@ const file_catalog_service_v1_model_proto_rawDesc = "" +
 	"\fencrypt_hint\x18\x05 \x01(\tR\fencrypt_hint\x12:\n" +
 	"\n" +
 	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expires_at\"\xef\x03\n" +
+	"expires_at\"\xdd\x04\n" +
 	"\x19CreateModelVersionRequest\x12\x1a\n" +
 	"\bmodel_id\x18\x02 \x01(\tR\bmodel_id\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x12\x16\n" +
@@ -3094,7 +3144,9 @@ const file_catalog_service_v1_model_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\v \x01(\tR\x0fidempotency_key\x12 \n" +
 	"\vengine_type\x18\f \x01(\tR\vengine_type\x12(\n" +
 	"\x0fstartup_command\x18\r \x01(\tR\x0fstartup_command\x12\"\n" +
-	"\fengine_image\x18\x0f \x01(\tR\fengine_imageJ\x04\b\x01\x10\x02J\x04\b\x0e\x10\x0fR\x04data\"X\n" +
+	"\fengine_image\x18\x0f \x01(\tR\fengine_image\x122\n" +
+	"\x14recommended_image_id\x18\x10 \x01(\tR\x14recommended_image_id\x128\n" +
+	"\x17recommended_image_scope\x18\x11 \x01(\tR\x17recommended_image_scopeJ\x04\b\x01\x10\x02J\x04\b\x0e\x10\x0fR\x04data\"X\n" +
 	"\x1aCreateModelVersionResponse\x12:\n" +
 	"\aversion\x18\x01 \x01(\v2 .catalog.service.v1.ModelVersionR\aversion\"z\n" +
 	"\x16GetModelVersionRequest\x12*\n" +
@@ -3130,13 +3182,15 @@ const file_catalog_service_v1_model_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x02 \x01(\tR\fdisplay_name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\"\n" +
 	"\fcapabilities\x18\x04 \x03(\tR\fcapabilities\x12,\n" +
-	"\x11external_model_id\x18\x05 \x01(\tR\x11external_model_id\"\xc0\x01\n" +
+	"\x11external_model_id\x18\x05 \x01(\tR\x11external_model_id\"\xae\x02\n" +
 	"\x1cImportModelBundleVersionData\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06format\x18\x02 \x01(\tR\x06format\x12 \n" +
 	"\vengine_type\x18\x03 \x01(\tR\vengine_type\x12\"\n" +
 	"\fengine_image\x18\x04 \x01(\tR\fengine_image\x12(\n" +
-	"\x0fstartup_command\x18\x05 \x01(\tR\x0fstartup_command\"o\n" +
+	"\x0fstartup_command\x18\x05 \x01(\tR\x0fstartup_command\x122\n" +
+	"\x14recommended_image_id\x18\x06 \x01(\tR\x14recommended_image_id\x128\n" +
+	"\x17recommended_image_scope\x18\a \x01(\tR\x17recommended_image_scope\"o\n" +
 	"\x1bImportModelBundleSourceData\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x18\n" +
 	"\arepo_id\x18\x02 \x01(\tR\arepo_id\x12\x1a\n" +

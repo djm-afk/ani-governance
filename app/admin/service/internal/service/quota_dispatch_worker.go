@@ -235,6 +235,15 @@ func (w *QuotaDispatchWorker) dispatchOne(ctx context.Context, op *data.ClaimedO
 		return
 	}
 
+	if reason, message, known := inferenceImageRejected(op, derr); known {
+		if _, err := w.ledger.RejectInferenceImageAndClose(ctx, op, reason, message); err != nil {
+			w.log.Errorf(context.Background(), "inference image close writeback failed: %v", err)
+		} else {
+			w.Notify()
+		}
+		return
+	}
+
 	if op.OwnerService == commandcontract.InstanceOwner && op.Action == commandcontract.VMDeleteAction && vmDeleteVersionRejected(derr) {
 		if _, err := w.ledger.RejectVMDeleteVersion(ctx, op.TenantID, op.OperationID, op.LeaseGeneration); err != nil {
 			w.log.Errorf(context.Background(), "VM delete rejection writeback failed: %v", err)
