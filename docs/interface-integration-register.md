@@ -1681,6 +1681,31 @@ mTLS gRPC 请求，不信任客户端提交的租户或 actor。Higress 只承�
 导入仍由 Model Service 创建一次性 Kubernetes Job 完成，文件写入当前 Model Service
 配置的 S3-compatible 存储。
 
+### 2026-10-26 默认镜像目录与拒绝收尾
+
+模型版本创建、整包导入 version 和查询投影增加成对可选的
+`recommended_image_id/recommended_image_scope`。选择目录时，Gov 使用当前可信
+租户及 actor 调用现有 Image `GetImage`，核验 scope、租户、未注销状态并填写
+目录固定 `resolved_reference`；矛盾的 `engine_image` 被拒绝。旧调用仍可不传目录
+选择。`IMG-KNOWN-P2-001` 保持 **DEFERRED**：Model 已保存但响应丢失后，当前
+目录不可用可能阻断原请求到达 Model 重放；本期不新增 replay preflight。
+
+推理创建和镜像更新增加 `image_id/image_scope`，成对提交且与 raw `engine_image`
+互斥；默认值仅用于客户端预填，最终选择显式提交。旧 public intent 的 canonical
+字段集及 `gov-inference-intent-v2` hash 保留；目录选择使用 v3 intent，并向受信
+Inference 发送 `contract_version=2` 的命令。已有 preset admission、原 charge 和
+引擎完整启动命令保持。查询返回选择及实际固定 `engine_image`。
+
+P1 只有受信 Inference CREATE 返回 `FailedPrecondition` 与唯一 ErrorInfo
+`domain=ani-inference, reason=IMAGE_ADMISSION_REJECTED`，且 metadata 的
+`stage=pre_accept`、tenant/resource/operation/request_digest 与原冻结命令完全一致
+时触发。Gov 在同一数据库事务保存 CREATE 的 REJECTED、原业务 reason、稳定错误
+消息和 `close_operation_id`，并持久建立关联原 CREATE/charge 的独立 DELETE。
+worker 重启继续派发 DELETE；重复拒绝及用户随后关闭复用关联操作。DELETE ACK
+只代表接受，GPU 仍须既有 owner 完整释放事实后按原账本结算。超时、断连、普通
+NotFound 或没有身份/阶段的错误保持未知，不触发该收尾或直接退款。管理查询继续
+显示原创建错误及关闭操作，不被删除成功覆盖。
+
 ### HTTP 入口
 
 | 业务 | 方法与路径 | 权限 |

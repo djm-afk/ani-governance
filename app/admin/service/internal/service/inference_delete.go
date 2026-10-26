@@ -13,6 +13,18 @@ import (
 )
 
 func (s *GpuAcceptance) acceptInferenceDelete(ctx context.Context, p *auth.Principal, key, resource string, generation int64, original *ent.QuotaOperation) (*commandv1.GpuDeleteAcceptance, error) {
+	if original.DispatchState == "REJECTED" {
+		if saved, ok := inferenceRejectedClose(original.AckJSON); ok {
+			close, e := s.ledger.GetOperationForUser(ctx, p.TenantID, saved.CloseOperationID)
+			if e != nil {
+				return nil, e
+			}
+			if close.OwnerService != original.OwnerService || close.ResourceID != original.ResourceID || close.CreateOperationID == nil || *close.CreateOperationID != original.OperationID || close.Action != InferenceDeleteAction {
+				return nil, commandcontract.Invalid("invalid automatic inference close")
+			}
+			return &commandv1.GpuDeleteAcceptance{DeleteOperationId: close.OperationID, ResourceId: resource, DispatchOperationId: close.OperationID, Result: "QUEUED_FOR_OWNER"}, nil
+		}
+	}
 	c, e := commandcontract.DecodeInferenceCanonical([]byte(original.CanonicalRequest))
 	if e != nil {
 		return nil, e

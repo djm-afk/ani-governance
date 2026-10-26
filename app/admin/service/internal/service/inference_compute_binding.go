@@ -34,10 +34,17 @@ func validateInferenceCreateIntent(d *view.CreateInferenceRequest) error {
 	if d.Cpu != "" || d.Memory != "" || d.Gpu != nil {
 		return status.Error(codes.InvalidArgument, "cpu, memory and gpu input are retired; use preset_id")
 	}
-	for field, value := range map[string]string{"idempotency_key": d.IdempotencyKey, "preset_id": d.PresetId, "name": d.Name, "model_version_id": d.ModelVersionId, "served_model_name": d.ServedModelName, "engine_image": d.EngineImage, "engine_type": d.EngineType, "command": d.Command} {
+	for field, value := range map[string]string{"idempotency_key": d.IdempotencyKey, "preset_id": d.PresetId, "name": d.Name, "model_version_id": d.ModelVersionId, "served_model_name": d.ServedModelName, "engine_type": d.EngineType, "command": d.Command} {
 		if strings.TrimSpace(value) == "" {
 			return status.Errorf(codes.InvalidArgument, "%s is required", field)
 		}
+	}
+	if d.ImageId == "" && d.ImageScope == "" {
+		if strings.TrimSpace(d.EngineImage) == "" {
+			return status.Error(codes.InvalidArgument, "engine_image or catalog image selection is required")
+		}
+	} else if !imageIDPattern.MatchString(d.ImageId) || (d.ImageScope != "platform" && d.ImageScope != "tenant") || d.EngineImage != "" {
+		return status.Error(codes.InvalidArgument, "image_id and image_scope must be paired and cannot include engine_image")
 	}
 	if id, e := uuid.Parse(d.PresetId); e != nil || id == uuid.Nil || id.String() != d.PresetId {
 		return status.Error(codes.InvalidArgument, "invalid preset_id")
@@ -64,7 +71,15 @@ func (b *InferenceGpuBinding) IntentHash(tenant, actorType, actorID string, mess
 	if e != nil {
 		return "", e
 	}
-	return commandcontract.Hash(map[string]any{"schema": "gov-inference-intent-v2", "tenant_id": tenant, "actor_type": actorType, "actor_id": actorID, "owner": commandcontract.InferenceOwner, "action": InferenceCreateAction, "usage": "INFERENCE", "business": business})
+	schema := "gov-inference-intent-v2"
+	if d.ImageId == "" && d.ImageScope == "" {
+		// The old canonical field set is immutable despite appended DTO fields.
+		delete(business, "image_id")
+		delete(business, "image_scope")
+	} else {
+		schema = "gov-inference-intent-v3"
+	}
+	return commandcontract.Hash(map[string]any{"schema": schema, "tenant_id": tenant, "actor_type": actorType, "actor_id": actorID, "owner": commandcontract.InferenceOwner, "action": InferenceCreateAction, "usage": "INFERENCE", "business": business})
 }
 func (b *InferenceGpuBinding) PrepareManagedBusiness(ctx context.Context, p *auth.Principal, tenant string, message proto.Message) (*preparedManagedBusiness, error) {
 	d, ok := message.(*view.CreateInferenceRequest)

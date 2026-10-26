@@ -25,5 +25,6 @@ message Operation {
   string gov_dispatch_state = 11 [json_name = "gov_dispatch_state"];
   // NONE for CPU; GPU accounting is independent of owner cleanup completion.
   string refund_state = 12 [json_name = "refund_state"];
+  string close_operation_id = 13 [json_name = "close_operation_id"];
 
 }

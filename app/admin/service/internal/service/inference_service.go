@@ -281,8 +281,13 @@ func (s *InferenceService) buildCreateRequest(d *view.CreateInferenceRequest) (*
 	default:
 		return nil, status.Error(codes.InvalidArgument, "invalid runtime_mode")
 	}
+	version := uint32(0)
+	if d.ImageId != "" {
+		version = 2
+	}
 	return &runtimev1.CreateInferenceServiceRequest{
-		Name: d.Name, ModelVersionId: d.ModelVersionId, ServedModelName: d.ServedModelName, Replicas: d.Replicas,
+		ContractVersion: version,
+		Name:            d.Name, ModelVersionId: d.ModelVersionId, ServedModelName: d.ServedModelName, Replicas: d.Replicas,
 		// Governance exposes the business-facing flat request. The inference
 		// runtime still needs an explicit HTTP endpoint to mount the verified
 		// model PVC and publish the KServe predictor. Keep this transport
@@ -291,7 +296,7 @@ func (s *InferenceService) buildCreateRequest(d *view.CreateInferenceRequest) (*
 			Mode: mode, WorkerReplicas: d.WorkerReplicas, Provider: "kserve",
 			Endpoint: &runtimev1.EndpointSpec{ContainerPort: 8000, ServicePort: 80, TargetPort: "8000", Protocol: "TCP"},
 		},
-		Engine: &runtimev1.EngineSpec{Type: d.EngineType, Image: d.EngineImage, Command: d.Command},
+		Engine: &runtimev1.EngineSpec{Type: d.EngineType, Image: d.EngineImage, Command: d.Command, ImageId: d.ImageId, ImageScope: d.ImageScope},
 	}, nil
 }
 
@@ -437,6 +442,8 @@ func mapInferenceView(source *runtimev1.InferenceService) *view.InferenceView {
 	}
 	if source.Engine != nil {
 		projected.EngineImage = source.Engine.Image
+		projected.ImageId = source.Engine.ImageId
+		projected.ImageScope = source.Engine.ImageScope
 		projected.EngineType = source.Engine.Type
 		projected.Command = source.Engine.Command
 	}
@@ -602,8 +609,26 @@ func (s *InferenceService) UpdateInference(ctx context.Context, in *view.UpdateI
 		return nil, status.Error(codes.InvalidArgument, "inference resources and topology are frozen")
 	}
 	request := &runtimev1.UpdateInferenceServiceRequest{RequestId: d.IdempotencyKey, ResourceId: d.ResourceId, ExpectedGeneration: d.ExpectedGeneration, UpdateMask: d.UpdateMask, ModelVersionId: d.ModelVersionId, ServedModelName: d.ServedModelName}
-	if d.EngineImage != "" || d.EngineType != "" || d.Command != "" {
-		request.Engine = &runtimev1.EngineSpec{Image: d.EngineImage, Type: d.EngineType, Command: d.Command}
+	if d.EngineImage != "" || d.EngineType != "" || d.Command != "" || d.ImageId != "" || d.ImageScope != "" {
+		request.Engine = &runtimev1.EngineSpec{Image: d.EngineImage, Type: d.EngineType, Command: d.Command, ImageId: d.ImageId, ImageScope: d.ImageScope}
+		if d.ImageId != "" || d.ImageScope != "" {
+			if d.UpdateMask == nil || len(d.UpdateMask.Paths) == 0 {
+				return nil, status.Error(codes.InvalidArgument, "catalog image update requires the complete engine mask")
+			}
+			hasEngine := false
+			for _, path := range d.UpdateMask.Paths {
+				if path == "engine" {
+					hasEngine = true
+				}
+			}
+			if !hasEngine {
+				return nil, status.Error(codes.InvalidArgument, "catalog image update requires the complete engine mask")
+			}
+			if !imageIDPattern.MatchString(d.ImageId) || (d.ImageScope != "platform" && d.ImageScope != "tenant") || d.EngineImage != "" {
+				return nil, status.Error(codes.InvalidArgument, "invalid catalog image update")
+			}
+			request.ContractVersion = 2
+		}
 	}
 	if err := contractv1.ValidateUpdatePatch(request); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
