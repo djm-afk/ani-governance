@@ -1783,6 +1783,16 @@ status=ready 返回 total=1/ready，operations 返回 total=1。含斜杠的公�
 
 创建/删除沿已有 Gov operation/事务/worker，VM 空 items/charges；其他业务变更由当前授权后直接调用 Resource。所有直达新变更及新 console 会话在精确原 VM CREATE→VM DELETE 持久受理栅栏后拒绝；只读 Resource/SG 原键重放先于该栅栏，异意图冲突保持原错误。操作查询先读 Gov 待投递记录，不将 owner 尚未接收误报为资源从未存在。DELETE expected_version 冻结后不得更新为当前版本；明确 owner 冲突保持原 operation/error，不把受理或永久拒绝写成删除完成。
 
+DNS 创建选项由 `CreateVMData.dns` 接收：省略、空对象或 `{"mode":"PLATFORM_DEFAULT"}` 均选择平台默认；该模式不能附带 nameservers。自定义示例：
+
+```json
+{"data":{"idempotencyKey":"原创建幂等键","dns":{"mode":"CUSTOM","nameservers":["223.5.5.5","2001:4860:4860::8888"]}}}
+```
+
+示例省略其他必填创建字段。`CUSTOM` 接受 1–3 个 IP 字符串（IPv4/IPv6，不接受域名、端口或 zone），按首次出现顺序规范化、去重；有效性校验不承诺该 VPC 实际可达。前端可以通过 `GET /api/v1/virtual-machine-dns-defaults` 展示当前默认值，响应直接为 `{"nameservers":["223.5.5.5"]}`。该只读接口无请求体、分页或查询参数，复用创建页的 `vm:create` 权限并校验 `VIRTUAL_MACHINE` 套餐；不给用户开放平台默认值修改或可信租户、DNS 策略、冻结 spec 字段。
+
+Gov 将用户选择规范化后纳入原 CREATE 意图摘要；默认的有效地址由 Resource 解析并冻结在 CreateSpec，Gov 不在公网上接收有效默认值快照。Gov → Resource 的 `/vm.v1.VMService/GetDNSDefaults` 是用户委托只读调用，沿既有受管 mTLS VM 客户端及 30 秒 deadline，从当前 Principal 和持久租户映射重建 tenant/actor metadata，不透传入站身份。详情/列表返回的 `dns` 为 `{mode,nameservers}`，表示该 VM 冻结的有效值；修改平台默认不改变已有 VM 或原幂等键重放，改变自定义地址或顺序仍是异意图冲突。历史没有 DNS 冻结字段的记录保持原表示，不补写当前默认值。实际 Linux、Windows DHCP/DNS 生效仍须分别验证。
+
 Linux `DISK_IMAGE` 仅在 Resource 媒体目录 `initializationCapability=CLOUD_INIT_NOCLOUD` 且 `initializationVerified=true` 时接受可选 `guestInitialization`（用户名、控制台密码、用户提供的 SSH 公钥）；ISO、未知能力及未验证媒体拒绝。公开 DTO 不提供方法切换、密钥对生成或私钥管理。路径专用只读请求的 JSON 名显式保持 Proto 路径变量，避免生成目录 `{vmId}` 与实际鉴权 `{vm_id}` 分裂。
 
 密码不进入普通 Resource CreateSpec、operation 查询或日志。Gov 使用既有强制副本共享的 AccessKeyCipher 主密钥分别派生凭据意图 HMAC 和 AES-GCM 子密钥；普通 intent 仅含 PasswordSet 与 HMAC，私密 payload 在受理事务内加密进原 outbox canonical，AAD 绑定可信 tenant、actor、原 operation/resource 与冻结 spec digest。进程重开从同一持久记录解密后，仅随 mTLS AcceptCreate 的独立 guest_credentials 参数投递；原键重放保留原 ciphertext 与原结果，改变密码仍是异意图冲突。DELETE 不解密密码。现有主密钥是该持久 outbox 的恢复依赖，不能在仍有待投递记录时丢失或任意替换。

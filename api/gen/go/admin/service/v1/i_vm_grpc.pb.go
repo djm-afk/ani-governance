@@ -37,6 +37,7 @@ const (
 	VMService_SetVMMedia_FullMethodName             = "/admin.service.v1.VMService/SetVMMedia"
 	VMService_EjectVMMedia_FullMethodName           = "/admin.service.v1.VMService/EjectVMMedia"
 	VMService_SetVMBootDevice_FullMethodName        = "/admin.service.v1.VMService/SetVMBootDevice"
+	VMService_GetVMDNSDefaults_FullMethodName       = "/admin.service.v1.VMService/GetVMDNSDefaults"
 	VMService_ListVMMedia_FullMethodName            = "/admin.service.v1.VMService/ListVMMedia"
 	VMService_ListVMSnapshots_FullMethodName        = "/admin.service.v1.VMService/ListVMSnapshots"
 	VMService_GetVMSnapshot_FullMethodName          = "/admin.service.v1.VMService/GetVMSnapshot"
@@ -68,6 +69,7 @@ type VMServiceClient interface {
 	SetVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
 	EjectVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
 	SetVMBootDevice(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	GetVMDNSDefaults(ctx context.Context, in *v1.GetDNSDefaultsRequest, opts ...grpc.CallOption) (*v1.DNSDefaults, error)
 	ListVMMedia(ctx context.Context, in *v1.ListMediaRequest, opts ...grpc.CallOption) (*v1.ListMediaResponse, error)
 	ListVMSnapshots(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.ListSnapshotsResponse, error)
 	GetVMSnapshot(ctx context.Context, in *v1.GetSnapshotRequest, opts ...grpc.CallOption) (*v1.VMSnapshot, error)
@@ -256,6 +258,16 @@ func (c *vMServiceClient) SetVMBootDevice(ctx context.Context, in *v1.ChangeVMRe
 	return out, nil
 }
 
+func (c *vMServiceClient) GetVMDNSDefaults(ctx context.Context, in *v1.GetDNSDefaultsRequest, opts ...grpc.CallOption) (*v1.DNSDefaults, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DNSDefaults)
+	err := c.cc.Invoke(ctx, VMService_GetVMDNSDefaults_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *vMServiceClient) ListVMMedia(ctx context.Context, in *v1.ListMediaRequest, opts ...grpc.CallOption) (*v1.ListMediaResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListMediaResponse)
@@ -357,6 +369,7 @@ type VMServiceServer interface {
 	SetVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
 	EjectVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
 	SetVMBootDevice(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	GetVMDNSDefaults(context.Context, *v1.GetDNSDefaultsRequest) (*v1.DNSDefaults, error)
 	ListVMMedia(context.Context, *v1.ListMediaRequest) (*v1.ListMediaResponse, error)
 	ListVMSnapshots(context.Context, *v1.GetVMRequest) (*v1.ListSnapshotsResponse, error)
 	GetVMSnapshot(context.Context, *v1.GetSnapshotRequest) (*v1.VMSnapshot, error)
@@ -425,6 +438,9 @@ func (UnimplementedVMServiceServer) EjectVMMedia(context.Context, *v1.ChangeVMRe
 }
 func (UnimplementedVMServiceServer) SetVMBootDevice(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetVMBootDevice not implemented")
+}
+func (UnimplementedVMServiceServer) GetVMDNSDefaults(context.Context, *v1.GetDNSDefaultsRequest) (*v1.DNSDefaults, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVMDNSDefaults not implemented")
 }
 func (UnimplementedVMServiceServer) ListVMMedia(context.Context, *v1.ListMediaRequest) (*v1.ListMediaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListVMMedia not implemented")
@@ -777,6 +793,24 @@ func _VMService_SetVMBootDevice_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VMService_GetVMDNSDefaults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetDNSDefaultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VMServiceServer).GetVMDNSDefaults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VMService_GetVMDNSDefaults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VMServiceServer).GetVMDNSDefaults(ctx, req.(*v1.GetDNSDefaultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _VMService_ListVMMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.ListMediaRequest)
 	if err := dec(in); err != nil {
@@ -995,6 +1029,10 @@ var VMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetVMBootDevice",
 			Handler:    _VMService_SetVMBootDevice_Handler,
+		},
+		{
+			MethodName: "GetVMDNSDefaults",
+			Handler:    _VMService_GetVMDNSDefaults_Handler,
 		},
 		{
 			MethodName: "ListVMMedia",

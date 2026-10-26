@@ -113,6 +113,8 @@ func (c *VMClient) Read(ctx context.Context, t, a, action, id, snapshot string) 
 			return c.client.ListDisks(ctx, &vm.GetVMRequest{TenantId: t, VmId: id})
 		case "media":
 			return c.client.ListMedia(ctx, &vm.ListMediaRequest{TenantId: t})
+		case "dns-defaults":
+			return c.client.GetDNSDefaults(ctx, &vm.GetDNSDefaultsRequest{TenantId: t})
 		case "snapshots":
 			return c.client.ListSnapshots(ctx, &vm.GetVMRequest{TenantId: t, VmId: id})
 		case "snapshot":
