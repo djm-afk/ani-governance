@@ -183,7 +183,7 @@ func newGpuMonitoringFixture(t *testing.T) *gpuMonitoringFixture {
 	require.NoError(t, err)
 	ref := &acc.GpuUsageRef{TenantId: tenant.ResourceTenantID, OwnerService: InstanceOwner, ResourceId: resourceID, CreateOperationId: createID}
 	now := time.Now().UTC()
-	scope := &acc.GpuMetricScope{ScopeId: "secret-scope", Ref: ref, ResourceKind: "container", ClusterId: plan.Request.ClusterId, Node: &acc.NodeRef{Name: "secret-node", Uid: uuid.NewString()}, Namespace: "secret-namespace", PodName: "secret-pod", PodUid: uuid.NewString(), ContainerName: "workspace", GpuUuid: "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", VdeviceId: "0", DeviceId: uuid.NewString(), BindingId: uuid.NewString(), ValidFrom: now.Add(-time.Hour).Format(time.RFC3339Nano), EvidenceAt: now.Format(time.RFC3339Nano), OwnershipState: "VERIFIED", CandidateComplete: true}
+	scope := &acc.GpuMetricScope{ScopeId: "secret-scope", Ref: ref, ResourceKind: "container_instance", ClusterId: plan.Request.ClusterId, Node: &acc.NodeRef{Name: "secret-node", Uid: uuid.NewString()}, Namespace: "secret-namespace", PodName: "secret-pod", PodUid: uuid.NewString(), ContainerName: "workspace", GpuUuid: "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", VdeviceId: "0", DeviceId: uuid.NewString(), BindingId: uuid.NewString(), ValidFrom: now.Add(-time.Hour).Format(time.RFC3339Nano), EvidenceAt: now.Format(time.RFC3339Nano), OwnershipState: "VERIFIED", CandidateComplete: true}
 	accPeer := &gpuMonitoringACCProbe{}
 	accPeer.tenant = func(r *acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
 		require.Equal(t, tenant.ResourceTenantID, r.Context.TenantId)
@@ -217,6 +217,8 @@ func TestGpuMonitoringTenantAndContainerUseTrustedScopes(t *testing.T) {
 	require.Equal(t, f.tenant.ResourceTenantID, f.owner.tenant)
 	require.Equal(t, "governance:user:"+strconv.FormatUint(uint64(f.operator.ID), 10), f.owner.actor)
 	require.Equal(t, "RESOURCE", f.obs.target.Kind)
+	require.Equal(t, "container", f.obs.target.Scopes[0].ResourceKind)
+	require.Equal(t, "container_instance", f.scope.ResourceKind, "provider identity is adapted without mutating its fact")
 	require.Equal(t, f.tenant.ResourceTenantID, f.obs.tenant)
 	require.False(t, f.obs.platform)
 	require.Equal(t, f.ref.CreateOperationId, f.obs.target.Scopes[0].UsageRef.CreateOperationId)

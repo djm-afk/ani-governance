@@ -416,6 +416,16 @@ func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32
 			if x == nil || x.Ref == nil || x.Ref.TenantId != tenant || ref != nil && (x.Ref.OwnerService != ref.OwnerService || x.Ref.ResourceId != id || x.Ref.CreateOperationId != ref.CreateOperationId) || x.Node == nil {
 				return nil, "", "", acceleratorInvalidResponse()
 			}
+			// ACC names the owner's container scope container_instance. The public
+			// adapter names this business resource container; original owner/ref
+			// identity and runtime selectors remain unchanged.
+			scopeKind := x.ResourceKind
+			if x.Ref.OwnerService == InstanceOwner && scopeKind == "container_instance" {
+				scopeKind = "container"
+			}
+			if ref != nil && scopeKind != kind {
+				return nil, "", "", acceleratorInvalidResponse()
+			}
 			from, err := gpuScopeTime(x.ValidFrom)
 			if err != nil {
 				return nil, "", "", err
@@ -434,18 +444,18 @@ func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32
 				if state == "VERIFIED" {
 					state = "OWNERSHIP_UNKNOWN"
 				}
-				uncovered[x.ResourceKind] = true
+				uncovered[scopeKind] = true
 			}
 			if state != "VERIFIED" {
 				t.IndexComplete = false
 			}
-			kinds[x.ResourceKind] = true
+			kinds[scopeKind] = true
 			source := strings.Join([]string{x.ClusterId, x.Node.Name, x.Node.Uid, x.Namespace, x.PodName, x.ContainerName, strings.ToLower(strings.TrimPrefix(strings.ToLower(x.GpuUuid), "gpu-")), x.VdeviceId}, "\x00")
 			sources[source] = true
 			if len(sources) > 128 {
 				return nil, "", "", gpuBudget()
 			}
-			t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: x.ClusterId, NodeId: x.Node.Name, NodeUid: x.Node.Uid, CandidateComplete: x.CandidateComplete, Reasons: x.Reasons, GpuUuid: x.GpuUuid, Namespace: x.Namespace, PodName: x.PodName, ContainerName: x.ContainerName, VdeviceId: x.VdeviceId, UsageRef: &gpu.UsageRef{TenantId: x.Ref.TenantId, OwnerService: x.Ref.OwnerService, ResourceId: x.Ref.ResourceId, CreateOperationId: x.Ref.CreateOperationId}, ValidFrom: from, ValidTo: to, EvidenceAt: evidence, OwnershipState: state, ResourceKind: x.ResourceKind, DeviceId: x.DeviceId})
+			t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: x.ClusterId, NodeId: x.Node.Name, NodeUid: x.Node.Uid, CandidateComplete: x.CandidateComplete, Reasons: x.Reasons, GpuUuid: x.GpuUuid, Namespace: x.Namespace, PodName: x.PodName, ContainerName: x.ContainerName, VdeviceId: x.VdeviceId, UsageRef: &gpu.UsageRef{TenantId: x.Ref.TenantId, OwnerService: x.Ref.OwnerService, ResourceId: x.Ref.ResourceId, CreateOperationId: x.Ref.CreateOperationId}, ValidFrom: from, ValidTo: to, EvidenceAt: evidence, OwnershipState: state, ResourceKind: scopeKind, DeviceId: x.DeviceId})
 		}
 		if reply.NextToken == "" {
 			break
