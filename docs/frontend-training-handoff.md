@@ -4,7 +4,9 @@
 
 联调环境：`http://10.10.1.66:30085`（NodePort 30085），租户 `tenant-a`。登录沿用现有接口 `POST /api/v1/auth/password/login`，之后所有请求带 `Authorization: Bearer <access_token>`。
 
-**本文件范围**：接口合同——任务创建（CPU / GPU）、列表、详情（含流水线步骤与训练曲线）、日志快照与日志流、容器组、事件、产物、停止、恢复模型登记，覆盖普通训练与微调两条链路。**只描述接口的请求/响应/错误语义，不含页面布局与交互设计建议。**
+**本文件范围**：接口合同——目录与输入、任务创建（CPU / GPU）、列表、详情基础字段与 `steps` / `metrics` / `failure`，以及产物、停止、恢复模型登记，覆盖普通训练与微调两条链路。**只描述接口的请求/响应/错误语义，不含页面布局与交互设计建议。**
+
+**详情页四类读取能力另见一份文档**：容器组（Pod）、日志（快照 + SSE 流）、事件、资源曲线见配套 handout `frontend-training-detail-diagnostics.md`（不随本仓发布）。本文件只在第 9.1 节保留一张指向表，不再重复其字段与参数。
 
 **全部接口均可联调**：产物真实下载已于 2026-10-27 打通，用 `GET /api/v1/modeldev/artifacts/{id}/download`（见 13.1）。
 
@@ -67,6 +69,7 @@
 | `/api/v1/modeldev/executions/{id}` | GET | `modeldev:execution:get` |
 | `/api/v1/modeldev/executions/{id}/pods` | GET | `modeldev:execution:get` |
 | `/api/v1/modeldev/executions/{id}/events` | GET | `modeldev:execution:get` |
+| `/api/v1/modeldev/executions/{id}/resource-metrics` | GET | `modeldev:execution:get` |
 | `/api/v1/modeldev/executions/{id}/logs` | GET | `modeldev:execution:logs` |
 | `/api/v1/modeldev/executions/{id}/logs/stream` | GET | `modeldev:execution:logs` |
 | `/api/v1/modeldev/executions/{id}/artifacts` | GET | `modeldev:artifact:list` |
@@ -94,7 +97,8 @@
 ## 3. 通用约定
 
 - 列表统一 `page` / `pageSize`（camelCase），响应 `items` / `total`。默认 `page=1`、`pageSize=20`，`pageSize` 上限 100。显式传 `0`、负数、前导零、小数、重复参数或未声明的参数，一律 `400`，不静默修正。
-- **响应里的 `int64`/`uint64` 字段是十进制字符串**：`total`、`cpu_millis`、`memory_mib`、`size_bytes`、`close_generation`、`execution_timeout_*_seconds`、`step_timeout_seconds`、`explicit_parameters` 里的整数参数等。`uint32` 的 `seed` 在响应里是数字。
+- **响应里的 `int64`/`uint64` 字段是十进制字符串**：`total`、`cpu_millis`、`memory_mib`、`size_bytes`、`close_generation`、`execution_timeout_*_seconds`、`step_timeout_seconds`、`explicit_parameters` 里的整数参数等。
+- **唯一例外是详情里的 `seed`**：`explicit_parameters` 与 `resolved_parameters` 里 `seed` 是 JSON 数字（因为契约声明它是 `uint32`），而 `managed_settings.seed` / `data_seed` 是十进制字符串（契约声明 `int64`）。同一个字段名在响应里出现两种类型，前端请按所在对象分别处理，见 7.5 与第 9 节。
 - **请求体里的整型参数是 JSON 数字，不是字符串**——这条与上面的响应规则相反，容易踩坑，详见 7.5。传成字符串会 `400 INVALID_MODELDEV_CREATE`（2026-10-26 现网实测）。
 - 时间字段是 RFC3339Nano UTC 字符串（如 `2026-10-23T08:35:54.775435Z`）。
 - 所有 modeldev 读接口响应带 `Cache-Control: no-store`、`Pragma: no-cache`、`Referrer-Policy: no-referrer`；不要做本地缓存或共享缓存。
@@ -252,8 +256,8 @@ GET /api/v1/compute-presets?usage=TRAINING&page=1&pageSize=100
         "memory_mib_total": "24570",
         "core_limit_percent": 50
       },
-      "selectable": false,
-      "unavailable_reason": "GPU_CAPACITY_UNKNOWN"
+      "selectable": true,
+      "unavailable_reason": ""
     }
   ],
   "total": "9",
@@ -261,6 +265,8 @@ GET /api/v1/compute-presets?usage=TRAINING&page=1&pageSize=100
   "gpu_catalog_reason": ""
 }
 ```
+
+上例第二条是 `SHARED_FIXED` 的共享 GPU 规格，现网 `selectable=true`；`WHOLE_EXCLUSIVE` 的整卡规格当前均不可选，见 5.1。
 
 **`selectable=false` 表示该规格当前不可提交**，调用方应在提交前据此排除，不要依赖服务端拦截。`unavailable_reason` 取值：
 
@@ -277,15 +283,24 @@ GET /api/v1/compute-presets?usage=TRAINING&page=1&pageSize=100
 
 注意：**目录可见 ≠ 有资格创建**。即使 `selectable=true`，创建时仍会重新校验当前权限、套餐和额度。
 
-### 5.1 GPU 规格当前全部不可选
+### 5.1 GPU 规格：共享卡可选，整卡不可选
 
-现网状态（2026-10-27 复核）：9 条规格中 6 条 CPU 可选，3 条 GPU **全部** `selectable=false / GPU_CAPACITY_UNKNOWN`。
+现网状态（2026-10-27 复核，`tenant-a`）：9 条规格里 6 条 `selectable=true`（4 条 CPU + 2 条共享 GPU），3 条整卡 GPU 全部 `selectable=false / GPU_CAPACITY_UNKNOWN`。
 
-- 原因不是代码没实现，而是 **GPU 容量观测不完整**：集群 3 个节点都有 vGPU 可分配（node1/node2 各 2 卡、node3 4 卡，`volcano.sh/vgpu-number`），但节点上没有 `nvidia.com/gpu` 这一可分配资源，Accelerator 上报的容量数据不完整，目录侧只能判定为未知。
-- 用 `selectable=false` 的 GPU 规格直接提交创建，当前返回 `503 MODELDEV_CREATE_UNAVAILABLE`（2026-10-26 实测），不是 400。
-- GPU 链路已有真实的历史执行记录（含训练与微调、额度占用与全额退还），所以本文档的 GPU 字段、额度语义、释放规则都按已验证行为编写；**只要后端补齐容量观测、`selectable` 变 true，调用方无需改动即可用**。
-- 目录接口始终返回全部 GPU 规格（含 `selectable=false`），不会隐藏；`selectable` 恢复后同一份响应即可提交。
-- **本期未做 GPU 端到端实测**：现网 25 条执行全部是 CPU（13 SUCCEEDED / 7 SUBMISSION_CONFIRMED / 3 TRAINING / 2 FAILED），GPU 创建→训练→产物这条链路本期从未跑通。前端可先把 GPU 选项按不可用渲染，待容量观测补齐后再联调。
+| 规格 | `compute_type` | `gpu.mode` | `selectable` | `unavailable_reason` |
+| --- | --- | --- | --- | --- |
+| ModelDev v2.1 node3 Shared 4C 8GiB | gpu | `SHARED_FIXED` | **true** | `""` |
+| ModelDev v2.1 node3 Shared 2C 4GiB | gpu | `SHARED_FIXED` | **true** | `""` |
+| ModelDev v2.1 Whole 4090 1GPU 4C 8GiB | gpu | `WHOLE_EXCLUSIVE` | false | `GPU_CAPACITY_UNKNOWN` |
+| ModelDev v2.1 Whole 4090 1GPU 2C 4GiB | gpu | `WHOLE_EXCLUSIVE` | false | `GPU_CAPACITY_UNKNOWN` |
+| ANI factor10 Whole 1 card E2E | gpu | `WHOLE_EXCLUSIVE` | false | `GPU_CAPACITY_UNKNOWN` |
+
+- 差异根因是 **容量观测口径不同**：节点上只有 `volcano.sh/vgpu-*` 这类可切分资源（node1/node2 各 2 卡、node3 4 卡），共享模式能按这套资源核算出容量，整卡模式需要 `nvidia.com/gpu` 整卡可分配量，而节点上没有这个资源，只能判定为未知。
+- 用 `selectable=false` 的整卡规格直接提交创建返回 `503 MODELDEV_CREATE_UNAVAILABLE`（2026-10-26 实测），不是 `400`。
+- 前端请只按 `selectable` 渲染，不要按 `gpu.mode` 或规格名硬编码哪条可用——容量补齐后同一条规格会自行变为可选。
+- 目录接口始终返回全部 GPU 规格（含 `selectable=false`），不会隐藏。
+- GPU 字段、额度语义、释放规则按已验证行为编写；**只要 `selectable` 变 true，调用方无需改动即可用**。
+- **GPU 端到端本期未跑通**：现网 25 条执行全部是 CPU（13 SUCCEEDED / 7 SUBMISSION_CONFIRMED / 3 TRAINING / 2 FAILED），共享 GPU 规格虽然可选，但没有一条真实的 GPU 执行记录。前端可先按可选渲染并允许提交，但首次真机联调请与后端同步。
 
 ## 6. 输入版本
 
@@ -625,10 +640,10 @@ GET /api/v1/modeldev/executions/{execution_id}
 | 字段 | 说明 |
 | --- | --- |
 | `role` | 步骤角色，如 `prepare`、`train-wait`、`export`、`collect` |
-| `state` | 步骤状态，如 `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` |
-| `started_at` / `finished_at` | RFC3339；未开始或未结束时为 `null` |
-| `exit_code` | 进程退出码；未结束为 0 |
-| `deadline_at` | 该步的超时截止时间 |
+| `state` | `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` / `STOPPED`。`STOPPED` 表示该步已启动但执行被停止或超时中断，**不是失败**，不要渲染成错误 |
+| `started_at` / `finished_at` | RFC3339 字符串；未开始或未结束时是**空串 `""`**，不是 `null` |
+| `exit_code` | 进程退出码，恒为数字；未结束时是 `0`，不要据此判断成功 |
+| `deadline_at` | 该步的超时截止时间；`close` 步骤没有截止时间，为空串 |
 
 `steps` 与 `metrics` 都随详情一起返回，**不需要额外请求**。`metrics` 为空数组表示该执行没有已发布的 `METRICS` 产物（例如仍在训练或已失败）。
 
@@ -647,7 +662,18 @@ GET /api/v1/modeldev/executions/{execution_id}
 
 `managed_settings` 字段（微调才有）：
 
-服务端托管的训练超参，**创建请求不接受这些字段**，只能读取展示。`stage` 本期恒为 `"sft"`（当前只有 SFT，不存在 DPO/PPO，**不要做成可选项**）。`lora_rank` / `lora_alpha` / `cutoff_len` / `per_device_train_batch_size` / `gradient_accumulation_steps` / `seed` / `data_seed` / `num_train_epochs` / `logging_steps` 是整数；`warmup_ratio` / `weight_decay` / `lora_dropout` 是十进制字符串；`fp16` / `bf16` 是布尔。
+服务端托管的训练超参，**创建请求不接受这些字段**，只能读取展示。`stage` 本期恒为 `"sft"`（当前只有 SFT，不存在 DPO/PPO，**不要做成可选项**）。
+
+类型按响应实际编码，不要按 proto 的 `int64` 去解析：
+
+| 类型 | 字段 | 说明 |
+| --- | --- | --- |
+| 十进制字符串 | `lora_rank`、`lora_alpha`、`cutoff_len`、`per_device_train_batch_size`、`gradient_accumulation_steps`、`seed`、`data_seed`、`num_train_epochs`、`logging_steps` | 契约里是 `int64`，但 BFF 统一把 `int64` 输出为十进制文本（见第 3 节），所以实测拿到的是 `"4"`、`"73"` 这样的字符串 |
+| 十进制字符串 | `warmup_ratio`、`weight_decay`、`lora_dropout` | 本来就是字符串 |
+| 布尔 | `fp16`、`bf16` | 真正的 JSON 布尔 |
+| 普通字符串 | `stage`、`finetuning_type`、`lora_target`、`device`、`flash_attn`、`report_to`、`save_strategy`、`template`、`train_dtype`、`export_dtype`、`verify_dtype`、`lr_scheduler_type`、`optim` | 直接展示 |
+
+现网微调实测（`d95bc78c`）全部 27 个键都有值，没有缺键。
 
 不要把 `delivery_state=PUBLISHED` 当成训练成功；判断成功只看 `compute_state`。
 
@@ -662,162 +688,21 @@ GET /api/v1/modeldev/executions/{execution_id}
 
 `base_model` **只有身份信息**：没有对象键、存储桶、存储 scope 和文件清单，因此**不能**据此拼下载地址。要下载请走第 13 节的产物接口。普通训练恒为 `null`；微调且登记了基座时才有值。
 
-### 9.1 容器组
+### 9.1 容器组、事件、资源曲线与日志流
 
-```
-GET /api/v1/modeldev/executions/{execution_id}/pods
-```
+这四项的完整字段表、参数规则与错误码见配套 handout `frontend-training-detail-diagnostics.md`。这里只给出一行指引：
 
-可选参数 `layer`（`all` 默认 / `trainer` / `pipeline`）与 `includeRecycled`（`true` / `false`，默认 `false`）。**默认不返回已回收的容器组**；要在列表里看到它们必须显式传 `true`。
-
-```json
-{
-  "pods": [
-    {
-      "pod_name": "md-rtttx-2081272040",
-      "pod_uid": "…",
-      "pod_ip": "10.244.3.51",
-      "phase": "Succeeded",
-      "ready": false,
-      "node_name": "node3",
-      "restarts": 0,
-      "created_at": "2026-10-23T09:55:20Z",
-      "start_time": "2026-10-23T09:55:22Z",
-      "layer": "PIPELINE",
-      "availability": "ORPHANED",
-      "log_id": "…",
-      "log_available": true,
-      "containers": [{"name": "main", "type": "container", "state": "terminated", "exit_code": 0}],
-      "init_containers": [],
-      "ephemeral_containers": [],
-      "api_present": true,
-      "metric_instance_id": "…"
-    }
-  ],
-  "observed_at": "2026-10-27T04:25:00Z",
-  "availability": "LIVE"
-}
-```
-
-**所有字段都会输出，空值不会省略**（BFF 用 `UseProtoNames + EmitUnpopulated` 编码）：字符串为空是 `""`、`null` 只用于消息型字段（如 `last_state`）、数值为 `0`、布尔为 `false`、数组为 `[]`、Map 为 `{}`。所以"Pod 还在运行"时 `exit_code` 是 `0` 而不是缺失，`deletion_timestamp` 是 `""`。前端必须靠 `phase`/`availability` 判断状态，不能靠字段是否存在。
-
-| 字段 | 说明 |
-| --- | --- |
-| `layer` | `TRAINER`（训练容器）或 `PIPELINE`（流水线控制器） |
-| `availability` | 容器组的存在状态，见下表 |
-| `phase` | **仅** Kubernetes 原始 phase；已回收或从未创建的容器组由 `availability` 表达，`phase` 可能仍是历史值 |
-| `restarts` | 重启次数 |
-| `exit_code` | worker 容器退出码；未终止时字段缺省，不要当成 0 |
-| `containers` / `init_containers` / `ephemeral_containers` | 三类容器状态分列；诊断 prepare 阶段失败时看 `init_containers` |
-| `metric_instance_id` | 该 Pod 在可观测侧上报的实例 ID：worker 为执行 ID，step 为 KFP run ID。是 9.3 的内部依据，前端不需要传；标签早于该字段的历史 Pod 为空串 |
-
-`availability` 取值：
-
-| 值 | 含义 |
-| --- | --- |
-| `LIVE` | 容器组仍存在 |
-| `RECYCLED` | 曾经存在，已被回收 |
-| `NEVER_CREATED` | 从未创建（通常任务未走到该阶段） |
-| `REJECTED` | 创建被拒绝 |
-| `ORPHANED` | 已不属于当前执行但仍可观测 |
-| `CREATION_PENDING` | 创建中 |
-
-顶层 `availability` 描述**本次查询**能否取到数据，不要和单个容器组的 `availability` 混用。
-
-### 9.2 事件
-
-```
-GET /api/v1/modeldev/executions/{execution_id}/events[?scope=key|all|warning]
-```
-
-`scope` 省略等价于 `key`；传其它值返回 `400 INVALID_MODELDEV_QUERY`。
-
-```json
-{
-  "events": [
-    {
-      "type": "Warning",
-      "reason": "BackOff",
-      "message": "Back-off restarting failed container",
-      "first_timestamp": "2026-10-23T09:56:30Z",
-      "last_timestamp": "2026-10-23T09:58:10Z",
-      "count": 5,
-      "source": "kubelet",
-      "involved_kind": "Pod",
-      "involved_name": "md-rtttx-2081272040",
-      "involved_uid": "…",
-      "field_path": "",
-      "reporting_instance": "node3"
-    }
-  ],
-  "observed_at": "2026-10-27T04:25:00Z",
-  "retention_hint": "1h",
-  "truncated": false
-}
-```
-
-- `retention_hint`：Kubernetes 事件的保留窗口，当前为 `1h`。**超过窗口的事件不会返回**，`events` 为空是正常结果，不代表出错。
-- `truncated=true` 表示本次结果被截断。
-- 事件来自 Kubernetes Event 对象，不是执行日志的替代品。
-
-### 9.3 资源曲线（CPU/内存）
-
-```
-GET /api/v1/modeldev/executions/{execution_id}/resource-metrics
-    ?pod_uid=&container=&start=&end=&step_seconds=&metric_codes=
-```
-
-**一次请求只返回一个 Pod 的一个容器**：可观测侧的 target 合同一次只解析一个物理工作负载，
-并行 step 的曲线不能合并成一次调用。前端按 Pod 分页懒加载。
-
-| 参数 | 必填 | 说明 |
+| 能力 | 接口 | 详见 |
 | --- | --- | --- |
-| `pod_uid` | 是 | 取自 9.1 `pods[].podUid`；用 Pod UID 而非名字，重建后的 Pod 不会继承旧曲线 |
-| `container` | 是 | worker 层只能 `node`，step 层只能 `main`；传错返回 `400`，不会静默返回空曲线 |
-| `start` / `end` | 是 | RFC3339，窗口 ≤ 24h，`end` 不得晚于当前时间 |
-| `step_seconds` | 否 | 默认 `30`；允许 30–3600，且必须是 30 的整数倍；点数上限 3000 |
-| `metric_codes` | 是 | 逗号分隔，只接受 `cpu.usage_cores` / `memory.working_set_bytes` |
+| 容器组 | `GET /api/v1/modeldev/executions/{id}/pods` | 该文档 §3 |
+| 事件 | `GET /api/v1/modeldev/executions/{id}/events` | 该文档 §4 |
+| 日志快照与 SSE 流 | `GET .../logs`、`GET .../logs/stream` | 该文档 §5 |
+| 资源曲线 | `GET .../resource-metrics` | 该文档 §6 |
 
-Pod 的实例归属由服务端从 9.1 的 `metric_instance_id` 取得，不需要前端传；该字段为空（早于指标标签的 Pod）时，worker 回落到执行 ID，step 回落到运行时历史里的 run ID，两者都取不到时返回 `412`。
+两点容易踩的坑，先在这里点明：
 
-```json
-{
-  "execution_id": "…",
-  "pod_uid": "…",
-  "pod_name": "md-rtttx-2081272040",
-  "container": "node",
-  "start": "2026-10-27T00:00:00Z",
-  "end": "2026-10-27T01:00:00Z",
-  "step_seconds": 60,
-  "observed_at": "2026-10-27T01:00:05Z",
-  "source": "PROMETHEUS_CADVISOR_PROJECTION",
-  "retention_hint": "24h",
-  "device_mode": "cpu",
-  "gpu_requested": false,
-  "gpu_available": false,
-  "series": [
-    {
-      "metric_code": "cpu.usage_cores",
-      "unit": "cores",
-      "status": "PARTIAL",
-      "points": [
-        { "timestamp": "2026-10-27T00:00:00Z", "value": "1.72" },
-        { "timestamp": "2026-10-27T00:01:00Z", "gap_reason": "NO_DATA" }
-      ]
-    }
-  ]
-}
-```
-
-- `status`：`OK` / `PARTIAL` / `NO_DATA`，与 `points` 里真实值的个数一致。
-- 缺口点**没有 `value`**，只有 `gap_reason`（`NO_DATA` / `AMBIGUOUS_SOURCE` / `INVALID_VALUE`）。不要渲染成 0。
-- `source` 是 recording rule 对 cAdvisor 的投影，不是直读 cAdvisor。
-- `retention_hint` 当前 `24h`；超出保留期返回空序列，接口不报错，前端不要承诺更长历史。
-- `gpu_requested=true` 且 `gpu_available=false`：显示“GPU 指标不可用”，不要显示成 0。当前环境没有 GPU exporter。
-- 曲线数据 30s 采集一次，前端轮询间隔不要低于 `step_seconds`。
-- 每租户并发上限 4，BFF 会把超出部分排队；首屏（worker + 4 个 step）= 5 次调用，建议限制同时展开的详情页为 1。
-- **`cpu.usage_cores` 对 step Pod 通常是整条 `NO_DATA`**：该指标用 `rate(...[5m])` 求值，要求同一 Pod 连续存活 ≥5 分钟，而 step Pod 一般只活 10–30 秒。这是采集规则的物理限制，不是接口缺陷；worker Pod 长时间运行可正常出点。前端对 step 曲线建议默认只展示内存。
-- 2026-10-27 在 66 集群实测：`memory.working_set_bytes` 返回真实值（62.3 MiB），`status=PARTIAL`，未测到点的位置均为 `NO_DATA`；参数类负例（缺 `pod_uid`、非规范 UUID、未登记指标码、layer 与容器名不匹配、`step_seconds` 越界、窗口 >24h、`end` 晚于当前、重复指标码、未知 query 参数、Pod 不属于该执行、执行不存在、无 token）全部返回预期状态码。GPU 曲线形状尚未实测（环境中唯一的 GPU 执行 Pod 已被回收）。
+- `/pods` 默认**不返回已回收的容器组**；要看已结束任务的容器必须传 `includeRecycled=true`。
+- `/resource-metrics` 一次只返回一个 Pod 的一个容器，不支持执行级聚合。
 
 ## 10. 枚举取值
 
@@ -903,74 +788,14 @@ Pod 的实例归属由服务端从 9.1 的 `metric_instance_id` 取得，不需�
 
 普通训练实测为 `CHECKPOINT` / `MODEL_CONFIG` / `METRICS` / `SUMMARY` / `LOG` 一类；微调会额外出现 `HF_MODEL` / `LORA_ADAPTER` / `EXPORT_REPORT` / `VERIFY_REPORT` / `SOURCE_METADATA`。不要假设某个角色一定存在。
 
-## 11. 日志（一次性快照，可用）
+## 11. 日志
 
-```
-GET /api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=16384
-```
+日志快照（`GET .../logs`）与 SSE 流（`GET .../logs/stream`）的完整合同——参数组合、容器选择、帧格式、续传语义、并发上限与全部错误码——见配套 handout `frontend-training-detail-diagnostics.md` §5。
 
-> 本接口是**一次性快照**，可用（2026-10-27 实测 200）。流式日志见 11.1。
-> 响应是一次性快照，不含增量或订阅语义。
+这里只保留两条与"失败排查"直接相关的结论：
 
-- 只接受 `tail_lines`（1–1000）与 `max_bytes`（1–65536）。不传时服务端默认 200 行 / 16384 字节。
-- 可选 `podUid`（规范 UUID）、`container`（小写容器名）、`previous`（`true` 读上一次终止实例）、`logId`（取自容器组的 `log_id`）。**`podUid` 与 `container` 必须同时传或同时不传**；只传 `container` 返回 `412`。不传任何选择器时走兼容路径：返回该执行训练 worker 的默认日志（`node` 容器）并优先使用归档 tail。
-- 不接受 pod **名字**、namespace 等选择器；选 Pod 一律用 `podUid`。
-- 响应：
-
-```json
-{
-  "log_id": "…",
-  "lines": [{"timestamp":"2026-10-23T08:40:01.123456Z","text":"epoch 1/5 loss=0.42"}],
-  "truncated": true,
-  "observed_at": "2026-10-23T09:10:12.345678Z",
-  "source_kind": "TRAINER",
-  "container_name": "trainer"
-}
-```
-
-- 没有可用日志来源时返回 **`412 ARTIFACT_NOT_PUBLISHED`**（训练尚未产出日志，或日志已随容器回收）。
-- 日志是**一次性快照**；需要持续跟随时用 11.1 的流式接口。
-
-### 11.1 流式日志
-
-```
-GET /api/v1/modeldev/executions/{execution_id}/logs/stream
-```
-
-`Content-Type: text/event-stream`（SSE）。可选参数 `podUid`、`container`、`previous`、`sinceBytes`（续传偏移，规范十进制，上限 `2^30`）。服务端每连接最多保留 10 分钟，到期以 `event: end` + `reason: TIME_LIMIT` 正常收口，前端用最后的 `offset` 续传。
-
-数据帧格式：
-
-```
-: ready
-
-event: log
-data: {"text":"epoch 1/5 loss=0.42","offset":115}
-
-event: log
-data: {"text":"epoch 2/5 loss=0.31","offset":268}
-
-event: end
-data: {"reason":"LOG_ENDED"}
-```
-
-| 帧 | 说明 |
-| --- | --- |
-| `: ready` | 注释帧，表示连接已建立并开始推送，可直接忽略 |
-| `event: log` | 一行日志。`offset` 是该行在日志流中的累计字节偏移，用于断线续传判断 |
-| `event: end` | 流正常结束。`reason` 取值 `LOG_ENDED` |
-
-流的失败语义（HTTP 状态码在**首帧之前**返回，不是 SSE 帧）：
-
-| 状态码 | `reason` | 含义 |
-| --- | --- | --- |
-| `412` | `LOG_UNAVAILABLE` | 该执行当前没有可读的日志来源 |
-| `404` | `RESOURCE_NOT_FOUND` | 执行不存在 |
-| `401` | — | 未认证 |
-
-已连接的流不会回传错误帧，异常断开就是终止；调用方按 `event: end` 或连接关闭结束读取。
-
-> 注意：训练容器的日志在容器回收后不再可读。已结束较久的执行会返回 `412 LOG_UNAVAILABLE`，这是设计行为，不是故障。
+- 不传任何选择器时走兼容路径，返回该执行训练 worker 的 `node` 容器日志（实测 `200`）。
+- 容器回收后日志不可读，返回 **`412 ARTIFACT_NOT_PUBLISHED`**（快照）或 `412 LOG_UNAVAILABLE`（流），这是设计行为。
 
 ## 12. 停止任务
 
@@ -1065,7 +890,8 @@ GET /api/v1/modeldev/artifacts/{artifact_id}/download
 
 - **不接受任何 query**；URL 不得带裸 `?`。
 - 返回**二进制流**，不是 JSON：
-  - `Content-Type`：普通文件是 `application/octet-stream`；`application/json`、`text/plain`、`application/x-ndjson` 会原样透出。`text/html`、`image/svg+xml` 等可被浏览器在控制台同源执行的类型强制降为 `application/octet-stream`。
+  - `Content-Type`：透传对象存储给出的类型，但只保留 `application/octet-stream`、`text/plain`、`application/json`、`application/x-ndjson` 这四个白名单值；`text/html`、`image/svg+xml` 等可被浏览器同源执行的类型强制降为 `application/octet-stream`。
+  - **实测四档产物全部是 `application/octet-stream`**，包括 `adapter_config.json` 这类 JSON 文件——对象存储本身按二进制上报。所以**不要靠 `Content-Type` 判断文件是不是 JSON**，请按 `filename` 后缀自行判断。
   - `Content-Disposition: attachment; filename="<文件名>"`，只取最后一段文件名，不含路径。
   - `X-Content-Type-Options: nosniff`。
   - 已知大小时带 `Content-Length`，可据此做进度条。
@@ -1151,25 +977,26 @@ POST :stop → 202
 | `GET /api/v1/modeldev/implementations` | **200** | 2 条（`builtin.mlp` / `builtin.sft_lora`），规则完整 |
 | `GET /api/v1/modeldev/input-versions` | **200** | 2 条 READY（CSV 1379×16、JSON 64 行） |
 | `GET /api/v1/modeldev/input-versions/{id}` | **200** | 详情正常 |
-| `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：6 条 CPU 可选，3 条 GPU 全 `selectable=false / GPU_CAPACITY_UNKNOWN` |
+| `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：4 条 CPU 全部可选 + 2 条共享 GPU 可选，共 6 条可提交；3 条整卡 GPU 不可选（见 5.1） |
 | `GET /api/v1/models`、`/models/{id}/versions`、`/model-versions/{id}`、`/download-url` | **200** | 微调基模选择可用，`total=3` |
 | `POST /api/v1/modeldev/executions` | **202** | CPU 与 GPU 均 202（GPU 仅限历史上 `selectable=true` 时），幂等重放正常，负例 400 |
-| `GET /api/v1/modeldev/executions` | **200** | 22 条执行全部可列；只接受 `page`/`pageSize` |
-| `GET /api/v1/modeldev/executions/{id}` | **200** | 四状态 + 参数 + `model_registration` + `history` + **`steps`** + **`metrics`** |
-| `GET .../{id}/logs` | **200** | 一次性快照。无日志来源返回 `412 ARTIFACT_NOT_PUBLISHED`（见第 11 节） |
-| `GET .../{id}/logs/stream` | **200** | SSE；`: ready` → `event: log` → `event: end`。无日志来源返回 `412 LOG_UNAVAILABLE`（见 11.1） |
+| `GET /api/v1/modeldev/executions` | **200** | 25 条执行全部可列；支持 `page`/`pageSize` 与状态、名称筛选（见第 8 节） |
+| `GET /api/v1/modeldev/executions/{id}` | **200** | 四状态 + 参数 + `steps` + `metrics` + `failure` + `managed_settings` + `base_model` |
+| `GET .../{id}/logs` | **200** | 一次性快照（见第 11 节） |
+| `GET .../{id}/logs/stream` | **200** | SSE（见第 11 节） |
 | `GET .../{id}/artifacts` | **200** | 有产出的历史执行可正常列出（微调执行 `total=18`，`filename` 为嵌套相对路径） |
 | `GET /api/v1/modeldev/artifacts/{id}/content` | **200** | 返回 `download_url`；该 URL 是集群内地址 + 60 秒签名，集群外不可达，只能由后端使用（见第 13 节） |
 | `GET /api/v1/modeldev/artifacts/{id}/download` | **200** | 二进制流，BFF 转发；855 B / 11 MB / 8.8 MB / 1.98 GB 四档 sha256 全一致（见 13.1） |
-| `GET .../{id}/pods` | **200** | 容器组，含 `layer` / `availability`（见 9.1） |
-| `GET .../{id}/events` | **200** | Kubernetes 事件，保留窗口 `1h`（见 9.2）；`scope` 非法值 400 |
+| `GET .../{id}/pods` | **200** | 容器组（见 9.1 与外链文档） |
+| `GET .../{id}/events` | **200** | Kubernetes 事件，保留窗口 `1h`（见 9.1 与外链文档） |
+| `GET .../{id}/resource-metrics` | **200** | 单 Pod 单容器的 CPU/内存曲线（见 9.1 与外链文档） |
 | `POST ...:stop` | **202** | 正常，重复调用 `replayed=true`、`intent_generation` 不变 |
 | `POST ...:resume-model-registration` | **200** | 权限已绑定；但仅目标条件满足时 200，否则 `412 MODEL_REGISTRATION_UNAVAILABLE` |
 | `GET /api/v1/model-versions`（列表） | **404** | 该路由不存在，只能通过 `/models/{id}/versions` |
 
 实测补充：
 
-- 22 条执行详情全部 200，`steps` 有值：普通训练 5 步，微调 8 步
+- 25 条执行详情全部 200，`steps` 有值：普通训练 5 步，微调 8 步
 - `steps` / `metrics` 随详情返回，不需要额外请求；微调实测 `metrics` 1000 点
 - 未认证访问详情与子资源均为 **401**；不存在的 UUID 为 **404 `RESOURCE_NOT_FOUND`**（此前为 400，已修正）
 - `page=0`、`pageSize=101`、非 UUID、未知参数仍是 **400 `INVALID_MODELDEV_QUERY`**
@@ -1216,9 +1043,9 @@ POST :stop → 202
 
 ## 17. 当前不可用能力
 
-### 17.1 已交付：详情页诊断能力
+### 17.1 详情页诊断能力：已全部交付
 
-此前列为“另出文档”的四类详情能力，**已随 `v21-detail-on-dev-20261027` 一并交付**，可直接按本文件对接：
+详情页需要的四类读取能力都已上线，接口表格见第 9.1 节，完整合同见配套 handout `frontend-training-detail-diagnostics.md`。此外还有三项随详情一起返回，无需额外请求：
 
 | 能力 | 位置 | 实测 |
 | --- | --- | --- |
@@ -1226,10 +1053,6 @@ POST :stop → 202
 | 训练曲线 | 详情响应的 `metrics[]` | **200**，实测 7~1379 点（内容已核实） |
 | 失败诊断 | 详情响应的 `failure` | 见第 9 节字段说明 |
 | 托管超参 | 详情响应的 `managed_settings` | 见第 9 节字段说明 |
-| 容器组 `GET .../pods` | 见 9.1 | **200** |
-| 事件 `GET .../events` | 见 9.2 | **200**（保留窗口 `1h`） |
-| 资源曲线 `GET .../resource-metrics` | 见 9.3 | **200**（CPU/内存，GPU 未实测） |
-| 日志流 `GET .../logs/stream` | 见 11.1 | **200**（SSE） |
 
 注意事项：
 
@@ -1317,13 +1140,13 @@ PC 上实测（2026-10-26）：`Content-Type: application/json; charset=utf-8` *
 
 ### 18.4 查询（200）
 
-> 列表、详情、日志、容器组、事件均已可用。字段定义以第 9、11 节为准。
+> 列表、详情、日志、容器组、事件均已可用。详情字段以第 9 节为准；容器组、事件、日志流、资源曲线的字段见外链文档。
 
 ```bash
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions?page=1&pageSize=20"
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}"
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=16384"
-curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/pods"
+curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/pods?includeRecycled=true"
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/events?scope=all"
 ```
 
@@ -1342,7 +1165,7 @@ curl -sN -H "Authorization: Bearer $TOK" \
 ```
 
 期望逐行输出 `: ready`、若干 `event: log` + `data: {...}`，最后 `event: end`。
-没有可读日志来源时会直接返回 `412 LOG_UNAVAILABLE`（不是流帧），不要当成连接失败。
+没有可读日志来源时会直接返回 `412`（不是流帧），不要当成连接失败。帧与 `reason` 全集见外链文档 §5.2。
 
 ### 18.5 产物（200）
 
@@ -1394,9 +1217,14 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?kind=UNSPECIFIED"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions?state=ready"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions?format=csv"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions?kind=FINETUNING"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions/not-a-uuid"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/compute-presets?page=1"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions?compute_state=succeeded"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions?delivery_state=SUCCEEDED"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions?compute_state=A&compute_state=B"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions?name=%20%20"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/artifacts?role=HF_MODEL"
 ```
 
