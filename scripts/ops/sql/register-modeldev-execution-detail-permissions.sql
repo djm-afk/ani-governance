@@ -5,6 +5,10 @@
 -- No new permission code is introduced: pods and events are fields of the
 -- execution detail (modeldev:execution:get) and the stream is the live form of
 -- the training log (modeldev:execution:logs). Roles and plans are not touched.
+--
+-- The artifact byte relay is the same grant as the URL exchange: whoever may
+-- read an artifact's download URL may also stream its bytes, so the relay
+-- reuses modeldev:artifact:download instead of widening access.
 BEGIN;
 
 DO $$
@@ -18,7 +22,8 @@ BEGIN
       ('GET', '/api/v1/modeldev/executions/{execution_id}/pods',        'modeldev:execution:get'),
       ('GET', '/api/v1/modeldev/executions/{execution_id}/events',      'modeldev:execution:get'),
       ('GET', '/api/v1/modeldev/executions/{execution_id}/resource-metrics', 'modeldev:execution:get'),
-      ('GET', '/api/v1/modeldev/executions/{execution_id}/logs/stream', 'modeldev:execution:logs')
+      ('GET', '/api/v1/modeldev/executions/{execution_id}/logs/stream', 'modeldev:execution:logs'),
+      ('GET', '/api/v1/modeldev/artifacts/{artifact_id}/download',      'modeldev:artifact:download')
     ) AS routes(method, path, permission_code)
   LOOP
     SELECT a.id INTO STRICT v_api_id
