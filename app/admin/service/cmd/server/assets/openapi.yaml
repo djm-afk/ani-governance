@@ -8756,6 +8756,18 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: compute_state
+                  in: query
+                  schema:
+                    type: string
+                - name: delivery_state
+                  in: query
+                  schema:
+                    type: string
+                - name: close_state
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -14899,6 +14911,101 @@ components:
                     description: |-
                         Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
                          from the published METRICS artifact.
+                failure:
+                    $ref: '#/components/schemas/ExecutionFailureView'
+                managed_settings:
+                    $ref: '#/components/schemas/ExecutionManagedSettingsView'
+        ExecutionFailureView:
+            type: object
+            properties:
+                reason:
+                    type: string
+                safe_message:
+                    type: string
+                violations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionFieldViolationView'
+                correlation_id:
+                    type: string
+            description: 历史失败诊断。safe_message 已剔除凭据与存储密钥，可直接展示。
+        ExecutionFieldViolationView:
+            type: object
+            properties:
+                field:
+                    type: string
+                reason:
+                    type: string
+        ExecutionManagedSettingsView:
+            type: object
+            properties:
+                stage:
+                    type: string
+                finetuning_type:
+                    type: string
+                lora_target:
+                    type: string
+                lora_rank:
+                    type: string
+                    format: int64
+                lora_alpha:
+                    type: string
+                    format: int64
+                cutoff_len:
+                    type: string
+                    format: int64
+                per_device_train_batch_size:
+                    type: string
+                    format: int64
+                gradient_accumulation_steps:
+                    type: string
+                    format: int64
+                seed:
+                    type: string
+                    format: int64
+                data_seed:
+                    type: string
+                    format: int64
+                device:
+                    type: string
+                fp16:
+                    type: boolean
+                bf16:
+                    type: boolean
+                flash_attn:
+                    type: string
+                report_to:
+                    type: string
+                save_strategy:
+                    type: string
+                template:
+                    type: string
+                train_dtype:
+                    type: string
+                export_dtype:
+                    type: string
+                verify_dtype:
+                    type: string
+                lr_scheduler_type:
+                    type: string
+                warmup_ratio:
+                    type: string
+                weight_decay:
+                    type: string
+                lora_dropout:
+                    type: string
+                num_train_epochs:
+                    type: string
+                    format: int64
+                optim:
+                    type: string
+                logging_steps:
+                    type: string
+                    format: int64
+            description: |-
+                服务端托管的训练超参，创建请求不接受这些字段。整数字段在本消息里是原生
+                 整数（与执行详情的其他 int64 一致），不走 explicit_parameters 的字符串编码；
+                 小数型超参（warmup_ratio / weight_decay / lora_dropout）保留十进制字符串。
         Expression:
             type: object
             properties:
@@ -18755,6 +18862,16 @@ components:
                 numeric_representation:
                     type: string
                 validation_description:
+                    type: string
+                minimum_inclusive:
+                    type: boolean
+                    nullable: true
+                maximum_inclusive:
+                    type: boolean
+                    nullable: true
+                editable:
+                    type: boolean
+                non_editable_reason:
                     type: string
         PasswordLoginRequest:
             type: object

@@ -46,3 +46,97 @@ func TestModelDevPublicExecutionPassesThroughStepsAndMetrics(t *testing.T) {
 		t.Fatalf("metric=%+v", metric)
 	}
 }
+
+// A failed execution must explain itself. The reason is rendered without the
+// ERROR_REASON_ prefix so it matches the vocabulary used elsewhere, and the
+// owner-supplied safe_message is forwarded verbatim.
+func TestModelDevPublicExecutionExposesFailure(t *testing.T) {
+	in := &modeldevcontractv1.ExecutionView{
+		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:   &modeldevcontractv1.ExecutionStates{},
+		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
+		Failure: &modeldevcontractv1.ErrorDetail{
+			Reason:        modeldevcontractv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE,
+			SafeMessage:   "the trainer exited before writing the export",
+			CorrelationId: "corr-1",
+			Violations:    []*modeldevcontractv1.FieldViolation{{Field: "parameters.epochs", Reason: "out of range"}},
+		},
+	}
+	out := modelDevPublicExecution(in)
+	if out.Failure == nil {
+		t.Fatal("failure dropped")
+	}
+	if out.Failure.Reason != "UPSTREAM_UNAVAILABLE" {
+		t.Fatalf("reason=%q", out.Failure.Reason)
+	}
+	if out.Failure.SafeMessage != "the trainer exited before writing the export" || out.Failure.CorrelationId != "corr-1" {
+		t.Fatalf("failure=%+v", out.Failure)
+	}
+	if len(out.Failure.Violations) != 1 || out.Failure.Violations[0].Field != "parameters.epochs" || out.Failure.Violations[0].Reason != "out of range" {
+		t.Fatalf("violations=%+v", out.Failure.Violations)
+	}
+
+	// An execution that never failed must not invent an empty diagnostic.
+	healthy := modelDevPublicExecution(&modeldevcontractv1.ExecutionView{
+		Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:     &modeldevcontractv1.ExecutionStates{},
+		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
+	})
+	if healthy.Failure != nil {
+		t.Fatalf("unexpected failure=%+v", healthy.Failure)
+	}
+}
+
+// The managed settings are the read-only half of the training configuration.
+// They must survive the mapping unchanged, including the decimal strings.
+func TestModelDevPublicExecutionExposesManagedSettings(t *testing.T) {
+	in := &modeldevcontractv1.ExecutionView{
+		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:   &modeldevcontractv1.ExecutionStates{},
+		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
+		ManagedSettings: &modeldevcontractv1.FinetuningManagedSettings{
+			Stage: "sft", FinetuningType: "lora", LoraTarget: "all", LoraRank: 8, LoraAlpha: 16,
+			CutoffLen: 128, PerDeviceTrainBatchSize: 1, GradientAccumulationSteps: 1, Seed: 42, DataSeed: 42,
+			Device: "cpu", FlashAttn: "disabled", ReportTo: "none", SaveStrategy: "no", Template: "qwen",
+			TrainDtype: "float32", ExportDtype: "float32", VerifyDtype: "float32", LrSchedulerType: "linear",
+			WarmupRatio: "0", WeightDecay: "0", LoraDropout: "0", NumTrainEpochs: 3, Optim: "adamw_torch", LoggingSteps: 1,
+		},
+	}
+	out := modelDevPublicExecution(in)
+	want := in.ManagedSettings
+	got := out.ManagedSettings
+	if got == nil {
+		t.Fatal("managed settings dropped")
+	}
+	if got.Stage != want.Stage || got.FinetuningType != want.FinetuningType || got.LoraTarget != want.LoraTarget {
+		t.Fatalf("type fields=%+v", got)
+	}
+	if got.LoraRank != want.LoraRank || got.LoraAlpha != want.LoraAlpha || got.CutoffLen != want.CutoffLen ||
+		got.PerDeviceTrainBatchSize != want.PerDeviceTrainBatchSize || got.GradientAccumulationSteps != want.GradientAccumulationSteps ||
+		got.Seed != want.Seed || got.DataSeed != want.DataSeed || got.NumTrainEpochs != want.NumTrainEpochs || got.LoggingSteps != want.LoggingSteps {
+		t.Fatalf("integer fields=%+v", got)
+	}
+	if got.WarmupRatio != want.WarmupRatio || got.WeightDecay != want.WeightDecay || got.LoraDropout != want.LoraDropout {
+		t.Fatalf("decimal strings=%+v", got)
+	}
+	if got.Fp16 != want.Fp16 || got.Bf16 != want.Bf16 {
+		t.Fatalf("precision flags=%+v", got)
+	}
+	if got.Device != want.Device || got.FlashAttn != want.FlashAttn || got.ReportTo != want.ReportTo || got.SaveStrategy != want.SaveStrategy {
+		t.Fatalf("runtime fields=%+v", got)
+	}
+	if got.Template != want.Template || got.TrainDtype != want.TrainDtype || got.ExportDtype != want.ExportDtype ||
+		got.VerifyDtype != want.VerifyDtype || got.LrSchedulerType != want.LrSchedulerType || got.Optim != want.Optim {
+		t.Fatalf("dtype fields=%+v", got)
+	}
+
+	// A general-training execution has no finetuning settings block.
+	plain := modelDevPublicExecution(&modeldevcontractv1.ExecutionView{
+		Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:     &modeldevcontractv1.ExecutionStates{},
+		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
+	})
+	if plain.ManagedSettings != nil {
+		t.Fatalf("unexpected managed settings=%+v", plain.ManagedSettings)
+	}
+}

@@ -68,7 +68,11 @@ func (s *ModelDevService) ListExecutions(ctx context.Context, in *modeldevv1.Lis
 	if err != nil {
 		return nil, err
 	}
-	out, err := s.resolver.ListExecutions(ctx, scope, page, pageSize)
+	filter, err := modelDevExecutionFilter(in)
+	if err != nil {
+		return nil, err
+	}
+	out, err := s.resolver.ListExecutions(ctx, scope, page, pageSize, filter)
 	if err != nil {
 		return nil, modelDevQueryFailure(err)
 	}
@@ -77,6 +81,39 @@ func (s *ModelDevService) ListExecutions(ctx context.Context, in *modeldevv1.Lis
 		reply.Items = append(reply.Items, modelDevPublicExecution(execution))
 	}
 	return reply, nil
+}
+
+// modelDevExecutionFilter converts the public state names into the owner enums.
+// The state names reuse the response vocabulary, so a typo, a lower-case value
+// or the placeholder UNSPECIFIED is rejected here instead of silently
+// returning an unfiltered page.
+func modelDevExecutionFilter(in *modeldevv1.ListExecutionsRequest) (data.ExecutionFilter, error) {
+	var filter data.ExecutionFilter
+	if in.ComputeState != nil {
+		value, ok := modeldevcontractv1.ComputeState_value["COMPUTE_STATE_"+*in.ComputeState]
+		if !ok || value == 0 {
+			return data.ExecutionFilter{}, modelDevQueryInvalid()
+		}
+		parsed := modeldevcontractv1.ComputeState(value)
+		filter.ComputeState = &parsed
+	}
+	if in.DeliveryState != nil {
+		value, ok := modeldevcontractv1.DeliveryState_value["DELIVERY_STATE_"+*in.DeliveryState]
+		if !ok || value == 0 {
+			return data.ExecutionFilter{}, modelDevQueryInvalid()
+		}
+		parsed := modeldevcontractv1.DeliveryState(value)
+		filter.DeliveryState = &parsed
+	}
+	if in.CloseState != nil {
+		value, ok := modeldevcontractv1.CloseState_value["CLOSE_STATE_"+*in.CloseState]
+		if !ok || value == 0 {
+			return data.ExecutionFilter{}, modelDevQueryInvalid()
+		}
+		parsed := modeldevcontractv1.CloseState(value)
+		filter.CloseState = &parsed
+	}
+	return filter, nil
 }
 
 func (s *ModelDevService) GetExecutionLogs(ctx context.Context, in *modeldevv1.GetExecutionLogsRequest) (*modeldevv1.GetExecutionLogsResponse, error) {
@@ -265,6 +302,12 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	if r := execution.ModelRegistration; r != nil {
 		out.ModelRegistration = &modeldevv1.ModelRegistrationView{State: r.State, RegistrationId: r.RegistrationId, ModelId: r.ModelId, ModelVersionId: r.ModelVersionId, FailureCode: r.FailureCode}
 	}
+	if failure := execution.Failure; failure != nil {
+		out.Failure = modelDevPublicFailure(failure)
+	}
+	if managed := execution.ManagedSettings; managed != nil {
+		out.ManagedSettings = modelDevPublicManagedSettings(managed)
+	}
 	if h := execution.History; h != nil {
 		out.History = &modeldevv1.ExecutionHistoryView{RunId: h.RunId, WorkflowUid: h.WorkflowUid, ObservedAt: h.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano), WorkflowResourceVersion: h.WorkflowResourceVersion, WorkflowNodesSha256: h.WorkflowNodesSha256}
 		if h.RunState != 0 {
@@ -282,6 +325,35 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	}
 
 	return out
+}
+
+// modelDevPublicFailure keeps the diagnostic a failed execution already recorded.
+// The owner strips credentials and storage secrets from safe_message, so the
+// text is forwarded unchanged rather than rebuilt here.
+func modelDevPublicFailure(in *modeldevcontractv1.ErrorDetail) *modeldevv1.ExecutionFailureView {
+	out := &modeldevv1.ExecutionFailureView{SafeMessage: in.SafeMessage, CorrelationId: in.CorrelationId}
+	if in.Reason != 0 {
+		out.Reason = strings.TrimPrefix(in.Reason.String(), "ERROR_REASON_")
+	}
+	for _, violation := range in.Violations {
+		out.Violations = append(out.Violations, &modeldevv1.ExecutionFieldViolationView{Field: violation.Field, Reason: violation.Reason})
+	}
+	return out
+}
+
+// modelDevPublicManagedSettings exposes the read-only training hyperparameters.
+// The owner renders decimals as strings, so they stay strings here.
+func modelDevPublicManagedSettings(in *modeldevcontractv1.FinetuningManagedSettings) *modeldevv1.ExecutionManagedSettingsView {
+	return &modeldevv1.ExecutionManagedSettingsView{
+		Stage: in.Stage, FinetuningType: in.FinetuningType, LoraTarget: in.LoraTarget,
+		LoraRank: in.LoraRank, LoraAlpha: in.LoraAlpha, CutoffLen: in.CutoffLen,
+		PerDeviceTrainBatchSize: in.PerDeviceTrainBatchSize, GradientAccumulationSteps: in.GradientAccumulationSteps,
+		Seed: in.Seed, DataSeed: in.DataSeed, Device: in.Device, Fp16: in.Fp16, Bf16: in.Bf16,
+		FlashAttn: in.FlashAttn, ReportTo: in.ReportTo, SaveStrategy: in.SaveStrategy, Template: in.Template,
+		TrainDtype: in.TrainDtype, ExportDtype: in.ExportDtype, VerifyDtype: in.VerifyDtype,
+		LrSchedulerType: in.LrSchedulerType, WarmupRatio: in.WarmupRatio, WeightDecay: in.WeightDecay,
+		LoraDropout: in.LoraDropout, NumTrainEpochs: in.NumTrainEpochs, Optim: in.Optim, LoggingSteps: in.LoggingSteps,
+	}
 }
 
 // modelDevPublicStep keeps the timeline facts ModelDev already derived. Absent

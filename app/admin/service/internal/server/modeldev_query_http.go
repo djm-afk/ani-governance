@@ -34,6 +34,12 @@ func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevS
 				in.Page, err = modelDevPagePointer(values[0])
 			case "pageSize":
 				in.PageSize, err = modelDevPageSizePointer(values[0])
+			case "compute_state":
+				in.ComputeState, err = modelDevStatePointer(values[0])
+			case "delivery_state":
+				in.DeliveryState, err = modelDevStatePointer(values[0])
+			case "close_state":
+				in.CloseState, err = modelDevStatePointer(values[0])
 			default:
 				return invalidModelDevQueryHTTP()
 			}
@@ -322,6 +328,22 @@ func modelDevPageSizePointer(value string) (*uint32, error) {
 		return nil, err
 	}
 	return &n, nil
+}
+
+// modelDevStatePointer accepts one upper-case enum member name without its
+// prefix, matching the vocabulary the list response returns. Validation of the
+// member itself happens in the service, where the owner enum is available.
+func modelDevStatePointer(value string) (*string, error) {
+	if value == "" || len(value) > 48 {
+		return nil, invalidModelDevQueryHTTP()
+	}
+	for _, character := range value {
+		if !(character >= 'A' && character <= 'Z' || character == '_') {
+			return nil, invalidModelDevQueryHTTP()
+		}
+	}
+	parsed := value
+	return &parsed, nil
 }
 
 // modelDevQueryUUIDPointer accepts one canonical UUID query value.

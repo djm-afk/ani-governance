@@ -160,6 +160,10 @@ GET /api/v1/modeldev/implementations?kind=FINETUNING
           "allowed_values": [],
           "minimum": {"name": "learning_rate", "type": "DECIMAL", "value": "0"},
           "maximum": null,
+          "minimum_inclusive": false,
+          "maximum_inclusive": null,
+          "editable": true,
+          "non_editable_reason": "",
           "numeric_representation": "float32_positive_finite",
           "validation_description": "non-exponent decimal string, at most 32 characters, positive and finite after float32 conversion"
         }
@@ -191,6 +195,17 @@ GET /api/v1/modeldev/implementations?kind=FINETUNING
   - 带 `kind=GENERAL_TRAINING`：`total` 为 `"1"`，`page=1` 返回 `builtin.mlp`，`page>=2` 即为空数组。
   - 因此翻页循环请以**响应里的 `total`** 为准，不要按固定页数或写死 `page<=3`。要拿全量请一次请求 `pageSize>=total`。
 - `parameter_rules` 里的 `default_value` / `minimum` / `maximum` / `allowed_values` / `numeric_representation` / `validation_description` 都是运行时值，不要硬编码默认值和边界。
+- **区间开闭必须与 `minimum` / `maximum` 成对解读**，否则会放过后端拒绝的值：
+
+  | 参数 | `minimum` | `minimum_inclusive` | `maximum` | `maximum_inclusive` | 真实区间 |
+  | --- | --- | --- | --- | --- | --- |
+  | `learning_rate` | `"0"` | `false` | `null` | `null` | `(0, +∞)` |
+  | `lora_dropout` | `"0"` | `true` | `"1"` | `false` | `[0, 1)` |
+  | `epochs` / `batch_size` / `cutoff_len` / `max_steps` / `seed` 等整数 | 见返回 | `true` | 见返回 | `true` | `[min, max]` |
+
+  典型陷阱：`lora_dropout` 的 `maximum` 是 `"1"`，但 `maximum_inclusive=false`，**填 1 会被后端拒绝**；`learning_rate` 的 `minimum` 是 `"0"`，但 `minimum_inclusive=false`，**填 0 也会被拒绝**。前端的输入校验请按上表判定，不要只比较 `minimum` / `maximum` 的数值。
+- `minimum_inclusive` / `maximum_inclusive` 是**可为 null** 的布尔：`null` 表示服务端没有给出该侧区间语义（通常同时 `minimum` 或 `maximum` 也是 `null`），**不要当作 `true` 处理**。
+- `editable` 表示该参数当前是否允许用户改写，`non_editable_reason` 在 `editable=false` 时给出原因。当前两个已发布实现的所有参数都是 `editable=true`，此时 `non_editable_reason` 为 `""`。前端应按 `editable` 决定是否置灰，不要按参数名硬编码。
 - 不传某个参数与显式传默认值，在服务端是**两种不同原意图**（会影响幂等哈希）。未填写的参数请保持“未提交”，不要补默认值。
 - `execution_timeout_max_seconds` 是 `timeout_seconds` 的上限；`step_timeout_seconds` 是只读值。
 
@@ -423,11 +438,25 @@ GET /api/v1/models/{model_id}                                  # 登记到已有
 
 ```
 GET /api/v1/modeldev/executions?page=1&pageSize=20
+GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=SUCCEEDED
+GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=FAILED&close_state=NEEDS_REVIEW
 ```
 
-- **只接受 `page` / `pageSize`**。传 `compute_state`、`keyword`、`sort`、`limit`、`cursor` 等都会 `400 INVALID_MODELDEV_QUERY`。
-- 状态筛选、名称搜索需由调用方在本地完成；如需全量，按页拉取直到累计条数达到 `total`。
-- **排序是 `execution_id` 字典序（UUID v4），不是时间序**。不要假设“第一页是最新”；按时间排序请自行基于 `accepted_at`。
+**支持的 query 参数**
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `page` | 整数 ≥1 | 页码，缺省 1 |
+| `pageSize` | 整数 1–100 | 每页条数，缺省 20 |
+| `compute_state` | 字符串 | 可选，计算状态筛选 |
+| `delivery_state` | 字符串 | 可选，交付状态筛选 |
+| `close_state` | 字符串 | 可选，关闭状态筛选 |
+
+- **三个状态筛选可任意叠加**（AND 语义），都能在分页前生效，`total` 是筛选后的条数。
+- 取值**不带枚举前缀，且只认大写**：`compute_state` 用 `ACCEPTED` / `SUBMITTING` / `SUBMISSION_UNCERTAIN` / `QUEUED` / `PREPARING` / `TRAINING` / `SUCCEEDED` / `FAILED` / `CANCELED`（以及 `SUBMISSION_NOT_SENT`）；`delivery_state` 用 `PENDING` / `PUBLISHING` / `PUBLISHED` / `FAILED`；`close_state` 用 `OPEN` / `CLOSING` / `CLOSED` / `NEEDS_REVIEW`。词汇与响应里的同名字段完全一致。
+- 非法取值一律 `400 INVALID_MODELDEV_QUERY`，**不会静默退化成不筛选**：小写（`succeeded`）、空值、重复（`compute_state=A&compute_state=B`）、`UNSPECIFIED`、以及把某个枚举的成员传给另一个枚举（如 `delivery_state=SUCCEEDED`）都会被拒。
+- `keyword`、`sort`、`limit`、`cursor` 仍未支持，传了返回 `400`。**名称搜索与按时间排序仍需调用方本地完成**。
+- **排序仍是 `execution_id` 字典序（UUID v4），不是时间序**。不要假设“第一页是最新”；需要按时间排请基于 `accepted_at` 在本地排序。
 - 响应：
 
 ```json
@@ -515,7 +544,44 @@ GET /api/v1/modeldev/executions/{execution_id}
   ],
   "metrics": [
     {"name": "train.loss", "decimal_value": "0.7341379523277283", "step": "1"}
-  ]
+  ],
+  "failure": {
+    "reason": "UPSTREAM_UNAVAILABLE",
+    "safe_message": "the trainer exited before writing the export",
+    "violations": [
+      {"field": "parameters.epochs", "reason": "out of range"}
+    ],
+    "correlation_id": "0f3a1c2e-…"
+  },
+  "managed_settings": {
+    "stage": "sft",
+    "finetuning_type": "lora",
+    "lora_target": "all",
+    "lora_rank": "8",
+    "lora_alpha": "16",
+    "cutoff_len": "128",
+    "per_device_train_batch_size": "1",
+    "gradient_accumulation_steps": "1",
+    "seed": "42",
+    "data_seed": "42",
+    "device": "cpu",
+    "fp16": false,
+    "bf16": false,
+    "flash_attn": "disabled",
+    "report_to": "none",
+    "save_strategy": "no",
+    "template": "qwen",
+    "train_dtype": "float32",
+    "export_dtype": "float32",
+    "verify_dtype": "float32",
+    "lr_scheduler_type": "linear",
+    "warmup_ratio": "0",
+    "weight_decay": "0",
+    "lora_dropout": "0",
+    "num_train_epochs": "3",
+    "optim": "adamw_torch",
+    "logging_steps": "1"
+  }
 }
 ```
 
@@ -534,6 +600,8 @@ GET /api/v1/modeldev/executions/{execution_id}
 | `history` | 关闭时持久化的控制器证据；缺失字段表示“当时无该证据”，不要补猜 |
 | `steps` | 流水线步骤时间线，按执行顺序排列。普通训练 5 步，微调 8 步；步集由 `kind` 决定，所以 `role` / `state` 是字符串不是枚举 |
 | `metrics` | 训练曲线点，来自已发布的 `METRICS` 产物。目前只有 `train.loss`；`decimal_value` 是字符串，需按十进制解析，`step` 是数字。曲线点数等于实际写入的点数（实测微调可到 1000 点） |
+| `failure` | 历史失败诊断，**只有确实失败过才有值**，正常结束或仍在运行时为 `null`。见下方 `failure[]` 字段 |
+| `managed_settings` | 服务端托管的训练超参，**只读展示**。只有微调才有值，普通训练为 `null`。见下方 `managed_settings[]` 字段 |
 
 `steps[]` 字段：
 
@@ -547,7 +615,22 @@ GET /api/v1/modeldev/executions/{execution_id}
 
 `steps` 与 `metrics` 都随详情一起返回，**不需要额外请求**。`metrics` 为空数组表示该执行没有已发布的 `METRICS` 产物（例如仍在训练或已失败）。
 
-详情中**没有**失败原因字段。失败信息只能从 `compute_state` / `close_state` 推断；不要把 `delivery_state=PUBLISHED` 当成训练成功。
+`failure` 字段（失败时才有）：
+
+| 字段 | 说明 |
+| --- | --- |
+| `reason` | 失败原因枚举名，不带前缀，如 `INVALID_ARGUMENT` / `RESOURCE_NOT_FOUND` / `UPSTREAM_UNAVAILABLE` / `ENVIRONMENT_NOT_READY` |
+| `safe_message` | 面向人的安全描述。服务端已剔除凭据、存储密钥与隐藏的对象事实，**可直接展示** |
+| `violations[]` | 字段级违规明细，`{field, reason}`；空数组表示没有字段级信息 |
+| `correlation_id` | 服务端关联 ID，用于向后端追日志；**不是**业务标识，不要展示为主键 |
+
+`failure` 是**执行结果的一部分**，与 HTTP 错误不同：接口仍然返回 `200`，只是这次训练失败了。`failure=null` 只代表“没有失败诊断”，不代表成功——成功仍需看 `compute_state=SUCCEEDED`。
+
+`managed_settings` 字段（微调才有）：
+
+服务端托管的训练超参，**创建请求不接受这些字段**，只能读取展示。`stage` 本期恒为 `"sft"`（当前只有 SFT，不存在 DPO/PPO，**不要做成可选项**）。`lora_rank` / `lora_alpha` / `cutoff_len` / `per_device_train_batch_size` / `gradient_accumulation_steps` / `seed` / `data_seed` / `num_train_epochs` / `logging_steps` 是整数；`warmup_ratio` / `weight_decay` / `lora_dropout` 是十进制字符串；`fp16` / `bf16` 是布尔。
+
+不要把 `delivery_state=PUBLISHED` 当成训练成功；判断成功只看 `compute_state`。
 
 ### 9.1 容器组
 
@@ -1027,6 +1110,8 @@ POST :stop → 202
 | --- | --- | --- |
 | 流水线步骤明细 | 详情响应的 `steps[]` | **200**，普通训练 5 步、微调 8 步 |
 | 训练曲线 | 详情响应的 `metrics[]` | **200**，微调实测 1000 点 |
+| 失败诊断 | 详情响应的 `failure` | 见第 9 节字段说明 |
+| 托管超参 | 详情响应的 `managed_settings` | 见第 9 节字段说明 |
 | 容器组 `GET .../pods` | 见 9.1 | **200** |
 | 事件 `GET .../events` | 见 9.2 | **200**（保留窗口 `1h`） |
 | 资源曲线 `GET .../resource-metrics` | 见 9.3 | 已实现，待目标环境联调一致 |
@@ -1042,7 +1127,6 @@ POST :stop → 202
 
 | 能力 | 状态 |
 | --- | --- |
-| 失败原因字段（详情级 `failure`） | 主干详情不含该字段，只能从 `compute_state` / `close_state` 推断 |
 | 数据集上传/导入 | 无接口，只能运维 CLI 登记 |
 | 训练 Release / 预设绑定 / 组合审批 | 已退出当前产品，不提供 |
 | 任务重试 / 重新提交 | 无接口；`SUBMISSION_NOT_SENT` 等状态也不可重发 |

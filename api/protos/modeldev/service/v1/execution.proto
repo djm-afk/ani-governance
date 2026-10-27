@@ -89,6 +89,15 @@ message ParameterRule {
   GeneralParameter maximum = 7;
   string numeric_representation = 8 [json_name = "numeric_representation"];
   string validation_description = 9 [json_name = "validation_description"];
+  // 开闭区间。与 minimum/maximum 成对解读：minimum_inclusive=false 表示下界开，
+  // 此时 minimum 本身不可取。未设置（null）表示服务端没有给出区间语义，不要猜测。
+  optional bool minimum_inclusive = 10 [json_name = "minimum_inclusive"];
+  // maximum_inclusive=false 表示上界开，此时 maximum 本身不可取。
+  optional bool maximum_inclusive = 11 [json_name = "maximum_inclusive"];
+  // 该参数是否允许用户改写。当前所有已发布实现均为 true。
+  bool editable = 12;
+  // editable=false 时说明原因；editable=true 时恒为空字符串。
+  string non_editable_reason = 13 [json_name = "non_editable_reason"];
 }
 message GetInputVersionRequest { string input_version_id = 1 [json_name = "input_version_id"]; }
 message GetInputVersionResponse { InputVersionView input_version = 1 [json_name = "input_version"]; }
@@ -152,6 +161,12 @@ message ListExecutionsRequest {
   reserved "limit", "cursor";
   optional uint32 page = 3 [json_name = "page"];
   optional uint32 page_size = 4 [json_name = "pageSize"];
+  // 以下三个筛选与响应里的 compute_state / delivery_state / close_state 同词汇
+  // （不带枚举前缀，如 SUCCEEDED / PUBLISHED / CLOSED）。三者在服务端可叠加，
+  // 且都在分页前生效，total 为筛选后的条数。
+  optional string compute_state = 5 [json_name = "compute_state"];
+  optional string delivery_state = 6 [json_name = "delivery_state"];
+  optional string close_state = 7 [json_name = "close_state"];
 }
 message ListExecutionsResponse {
   repeated ExecutionView items = 1;
@@ -358,6 +373,58 @@ message ExecutionView {
   // Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
   // from the published METRICS artifact.
   repeated ExecutionMetricView metrics = 30 [json_name = "metrics"];
+  // 历史失败诊断。仅当这次执行确实失败过才有值；正常结束或仍在运行时为 null。
+  // 与 HTTP 错误无关——这是执行结果的一部分，不是接口调用失败。
+  ExecutionFailureView failure = 31;
+  // 服务端托管的训练超参。前端只读展示，创建时不能提交这些字段。
+  ExecutionManagedSettingsView managed_settings = 32 [json_name = "managed_settings"];
+}
+// 历史失败诊断。safe_message 已剔除凭据与存储密钥，可直接展示。
+message ExecutionFailureView {
+  // 不带前缀的原因枚举名，如 INVALID_ARGUMENT / UPSTREAM_UNAVAILABLE。
+  string reason = 1;
+  // 面向人的安全描述，不含凭据、存储密钥或隐藏的对象事实。
+  string safe_message = 2 [json_name = "safe_message"];
+  repeated ExecutionFieldViolationView violations = 3;
+  // 服务端关联 ID，用于日志检索；不是用户可见的业务标识。
+  string correlation_id = 4 [json_name = "correlation_id"];
+}
+message ExecutionFieldViolationView {
+  string field = 1;
+  string reason = 2;
+}
+// 服务端托管的训练超参，创建请求不接受这些字段。整数字段在本消息里是原生
+// 整数（与执行详情的其他 int64 一致），不走 explicit_parameters 的字符串编码；
+// 小数型超参（warmup_ratio / weight_decay / lora_dropout）保留十进制字符串。
+message ExecutionManagedSettingsView {
+  // 训练阶段。本期只有 sft，不存在 dpo/ppo。
+  string stage = 1;
+  string finetuning_type = 2 [json_name = "finetuning_type"];
+  string lora_target = 3 [json_name = "lora_target"];
+  int64 lora_rank = 4 [json_name = "lora_rank"];
+  int64 lora_alpha = 5 [json_name = "lora_alpha"];
+  int64 cutoff_len = 6 [json_name = "cutoff_len"];
+  int64 per_device_train_batch_size = 7 [json_name = "per_device_train_batch_size"];
+  int64 gradient_accumulation_steps = 8 [json_name = "gradient_accumulation_steps"];
+  int64 seed = 9;
+  int64 data_seed = 10 [json_name = "data_seed"];
+  string device = 11;
+  bool fp16 = 12;
+  bool bf16 = 13;
+  string flash_attn = 14 [json_name = "flash_attn"];
+  string report_to = 15 [json_name = "report_to"];
+  string save_strategy = 16 [json_name = "save_strategy"];
+  string template = 17;
+  string train_dtype = 18 [json_name = "train_dtype"];
+  string export_dtype = 19 [json_name = "export_dtype"];
+  string verify_dtype = 20 [json_name = "verify_dtype"];
+  string lr_scheduler_type = 21 [json_name = "lr_scheduler_type"];
+  string warmup_ratio = 22 [json_name = "warmup_ratio"];
+  string weight_decay = 23 [json_name = "weight_decay"];
+  string lora_dropout = 24 [json_name = "lora_dropout"];
+  int64 num_train_epochs = 25 [json_name = "num_train_epochs"];
+  string optim = 26;
+  int64 logging_steps = 27 [json_name = "logging_steps"];
 }
 // One ordered timeline entry. Extended facts mirror ModelDev StepProgress, which
 // uses a google.protobuf.Timestamp there; this contract keeps RFC3339 strings.

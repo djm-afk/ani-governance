@@ -18,7 +18,15 @@ type LogSelection struct {
 	Previous  bool
 }
 
-func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResolveScope, page, pageSize uint32) (*modeldevv1.ListExecutionsResponse, error) {
+// ExecutionFilter narrows the execution list before the owner counts or pages.
+// Nil fields mean "no filter", which is not the same as asking for UNSPECIFIED.
+type ExecutionFilter struct {
+	ComputeState  *modeldevv1.ComputeState
+	DeliveryState *modeldevv1.DeliveryState
+	CloseState    *modeldevv1.CloseState
+}
+
+func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResolveScope, page, pageSize uint32, filter ExecutionFilter) (*modeldevv1.ListExecutionsResponse, error) {
 	if page == 0 || pageSize == 0 || pageSize > 100 {
 		return nil, modelDevQueryUnavailable()
 	}
@@ -27,7 +35,13 @@ func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResol
 		return nil, err
 	}
 	defer cancel()
-	out, err := modeldevv1.NewModelDevQueryServiceClient(c.connection).ListExecutions(call, &modeldevv1.ListExecutionsRequest{Page: &modeldevv1.PageRequest{Page: &page, PageSize: &pageSize}}, grpc.WaitForReady(true))
+	request := &modeldevv1.ListExecutionsRequest{
+		Page:          &modeldevv1.PageRequest{Page: &page, PageSize: &pageSize},
+		ComputeState:  filter.ComputeState,
+		DeliveryState: filter.DeliveryState,
+		CloseState:    filter.CloseState,
+	}
+	out, err := modeldevv1.NewModelDevQueryServiceClient(c.connection).ListExecutions(call, request, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, modelDevQueryError(err)
 	}

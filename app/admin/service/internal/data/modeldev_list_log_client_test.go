@@ -107,7 +107,7 @@ func TestModelDevListLogClientDelegatesCurrentScopeAndBoundsResponses(t *testing
 			require.NoError(t, err)
 			t.Cleanup(closeClient)
 			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("x-ani-tenant-id", uuid.NewString(), "x-ani-actor", "governance:user:1", "x-ani-authorized-method", "forged", "x-secret-injected", "private"))
-			listed, err := client.ListExecutions(ctx, peer.scope, 1, 1)
+			listed, err := client.ListExecutions(ctx, peer.scope, 1, 1, ExecutionFilter{})
 			require.Equal(t, test.listCode, status.Code(err))
 			if err != nil {
 				require.Nil(t, listed)
@@ -116,10 +116,10 @@ func TestModelDevListLogClientDelegatesCurrentScopeAndBoundsResponses(t *testing
 				require.True(t, proto.Equal(peer.list, listed))
 			}
 			// An invalid page window is rejected before any downstream call.
-			if _, err := client.ListExecutions(ctx, peer.scope, 0, 20); status.Code(err) != codes.Unavailable {
+			if _, err := client.ListExecutions(ctx, peer.scope, 0, 20, ExecutionFilter{}); status.Code(err) != codes.Unavailable {
 				t.Fatal("zero page was forwarded")
 			}
-			if _, err := client.ListExecutions(ctx, peer.scope, 1, 101); status.Code(err) != codes.Unavailable {
+			if _, err := client.ListExecutions(ctx, peer.scope, 1, 101, ExecutionFilter{}); status.Code(err) != codes.Unavailable {
 				t.Fatal("out-of-range page size was forwarded")
 			}
 			got, err := client.GetExecutionLogs(ctx, peer.scope, id, 1, 32, LogSelection{})

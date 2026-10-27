@@ -41,7 +41,7 @@ func (s *ModelDevService) ListImplementations(ctx context.Context, in *modeldevv
 	for _, preset := range out.Implementations {
 		view := &modeldevv1.ImplementationView{ImplementationId: preset.ImplementationId, Name: preset.Name, Kind: strings.TrimPrefix(preset.Kind.String(), "EXECUTION_KIND_"), Version: preset.Version, ParameterContractVersion: preset.ParameterContractVersion, SupportedDeviceModes: preset.SupportedDeviceModes, Available: preset.Available, ExecutionTimeoutDefaultSeconds: preset.ExecutionTimeoutDefaultSeconds, ExecutionTimeoutMaxSeconds: preset.ExecutionTimeoutMaxSeconds, StepTimeoutSeconds: preset.StepTimeoutSeconds}
 		for _, rule := range preset.ParameterRules {
-			view.ParameterRules = append(view.ParameterRules, &modeldevv1.ParameterRule{Name: rule.Name, Type: strings.TrimPrefix(rule.Type.String(), "PARAMETER_TYPE_"), Required: rule.Required, DefaultValue: modelDevPublicParameter(rule.DefaultValue), Minimum: modelDevPublicParameter(rule.Minimum), Maximum: modelDevPublicParameter(rule.Maximum), NumericRepresentation: rule.NumericRepresentation, ValidationDescription: rule.ValidationDescription})
+			view.ParameterRules = append(view.ParameterRules, modelDevPublicParameterRule(rule))
 			for _, allowed := range rule.AllowedValues {
 				n := len(view.ParameterRules) - 1
 				view.ParameterRules[n].AllowedValues = append(view.ParameterRules[n].AllowedValues, modelDevPublicParameter(allowed))
@@ -50,6 +50,26 @@ func (s *ModelDevService) ListImplementations(ctx context.Context, in *modeldevv
 		reply.Items = append(reply.Items, view)
 	}
 	return reply, nil
+}
+
+// modelDevPublicParameterRule maps one catalogue rule. The inclusive flags stay
+// pointers: a missing upper bound must not be read as "closed", because the
+// owner omits maximum entirely for open-ended parameters.
+func modelDevPublicParameterRule(rule *modeldevcontractv1.ParameterRule) *modeldevv1.ParameterRule {
+	return &modeldevv1.ParameterRule{
+		Name:                   rule.Name,
+		Type:                   strings.TrimPrefix(rule.Type.String(), "PARAMETER_TYPE_"),
+		Required:               rule.Required,
+		DefaultValue:           modelDevPublicParameter(rule.DefaultValue),
+		Minimum:                modelDevPublicParameter(rule.Minimum),
+		Maximum:                modelDevPublicParameter(rule.Maximum),
+		NumericRepresentation:  rule.NumericRepresentation,
+		ValidationDescription:  rule.ValidationDescription,
+		MinimumInclusive:       rule.MinimumInclusive,
+		MaximumInclusive:       rule.MaximumInclusive,
+		Editable:               rule.Editable,
+		NonEditableReason:      rule.NonEditableReason,
+	}
 }
 
 func modelDevPublicParameter(in *trainingv1.Parameter) *modeldevv1.GeneralParameter {

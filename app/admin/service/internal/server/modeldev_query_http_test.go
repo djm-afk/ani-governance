@@ -41,7 +41,18 @@ func TestModelDevListAndLogRejectUnboundedSelectors(t *testing.T) {
 		{"/api/v1/modeldev/executions/id/artifacts?unknown=1", ""},
 		{"/api/v1/modeldev/executions?id=1", "{}"},
 		{"/api/v1/modeldev/executions?tenant_id=other", ""},
-		{"/api/v1/modeldev/executions?compute_state=RUNNING", ""},
+		// The three state selectors are declared, so the malformed shapes below
+		// must still fail at this layer: lower case, empty, duplicated and
+		// over-long values are all rejected rather than forwarded.
+		{"/api/v1/modeldev/executions?compute_state=running", ""},
+		{"/api/v1/modeldev/executions?compute_state=", ""},
+		{"/api/v1/modeldev/executions?compute_state=SUCCEEDED&compute_state=FAILED", ""},
+		{"/api/v1/modeldev/executions?delivery_state=published", ""},
+		{"/api/v1/modeldev/executions?delivery_state=", ""},
+		{"/api/v1/modeldev/executions?close_state=closed", ""},
+		{"/api/v1/modeldev/executions?close_state=", ""},
+		{"/api/v1/modeldev/executions?close_state=" + strings.Repeat("A", 49), ""},
+		{"/api/v1/modeldev/executions?unknown_state=SUCCEEDED", ""},
 		{"/api/v1/modeldev/executions", "{}"},
 		{"/api/v1/modeldev/executions/id/logs?tail_lines=1001", ""},
 		{"/api/v1/modeldev/executions/id/logs?max_bytes=65537", ""},
