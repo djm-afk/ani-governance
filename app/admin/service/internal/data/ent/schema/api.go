@@ -63,6 +63,7 @@ func (Api) Fields() []ent.Field {
 				"Inference", "INFERENCE",
 				"VirtualMachine", "VIRTUAL_MACHINE",
 				"Instance", "INSTANCE",
+				"Storage", "STORAGE",
 			).
 			Optional().
 			Nillable(),

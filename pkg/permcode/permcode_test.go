@@ -174,12 +174,12 @@ func TestCountsAndKeys(t *testing.T) {
 	if ManagementCount() != 199 {
 		t.Errorf("ManagementCount() = %d, want 199", ManagementCount())
 	}
-	if CapabilityCount() != 166 {
-		t.Errorf("CapabilityCount() = %d, want 166", CapabilityCount())
+	if CapabilityCount() != 176 {
+		t.Errorf("CapabilityCount() = %d, want 176", CapabilityCount())
 	}
 	keys := AllKeys()
-	if len(keys) < 262 {
-		t.Errorf("AllKeys() = %d, want >= 262", len(keys))
+	if len(keys) < 272 {
+		t.Errorf("AllKeys() = %d, want >= 272", len(keys))
 	}
 	method, path := SplitKey("GET /api/v1/admin/users")
 	if method != "GET" || path != "/api/v1/admin/users" {

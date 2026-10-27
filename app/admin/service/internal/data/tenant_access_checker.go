@@ -257,6 +257,8 @@ func mapProtoModuleToEnt(m identityV1.Module) planmodule.Module {
 		return planmodule.ModuleInstance
 	case identityV1.Module_VIRTUAL_MACHINE:
 		return planmodule.ModuleVirtualMachine
+	case identityV1.Module_STORAGE:
+		return planmodule.ModuleStorage
 	case identityV1.Module_MODEL:
 		return planmodule.ModuleModel
 	default:
@@ -298,6 +300,8 @@ func mapApiBusinessModuleToProto(m api.BusinessModule) identityV1.Module {
 		return identityV1.Module_INSTANCE
 	case api.BusinessModuleVirtualMachine:
 		return identityV1.Module_VIRTUAL_MACHINE
+	case api.BusinessModuleStorage:
+		return identityV1.Module_STORAGE
 	case api.BusinessModuleModel:
 		return identityV1.Module_MODEL
 	default:
