@@ -15,6 +15,7 @@ var modelDevLogStreamHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions
 var instanceMetricsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/metrics/(query|latest)$`)
 var modelDevMetricsHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resource-metrics$`)
 var modelDevArtifactHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/artifacts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/content$`)
+
 // The byte relay streams a checkpoint of up to a few GiB, so the ordinary
 // request timer must not cut it. Its handler owns a bounded lifetime.
 var modelDevArtifactDownloadHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/artifacts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/download$`)

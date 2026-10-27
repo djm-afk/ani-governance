@@ -8740,39 +8740,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AuthorizeArtifactDownloadResponse'
-    /api/v1/modeldev/artifacts/{artifact_id}/download:
-        get:
-            tags:
-                - ModelDevService
-            operationId: ModelDevService_DownloadArtifact
-            description: |-
-                以字节流返回产物内容。与 /content 的区别是：/content 只换取对象存储的短期签名 URL，
-                而该 URL 的主机是集群内域名，浏览器在集群外无法解析；本接口在服务端用内部根证书拉取
-                对象并转发，调用方只需能访问 BFF。
-            parameters:
-                - name: artifact_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/octet-stream:
-                            schema:
-                                type: string
-                                format: binary
-                "400":
-                    description: 参数非法
-                "404":
-                    description: 产物不存在或无权限
-                "412":
-                    description: 产物未发布
-                "502":
-                    description: 对象存储不可达或返回错误
-                "504":
-                    description: 对象存储超时
     /api/v1/modeldev/executions:
         get:
             tags:
@@ -11641,6 +11608,41 @@ paths:
                     description: Connection limit reached
                 "503":
                     description: Upstream frame stream unavailable before READY
+    /api/v1/modeldev/artifacts/{artifact_id}/download:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_DownloadArtifact
+            description: Relay the artifact bytes. The URL exchange returns a signed URL on the object store's in-cluster host, which a browser cannot reach; this endpoint fetches that object server-side and copies it out. Accepts no query.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: artifact_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            responses:
+                "200":
+                    description: Artifact bytes as an attachment. The type collapses to application/octet-stream unless it is a known safe textual type.
+                    content:
+                        application/octet-stream:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: Invalid UUID or a query was supplied
+                "403":
+                    description: Artifact access denied
+                "404":
+                    description: Artifact absent or not visible
+                "412":
+                    description: Artifact not published
+                "502":
+                    description: Object store unreachable or returned an error
+                "504":
+                    description: Object store timed out
 components:
     schemas:
         NetworkOperation:

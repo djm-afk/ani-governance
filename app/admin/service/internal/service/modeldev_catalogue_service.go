@@ -57,18 +57,18 @@ func (s *ModelDevService) ListImplementations(ctx context.Context, in *modeldevv
 // owner omits maximum entirely for open-ended parameters.
 func modelDevPublicParameterRule(rule *modeldevcontractv1.ParameterRule) *modeldevv1.ParameterRule {
 	return &modeldevv1.ParameterRule{
-		Name:                   rule.Name,
-		Type:                   strings.TrimPrefix(rule.Type.String(), "PARAMETER_TYPE_"),
-		Required:               rule.Required,
-		DefaultValue:           modelDevPublicParameter(rule.DefaultValue),
-		Minimum:                modelDevPublicParameter(rule.Minimum),
-		Maximum:                modelDevPublicParameter(rule.Maximum),
-		NumericRepresentation:  rule.NumericRepresentation,
-		ValidationDescription:  rule.ValidationDescription,
-		MinimumInclusive:       rule.MinimumInclusive,
-		MaximumInclusive:       rule.MaximumInclusive,
-		Editable:               rule.Editable,
-		NonEditableReason:      rule.NonEditableReason,
+		Name:                  rule.Name,
+		Type:                  strings.TrimPrefix(rule.Type.String(), "PARAMETER_TYPE_"),
+		Required:              rule.Required,
+		DefaultValue:          modelDevPublicParameter(rule.DefaultValue),
+		Minimum:               modelDevPublicParameter(rule.Minimum),
+		Maximum:               modelDevPublicParameter(rule.Maximum),
+		NumericRepresentation: rule.NumericRepresentation,
+		ValidationDescription: rule.ValidationDescription,
+		MinimumInclusive:      rule.MinimumInclusive,
+		MaximumInclusive:      rule.MaximumInclusive,
+		Editable:              rule.Editable,
+		NonEditableReason:     rule.NonEditableReason,
 	}
 }
 

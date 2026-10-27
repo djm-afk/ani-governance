@@ -14,20 +14,20 @@ import (
 func TestModelDevPublicParameterRuleKeepsIntervalOpenness(t *testing.T) {
 	closed, open := true, false
 	for _, test := range []struct {
-		name            string
-		rule            *modeldevcontractv1.ParameterRule
-		wantMin         *bool
-		wantMax         *bool
-		wantEditable    bool
-		wantReason      string
+		name         string
+		rule         *modeldevcontractv1.ParameterRule
+		wantMin      *bool
+		wantMax      *bool
+		wantEditable bool
+		wantReason   string
 	}{
 		{
 			name: "half-open upper bound keeps maximum exclusive",
 			rule: &modeldevcontractv1.ParameterRule{
 				Name: "lora_dropout", Type: modeldevcontractv1.ParameterType_PARAMETER_TYPE_DECIMAL,
 				MinimumInclusive: &closed, MaximumInclusive: &open,
-				Maximum:        &trainingcontractv1.Parameter{Name: "lora_dropout", Value: &trainingcontractv1.Parameter_DecimalValue{DecimalValue: "1"}},
-				Editable:       true,
+				Maximum:  &trainingcontractv1.Parameter{Name: "lora_dropout", Value: &trainingcontractv1.Parameter_DecimalValue{DecimalValue: "1"}},
+				Editable: true,
 			},
 			wantMin: &closed, wantMax: &open, wantEditable: true,
 		},

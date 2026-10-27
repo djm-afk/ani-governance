@@ -52,8 +52,8 @@ func TestModelDevPublicExecutionPassesThroughStepsAndMetrics(t *testing.T) {
 // owner-supplied safe_message is forwarded verbatim.
 func TestModelDevPublicExecutionExposesFailure(t *testing.T) {
 	in := &modeldevcontractv1.ExecutionView{
-		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
-		States:   &modeldevcontractv1.ExecutionStates{},
+		Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:     &modeldevcontractv1.ExecutionStates{},
 		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
 		Failure: &modeldevcontractv1.ErrorDetail{
 			Reason:        modeldevcontractv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE,
@@ -93,8 +93,8 @@ func TestModelDevPublicExecutionExposesFailure(t *testing.T) {
 func TestModelDevPublicExecutionDerivesFailureFromFailedStep(t *testing.T) {
 	now := time.Now()
 	failed := &modeldevcontractv1.ExecutionView{
-		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
-		States:   &modeldevcontractv1.ExecutionStates{ComputeState: modeldevcontractv1.ComputeState_COMPUTE_STATE_FAILED},
+		Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:     &modeldevcontractv1.ExecutionStates{ComputeState: modeldevcontractv1.ComputeState_COMPUTE_STATE_FAILED},
 		AcceptedAt: timestamppb.New(now), DeadlineAt: timestamppb.New(now), ObservedAt: timestamppb.New(now),
 		Steps: []*modeldevcontractv1.StepProgress{
 			{Role: "prepare", State: "SUCCEEDED"},
@@ -118,8 +118,8 @@ func TestModelDevPublicExecutionDerivesFailureFromFailedStep(t *testing.T) {
 
 	// The owner's own ErrorDetail wins over the derivation.
 	owner := &modeldevcontractv1.ExecutionView{
-		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
-		States:   &modeldevcontractv1.ExecutionStates{ComputeState: modeldevcontractv1.ComputeState_COMPUTE_STATE_FAILED},
+		Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:     &modeldevcontractv1.ExecutionStates{ComputeState: modeldevcontractv1.ComputeState_COMPUTE_STATE_FAILED},
 		AcceptedAt: timestamppb.New(now), DeadlineAt: timestamppb.New(now), ObservedAt: timestamppb.New(now),
 		Steps:   []*modeldevcontractv1.StepProgress{{Role: "train-wait", State: "FAILED"}},
 		Failure: &modeldevcontractv1.ErrorDetail{Reason: modeldevcontractv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE, SafeMessage: "owner text"},
@@ -135,8 +135,8 @@ func TestModelDevPublicExecutionDerivesFailureFromFailedStep(t *testing.T) {
 		modeldevcontractv1.ComputeState_COMPUTE_STATE_CANCELED,
 	} {
 		view := modelDevPublicExecution(&modeldevcontractv1.ExecutionView{
-			Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
-			States:   &modeldevcontractv1.ExecutionStates{ComputeState: state},
+			Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+			States:     &modeldevcontractv1.ExecutionStates{ComputeState: state},
 			AcceptedAt: timestamppb.New(now), DeadlineAt: timestamppb.New(now), ObservedAt: timestamppb.New(now),
 			Steps: []*modeldevcontractv1.StepProgress{{Role: "train-wait", State: "FAILED"}},
 		})
@@ -150,8 +150,8 @@ func TestModelDevPublicExecutionDerivesFailureFromFailedStep(t *testing.T) {
 // They must survive the mapping unchanged, including the decimal strings.
 func TestModelDevPublicExecutionExposesManagedSettings(t *testing.T) {
 	in := &modeldevcontractv1.ExecutionView{
-		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
-		States:   &modeldevcontractv1.ExecutionStates{},
+		Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:     &modeldevcontractv1.ExecutionStates{},
 		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
 		ManagedSettings: &modeldevcontractv1.FinetuningManagedSettings{
 			Stage: "sft", FinetuningType: "lora", LoraTarget: "all", LoraRank: 8, LoraAlpha: 16,
