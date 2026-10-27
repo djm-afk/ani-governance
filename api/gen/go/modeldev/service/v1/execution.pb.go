@@ -336,10 +336,13 @@ func (x *GeneralParameter) GetValue() string {
 
 // Catalogue metadata exposes selection and registered parameters only.
 // Gov public pagination uses page/pageSize; legacy limit/cursor stay reserved.
+// kind filters by task type before pagination and reuses the value returned in
+// ImplementationView.kind.
 type ListImplementationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Page          *uint32                `protobuf:"varint,3,opt,name=page,proto3,oneof" json:"page,omitempty"`
 	PageSize      *uint32                `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
+	Kind          *string                `protobuf:"bytes,5,opt,name=kind,proto3,oneof" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -386,6 +389,13 @@ func (x *ListImplementationsRequest) GetPageSize() uint32 {
 		return *x.PageSize
 	}
 	return 0
+}
+
+func (x *ListImplementationsRequest) GetKind() string {
+	if x != nil && x.Kind != nil {
+		return *x.Kind
+	}
+	return ""
 }
 
 type ListImplementationsResponse struct {
@@ -3499,13 +3509,15 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\x10GeneralParameter\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05value\"\x89\x01\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\"\xab\x01\n" +
 	"\x1aListImplementationsRequest\x12\x17\n" +
 	"\x04page\x18\x03 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
-	"\tpage_size\x18\x04 \x01(\rH\x01R\bpageSize\x88\x01\x01B\a\n" +
+	"\tpage_size\x18\x04 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12\x17\n" +
+	"\x04kind\x18\x05 \x01(\tH\x02R\x04kind\x88\x01\x01B\a\n" +
 	"\x05_pageB\f\n" +
 	"\n" +
-	"_page_sizeJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"\x85\x01\n" +
+	"_page_sizeB\a\n" +
+	"\x05_kindJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"\x85\x01\n" +
 	"\x1bListImplementationsResponse\x12=\n" +
 	"\x05items\x18\x01 \x03(\v2'.modeldev.service.v1.ImplementationViewR\x05items\x12\x14\n" +
 	"\x05total\x18\x03 \x01(\x04R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\xac\x05\n" +

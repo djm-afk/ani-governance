@@ -24,7 +24,16 @@ func (s *ModelDevService) ListImplementations(ctx context.Context, in *modeldevv
 	if err != nil {
 		return nil, err
 	}
-	out, err := s.resolver.ListImplementations(ctx, scope, page, pageSize)
+	var kind *trainingv1.ExecutionKind
+	if in.Kind != nil {
+		value, ok := trainingv1.ExecutionKind_value["EXECUTION_KIND_"+*in.Kind]
+		if !ok || value == 0 {
+			return nil, modelDevQueryInvalid()
+		}
+		parsed := trainingv1.ExecutionKind(value)
+		kind = &parsed
+	}
+	out, err := s.resolver.ListImplementations(ctx, scope, page, pageSize, kind)
 	if err != nil {
 		return nil, modelDevQueryFailure(err)
 	}

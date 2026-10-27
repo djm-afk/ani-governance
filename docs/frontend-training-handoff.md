@@ -132,9 +132,10 @@
 
 ```
 GET /api/v1/modeldev/implementations?page=1&pageSize=20
+GET /api/v1/modeldev/implementations?kind=FINETUNING
 ```
 
-只接受 `page` / `pageSize`。真实响应（节选）：
+只接受 `page` / `pageSize` / `kind`。真实响应（节选）：
 
 ```json
 {
@@ -171,7 +172,7 @@ GET /api/v1/modeldev/implementations?page=1&pageSize=20
 
 要点：
 
-- 响应是**扁平列表，不按 `kind` 分组**，也没有 `kind` 分组字段。要按类型取子集需在本地过滤。
+- 响应是**扁平列表，不按 `kind` 分组**，也没有 `kind` 分组字段。要按类型取子集用 `kind` 查询参数。
 - 当前只有两条，且 `kind` 与 `implementation_id` 是**固定一对一**：
 
   | `kind` | 唯一对应的 `implementation_id` | `name` |
@@ -181,8 +182,10 @@ GET /api/v1/modeldev/implementations?page=1&pageSize=20
 
   两者都是 `version="1"`。当前不存在“同一 `kind` 下多个实现”的情况。
 - 一对一关系是服务端强制的：`kind=FINETUNING` 配 `implementation_id=builtin.mlp`（或反向错配）在创建时返回 `400 INVALID_MODELDEV_CREATE`（2026-10-26 实测）。因此创建时 `implementation_id` 可由 `kind` 唯一推导，但仍必须显式提交该字段。
-- 只接受 `page` / `pageSize`；`kind`、`implementation_id` 等任何筛选参数都返回 `400 INVALID_MODELDEV_QUERY`（2026-10-26 实测）。
-- 分页对本接口生效：`pageSize=1` 时 `page=1` 返回 `GENERAL_TRAINING`、`page=2` 返回 `FINETUNING`、`page=3` 返回空数组且 `total` 仍为 `"2"`。要拿全量请一次请求 `pageSize>=total`。
+- 可选 `kind` 取值为 `GENERAL_TRAINING` / `FINETUNING`，与响应 `kind` 同词汇。筛选在分页前执行，`total` 为筛选后条数，无匹配返回 `items: []`／`total: "0"`。
+- `kind` 表达任务类型而不是实现标识；同一 `kind` 后续可能对应多个 `implementation_id`，前端须按返回项渲染，不能把 `kind` 当 `implementation_id` 的别名。
+- `kind` 只在本接口接受，且只认大写枚举值：小写、`UNSPECIFIED`、空值、重复 `kind`、与 `state` 混用，以及 `implementation_id` 等未声明参数都返回 `400 INVALID_MODELDEV_QUERY`（2026-10-26 实测口径）。
+- 分页对本接口生效：`pageSize=1` 时 `page=1` 返回 `GENERAL_TRAINING`、`page=2` 返回 `FINETUNING`、`page=3` 返回空数组且 `total` 仍为 `"2"`。带 `kind` 时 `total` 为筛选后条数。要拿全量请一次请求 `pageSize>=total`。
 - `parameter_rules` 里的 `default_value` / `minimum` / `maximum` / `allowed_values` / `numeric_representation` / `validation_description` 都是运行时值，不要硬编码默认值和边界。
 - 不传某个参数与显式传默认值，在服务端是**两种不同原意图**（会影响幂等哈希）。未填写的参数请保持“未提交”，不要补默认值。
 - `execution_timeout_max_seconds` 是 `timeout_seconds` 的上限；`step_timeout_seconds` 是只读值。
@@ -1120,8 +1123,11 @@ curl -s -w '\n%{http_code}\n' -X POST "$B/api/v1/modeldev/executions/{execution_
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?page=0"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?pageSize=101"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?name=MLP"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?kind=finetuning"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?kind=UNSPECIFIED"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/implementations?"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions?state=ready"
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions?kind=FINETUNING"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/input-versions/not-a-uuid"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/compute-presets?page=1"
 curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/artifacts?role=HF_MODEL"

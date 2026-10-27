@@ -1318,7 +1318,7 @@ FINETUNING 同时省略 `new_model_name` 与 `target_model_id` 表示仅发布�
 | MODELDEV-01 | 创建执行 | implementation/compute/typed parameters/总时长；拒绝旧Release字段；202为持久受理 |
 | MODELDEV-02 | 已退役Release操作 | import-release/enable/pause/binding/generation不再注册；历史证据不作为新受理许可 |
 | MODELDEV-03～06 | 详情、产物、下载、停止、列表、日志 | 原当前授权/租户隔离和正交状态保留；下载不缓存、不存有效URL |
-| MODELDEV-07 | 实现规则与输入 | `/api/v1/modeldev/implementations`；公共compute复用TRAINING目录；输入独立 `modeldev:manage_input`；不要求Release导入批准 |
+| MODELDEV-07 | 实现规则与输入 | `/api/v1/modeldev/implementations`；可选 `kind`（`GENERAL_TRAINING`/`FINETUNING`，分页前筛选，非法值400）；公共compute复用TRAINING目录；输入独立 `modeldev:manage_input`；不要求Release导入批准 |
 | MODELDEV-08 | inspect/reconcile/cleanup | 当前独立execution权限，精确原UID清理；不自动删PVC/publication/模型 |
 | MODELDEV-12 | 恢复原模型登记 | `POST /api/v1/modeldev/executions/{execution_id}:resume-model-registration`；空 body/no query，仅原 CLOSED FINETUNING，当前 manage+GET+Model 原目标分支权限；同详情返回 `model_registration`/`history` |
 
