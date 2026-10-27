@@ -70,8 +70,8 @@ func (c *NetworkClient) GetDefaultVPCEgress(ctx context.Context, actor string, r
 		return c.defaultEgress.GetDefaultVPCEgress(ctx, req)
 	})
 }
-func (c *NetworkClient) GetCurrentDefaultVPCEgress(ctx context.Context, actor string, req *networkv1.GetCurrentDefaultVPCEgressRequest) (*networkv1.GetDefaultVPCEgressResponse, error) {
-	return platformCall(c, ctx, actor, func(ctx context.Context) (*networkv1.GetDefaultVPCEgressResponse, error) {
+func (c *NetworkClient) GetCurrentDefaultVPCEgress(ctx context.Context, actor string, req *networkv1.GetCurrentDefaultVPCEgressRequest) (*networkv1.GetCurrentDefaultVPCEgressResponse, error) {
+	return platformCall(c, ctx, actor, func(ctx context.Context) (*networkv1.GetCurrentDefaultVPCEgressResponse, error) {
 		if c.defaultEgress == nil {
 			return nil, status.Error(codes.Unavailable, "network client unavailable")
 		}

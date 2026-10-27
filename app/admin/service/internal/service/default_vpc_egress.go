@@ -72,7 +72,7 @@ func (s *PlatformNetworkService) GetCurrentDefaultVPCEgress(ctx context.Context,
 		return nil, errors.BadRequest("INVALID_PLATFORM_NETWORK_REQUEST", "request required")
 	}
 	client, ok := s.client.(interface {
-		GetCurrentDefaultVPCEgress(context.Context, string, *networkv1.GetCurrentDefaultVPCEgressRequest) (*networkv1.GetDefaultVPCEgressResponse, error)
+		GetCurrentDefaultVPCEgress(context.Context, string, *networkv1.GetCurrentDefaultVPCEgressRequest) (*networkv1.GetCurrentDefaultVPCEgressResponse, error)
 	})
 	if !ok {
 		return nil, errors.ServiceUnavailable("NETWORK_UNAVAILABLE", "platform default egress access is unavailable")

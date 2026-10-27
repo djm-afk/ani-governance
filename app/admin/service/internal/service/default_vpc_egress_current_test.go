@@ -18,7 +18,7 @@ type currentDefaultEgressProbe struct {
 	err   error
 }
 
-func (p *currentDefaultEgressProbe) GetCurrentDefaultVPCEgress(_ context.Context, actor string, _ *networkv1.GetCurrentDefaultVPCEgressRequest) (*networkv1.GetDefaultVPCEgressResponse, error) {
+func (p *currentDefaultEgressProbe) GetCurrentDefaultVPCEgress(_ context.Context, actor string, _ *networkv1.GetCurrentDefaultVPCEgressRequest) (*networkv1.GetCurrentDefaultVPCEgressResponse, error) {
 	if actor != "governance:user:9" {
 		panic("untrusted actor")
 	}
@@ -26,7 +26,7 @@ func (p *currentDefaultEgressProbe) GetCurrentDefaultVPCEgress(_ context.Context
 	if p.err != nil {
 		return nil, p.err
 	}
-	return &networkv1.GetDefaultVPCEgressResponse{Egress: &networkv1.DefaultVPCEgress{Id: "dve_0123456789abcdef0123456789abcdef", PoolId: "pool_0123456789abcdef0123456789abcdef", Version: 1, State: "provisioning", LastOperationId: "01234567-89ab-4cde-8123-0123456789ab", ClusterId: "fixed", ClusterUid: "fixed-uid", DefaultVpcNamespace: "kcn-system", DefaultVpcName: "kcn-cluster", DefaultVpcUid: "vpc-uid"}}, nil
+	return &networkv1.GetCurrentDefaultVPCEgressResponse{Egress: &networkv1.DefaultVPCEgress{Id: "dve_0123456789abcdef0123456789abcdef", PoolId: "pool_0123456789abcdef0123456789abcdef", Version: 1, State: "provisioning", LastOperationId: "01234567-89ab-4cde-8123-0123456789ab", ClusterId: "fixed", ClusterUid: "fixed-uid", DefaultVpcNamespace: "kcn-system", DefaultVpcName: "kcn-cluster", DefaultVpcUid: "vpc-uid"}}, nil
 }
 func TestCurrentDefaultVPCEgressContract(t *testing.T) {
 	p := &currentDefaultEgressProbe{}
