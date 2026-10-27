@@ -304,6 +304,8 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	}
 	if failure := execution.Failure; failure != nil {
 		out.Failure = modelDevPublicFailure(failure)
+	} else {
+		out.Failure = modelDevDerivedFailure(out)
 	}
 	if managed := execution.ManagedSettings; managed != nil {
 		out.ManagedSettings = modelDevPublicManagedSettings(managed)
@@ -354,6 +356,34 @@ func modelDevPublicManagedSettings(in *modeldevcontractv1.FinetuningManagedSetti
 		LrSchedulerType: in.LrSchedulerType, WarmupRatio: in.WarmupRatio, WeightDecay: in.WeightDecay,
 		LoraDropout: in.LoraDropout, NumTrainEpochs: in.NumTrainEpochs, Optim: in.Optim, LoggingSteps: in.LoggingSteps,
 	}
+}
+
+// modelDevDerivedFailure fills the gap the owner leaves open. The owner records
+// an ErrorDetail only for an input-version rejection and an unavailable model
+// registration; a training failure closes the execution with the failed step
+// marked in the timeline and no free-text reason. Reporting null there would
+// look like "no problem", so the failed step is turned into a minimal
+// diagnostic built only from observed facts. Nothing is invented: the reason
+// reuses the owner's own STEP_FAILED vocabulary and the message names the step
+// the owner already marked FAILED.
+func modelDevDerivedFailure(execution *modeldevv1.ExecutionView) *modeldevv1.ExecutionFailureView {
+	if execution.ComputeState != "FAILED" {
+		return nil
+	}
+	derived := &modeldevv1.ExecutionFailureView{Reason: "STEP_FAILED"}
+	for _, step := range execution.Steps {
+		if step.State != "FAILED" {
+			continue
+		}
+		if derived.SafeMessage == "" {
+			derived.SafeMessage = "step " + step.Role + " failed"
+		}
+		derived.Violations = append(derived.Violations, &modeldevv1.ExecutionFieldViolationView{Field: "steps." + step.Role, Reason: "FAILED"})
+	}
+	if derived.SafeMessage == "" {
+		derived.SafeMessage = "the execution ended FAILED without a failed step"
+	}
+	return derived
 }
 
 // modelDevPublicStep keeps the timeline facts ModelDev already derived. Absent

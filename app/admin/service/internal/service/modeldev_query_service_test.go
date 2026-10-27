@@ -87,6 +87,65 @@ func TestModelDevPublicExecutionExposesFailure(t *testing.T) {
 	}
 }
 
+// A training failure closes with the failed step in the timeline but no
+// owner-supplied ErrorDetail. The detail must still explain itself; returning
+// null would read as "no problem".
+func TestModelDevPublicExecutionDerivesFailureFromFailedStep(t *testing.T) {
+	now := time.Now()
+	failed := &modeldevcontractv1.ExecutionView{
+		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:   &modeldevcontractv1.ExecutionStates{ComputeState: modeldevcontractv1.ComputeState_COMPUTE_STATE_FAILED},
+		AcceptedAt: timestamppb.New(now), DeadlineAt: timestamppb.New(now), ObservedAt: timestamppb.New(now),
+		Steps: []*modeldevcontractv1.StepProgress{
+			{Role: "prepare", State: "SUCCEEDED"},
+			{Role: "train-wait", State: "FAILED"},
+			{Role: "export", State: "PENDING"},
+		},
+	}
+	out := modelDevPublicExecution(failed)
+	if out.Failure == nil {
+		t.Fatal("training failure produced no diagnostic")
+	}
+	if out.Failure.Reason != "STEP_FAILED" {
+		t.Fatalf("reason=%q", out.Failure.Reason)
+	}
+	if out.Failure.SafeMessage != "step train-wait failed" {
+		t.Fatalf("message=%q", out.Failure.SafeMessage)
+	}
+	if len(out.Failure.Violations) != 1 || out.Failure.Violations[0].Field != "steps.train-wait" || out.Failure.Violations[0].Reason != "FAILED" {
+		t.Fatalf("violations=%+v", out.Failure.Violations)
+	}
+
+	// The owner's own ErrorDetail wins over the derivation.
+	owner := &modeldevcontractv1.ExecutionView{
+		Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+		States:   &modeldevcontractv1.ExecutionStates{ComputeState: modeldevcontractv1.ComputeState_COMPUTE_STATE_FAILED},
+		AcceptedAt: timestamppb.New(now), DeadlineAt: timestamppb.New(now), ObservedAt: timestamppb.New(now),
+		Steps:   []*modeldevcontractv1.StepProgress{{Role: "train-wait", State: "FAILED"}},
+		Failure: &modeldevcontractv1.ErrorDetail{Reason: modeldevcontractv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE, SafeMessage: "owner text"},
+	}
+	if got := modelDevPublicExecution(owner).Failure; got.Reason != "UPSTREAM_UNAVAILABLE" || got.SafeMessage != "owner text" {
+		t.Fatalf("owner detail overridden: %+v", got)
+	}
+
+	// Only a genuinely failed execution gets a derived diagnostic.
+	for _, state := range []modeldevcontractv1.ComputeState{
+		modeldevcontractv1.ComputeState_COMPUTE_STATE_SUCCEEDED,
+		modeldevcontractv1.ComputeState_COMPUTE_STATE_TRAINING,
+		modeldevcontractv1.ComputeState_COMPUTE_STATE_CANCELED,
+	} {
+		view := modelDevPublicExecution(&modeldevcontractv1.ExecutionView{
+			Identity: &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+			States:   &modeldevcontractv1.ExecutionStates{ComputeState: state},
+			AcceptedAt: timestamppb.New(now), DeadlineAt: timestamppb.New(now), ObservedAt: timestamppb.New(now),
+			Steps: []*modeldevcontractv1.StepProgress{{Role: "train-wait", State: "FAILED"}},
+		})
+		if view.Failure != nil {
+			t.Fatalf("%s produced %+v", state, view.Failure)
+		}
+	}
+}
+
 // The managed settings are the read-only half of the training configuration.
 // They must survive the mapping unchanged, including the decimal strings.
 func TestModelDevPublicExecutionExposesManagedSettings(t *testing.T) {

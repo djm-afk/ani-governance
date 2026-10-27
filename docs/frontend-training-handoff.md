@@ -600,8 +600,8 @@ GET /api/v1/modeldev/executions/{execution_id}
 | `history` | 关闭时持久化的控制器证据；缺失字段表示“当时无该证据”，不要补猜 |
 | `steps` | 流水线步骤时间线，按执行顺序排列。普通训练 5 步，微调 8 步；步集由 `kind` 决定，所以 `role` / `state` 是字符串不是枚举 |
 | `metrics` | 训练曲线点，来自已发布的 `METRICS` 产物。目前只有 `train.loss`；`decimal_value` 是字符串，需按十进制解析，`step` 是数字。曲线点数等于实际写入的点数（实测微调可到 1000 点） |
-| `failure` | 历史失败诊断，**只有确实失败过才有值**，正常结束或仍在运行时为 `null`。见下方 `failure[]` 字段 |
-| `managed_settings` | 服务端托管的训练超参，**只读展示**。只有微调才有值，普通训练为 `null`。见下方 `managed_settings[]` 字段 |
+| `failure` | 失败诊断，**只有确实失败过才有值**，正常结束或仍在运行时为 `null`。见下方 `failure` 字段 |
+| `managed_settings` | 服务端托管的训练超参，**只读展示**。只有微调才有值，普通训练为 `null`。见下方 `managed_settings` 字段 |
 
 `steps[]` 字段：
 
@@ -619,12 +619,14 @@ GET /api/v1/modeldev/executions/{execution_id}
 
 | 字段 | 说明 |
 | --- | --- |
-| `reason` | 失败原因枚举名，不带前缀，如 `INVALID_ARGUMENT` / `RESOURCE_NOT_FOUND` / `UPSTREAM_UNAVAILABLE` / `ENVIRONMENT_NOT_READY` |
-| `safe_message` | 面向人的安全描述。服务端已剔除凭据、存储密钥与隐藏的对象事实，**可直接展示** |
-| `violations[]` | 字段级违规明细，`{field, reason}`；空数组表示没有字段级信息 |
+| `reason` | 失败原因枚举名，不带前缀。`STEP_FAILED` 表示某个流水线步骤失败；其它取值（`INVALID_ARGUMENT` / `RESOURCE_NOT_FOUND` / `UPSTREAM_UNAVAILABLE` / `ENVIRONMENT_NOT_READY` 等）来自服务端记录的原始诊断 |
+| `safe_message` | 面向人的安全描述，**可直接展示**。服务端已剔除凭据、存储密钥与隐藏的对象事实 |
+| `violations[]` | 字段级明细，`{field, reason}`。`reason=STEP_FAILED` 时形如 `{field:"steps.train-wait", reason:"FAILED"}`，指出哪个步骤失败；空数组表示没有字段级信息 |
 | `correlation_id` | 服务端关联 ID，用于向后端追日志；**不是**业务标识，不要展示为主键 |
 
 `failure` 是**执行结果的一部分**，与 HTTP 错误不同：接口仍然返回 `200`，只是这次训练失败了。`failure=null` 只代表“没有失败诊断”，不代表成功——成功仍需看 `compute_state=SUCCEEDED`。
+
+**关于失败原因的精度**：本期后端只保留到“哪个步骤失败”，没有自由文本的训练日志级原因。`reason=STEP_FAILED` 时的 `safe_message` 形如 `step train-wait failed`，`violations` 列出所有 `state=FAILED` 的步骤。要看具体报错，请用第 11 节的日志接口读 `train-wait` 步骤的日志。更细的原因文本需 ModelDev 新增字段，本期不具备。
 
 `managed_settings` 字段（微调才有）：
 
