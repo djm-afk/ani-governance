@@ -172,6 +172,127 @@ func (x *ListTenantQuotaAccountsResponse) GetItems() []*v1.QuotaAccountView {
 	return nil
 }
 
+type ListTenantQuotaAccountSummariesRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Page     *uint32                `protobuf:"varint,1,opt,name=page,proto3,oneof" json:"page,omitempty"`
+	PageSize *uint32                `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
+	TenantId *uint32                `protobuf:"varint,3,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"`
+	// 精确目录编码；缺失政策仍返回configured=false。
+	QuotaCode     *string `protobuf:"bytes,4,opt,name=quota_code,json=quotaCode,proto3,oneof" json:"quota_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTenantQuotaAccountSummariesRequest) Reset() {
+	*x = ListTenantQuotaAccountSummariesRequest{}
+	mi := &file_admin_service_v1_quota_types_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTenantQuotaAccountSummariesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTenantQuotaAccountSummariesRequest) ProtoMessage() {}
+
+func (x *ListTenantQuotaAccountSummariesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_service_v1_quota_types_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTenantQuotaAccountSummariesRequest.ProtoReflect.Descriptor instead.
+func (*ListTenantQuotaAccountSummariesRequest) Descriptor() ([]byte, []int) {
+	return file_admin_service_v1_quota_types_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListTenantQuotaAccountSummariesRequest) GetPage() uint32 {
+	if x != nil && x.Page != nil {
+		return *x.Page
+	}
+	return 0
+}
+
+func (x *ListTenantQuotaAccountSummariesRequest) GetPageSize() uint32 {
+	if x != nil && x.PageSize != nil {
+		return *x.PageSize
+	}
+	return 0
+}
+
+func (x *ListTenantQuotaAccountSummariesRequest) GetTenantId() uint32 {
+	if x != nil && x.TenantId != nil {
+		return *x.TenantId
+	}
+	return 0
+}
+
+func (x *ListTenantQuotaAccountSummariesRequest) GetQuotaCode() string {
+	if x != nil && x.QuotaCode != nil {
+		return *x.QuotaCode
+	}
+	return ""
+}
+
+type ListTenantQuotaAccountSummariesResponse struct {
+	state         protoimpl.MessageState          `protogen:"open.v1"`
+	Items         []*v1.TenantQuotaAccountSummary `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total         uint64                          `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // 匹配租户总数，不是账户条数。
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTenantQuotaAccountSummariesResponse) Reset() {
+	*x = ListTenantQuotaAccountSummariesResponse{}
+	mi := &file_admin_service_v1_quota_types_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTenantQuotaAccountSummariesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTenantQuotaAccountSummariesResponse) ProtoMessage() {}
+
+func (x *ListTenantQuotaAccountSummariesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_service_v1_quota_types_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTenantQuotaAccountSummariesResponse.ProtoReflect.Descriptor instead.
+func (*ListTenantQuotaAccountSummariesResponse) Descriptor() ([]byte, []int) {
+	return file_admin_service_v1_quota_types_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListTenantQuotaAccountSummariesResponse) GetItems() []*v1.TenantQuotaAccountSummary {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListTenantQuotaAccountSummariesResponse) GetTotal() uint64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 var File_admin_service_v1_quota_types_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_quota_types_proto_rawDesc = "" +
@@ -184,7 +305,22 @@ const file_admin_service_v1_quota_types_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\rR\x02id\"x\n" +
 	"\x1fListTenantQuotaAccountsResponse\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\rR\btenantId\x128\n" +
-	"\x05items\x18\x02 \x03(\v2\".quota.service.v1.QuotaAccountViewR\x05itemsB\xbc\x01\n" +
+	"\x05items\x18\x02 \x03(\v2\".quota.service.v1.QuotaAccountViewR\x05items\"\xdd\x01\n" +
+	"&ListTenantQuotaAccountSummariesRequest\x12\x17\n" +
+	"\x04page\x18\x01 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
+	"\tpage_size\x18\x02 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12 \n" +
+	"\ttenant_id\x18\x03 \x01(\rH\x02R\btenantId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"quota_code\x18\x04 \x01(\tH\x03R\tquotaCode\x88\x01\x01B\a\n" +
+	"\x05_pageB\f\n" +
+	"\n" +
+	"_page_sizeB\f\n" +
+	"\n" +
+	"_tenant_idB\r\n" +
+	"\v_quota_code\"\x82\x01\n" +
+	"'ListTenantQuotaAccountSummariesResponse\x12A\n" +
+	"\x05items\x18\x01 \x03(\v2+.quota.service.v1.TenantQuotaAccountSummaryR\x05items\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05totalB\xbc\x01\n" +
 	"\x14com.admin.service.v1B\x0fQuotaTypesProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var (
@@ -199,22 +335,26 @@ func file_admin_service_v1_quota_types_proto_rawDescGZIP() []byte {
 	return file_admin_service_v1_quota_types_proto_rawDescData
 }
 
-var file_admin_service_v1_quota_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_admin_service_v1_quota_types_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_admin_service_v1_quota_types_proto_goTypes = []any{
-	(*ListQuotaDefinitionsResponse)(nil),    // 0: admin.service.v1.ListQuotaDefinitionsResponse
-	(*GetTenantQuotaAccountsRequest)(nil),   // 1: admin.service.v1.GetTenantQuotaAccountsRequest
-	(*ListTenantQuotaAccountsResponse)(nil), // 2: admin.service.v1.ListTenantQuotaAccountsResponse
-	(*v1.QuotaDefinition)(nil),              // 3: quota.service.v1.QuotaDefinition
-	(*v1.QuotaAccountView)(nil),             // 4: quota.service.v1.QuotaAccountView
+	(*ListQuotaDefinitionsResponse)(nil),            // 0: admin.service.v1.ListQuotaDefinitionsResponse
+	(*GetTenantQuotaAccountsRequest)(nil),           // 1: admin.service.v1.GetTenantQuotaAccountsRequest
+	(*ListTenantQuotaAccountsResponse)(nil),         // 2: admin.service.v1.ListTenantQuotaAccountsResponse
+	(*ListTenantQuotaAccountSummariesRequest)(nil),  // 3: admin.service.v1.ListTenantQuotaAccountSummariesRequest
+	(*ListTenantQuotaAccountSummariesResponse)(nil), // 4: admin.service.v1.ListTenantQuotaAccountSummariesResponse
+	(*v1.QuotaDefinition)(nil),                      // 5: quota.service.v1.QuotaDefinition
+	(*v1.QuotaAccountView)(nil),                     // 6: quota.service.v1.QuotaAccountView
+	(*v1.TenantQuotaAccountSummary)(nil),            // 7: quota.service.v1.TenantQuotaAccountSummary
 }
 var file_admin_service_v1_quota_types_proto_depIdxs = []int32{
-	3, // 0: admin.service.v1.ListQuotaDefinitionsResponse.items:type_name -> quota.service.v1.QuotaDefinition
-	4, // 1: admin.service.v1.ListTenantQuotaAccountsResponse.items:type_name -> quota.service.v1.QuotaAccountView
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	5, // 0: admin.service.v1.ListQuotaDefinitionsResponse.items:type_name -> quota.service.v1.QuotaDefinition
+	6, // 1: admin.service.v1.ListTenantQuotaAccountsResponse.items:type_name -> quota.service.v1.QuotaAccountView
+	7, // 2: admin.service.v1.ListTenantQuotaAccountSummariesResponse.items:type_name -> quota.service.v1.TenantQuotaAccountSummary
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_admin_service_v1_quota_types_proto_init() }
@@ -222,13 +362,14 @@ func file_admin_service_v1_quota_types_proto_init() {
 	if File_admin_service_v1_quota_types_proto != nil {
 		return
 	}
+	file_admin_service_v1_quota_types_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_admin_service_v1_quota_types_proto_rawDesc), len(file_admin_service_v1_quota_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
