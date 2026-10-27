@@ -3304,6 +3304,22 @@ paths:
                                 $ref: '#/components/schemas/GetPlatformNetworkCapabilitiesResponse'
             security:
                 - BearerAuth: []
+    /api/v1/admin/networks/default-vpc-egress:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetCurrentDefaultVPCEgress
+            description: Platform user JWT and network:platform:default-egress:get. Returns the active outlet of the configured system VPC; 404 when no outlet is configured. No client supplied cluster, tenant or VPC identity.
+            operationId: PlatformNetworkService_GetCurrentDefaultVPCEgress
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
     /api/v1/admin/networks/default-vpc-egresses:
         post:
             tags:
@@ -3558,6 +3574,101 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/DeleteEgressGatewayResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/eips:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: ListPlatformEIPs
+            description: Platform user JWT and network:platform:eip:list. All EIP owners in the configured cluster; page/pageSize and items/total, server-side tenant_id/name/address/pool_id/state/scope filters. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_ListPlatformEIPs
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: tenant_id
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: address
+                  in: query
+                  schema:
+                    type: string
+                - name: pool_id
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: scope
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListPlatformEIPsResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/eips/{eip_id}:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetPlatformEIP
+            description: Platform user JWT and network:platform:eip:get. Includes tenant, pool and exclusive binding identity. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetPlatformEIP
+            parameters:
+                - name: eip_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetPlatformEIPResponse'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - PlatformNetworkService
+            summary: ReleasePlatformEIP
+            description: Platform user JWT and network:platform:eip:release. Asynchronous ordinary owner release; active claims and unfinished operations block it. System-managed EIPs cannot be manually released. No force mode.
+            operationId: PlatformNetworkService_ReleasePlatformEIP
+            parameters:
+                - name: eip_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ReleasePlatformEIPResponse'
             security:
                 - BearerAuth: []
     /api/v1/admin/networks/intranet-address-pools:
@@ -13380,6 +13491,8 @@ components:
                     type: string
                 observation_stale:
                     type: boolean
+                eip_id:
+                    type: string
             description: The system VPC identity is output-only and fixed by Resource configuration.
         DeleteAcceleratorProfileData:
             type: object
@@ -14396,6 +14509,11 @@ components:
             properties:
                 operation:
                     $ref: '#/components/schemas/NetworkOperation'
+        GetPlatformEIPResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformEIP'
         GetPlatformNetworkCapabilitiesResponse:
             type: object
             properties:
@@ -16077,6 +16195,15 @@ components:
                 total:
                     type: string
             description: 套餐列表 - 答复
+        ListPlatformEIPsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PlatformEIP'
+                total:
+                    type: string
         ListPolicyEvaluationLogResponse:
             type: object
             properties:
@@ -18316,6 +18443,59 @@ components:
                     description: 删除时间
                     format: date-time
             description: 套餐配额
+        PlatformEIP:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                description:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                reason_message:
+                    type: string
+                version:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                observed_at:
+                    type: string
+                    format: date-time
+                observation_stale:
+                    type: boolean
+                last_operation_id:
+                    type: string
+                address:
+                    type: string
+                binding_state:
+                    type: string
+                binding_target:
+                    $ref: '#/components/schemas/EIPBindingTarget'
+                scope:
+                    type: string
+                managed_by:
+                    type: string
+                tenant_id:
+                    type: integer
+                    format: uint32
+                tenant_name:
+                    type: string
+                resource_tenant_id:
+                    type: string
+                pool_id:
+                    type: string
+                pool_name:
+                    type: string
+                cluster_id:
+                    type: string
         PlatformNetworkCapabilities:
             type: object
             properties:
@@ -18964,6 +19144,11 @@ components:
             properties:
                 image:
                     $ref: '#/components/schemas/ImageRegistration'
+        ReleasePlatformEIPResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformEIP'
         RequestBody:
             type: object
             properties:
