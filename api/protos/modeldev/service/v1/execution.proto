@@ -266,6 +266,63 @@ message ListExecutionEventsResponse {
   string retention_hint = 3 [json_name = "retention_hint"];
   bool truncated = 4;
 }
+// QueryExecutionMetrics reads one container's CPU/memory curve inside a single
+// execution Pod. One request addresses one Pod because the observability
+// contract resolves exactly one physical workload per call; callers page
+// through Pods instead of asking for an execution-wide aggregate.
+message QueryExecutionMetricsRequest {
+  string execution_id = 1 [json_name = "execution_id"];
+  // Pod UID from ListExecutionPods. Kept separate from the pod name so a
+  // recreated Pod never inherits the previous curve.
+  string pod_uid = 2 [json_name = "pod_uid"];
+  // Container name; "node" for the worker, "main" for a KFP step.
+  string container = 3;
+  string start = 4;
+  string end = 5;
+  optional uint32 step_seconds = 6 [json_name = "step_seconds", (gnostic.openapi.v3.property) = {type:"integer" format:"uint32"}];
+  repeated string metric_codes = 7 [json_name = "metric_codes"];
+}
+// Every field the observability contract does not return is synthesized here
+// and labelled as such, so a consumer never mistakes a derived value for a
+// measured one.
+message QueryExecutionMetricsResponse {
+  string execution_id = 1 [json_name = "execution_id"];
+  string pod_uid = 2 [json_name = "pod_uid"];
+  string pod_name = 3 [json_name = "pod_name"];
+  string container = 4;
+  string start = 5;
+  string end = 6;
+  uint32 step_seconds = 7 [json_name = "step_seconds"];
+  // BFF wall clock at the moment the answer was assembled.
+  string observed_at = 8 [json_name = "observed_at"];
+  // PROMETHEUS_CADVISOR_PROJECTION: the source is a recording rule over
+  // cAdvisor, not a direct cAdvisor read.
+  string source = 9;
+  // Prometheus retention as configured today; the frontend must not promise
+  // longer history.
+  string retention_hint = 10 [json_name = "retention_hint"];
+  // cpu / gpu, from ExecutionView.compute.device_mode.
+  string device_mode = 11 [json_name = "device_mode"];
+  // True when the execution requested a GPU. gpu_available additionally
+  // requires a real GPU exporter series, which this environment lacks.
+  bool gpu_requested = 12 [json_name = "gpu_requested"];
+  bool gpu_available = 13 [json_name = "gpu_available"];
+  repeated ExecutionMetricSeries series = 14;
+}
+message ExecutionMetricSeries {
+  string metric_code = 1 [json_name = "metric_code"];
+  string unit = 2;
+  // OK / PARTIAL / NO_DATA
+  string status = 3;
+  repeated ExecutionMetricPoint points = 4;
+}
+message ExecutionMetricPoint {
+  string timestamp = 1;
+  // Absent on a gap; decimal string so a large byte count stays exact.
+  optional string value = 2;
+  // NO_DATA / AMBIGUOUS_SOURCE / INVALID_VALUE / EXPORTER_UNAVAILABLE
+  optional string gap_reason = 3 [json_name = "gap_reason"];
+}
 message ExecutionView {
   string operation_id = 1 [json_name = "operation_id"];
   string execution_id = 2 [json_name = "execution_id"];

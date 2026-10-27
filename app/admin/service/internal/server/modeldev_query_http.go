@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/go-kratos/kratos/v2/errors"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
@@ -13,6 +14,8 @@ import (
 	modeldevv1 "go-wind-admin/api/gen/go/modeldev/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/internal/service"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevService) {
@@ -125,6 +128,55 @@ func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevS
 			return err
 		}
 		return ctx.Result(http.StatusOK, out)
+	})
+	route.GET(data.ModelDevExecutionMetricsPath, func(ctx khttp.Context) error {
+		modelDevQueryHeaders(ctx)
+		khttp.SetOperation(ctx, adminv1.OperationModelDevServiceQueryExecutionMetrics)
+		var in modeldevv1.QueryExecutionMetricsRequest
+		if ctx.BindVars(&in) != nil || in.ExecutionId == "" {
+			return invalidModelDevQueryHTTP()
+		}
+		query, err := modelDevBoundedQuery(ctx.Request())
+		if err != nil {
+			return err
+		}
+		for name, values := range query {
+			switch name {
+			case "pod_uid":
+				in.PodUid = values[0]
+			case "container":
+				in.Container = values[0]
+			case "start":
+				in.Start = values[0]
+			case "end":
+				in.End = values[0]
+			case "step_seconds":
+				in.StepSeconds, err = modelDevQueryStepPointer(values[0])
+			case "metric_codes":
+				in.MetricCodes = strings.Split(values[0], ",")
+			default:
+				return invalidModelDevQueryHTTP()
+			}
+			if err != nil {
+				return err
+			}
+		}
+		out, err := ctx.Middleware(func(c context.Context, v interface{}) (interface{}, error) {
+			return modeldev.QueryExecutionMetrics(c, v.(*modeldevv1.QueryExecutionMetricsRequest))
+		})(ctx, &in)
+		if err != nil {
+			return err
+		}
+		// Every unpopulated field is emitted: a missing point value must stay
+		// absent while gap_reason and the fixed envelope stay visible.
+		raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(out.(proto.Message))
+		if err != nil {
+			return err
+		}
+		ctx.Response().Header().Set("Content-Type", "application/json")
+		ctx.Response().WriteHeader(http.StatusOK)
+		_, err = ctx.Response().Write(raw)
+		return err
 	})
 	route.GET(data.ModelDevListExecutionEventsPath, func(ctx khttp.Context) error {
 		modelDevQueryHeaders(ctx)
@@ -302,6 +354,16 @@ func modelDevQueryBoolPointer(value string) (*bool, error) {
 	}
 	parsed := value == "true"
 	return &parsed, nil
+}
+
+// modelDevQueryStepPointer parses a canonical decimal step; the service applies
+// the 30s..1h and multiple-of-30 bounds so both layers agree on the contract.
+func modelDevQueryStepPointer(value string) (*uint32, error) {
+	n, err := modelDevQueryPositiveBound(value, 3600)
+	if err != nil {
+		return nil, err
+	}
+	return &n, nil
 }
 
 func modelDevQueryCanonicalUUID(value string) bool {

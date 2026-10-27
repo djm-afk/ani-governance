@@ -17,6 +17,7 @@ BEGIN
     SELECT * FROM (VALUES
       ('GET', '/api/v1/modeldev/executions/{execution_id}/pods',        'modeldev:execution:get'),
       ('GET', '/api/v1/modeldev/executions/{execution_id}/events',      'modeldev:execution:get'),
+      ('GET', '/api/v1/modeldev/executions/{execution_id}/resource-metrics', 'modeldev:execution:get'),
       ('GET', '/api/v1/modeldev/executions/{execution_id}/logs/stream', 'modeldev:execution:logs')
     ) AS routes(method, path, permission_code)
   LOOP

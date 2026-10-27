@@ -27,6 +27,7 @@ const (
 	ModelDevService_GetExecutionLogs_FullMethodName          = "/admin.service.v1.ModelDevService/GetExecutionLogs"
 	ModelDevService_ListExecutionPods_FullMethodName         = "/admin.service.v1.ModelDevService/ListExecutionPods"
 	ModelDevService_ListExecutionEvents_FullMethodName       = "/admin.service.v1.ModelDevService/ListExecutionEvents"
+	ModelDevService_QueryExecutionMetrics_FullMethodName     = "/admin.service.v1.ModelDevService/QueryExecutionMetrics"
 	ModelDevService_StopExecution_FullMethodName             = "/admin.service.v1.ModelDevService/StopExecution"
 	ModelDevService_ResumeModelRegistration_FullMethodName   = "/admin.service.v1.ModelDevService/ResumeModelRegistration"
 	ModelDevService_GetExecution_FullMethodName              = "/admin.service.v1.ModelDevService/GetExecution"
@@ -48,6 +49,7 @@ type ModelDevServiceClient interface {
 	GetExecutionLogs(ctx context.Context, in *v1.GetExecutionLogsRequest, opts ...grpc.CallOption) (*v1.GetExecutionLogsResponse, error)
 	ListExecutionPods(ctx context.Context, in *v1.ListExecutionPodsRequest, opts ...grpc.CallOption) (*v1.ListExecutionPodsResponse, error)
 	ListExecutionEvents(ctx context.Context, in *v1.ListExecutionEventsRequest, opts ...grpc.CallOption) (*v1.ListExecutionEventsResponse, error)
+	QueryExecutionMetrics(ctx context.Context, in *v1.QueryExecutionMetricsRequest, opts ...grpc.CallOption) (*v1.QueryExecutionMetricsResponse, error)
 	StopExecution(ctx context.Context, in *v1.StopExecutionRequest, opts ...grpc.CallOption) (*v1.StopExecutionResponse, error)
 	ResumeModelRegistration(ctx context.Context, in *v1.ResumeModelRegistrationRequest, opts ...grpc.CallOption) (*v1.GetExecutionResponse, error)
 	GetExecution(ctx context.Context, in *v1.GetExecutionRequest, opts ...grpc.CallOption) (*v1.GetExecutionResponse, error)
@@ -134,6 +136,16 @@ func (c *modelDevServiceClient) ListExecutionEvents(ctx context.Context, in *v1.
 	return out, nil
 }
 
+func (c *modelDevServiceClient) QueryExecutionMetrics(ctx context.Context, in *v1.QueryExecutionMetricsRequest, opts ...grpc.CallOption) (*v1.QueryExecutionMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.QueryExecutionMetricsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_QueryExecutionMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *modelDevServiceClient) StopExecution(ctx context.Context, in *v1.StopExecutionRequest, opts ...grpc.CallOption) (*v1.StopExecutionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.StopExecutionResponse)
@@ -207,6 +219,7 @@ type ModelDevServiceServer interface {
 	GetExecutionLogs(context.Context, *v1.GetExecutionLogsRequest) (*v1.GetExecutionLogsResponse, error)
 	ListExecutionPods(context.Context, *v1.ListExecutionPodsRequest) (*v1.ListExecutionPodsResponse, error)
 	ListExecutionEvents(context.Context, *v1.ListExecutionEventsRequest) (*v1.ListExecutionEventsResponse, error)
+	QueryExecutionMetrics(context.Context, *v1.QueryExecutionMetricsRequest) (*v1.QueryExecutionMetricsResponse, error)
 	StopExecution(context.Context, *v1.StopExecutionRequest) (*v1.StopExecutionResponse, error)
 	ResumeModelRegistration(context.Context, *v1.ResumeModelRegistrationRequest) (*v1.GetExecutionResponse, error)
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v1.GetExecutionResponse, error)
@@ -243,6 +256,9 @@ func (UnimplementedModelDevServiceServer) ListExecutionPods(context.Context, *v1
 }
 func (UnimplementedModelDevServiceServer) ListExecutionEvents(context.Context, *v1.ListExecutionEventsRequest) (*v1.ListExecutionEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListExecutionEvents not implemented")
+}
+func (UnimplementedModelDevServiceServer) QueryExecutionMetrics(context.Context, *v1.QueryExecutionMetricsRequest) (*v1.QueryExecutionMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QueryExecutionMetrics not implemented")
 }
 func (UnimplementedModelDevServiceServer) StopExecution(context.Context, *v1.StopExecutionRequest) (*v1.StopExecutionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopExecution not implemented")
@@ -409,6 +425,24 @@ func _ModelDevService_ListExecutionEvents_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ModelDevService_QueryExecutionMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.QueryExecutionMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).QueryExecutionMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_QueryExecutionMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).QueryExecutionMetrics(ctx, req.(*v1.QueryExecutionMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ModelDevService_StopExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.StopExecutionRequest)
 	if err := dec(in); err != nil {
@@ -551,6 +585,10 @@ var ModelDevService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListExecutionEvents",
 			Handler:    _ModelDevService_ListExecutionEvents_Handler,
+		},
+		{
+			MethodName: "QueryExecutionMetrics",
+			Handler:    _ModelDevService_QueryExecutionMetrics_Handler,
 		},
 		{
 			MethodName: "StopExecution",

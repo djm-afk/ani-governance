@@ -64,6 +64,12 @@ func TestModelDevListAndLogRejectUnboundedSelectors(t *testing.T) {
 		{"/api/v1/modeldev/executions/id/events?warning_only=true", ""},
 		{"/api/v1/modeldev/executions/id/pods", "{}"},
 		{"/api/v1/modeldev/executions/id/events", "{}"},
+		{"/api/v1/modeldev/executions/id/resource-metrics?scope=other", ""},
+		{"/api/v1/modeldev/executions/id/resource-metrics?step_seconds=0", ""},
+		{"/api/v1/modeldev/executions/id/resource-metrics?step_seconds=abc", ""},
+		{"/api/v1/modeldev/executions/id/resource-metrics?step_seconds=1&step_seconds=2", ""},
+		{"/api/v1/modeldev/executions/id/resource-metrics?pod_uid=a&pod_uid=b", ""},
+		{"/api/v1/modeldev/executions/id/resource-metrics", "{}"},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			request, err := http.NewRequest(http.MethodGet, web.URL+test.path, strings.NewReader(test.body))
@@ -84,6 +90,7 @@ func TestModelDevListAndLogRoutesEnterAuthentication(t *testing.T) {
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/pods",
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/events",
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/logs/stream",
+		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/resource-metrics?pod_uid=66666666-7777-4888-8999-aaaaaaaaaaaa&container=node&start=2026-10-27T00:00:00Z&end=2026-10-27T01:00:00Z&step_seconds=60&metric_codes=cpu.usage_cores",
 	})
 }
 

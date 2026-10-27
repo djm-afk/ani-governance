@@ -185,7 +185,11 @@ GET /api/v1/modeldev/implementations?kind=FINETUNING
 - 可选 `kind` 取值为 `GENERAL_TRAINING` / `FINETUNING`，与响应 `kind` 同词汇。筛选在分页前执行，`total` 为筛选后条数，无匹配返回 `items: []`／`total: "0"`。
 - `kind` 表达任务类型而不是实现标识；同一 `kind` 后续可能对应多个 `implementation_id`，前端须按返回项渲染，不能把 `kind` 当 `implementation_id` 的别名。
 - `kind` 只在本接口接受，且只认大写枚举值：小写、`UNSPECIFIED`、空值、重复 `kind`、与 `state` 混用，以及 `implementation_id` 等未声明参数都返回 `400 INVALID_MODELDEV_QUERY`（2026-10-26 实测口径）。
-- 分页对本接口生效：`pageSize=1` 时 `page=1` 返回 `GENERAL_TRAINING`、`page=2` 返回 `FINETUNING`、`page=3` 返回空数组且 `total` 仍为 `"2"`。带 `kind` 时 `total` 为筛选后条数。要拿全量请一次请求 `pageSize>=total`。
+- 分页对本接口生效，**页边界随筛选后的 `total` 收缩**：
+  - 不带 `kind`：`total` 为 `"2"`，`pageSize=1` 时 `page=1` 返回 `GENERAL_TRAINING`、`page=2` 返回 `FINETUNING`、`page>=3` 返回空数组。
+  - 带 `kind=FINETUNING`：`total` 为 `"1"`，`page=1` 返回 `builtin.sft_lora`，`page>=2` 即为空数组。
+  - 带 `kind=GENERAL_TRAINING`：`total` 为 `"1"`，`page=1` 返回 `builtin.mlp`，`page>=2` 即为空数组。
+  - 因此翻页循环请以**响应里的 `total`** 为准，不要按固定页数或写死 `page<=3`。要拿全量请一次请求 `pageSize>=total`。
 - `parameter_rules` 里的 `default_value` / `minimum` / `maximum` / `allowed_values` / `numeric_representation` / `validation_description` 都是运行时值，不要硬编码默认值和边界。
 - 不传某个参数与显式传默认值，在服务端是**两种不同原意图**（会影响幂等哈希）。未填写的参数请保持“未提交”，不要补默认值。
 - `execution_timeout_max_seconds` 是 `timeout_seconds` 的上限；`step_timeout_seconds` 是只读值。
@@ -632,6 +636,61 @@ GET /api/v1/modeldev/executions/{execution_id}/events[?scope=key|all|warning]
 - `truncated=true` 表示本次结果被截断。
 - 事件来自 Kubernetes Event 对象，不是执行日志的替代品。
 
+### 9.3 资源曲线（CPU/内存）
+
+```
+GET /api/v1/modeldev/executions/{execution_id}/resource-metrics
+    ?pod_uid=&container=&start=&end=&step_seconds=&metric_codes=
+```
+
+**一次请求只返回一个 Pod 的一个容器**：可观测侧的 target 合同一次只解析一个物理工作负载，
+并行 step 的曲线不能合并成一次调用。前端按 Pod 分页懒加载。
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `pod_uid` | 是 | 取自 9.1 `pods[].podUid`；用 Pod UID 而非名字，重建后的 Pod 不会继承旧曲线 |
+| `container` | 是 | worker 层只能 `node`，step 层只能 `main`；传错返回 `400`，不会静默返回空曲线 |
+| `start` / `end` | 是 | RFC3339，窗口 ≤ 24h，`end` 不得晚于当前时间 |
+| `step_seconds` | 否 | 默认 `30`；允许 30–3600，且必须是 30 的整数倍；点数上限 3000 |
+| `metric_codes` | 是 | 逗号分隔，只接受 `cpu.usage_cores` / `memory.working_set_bytes` |
+
+```json
+{
+  "execution_id": "…",
+  "pod_uid": "…",
+  "pod_name": "md-rtttx-2081272040",
+  "container": "node",
+  "start": "2026-10-27T00:00:00Z",
+  "end": "2026-10-27T01:00:00Z",
+  "step_seconds": 60,
+  "observed_at": "2026-10-27T01:00:05Z",
+  "source": "PROMETHEUS_CADVISOR_PROJECTION",
+  "retention_hint": "24h",
+  "device_mode": "cpu",
+  "gpu_requested": false,
+  "gpu_available": false,
+  "series": [
+    {
+      "metric_code": "cpu.usage_cores",
+      "unit": "cores",
+      "status": "PARTIAL",
+      "points": [
+        { "timestamp": "2026-10-27T00:00:00Z", "value": "1.72" },
+        { "timestamp": "2026-10-27T00:01:00Z", "gap_reason": "NO_DATA" }
+      ]
+    }
+  ]
+}
+```
+
+- `status`：`OK` / `PARTIAL` / `NO_DATA`，与 `points` 里真实值的个数一致。
+- 缺口点**没有 `value`**，只有 `gap_reason`（`NO_DATA` / `AMBIGUOUS_SOURCE` / `INVALID_VALUE`）。不要渲染成 0。
+- `source` 是 recording rule 对 cAdvisor 的投影，不是直读 cAdvisor。
+- `retention_hint` 当前 `24h`；超出保留期返回空序列，接口不报错，前端不要承诺更长历史。
+- `gpu_requested=true` 且 `gpu_available=false`：显示“GPU 指标不可用”，不要显示成 0。当前环境没有 GPU exporter。
+- 曲线数据 30s 采集一次，前端轮询间隔不要低于 `step_seconds`。
+- 每租户并发上限 4，BFF 会把超出部分排队；首屏（worker + 4 个 step）= 5 次调用，建议限制同时展开的详情页为 1。
+
 ## 10. 枚举取值
 
 ### 10.1 `compute_state`（计算状态）
@@ -970,6 +1029,7 @@ POST :stop → 202
 | 训练曲线 | 详情响应的 `metrics[]` | **200**，微调实测 1000 点 |
 | 容器组 `GET .../pods` | 见 9.1 | **200** |
 | 事件 `GET .../events` | 见 9.2 | **200**（保留窗口 `1h`） |
+| 资源曲线 `GET .../resource-metrics` | 见 9.3 | 已实现，待目标环境联调一致 |
 | 日志流 `GET .../logs/stream` | 见 11.1 | **200**（SSE） |
 
 注意事项：

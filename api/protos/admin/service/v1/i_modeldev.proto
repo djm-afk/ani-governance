@@ -30,6 +30,9 @@ service ModelDevService {
   rpc ListExecutionEvents (modeldev.service.v1.ListExecutionEventsRequest) returns (modeldev.service.v1.ListExecutionEventsResponse) {
     option (google.api.http) = { get: "/api/v1/modeldev/executions/{execution_id}/events" };
   }
+  rpc QueryExecutionMetrics (modeldev.service.v1.QueryExecutionMetricsRequest) returns (modeldev.service.v1.QueryExecutionMetricsResponse) {
+    option (google.api.http) = { get: "/api/v1/modeldev/executions/{execution_id}/resource-metrics" };
+  }
   rpc StopExecution (modeldev.service.v1.StopExecutionRequest) returns (modeldev.service.v1.StopExecutionResponse) {
     option (google.api.http) = { post: "/api/v1/modeldev/executions/{execution_id}:stop" };
     option (gnostic.openapi.v3.operation) = {
