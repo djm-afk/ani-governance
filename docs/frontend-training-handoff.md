@@ -872,7 +872,7 @@ Pod 的实例归属由服务端从 9.1 的 `metric_instance_id` 取得，不需�
 
 - 普通训练：`prepare → train-wait → collect → publish → close`
 - 微调：`prepare → train-wait → export → verify → collect → publish → register → close`
-  （未填登记目标时 `register` 不会成功执行）
+  （未填登记目标时 `register` 不登记模型，只确认产物，运行结束后为 `SUCCEEDED`）
 
 `steps[]` 是**有序**数组，前端直接按数组顺序渲染时间线，不要按上面的枚举顺序重排。
 
@@ -1183,7 +1183,7 @@ POST :stop → 202
 | 失败传播（失败步 FAILED、后续 PENDING、无误报 RUNNING） | **已核实** |
 | `metrics` 解析（7~1379 点）与未发布时为 `[]` | **已核实** |
 | `register` 成功路径（`model_registration.state=READY`） | **已核实** |
-| `register` 在**未登记目标**的成功微调上显示 `STOPPED` | **缺陷，未修**（7 条微调中 4 条命中），前端不要把它当失败渲染 |
+| `register` 在**未登记目标**的成功微调上显示 `STOPPED` | **已修复（2026-10-27）**：现为 `SUCCEEDED`，见下 |
 | stop / 步骤超时 / export 失败 / `DEPENDENCY_UNAVAILABLE` | **无样本，未验证** |
 | `metrics` 点数上限 | 实测最高 1379 点、单次响应约 108 KB，**无上限无分页**，前端需自行降采样 |
 
@@ -1207,6 +1207,7 @@ POST :stop → 202
 > 9. 输入版本支持 `format=CSV|JSON` 筛选（见第 6 节）。
 > 10. 微调详情新增 `base_model` 基座身份（见第 9 节）。
 > 11. 产物**可以真实下载了**：新增 `GET /api/v1/modeldev/artifacts/{id}/download`，由 BFF 转发字节，不再受对象存储集群内域名限制（见 13.1 节）。
+> 12. `register` 步骤不再把"仅发布产物、不登记模型"的微调误报为 `STOPPED`。根因是这类快照本就不写 registration 事实，展示层把"无事实"当成"被中断"。现按 `NATURAL_TERMINAL` 关闭 + 无登记目标判为 `SUCCEEDED`；有登记目标但被中断的仍报 `STOPPED`。现网 7 条微调已全部复核：3 条无目标的从 `STOPPED` 变 `SUCCEEDED`，2 条有目标的保持 `READY/SUCCEEDED`，运行中与失败的各 1 条保持 `PENDING`。
 
 **联调前请先向后端确认当前镜像状态。** 后端做过多次滚动发布，发布窗口内可能短暂出现 `503 MODELDEV_CREATE_UNAVAILABLE`。这类 503 是发布抖动，重试即可；若持续超过几分钟再找后端。
 
@@ -1220,7 +1221,7 @@ POST :stop → 202
 
 | 能力 | 位置 | 实测 |
 | --- | --- | --- |
-| 流水线步骤明细 | 详情响应的 `steps[]` | **200**，普通训练 5 步、微调 8 步（数量与顺序已核实；`register` 有已知缺陷，见上） |
+| 流水线步骤明细 | 详情响应的 `steps[]` | **200**，普通训练 5 步、微调 8 步（数量、顺序与 `register` 状态均已核实） |
 | 训练曲线 | 详情响应的 `metrics[]` | **200**，实测 7~1379 点（内容已核实） |
 | 失败诊断 | 详情响应的 `failure` | 见第 9 节字段说明 |
 | 托管超参 | 详情响应的 `managed_settings` | 见第 9 节字段说明 |
