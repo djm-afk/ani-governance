@@ -8758,6 +8758,10 @@ paths:
                     format: uint32
                 - name: compute_state
                   in: query
+                  description: |-
+                    以下三个筛选与响应里的 compute_state / delivery_state / close_state 同词汇
+                     （不带枚举前缀，如 SUCCEEDED / PUBLISHED / CLOSED）。三者在服务端可叠加，
+                     且都在分页前生效，total 为筛选后的条数。
                   schema:
                     type: string
                 - name: delivery_state
@@ -10459,6 +10463,15 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: name
+                  in: query
+                  description: 筛选在分页前生效，多个条件为 AND；空串表示不筛该字段。
+                  schema:
+                    type: string
+                - name: id
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -10638,6 +10651,19 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: name
+                  in: query
+                  description: 筛选在分页前生效，多个条件为 AND；空串表示不筛该字段。
+                  schema:
+                    type: string
+                - name: id
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -14649,6 +14675,30 @@ components:
                     type: string
                 reporting_instance:
                     type: string
+        ExecutionFailureView:
+            type: object
+            properties:
+                reason:
+                    type: string
+                    description: 不带前缀的原因枚举名，如 INVALID_ARGUMENT / UPSTREAM_UNAVAILABLE。
+                safe_message:
+                    type: string
+                    description: 面向人的安全描述，不含凭据、存储密钥或隐藏的对象事实。
+                violations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionFieldViolationView'
+                correlation_id:
+                    type: string
+                    description: 服务端关联 ID，用于日志检索；不是用户可见的业务标识。
+            description: 历史失败诊断。safe_message 已剔除凭据与存储密钥，可直接展示。
+        ExecutionFieldViolationView:
+            type: object
+            properties:
+                field:
+                    type: string
+                reason:
+                    type: string
         ExecutionHistoryView:
             type: object
             properties:
@@ -14680,6 +14730,68 @@ components:
                     type: string
                 text:
                     type: string
+        ExecutionManagedSettingsView:
+            type: object
+            properties:
+                stage:
+                    type: string
+                    description: 训练阶段。本期只有 sft，不存在 dpo/ppo。
+                finetuning_type:
+                    type: string
+                lora_target:
+                    type: string
+                lora_rank:
+                    type: string
+                lora_alpha:
+                    type: string
+                cutoff_len:
+                    type: string
+                per_device_train_batch_size:
+                    type: string
+                gradient_accumulation_steps:
+                    type: string
+                seed:
+                    type: string
+                data_seed:
+                    type: string
+                device:
+                    type: string
+                fp16:
+                    type: boolean
+                bf16:
+                    type: boolean
+                flash_attn:
+                    type: string
+                report_to:
+                    type: string
+                save_strategy:
+                    type: string
+                template:
+                    type: string
+                train_dtype:
+                    type: string
+                export_dtype:
+                    type: string
+                verify_dtype:
+                    type: string
+                lr_scheduler_type:
+                    type: string
+                warmup_ratio:
+                    type: string
+                weight_decay:
+                    type: string
+                lora_dropout:
+                    type: string
+                num_train_epochs:
+                    type: string
+                optim:
+                    type: string
+                logging_steps:
+                    type: string
+            description: |-
+                服务端托管的训练超参，创建请求不接受这些字段。整数字段在本消息里是原生
+                 整数（与执行详情的其他 int64 一致），不走 explicit_parameters 的字符串编码；
+                 小数型超参（warmup_ratio / weight_decay / lora_dropout）保留十进制字符串。
         ExecutionMetricPoint:
             type: object
             properties:
@@ -14812,6 +14924,12 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ExecutionContainerView'
+                metric_instance_id:
+                    type: string
+                    description: |-
+                        The instance this Pod reports under in the observability training records:
+                         the execution ID for a worker, the KFP run ID for a step. Empty for a Pod
+                         created before metric labelling, so callers must not substitute their own.
         ExecutionStepView:
             type: object
             properties:
@@ -14912,100 +15030,15 @@ components:
                         Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
                          from the published METRICS artifact.
                 failure:
-                    $ref: '#/components/schemas/ExecutionFailureView'
+                    allOf:
+                        - $ref: '#/components/schemas/ExecutionFailureView'
+                    description: |-
+                        历史失败诊断。仅当这次执行确实失败过才有值；正常结束或仍在运行时为 null。
+                         与 HTTP 错误无关——这是执行结果的一部分，不是接口调用失败。
                 managed_settings:
-                    $ref: '#/components/schemas/ExecutionManagedSettingsView'
-        ExecutionFailureView:
-            type: object
-            properties:
-                reason:
-                    type: string
-                safe_message:
-                    type: string
-                violations:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/ExecutionFieldViolationView'
-                correlation_id:
-                    type: string
-            description: 历史失败诊断。safe_message 已剔除凭据与存储密钥，可直接展示。
-        ExecutionFieldViolationView:
-            type: object
-            properties:
-                field:
-                    type: string
-                reason:
-                    type: string
-        ExecutionManagedSettingsView:
-            type: object
-            properties:
-                stage:
-                    type: string
-                finetuning_type:
-                    type: string
-                lora_target:
-                    type: string
-                lora_rank:
-                    type: string
-                    format: int64
-                lora_alpha:
-                    type: string
-                    format: int64
-                cutoff_len:
-                    type: string
-                    format: int64
-                per_device_train_batch_size:
-                    type: string
-                    format: int64
-                gradient_accumulation_steps:
-                    type: string
-                    format: int64
-                seed:
-                    type: string
-                    format: int64
-                data_seed:
-                    type: string
-                    format: int64
-                device:
-                    type: string
-                fp16:
-                    type: boolean
-                bf16:
-                    type: boolean
-                flash_attn:
-                    type: string
-                report_to:
-                    type: string
-                save_strategy:
-                    type: string
-                template:
-                    type: string
-                train_dtype:
-                    type: string
-                export_dtype:
-                    type: string
-                verify_dtype:
-                    type: string
-                lr_scheduler_type:
-                    type: string
-                warmup_ratio:
-                    type: string
-                weight_decay:
-                    type: string
-                lora_dropout:
-                    type: string
-                num_train_epochs:
-                    type: string
-                    format: int64
-                optim:
-                    type: string
-                logging_steps:
-                    type: string
-                    format: int64
-            description: |-
-                服务端托管的训练超参，创建请求不接受这些字段。整数字段在本消息里是原生
-                 整数（与执行详情的其他 int64 一致），不走 explicit_parameters 的字符串编码；
-                 小数型超参（warmup_ratio / weight_decay / lora_dropout）保留十进制字符串。
+                    allOf:
+                        - $ref: '#/components/schemas/ExecutionManagedSettingsView'
+                    description: 服务端托管的训练超参。前端只读展示，创建时不能提交这些字段。
         Expression:
             type: object
             properties:
@@ -18865,14 +18898,18 @@ components:
                     type: string
                 minimum_inclusive:
                     type: boolean
-                    nullable: true
+                    description: |-
+                        开闭区间。与 minimum/maximum 成对解读：minimum_inclusive=false 表示下界开，
+                         此时 minimum 本身不可取。未设置（null）表示服务端没有给出区间语义，不要猜测。
                 maximum_inclusive:
                     type: boolean
-                    nullable: true
+                    description: maximum_inclusive=false 表示上界开，此时 maximum 本身不可取。
                 editable:
                     type: boolean
+                    description: 该参数是否允许用户改写。当前所有已发布实现均为 true。
                 non_editable_reason:
                     type: string
+                    description: editable=false 时说明原因；editable=true 时恒为空字符串。
         PasswordLoginRequest:
             type: object
             properties:

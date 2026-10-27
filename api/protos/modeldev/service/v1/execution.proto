@@ -244,6 +244,10 @@ message ExecutionPodView {
   bool api_present = 20 [json_name = "api_present"];
   optional int32 exit_code = 21 [json_name = "exit_code"];
   repeated ExecutionContainerView ephemeral_containers = 22 [json_name = "ephemeral_containers"];
+  // The instance this Pod reports under in the observability training records:
+  // the execution ID for a worker, the KFP run ID for a step. Empty for a Pod
+  // created before metric labelling, so callers must not substitute their own.
+  string metric_instance_id = 23 [json_name = "metric_instance_id"];
 }
 message ExecutionEventView {
   string type = 1;

@@ -223,7 +223,7 @@ func modelDevPublicPod(pod *modeldevcontractv1.PodView) *modeldevv1.ExecutionPod
 		NodeName: pod.NodeName, Restarts: pod.Restarts, Layer: strings.TrimPrefix(pod.Layer.String(), "POD_LAYER_"),
 		Availability: strings.TrimPrefix(pod.Availability.String(), "POD_AVAILABILITY_"), StepName: pod.StepName,
 		Attempt: pod.Attempt, JobIndex: pod.JobIndex, LogId: pod.LogId, LogAvailable: pod.LogAvailable,
-		ApiPresent: pod.ApiPresent, ExitCode: pod.ExitCode,
+		ApiPresent: pod.ApiPresent, ExitCode: pod.ExitCode, MetricInstanceId: pod.MetricInstanceId,
 	}
 	if at := pod.CreatedAt; at != nil {
 		out.CreatedAt = at.AsTime().UTC().Format(time.RFC3339Nano)

@@ -215,19 +215,23 @@ func (s *ModelDevService) QueryExecutionMetrics(ctx context.Context, in *modelde
 	if deviceMode != "cpu" && deviceMode != "gpu" {
 		return nil, modelDevMetricResponseInvalid()
 	}
-	// A worker Pod reports under the execution id; a step Pod reports under the
-	// KFP run id. Only the step path needs the owner's runtime history.
-	instance := in.ExecutionId
-	if pod.GetLayer() == modeldevcontractv1.PodLayer_POD_LAYER_PIPELINE {
-		execution, err := s.resolver.GetExecution(ctx, scope, in.ExecutionId)
-		if err != nil {
-			return nil, modelDevMetricFailure(err)
+	// The Pod carries the instance it reports under, copied from the label the
+	// admission webhook verified. Runtime history is only a fallback: it is
+	// written asynchronously and a freshly started execution has none yet.
+	instance := pod.GetMetricInstanceId()
+	if !modelDevQueryUUID(instance) {
+		if pod.GetLayer() != modeldevcontractv1.PodLayer_POD_LAYER_PIPELINE {
+			instance = in.ExecutionId
+		} else {
+			execution, err := s.resolver.GetExecution(ctx, scope, in.ExecutionId)
+			if err != nil {
+				return nil, modelDevMetricFailure(err)
+			}
+			instance = execution.GetExecution().GetHistory().GetRunId()
 		}
-		runID := execution.GetExecution().GetHistory().GetRunId()
-		if !modelDevQueryUUID(runID) {
-			return nil, modelDevMetricScopeUnavailable()
-		}
-		instance = runID
+	}
+	if !modelDevQueryUUID(instance) {
+		return nil, modelDevMetricScopeUnavailable()
 	}
 
 	release, err := s.metricGate.acquire(ctx, principal.TenantID)

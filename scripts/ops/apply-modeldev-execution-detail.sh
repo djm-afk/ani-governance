@@ -6,7 +6,7 @@
 # routes fail closed. Every step is idempotent and separately switchable.
 #
 #   images   set the detail-era ani-modeldev / ani-governance images
-#   apis     register the three new (path, method) pairs in the API directory
+#   apis     register the four new (path, method) pairs in the API directory
 #   grant    link those APIs to modeldev:execution:get / modeldev:execution:logs
 #   rbac     let ani-modeldev-control list Events in the tenant namespace
 #
@@ -82,7 +82,7 @@ set_images() {
 }
 
 # Runs /app/bin/admin sync-apis in a throwaway Pod. --dry-run first, and the
-# dry-run output must mention the three detail routes: an admin image older than
+# dry-run output must mention the detail routes: an admin image older than
 # the routes would otherwise report success while adding nothing.
 #
 # The DSN carries a password, so it is read from ADMIN_DATABASE_DSN in the
@@ -113,7 +113,7 @@ sync_apis() {
   kubectl -n "$NAMESPACE" logs "$pod" > "/tmp/sync-apis-dry-run.$$" 2>&1 \
     || fail "could not read the admin dry-run log"
   cat "/tmp/sync-apis-dry-run.$$"
-  grep -qE '/(pods|events|logs/stream)' "/tmp/sync-apis-dry-run.$$" \
+  grep -qE '/(pods|events|resource-metrics|logs/stream)' "/tmp/sync-apis-dry-run.$$" \
     || fail "dry-run did not report the detail routes; the admin image predates this change"
   grep -qiE '^PASS|dry run' "/tmp/sync-apis-dry-run.$$" \
     || fail "dry-run did not finish cleanly; review the log above before applying"

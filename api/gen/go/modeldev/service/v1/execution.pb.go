@@ -1897,8 +1897,12 @@ type ExecutionPodView struct {
 	ApiPresent          bool                      `protobuf:"varint,20,opt,name=api_present,proto3" json:"api_present,omitempty"`
 	ExitCode            *int32                    `protobuf:"varint,21,opt,name=exit_code,proto3,oneof" json:"exit_code,omitempty"`
 	EphemeralContainers []*ExecutionContainerView `protobuf:"bytes,22,rep,name=ephemeral_containers,proto3" json:"ephemeral_containers,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// The instance this Pod reports under in the observability training records:
+	// the execution ID for a worker, the KFP run ID for a step. Empty for a Pod
+	// created before metric labelling, so callers must not substitute their own.
+	MetricInstanceId string `protobuf:"bytes,23,opt,name=metric_instance_id,proto3" json:"metric_instance_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ExecutionPodView) Reset() {
@@ -2083,6 +2087,13 @@ func (x *ExecutionPodView) GetEphemeralContainers() []*ExecutionContainerView {
 		return x.EphemeralContainers
 	}
 	return nil
+}
+
+func (x *ExecutionPodView) GetMetricInstanceId() string {
+	if x != nil {
+		return x.MetricInstanceId
+	}
+	return ""
 }
 
 type ExecutionEventView struct {
@@ -4513,7 +4524,7 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	" \x01(\v2+.modeldev.service.v1.ExecutionContainerViewR\n" +
 	"last_stateB\f\n" +
 	"\n" +
-	"_exit_code\"\xdc\x06\n" +
+	"_exit_code\"\x8c\a\n" +
 	"\x10ExecutionPodView\x12\x1a\n" +
 	"\bpod_name\x18\x01 \x01(\tR\bpod_name\x12\x18\n" +
 	"\apod_uid\x18\x02 \x01(\tR\apod_uid\x12\x16\n" +
@@ -4543,7 +4554,8 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\x0finit_containers\x18\x13 \x03(\v2+.modeldev.service.v1.ExecutionContainerViewR\x0finit_containers\x12 \n" +
 	"\vapi_present\x18\x14 \x01(\bR\vapi_present\x12!\n" +
 	"\texit_code\x18\x15 \x01(\x05H\x00R\texit_code\x88\x01\x01\x12_\n" +
-	"\x14ephemeral_containers\x18\x16 \x03(\v2+.modeldev.service.v1.ExecutionContainerViewR\x14ephemeral_containersB\f\n" +
+	"\x14ephemeral_containers\x18\x16 \x03(\v2+.modeldev.service.v1.ExecutionContainerViewR\x14ephemeral_containers\x12.\n" +
+	"\x12metric_instance_id\x18\x17 \x01(\tR\x12metric_instance_idB\f\n" +
 	"\n" +
 	"_exit_code\"\x9a\x03\n" +
 	"\x12ExecutionEventView\x12\x12\n" +
