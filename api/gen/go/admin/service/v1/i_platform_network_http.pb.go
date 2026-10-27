@@ -33,6 +33,7 @@ const OperationPlatformNetworkServiceDeleteIntranetAddressPool = "/admin.service
 const OperationPlatformNetworkServiceDeletePublicAddressPool = "/admin.service.v1.PlatformNetworkService/DeletePublicAddressPool"
 const OperationPlatformNetworkServiceDeleteVirtualSwitch = "/admin.service.v1.PlatformNetworkService/DeleteVirtualSwitch"
 const OperationPlatformNetworkServiceDeleteVlanNetwork = "/admin.service.v1.PlatformNetworkService/DeleteVlanNetwork"
+const OperationPlatformNetworkServiceGetCurrentDefaultVPCEgress = "/admin.service.v1.PlatformNetworkService/GetCurrentDefaultVPCEgress"
 const OperationPlatformNetworkServiceGetDefaultVPCEgress = "/admin.service.v1.PlatformNetworkService/GetDefaultVPCEgress"
 const OperationPlatformNetworkServiceGetEgressGateway = "/admin.service.v1.PlatformNetworkService/GetEgressGateway"
 const OperationPlatformNetworkServiceGetIntranetAddressPool = "/admin.service.v1.PlatformNetworkService/GetIntranetAddressPool"
@@ -74,6 +75,7 @@ type PlatformNetworkServiceHTTPServer interface {
 	DeletePublicAddressPool(context.Context, *v1.DeletePublicAddressPoolRequest) (*v1.DeletePublicAddressPoolResponse, error)
 	DeleteVirtualSwitch(context.Context, *v1.DeleteVirtualSwitchRequest) (*v1.DeleteVirtualSwitchResponse, error)
 	DeleteVlanNetwork(context.Context, *v1.DeleteVlanNetworkRequest) (*v1.DeleteVlanNetworkResponse, error)
+	GetCurrentDefaultVPCEgress(context.Context, *v1.GetCurrentDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error)
 	GetDefaultVPCEgress(context.Context, *v1.GetDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error)
 	GetEgressGateway(context.Context, *v1.GetEgressGatewayRequest) (*v1.GetEgressGatewayResponse, error)
 	GetIntranetAddressPool(context.Context, *v1.GetIntranetAddressPoolRequest) (*v1.GetIntranetAddressPoolResponse, error)
@@ -109,6 +111,7 @@ func RegisterPlatformNetworkServiceHTTPServer(s *http.Server, srv PlatformNetwor
 	r.DELETE("/api/v1/admin/networks/eips/{eip_id}", _PlatformNetworkService_ReleasePlatformEIP0_HTTP_Handler(srv))
 	r.POST("/api/v1/admin/networks/default-vpc-egresses", _PlatformNetworkService_CreateDefaultVPCEgress0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/networks/default-vpc-egresses/{egress_id}", _PlatformNetworkService_GetDefaultVPCEgress0_HTTP_Handler(srv))
+	r.GET("/api/v1/admin/networks/default-vpc-egress", _PlatformNetworkService_GetCurrentDefaultVPCEgress0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/admin/networks/default-vpc-egresses/{egress_id}", _PlatformNetworkService_DeleteDefaultVPCEgress0_HTTP_Handler(srv))
 	r.POST("/api/v1/admin/networks/devices/{device_id}/retirement", _PlatformNetworkService_RetireNetworkDevice0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/networks/devices/{device_id}/retirement", _PlatformNetworkService_GetNetworkDeviceRetirement0_HTTP_Handler(srv))
@@ -242,6 +245,25 @@ func _PlatformNetworkService_GetDefaultVPCEgress0_HTTP_Handler(srv PlatformNetwo
 		http.SetOperation(ctx, OperationPlatformNetworkServiceGetDefaultVPCEgress)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.GetDefaultVPCEgress(ctx, req.(*v1.GetDefaultVPCEgressRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetDefaultVPCEgressResponse)
+		return ctx.Result(200, reply.Egress)
+	}
+}
+
+func _PlatformNetworkService_GetCurrentDefaultVPCEgress0_HTTP_Handler(srv PlatformNetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetCurrentDefaultVPCEgressRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationPlatformNetworkServiceGetCurrentDefaultVPCEgress)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetCurrentDefaultVPCEgress(ctx, req.(*v1.GetCurrentDefaultVPCEgressRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -1014,6 +1036,7 @@ type PlatformNetworkServiceHTTPClient interface {
 	DeletePublicAddressPool(ctx context.Context, req *v1.DeletePublicAddressPoolRequest, opts ...http.CallOption) (rsp *v1.DeletePublicAddressPoolResponse, err error)
 	DeleteVirtualSwitch(ctx context.Context, req *v1.DeleteVirtualSwitchRequest, opts ...http.CallOption) (rsp *v1.DeleteVirtualSwitchResponse, err error)
 	DeleteVlanNetwork(ctx context.Context, req *v1.DeleteVlanNetworkRequest, opts ...http.CallOption) (rsp *v1.DeleteVlanNetworkResponse, err error)
+	GetCurrentDefaultVPCEgress(ctx context.Context, req *v1.GetCurrentDefaultVPCEgressRequest, opts ...http.CallOption) (rsp *v1.GetDefaultVPCEgressResponse, err error)
 	GetDefaultVPCEgress(ctx context.Context, req *v1.GetDefaultVPCEgressRequest, opts ...http.CallOption) (rsp *v1.GetDefaultVPCEgressResponse, err error)
 	GetEgressGateway(ctx context.Context, req *v1.GetEgressGatewayRequest, opts ...http.CallOption) (rsp *v1.GetEgressGatewayResponse, err error)
 	GetIntranetAddressPool(ctx context.Context, req *v1.GetIntranetAddressPoolRequest, opts ...http.CallOption) (rsp *v1.GetIntranetAddressPoolResponse, err error)
@@ -1213,6 +1236,19 @@ func (c *PlatformNetworkServiceHTTPClientImpl) DeleteVlanNetwork(ctx context.Con
 	opts = append(opts, http.Operation(OperationPlatformNetworkServiceDeleteVlanNetwork))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out.Resource, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *PlatformNetworkServiceHTTPClientImpl) GetCurrentDefaultVPCEgress(ctx context.Context, in *v1.GetCurrentDefaultVPCEgressRequest, opts ...http.CallOption) (*v1.GetDefaultVPCEgressResponse, error) {
+	var out v1.GetDefaultVPCEgressResponse
+	pattern := "/api/v1/admin/networks/default-vpc-egress"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationPlatformNetworkServiceGetCurrentDefaultVPCEgress))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Egress, opts...)
 	if err != nil {
 		return nil, err
 	}

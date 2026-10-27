@@ -15,6 +15,7 @@ var PlatformNetworkOperations = map[string]NetworkOperationPolicy{
 	"/admin.service.v1.PlatformNetworkService/ReleasePlatformEIP":               {"DELETE", "/api/v1/admin/networks/eips/{eip_id}", "network:platform:eip:release", false},
 	"/admin.service.v1.PlatformNetworkService/CreateDefaultVPCEgress":           {"POST", "/api/v1/admin/networks/default-vpc-egresses", "network:platform:default-egress:create", false},
 	"/admin.service.v1.PlatformNetworkService/GetDefaultVPCEgress":              {"GET", "/api/v1/admin/networks/default-vpc-egresses/{egress_id}", "network:platform:default-egress:get", true},
+	"/admin.service.v1.PlatformNetworkService/GetCurrentDefaultVPCEgress":       {"GET", "/api/v1/admin/networks/default-vpc-egress", "network:platform:default-egress:get", true},
 	"/admin.service.v1.PlatformNetworkService/DeleteDefaultVPCEgress":           {"DELETE", "/api/v1/admin/networks/default-vpc-egresses/{egress_id}", "network:platform:default-egress:delete", false},
 	"/admin.service.v1.PlatformNetworkService/RetireNetworkDevice":              {"POST", "/api/v1/admin/networks/devices/{device_id}/retirement", "network:platform:device-retirement:create", false},
 	"/admin.service.v1.PlatformNetworkService/GetNetworkDeviceRetirement":       {"GET", "/api/v1/admin/networks/devices/{device_id}/retirement", "network:platform:device-retirement:get", true},
@@ -83,6 +84,8 @@ func platformNetworkMessage(operation string) proto.Message {
 		return &view.CreateDefaultVPCEgressRequest{}
 	case "GetDefaultVPCEgress":
 		return &view.GetDefaultVPCEgressRequest{}
+	case "GetCurrentDefaultVPCEgress":
+		return &view.GetCurrentDefaultVPCEgressRequest{}
 	case "DeleteDefaultVPCEgress":
 		return &view.DeleteDefaultVPCEgressRequest{}
 	case "RetireNetworkDevice":

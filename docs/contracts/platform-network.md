@@ -4,7 +4,7 @@
 
 ## 入口与权限
 
-HTTP 前缀为 `/api/v1/admin/networks`。完整方法、路由和权限以 [平台网络策略](../../pkg/middleware/auth/platform_network_policy.go) 为准，报文以 [领域 DTO](../../api/protos/catalog/service/v1/platform_network.proto) 与 [BFF 路由](../../api/protos/admin/service/v1/i_platform_network.proto) 为准。共 39 个 RPC（含平台 EIP 查询、详情、受保护释放 3 个），包括平台默认 VPC 出口 3 个、旧设备登记受限退役 2 个、虚拟交换机 4 个、Public/Intranet 池各 7 个、VLAN 4 个、网卡/设备 3 个、网关 4 个、能力和平台 operation 各 1 个。
+HTTP 前缀为 `/api/v1/admin/networks`。完整方法、路由和权限以 [平台网络策略](../../pkg/middleware/auth/platform_network_policy.go) 为准，报文以 [领域 DTO](../../api/protos/catalog/service/v1/platform_network.proto) 与 [BFF 路由](../../api/protos/admin/service/v1/i_platform_network.proto) 为准。共 40 个 RPC（含平台 EIP 查询、详情、受保护释放 3 个），包括平台默认 VPC 出口 4 个、旧设备登记受限退役 2 个、虚拟交换机 4 个、Public/Intranet 池各 7 个、VLAN 4 个、网卡/设备 3 个、网关 4 个、能力和平台 operation 各 1 个。
 
 仅已认证的平台用户（可信用户 Principal、平台身份 tenant_id=0）可访问，逐请求检查动作权限与当前 Casbin 策略；令牌中的 IsPlatformAdmin 展示标志不授权。普通租户、租户 API Key、缺失权限或已撤销策略一律拒绝。平台配置接口不借用租户 UUID。平台 EIP 管理使用独立平台 RPC；释放的真实租户由 Resource 从持久 EIP 记录解析，不接受客户端指定所有者。NETWORK 套餐检查继续只约束租户业务入口，平台配置不用虚构租户或套餐。
 
@@ -41,3 +41,9 @@ Resource 逐完整 RPC 检查允许清单，平台方法只接受上述平台委
 `GET /api/v1/admin/networks/eips`、`GET /api/v1/admin/networks/eips/{eip_id}`、`DELETE /api/v1/admin/networks/eips/{eip_id}` 分别要求 `network:platform:eip:list/get/release`，仅平台用户 JWT 可调用。权限目录增量见 [EIP 权限](../../sql/data/20261027_platform_eip_permissions.sql)。
 
 列表使用 `page/pageSize`（默认 1/20，上限 100），支持 `tenant_id/name/address/pool_id/state/scope` 服务端组合筛选，返回 `{items,total}`。`tenant_id` 是 Gov 的正整数租户主键，由 BFF 换成 Resource UUID；不指定则查询当前配置集群的全租户 EIP。响应保留 `resource_tenant_id`、映射出的 `tenant_id/tenant_name`、地址池、绑定对象、状态与观测时间；映射缺失时仍保留原始所有者 UUID。详情与释放直接返回对象。系统管理的 Intranet EIP 只读，不能由管理员独立释放；绑定中的 EIP 和未完成操作仍由 Resource 原有删除链拒绝。没有强制解绑、越过 claim 或直接删库的入口。
+
+## 当前平台默认出口
+
+`GET /api/v1/admin/networks/default-vpc-egress` 使用 `network:platform:default-egress:get`，不接受查询参数或客户端指定的租户、集群、VPC。返回部署固定 VPC 的当前未退役出口详情；未配置返回 404/RESOURCE_NOT_FOUND，删除进行中的记录继续可见。既有创建与删除路径保持不变。
+
+平台 EIP 列表包括平台默认出口持有的地址。其 `managed_by=system`、`scope=public`、租户字段为空/零，`binding_target.kind=platform_default_egress`，目标 ID 为出口配置 ID。系统地址使用持久 `eip_id`，只通过所属出口的删除流程回收；不能从普通 EIP 释放入口单独释放。租户筛选排除此类无租户地址，分页和 total 包含相同过滤范围。

@@ -27,6 +27,10 @@ service PlatformNetworkService {
     option (google.api.http) = { get: "/api/v1/admin/networks/default-vpc-egresses/{egress_id}" response_body: "egress" };
     option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetDefaultVPCEgress" description: "Requires platform user JWT and network:platform:default-egress:get. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness." };
   }
+  rpc GetCurrentDefaultVPCEgress(catalog.service.v1.GetCurrentDefaultVPCEgressRequest) returns (catalog.service.v1.GetDefaultVPCEgressResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/networks/default-vpc-egress" response_body: "egress" };
+    option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "GetCurrentDefaultVPCEgress" description: "Platform user JWT and network:platform:default-egress:get. Returns the active outlet of the configured system VPC; 404 when no outlet is configured. No client supplied cluster, tenant or VPC identity." };
+  }
   rpc DeleteDefaultVPCEgress(catalog.service.v1.DeleteDefaultVPCEgressRequest) returns (catalog.service.v1.DeleteDefaultVPCEgressResponse) {
     option (google.api.http) = { delete: "/api/v1/admin/networks/default-vpc-egresses/{egress_id}" response_body: "egress" };
     option (gnostic.openapi.v3.operation) = { security: [{additional_properties: [{name: "BearerAuth" value: {}}]}] summary: "DeleteDefaultVPCEgress" description: "Requires platform user JWT and network:platform:default-egress:delete. The configured system VPC is fixed; requests cannot supply tenant or VPC identity. Acceptance and pending_unknown are not traffic readiness." };

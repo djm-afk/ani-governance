@@ -25,6 +25,7 @@ const (
 	PlatformNetworkService_ReleasePlatformEIP_FullMethodName               = "/admin.service.v1.PlatformNetworkService/ReleasePlatformEIP"
 	PlatformNetworkService_CreateDefaultVPCEgress_FullMethodName           = "/admin.service.v1.PlatformNetworkService/CreateDefaultVPCEgress"
 	PlatformNetworkService_GetDefaultVPCEgress_FullMethodName              = "/admin.service.v1.PlatformNetworkService/GetDefaultVPCEgress"
+	PlatformNetworkService_GetCurrentDefaultVPCEgress_FullMethodName       = "/admin.service.v1.PlatformNetworkService/GetCurrentDefaultVPCEgress"
 	PlatformNetworkService_DeleteDefaultVPCEgress_FullMethodName           = "/admin.service.v1.PlatformNetworkService/DeleteDefaultVPCEgress"
 	PlatformNetworkService_RetireNetworkDevice_FullMethodName              = "/admin.service.v1.PlatformNetworkService/RetireNetworkDevice"
 	PlatformNetworkService_GetNetworkDeviceRetirement_FullMethodName       = "/admin.service.v1.PlatformNetworkService/GetNetworkDeviceRetirement"
@@ -72,6 +73,7 @@ type PlatformNetworkServiceClient interface {
 	ReleasePlatformEIP(ctx context.Context, in *v1.ReleasePlatformEIPRequest, opts ...grpc.CallOption) (*v1.ReleasePlatformEIPResponse, error)
 	CreateDefaultVPCEgress(ctx context.Context, in *v1.CreateDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.CreateDefaultVPCEgressResponse, error)
 	GetDefaultVPCEgress(ctx context.Context, in *v1.GetDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.GetDefaultVPCEgressResponse, error)
+	GetCurrentDefaultVPCEgress(ctx context.Context, in *v1.GetCurrentDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.GetDefaultVPCEgressResponse, error)
 	DeleteDefaultVPCEgress(ctx context.Context, in *v1.DeleteDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.DeleteDefaultVPCEgressResponse, error)
 	RetireNetworkDevice(ctx context.Context, in *v1.RetireNetworkDeviceRequest, opts ...grpc.CallOption) (*v1.RetireNetworkDeviceResponse, error)
 	GetNetworkDeviceRetirement(ctx context.Context, in *v1.GetNetworkDeviceRetirementRequest, opts ...grpc.CallOption) (*v1.GetNetworkDeviceRetirementResponse, error)
@@ -160,6 +162,16 @@ func (c *platformNetworkServiceClient) GetDefaultVPCEgress(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetDefaultVPCEgressResponse)
 	err := c.cc.Invoke(ctx, PlatformNetworkService_GetDefaultVPCEgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformNetworkServiceClient) GetCurrentDefaultVPCEgress(ctx context.Context, in *v1.GetCurrentDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.GetDefaultVPCEgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetDefaultVPCEgressResponse)
+	err := c.cc.Invoke(ctx, PlatformNetworkService_GetCurrentDefaultVPCEgress_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -517,6 +529,7 @@ type PlatformNetworkServiceServer interface {
 	ReleasePlatformEIP(context.Context, *v1.ReleasePlatformEIPRequest) (*v1.ReleasePlatformEIPResponse, error)
 	CreateDefaultVPCEgress(context.Context, *v1.CreateDefaultVPCEgressRequest) (*v1.CreateDefaultVPCEgressResponse, error)
 	GetDefaultVPCEgress(context.Context, *v1.GetDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error)
+	GetCurrentDefaultVPCEgress(context.Context, *v1.GetCurrentDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error)
 	DeleteDefaultVPCEgress(context.Context, *v1.DeleteDefaultVPCEgressRequest) (*v1.DeleteDefaultVPCEgressResponse, error)
 	RetireNetworkDevice(context.Context, *v1.RetireNetworkDeviceRequest) (*v1.RetireNetworkDeviceResponse, error)
 	GetNetworkDeviceRetirement(context.Context, *v1.GetNetworkDeviceRetirementRequest) (*v1.GetNetworkDeviceRetirementResponse, error)
@@ -575,6 +588,9 @@ func (UnimplementedPlatformNetworkServiceServer) CreateDefaultVPCEgress(context.
 }
 func (UnimplementedPlatformNetworkServiceServer) GetDefaultVPCEgress(context.Context, *v1.GetDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDefaultVPCEgress not implemented")
+}
+func (UnimplementedPlatformNetworkServiceServer) GetCurrentDefaultVPCEgress(context.Context, *v1.GetCurrentDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCurrentDefaultVPCEgress not implemented")
 }
 func (UnimplementedPlatformNetworkServiceServer) DeleteDefaultVPCEgress(context.Context, *v1.DeleteDefaultVPCEgressRequest) (*v1.DeleteDefaultVPCEgressResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteDefaultVPCEgress not implemented")
@@ -786,6 +802,24 @@ func _PlatformNetworkService_GetDefaultVPCEgress_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PlatformNetworkServiceServer).GetDefaultVPCEgress(ctx, req.(*v1.GetDefaultVPCEgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformNetworkService_GetCurrentDefaultVPCEgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetCurrentDefaultVPCEgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformNetworkServiceServer).GetCurrentDefaultVPCEgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformNetworkService_GetCurrentDefaultVPCEgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformNetworkServiceServer).GetCurrentDefaultVPCEgress(ctx, req.(*v1.GetCurrentDefaultVPCEgressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1428,6 +1462,10 @@ var PlatformNetworkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDefaultVPCEgress",
 			Handler:    _PlatformNetworkService_GetDefaultVPCEgress_Handler,
+		},
+		{
+			MethodName: "GetCurrentDefaultVPCEgress",
+			Handler:    _PlatformNetworkService_GetCurrentDefaultVPCEgress_Handler,
 		},
 		{
 			MethodName: "DeleteDefaultVPCEgress",

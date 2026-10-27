@@ -56,6 +56,20 @@ func platformEIPFixture() *platformEIPProbe {
 func platformEIPContext() context.Context {
 	return auth.NewContext(context.Background(), &authv1.UserTokenPayload{UserId: 9, Roles: []string{"platform:admin"}, Permissions: []string{"network:platform:eip:list", "network:platform:eip:get", "network:platform:eip:release"}})
 }
+func TestPlatformSystemDefaultEgressEIP(t *testing.T) {
+	p := platformEIPFixture()
+	p.resource.Eip.TenantId, p.resource.Eip.ManagedBy = "", "system"
+	p.resource.Eip.BindingTarget = &networkv1.EIPBindingTarget{Kind: "platform_default_egress", Id: "dve_11111111111111111111111111111111", State: "available"}
+	s := NewPlatformNetworkService(p, platformEIPTenants{})
+	got, err := s.GetPlatformEIP(platformEIPContext(), &catalogv1.GetPlatformEIPRequest{EipId: platformEIPID})
+	if err != nil || got.Resource.ManagedBy != "system" || got.Resource.TenantId != 0 || got.Resource.ResourceTenantId != "" {
+		t.Fatalf("system outlet forced into tenant ownership: %v %v", got, err)
+	}
+	p.resource.Eip.BindingTarget = nil
+	if _, err = s.GetPlatformEIP(platformEIPContext(), &catalogv1.GetPlatformEIPRequest{EipId: platformEIPID}); err == nil {
+		t.Fatal("anonymous owner accepted without platform outlet binding")
+	}
+}
 func TestPlatformEIPMappingAndFilters(t *testing.T) {
 	p := platformEIPFixture()
 	s := NewPlatformNetworkService(p, platformEIPTenants{})

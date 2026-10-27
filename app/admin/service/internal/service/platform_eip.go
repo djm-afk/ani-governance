@@ -37,6 +37,9 @@ func (s *PlatformNetworkService) wirePlatformEIPs(ctx context.Context, values []
 		if v == nil || v.Eip == nil || !eipIDPattern.MatchString(v.Eip.Id) || v.ClusterId == "" || !auth.ValidPlatformNetworkID("pool_id", v.PoolId) || v.Eip.State == networkv1.ResourceState_RESOURCE_STATE_UNSPECIFIED {
 			return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid platform EIP response")
 		}
+		if v.Eip.ManagedBy == "system" && v.Eip.TenantId == "" && v.Eip.Scope == "public" && v.Eip.BindingTarget.GetKind() == "platform_default_egress" && auth.ValidPlatformNetworkID("egress_id", v.Eip.BindingTarget.GetId()) {
+			continue
+		}
 		id, err := uuid.Parse(v.Eip.TenantId)
 		if err != nil || id == uuid.Nil || id.String() != v.Eip.TenantId {
 			return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid platform EIP owner")

@@ -24,6 +24,8 @@ func TestPlatformNetworkHTTPContract(t *testing.T) {
 		{"list", "GET", base + "/public-address-pools?limit=1&state=available", "", 204},
 		{"default_egress_create", "POST", base + "/default-vpc-egresses", `{"data":{"name":"run-default-egress","pool_id":"pool_0123456789abcdef0123456789abcdef","idempotency_key":"default-egress"}}`, 204},
 		{"default_egress_get", "GET", base + "/default-vpc-egresses/dve_0123456789abcdef0123456789abcdef", "", 204},
+		{"default_egress_current", "GET", base + "/default-vpc-egress", "", 204},
+		{"default_egress_current_no_identity", "GET", base + "/default-vpc-egress?cluster_id=forged", "", 400},
 		{"default_egress_delete", "DELETE", base + "/default-vpc-egresses/dve_0123456789abcdef0123456789abcdef", "", 204},
 		{"default_egress_no_tenant", "POST", base + "/default-vpc-egresses", `{"data":{"name":"run-default-egress","pool_id":"pool_0123456789abcdef0123456789abcdef","tenant_id":"arbitrary"}}`, 400},
 		{"default_egress_no_arbitrary_vpc", "POST", base + "/default-vpc-egresses", `{"data":{"name":"run-default-egress","pool_id":"pool_0123456789abcdef0123456789abcdef","default_vpc_uid":"arbitrary"}}`, 400},

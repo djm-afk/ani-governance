@@ -3304,6 +3304,22 @@ paths:
                                 $ref: '#/components/schemas/GetPlatformNetworkCapabilitiesResponse'
             security:
                 - BearerAuth: []
+    /api/v1/admin/networks/default-vpc-egress:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetCurrentDefaultVPCEgress
+            description: Platform user JWT and network:platform:default-egress:get. Returns the active outlet of the configured system VPC; 404 when no outlet is configured. No client supplied cluster, tenant or VPC identity.
+            operationId: PlatformNetworkService_GetCurrentDefaultVPCEgress
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDefaultVPCEgressResponse'
+            security:
+                - BearerAuth: []
     /api/v1/admin/networks/default-vpc-egresses:
         post:
             tags:
@@ -13475,6 +13491,8 @@ components:
                     type: string
                 observation_stale:
                     type: boolean
+                eip_id:
+                    type: string
             description: The system VPC identity is output-only and fixed by Resource configuration.
         DeleteAcceleratorProfileData:
             type: object
