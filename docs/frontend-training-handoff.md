@@ -671,6 +671,9 @@ GET /api/v1/modeldev/executions/{execution_id}/pods
 | `availability` | 容器组的存在状态，见下表 |
 | `phase` | **仅** Kubernetes 原始 phase；已回收或从未创建的容器组由 `availability` 表达，`phase` 可能仍是历史值 |
 | `restarts` | 重启次数 |
+| `exit_code` | worker 容器退出码；未终止时字段缺省，不要当成 0 |
+| `containers` / `init_containers` / `ephemeral_containers` | 三类容器状态分列；诊断 prepare 阶段失败时看 `init_containers` |
+| `metric_instance_id` | 该 Pod 在可观测侧上报的实例 ID：worker 为执行 ID，step 为 KFP run ID。是 9.3 的内部依据，前端不需要传；标签早于该字段的历史 Pod 为空串 |
 
 `availability` 取值：
 
@@ -739,6 +742,8 @@ GET /api/v1/modeldev/executions/{execution_id}/resource-metrics
 | `step_seconds` | 否 | 默认 `30`；允许 30–3600，且必须是 30 的整数倍；点数上限 3000 |
 | `metric_codes` | 是 | 逗号分隔，只接受 `cpu.usage_cores` / `memory.working_set_bytes` |
 
+Pod 的实例归属由服务端从 9.1 的 `metric_instance_id` 取得，不需要前端传；该字段为空（早于指标标签的 Pod）时，worker 回落到执行 ID，step 回落到运行时历史里的 run ID，两者都取不到时返回 `412`。
+
 ```json
 {
   "execution_id": "…",
@@ -775,6 +780,8 @@ GET /api/v1/modeldev/executions/{execution_id}/resource-metrics
 - `gpu_requested=true` 且 `gpu_available=false`：显示“GPU 指标不可用”，不要显示成 0。当前环境没有 GPU exporter。
 - 曲线数据 30s 采集一次，前端轮询间隔不要低于 `step_seconds`。
 - 每租户并发上限 4，BFF 会把超出部分排队；首屏（worker + 4 个 step）= 5 次调用，建议限制同时展开的详情页为 1。
+- **`cpu.usage_cores` 对 step Pod 通常是整条 `NO_DATA`**：该指标用 `rate(...[5m])` 求值，要求同一 Pod 连续存活 ≥5 分钟，而 step Pod 一般只活 10–30 秒。这是采集规则的物理限制，不是接口缺陷；worker Pod 长时间运行可正常出点。前端对 step 曲线建议默认只展示内存。
+- 2026-10-27 在 66 集群实测：`memory.working_set_bytes` 返回真实值（62.3 MiB），`status=PARTIAL`，未测到点的位置均为 `NO_DATA`；参数类负例（缺 `pod_uid`、非规范 UUID、未登记指标码、layer 与容器名不匹配、`step_seconds` 越界、窗口 >24h、`end` 晚于当前、重复指标码、未知 query 参数、Pod 不属于该执行、执行不存在、无 token）全部返回预期状态码。GPU 曲线形状尚未实测（环境中唯一的 GPU 执行 Pod 已被回收）。
 
 ## 10. 枚举取值
 
@@ -1097,10 +1104,11 @@ POST :stop → 202
 > 4. 列表 / 详情再次 **503**：dev 分支锁定的 ModelDev 合同回退到 `af7f9e98`（缺 `steps`），而线上 ModelDev 已是 detail 版。已将执行详情合同并入 dev 并发布 `v21-detail-on-dev-20261027`。
 > 5. `/pods`、`/events`、`/logs/stream` 曾 **404**：这三条路由只在 detail 分支上。现已随同一镜像发布，三条均 **200**。
 > 6. 不存在的执行曾返回 **400**，现为 **404 `RESOURCE_NOT_FOUND`**。
+> 7. 资源曲线曾对新建执行的 step Pod 返回 **412**：实例归属取自运行时历史，而历史是异步写入的。现改为读 Pod 上的 `ani.io/instance-id`（由准入 webhook 写入），历史仅作回落。已在集群实测 `memory.working_set_bytes` 返回真实值。
 
 **联调前请先向后端确认当前镜像状态。** 后端做过多次滚动发布，发布窗口内可能短暂出现 `503 MODELDEV_CREATE_UNAVAILABLE`。这类 503 是发布抖动，重试即可；若持续超过几分钟再找后端。
 
-建议联调顺序：实现目录 → 算力目录 → 输入版本 → 模型（基模）选择 → 创建（含各类 400 负例）→ 列表 → 详情（含 `steps`/`metrics`）→ 日志快照与日志流 → 容器组 → 事件 → 产物列表与换 URL → 停止 → 恢复登记。除产物真实下载外，全部可联调。
+建议联调顺序：实现目录 → 算力目录 → 输入版本 → 模型（基模）选择 → 创建（含各类 400 负例）→ 列表 → 详情（含 `steps`/`metrics`）→ 日志快照与日志流 → 容器组 → 事件 → 资源曲线 → 产物列表与换 URL → 停止 → 恢复登记。除产物真实下载外，全部可联调。
 
 ## 17. 当前不可用能力
 
@@ -1116,7 +1124,7 @@ POST :stop → 202
 | 托管超参 | 详情响应的 `managed_settings` | 见第 9 节字段说明 |
 | 容器组 `GET .../pods` | 见 9.1 | **200** |
 | 事件 `GET .../events` | 见 9.2 | **200**（保留窗口 `1h`） |
-| 资源曲线 `GET .../resource-metrics` | 见 9.3 | 已实现，待目标环境联调一致 |
+| 资源曲线 `GET .../resource-metrics` | 见 9.3 | **200**（CPU/内存，GPU 未实测） |
 | 日志流 `GET .../logs/stream` | 见 11.1 | **200**（SSE） |
 
 注意事项：
