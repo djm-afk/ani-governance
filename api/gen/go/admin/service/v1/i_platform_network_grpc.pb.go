@@ -20,6 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	PlatformNetworkService_ListPlatformEIPs_FullMethodName                 = "/admin.service.v1.PlatformNetworkService/ListPlatformEIPs"
+	PlatformNetworkService_GetPlatformEIP_FullMethodName                   = "/admin.service.v1.PlatformNetworkService/GetPlatformEIP"
+	PlatformNetworkService_ReleasePlatformEIP_FullMethodName               = "/admin.service.v1.PlatformNetworkService/ReleasePlatformEIP"
 	PlatformNetworkService_CreateDefaultVPCEgress_FullMethodName           = "/admin.service.v1.PlatformNetworkService/CreateDefaultVPCEgress"
 	PlatformNetworkService_GetDefaultVPCEgress_FullMethodName              = "/admin.service.v1.PlatformNetworkService/GetDefaultVPCEgress"
 	PlatformNetworkService_DeleteDefaultVPCEgress_FullMethodName           = "/admin.service.v1.PlatformNetworkService/DeleteDefaultVPCEgress"
@@ -64,6 +67,9 @@ const (
 //
 // Platform user JWT, current action permission and Casbin authorization required.
 type PlatformNetworkServiceClient interface {
+	ListPlatformEIPs(ctx context.Context, in *v1.ListPlatformEIPsRequest, opts ...grpc.CallOption) (*v1.ListPlatformEIPsResponse, error)
+	GetPlatformEIP(ctx context.Context, in *v1.GetPlatformEIPRequest, opts ...grpc.CallOption) (*v1.GetPlatformEIPResponse, error)
+	ReleasePlatformEIP(ctx context.Context, in *v1.ReleasePlatformEIPRequest, opts ...grpc.CallOption) (*v1.ReleasePlatformEIPResponse, error)
 	CreateDefaultVPCEgress(ctx context.Context, in *v1.CreateDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.CreateDefaultVPCEgressResponse, error)
 	GetDefaultVPCEgress(ctx context.Context, in *v1.GetDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.GetDefaultVPCEgressResponse, error)
 	DeleteDefaultVPCEgress(ctx context.Context, in *v1.DeleteDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.DeleteDefaultVPCEgressResponse, error)
@@ -108,6 +114,36 @@ type platformNetworkServiceClient struct {
 
 func NewPlatformNetworkServiceClient(cc grpc.ClientConnInterface) PlatformNetworkServiceClient {
 	return &platformNetworkServiceClient{cc}
+}
+
+func (c *platformNetworkServiceClient) ListPlatformEIPs(ctx context.Context, in *v1.ListPlatformEIPsRequest, opts ...grpc.CallOption) (*v1.ListPlatformEIPsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListPlatformEIPsResponse)
+	err := c.cc.Invoke(ctx, PlatformNetworkService_ListPlatformEIPs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformNetworkServiceClient) GetPlatformEIP(ctx context.Context, in *v1.GetPlatformEIPRequest, opts ...grpc.CallOption) (*v1.GetPlatformEIPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetPlatformEIPResponse)
+	err := c.cc.Invoke(ctx, PlatformNetworkService_GetPlatformEIP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformNetworkServiceClient) ReleasePlatformEIP(ctx context.Context, in *v1.ReleasePlatformEIPRequest, opts ...grpc.CallOption) (*v1.ReleasePlatformEIPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ReleasePlatformEIPResponse)
+	err := c.cc.Invoke(ctx, PlatformNetworkService_ReleasePlatformEIP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *platformNetworkServiceClient) CreateDefaultVPCEgress(ctx context.Context, in *v1.CreateDefaultVPCEgressRequest, opts ...grpc.CallOption) (*v1.CreateDefaultVPCEgressResponse, error) {
@@ -476,6 +512,9 @@ func (c *platformNetworkServiceClient) GetPlatformOperation(ctx context.Context,
 //
 // Platform user JWT, current action permission and Casbin authorization required.
 type PlatformNetworkServiceServer interface {
+	ListPlatformEIPs(context.Context, *v1.ListPlatformEIPsRequest) (*v1.ListPlatformEIPsResponse, error)
+	GetPlatformEIP(context.Context, *v1.GetPlatformEIPRequest) (*v1.GetPlatformEIPResponse, error)
+	ReleasePlatformEIP(context.Context, *v1.ReleasePlatformEIPRequest) (*v1.ReleasePlatformEIPResponse, error)
 	CreateDefaultVPCEgress(context.Context, *v1.CreateDefaultVPCEgressRequest) (*v1.CreateDefaultVPCEgressResponse, error)
 	GetDefaultVPCEgress(context.Context, *v1.GetDefaultVPCEgressRequest) (*v1.GetDefaultVPCEgressResponse, error)
 	DeleteDefaultVPCEgress(context.Context, *v1.DeleteDefaultVPCEgressRequest) (*v1.DeleteDefaultVPCEgressResponse, error)
@@ -522,6 +561,15 @@ type PlatformNetworkServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPlatformNetworkServiceServer struct{}
 
+func (UnimplementedPlatformNetworkServiceServer) ListPlatformEIPs(context.Context, *v1.ListPlatformEIPsRequest) (*v1.ListPlatformEIPsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPlatformEIPs not implemented")
+}
+func (UnimplementedPlatformNetworkServiceServer) GetPlatformEIP(context.Context, *v1.GetPlatformEIPRequest) (*v1.GetPlatformEIPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPlatformEIP not implemented")
+}
+func (UnimplementedPlatformNetworkServiceServer) ReleasePlatformEIP(context.Context, *v1.ReleasePlatformEIPRequest) (*v1.ReleasePlatformEIPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReleasePlatformEIP not implemented")
+}
 func (UnimplementedPlatformNetworkServiceServer) CreateDefaultVPCEgress(context.Context, *v1.CreateDefaultVPCEgressRequest) (*v1.CreateDefaultVPCEgressResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateDefaultVPCEgress not implemented")
 }
@@ -650,6 +698,60 @@ func RegisterPlatformNetworkServiceServer(s grpc.ServiceRegistrar, srv PlatformN
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&PlatformNetworkService_ServiceDesc, srv)
+}
+
+func _PlatformNetworkService_ListPlatformEIPs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListPlatformEIPsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformNetworkServiceServer).ListPlatformEIPs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformNetworkService_ListPlatformEIPs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformNetworkServiceServer).ListPlatformEIPs(ctx, req.(*v1.ListPlatformEIPsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformNetworkService_GetPlatformEIP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetPlatformEIPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformNetworkServiceServer).GetPlatformEIP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformNetworkService_GetPlatformEIP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformNetworkServiceServer).GetPlatformEIP(ctx, req.(*v1.GetPlatformEIPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformNetworkService_ReleasePlatformEIP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ReleasePlatformEIPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformNetworkServiceServer).ReleasePlatformEIP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformNetworkService_ReleasePlatformEIP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformNetworkServiceServer).ReleasePlatformEIP(ctx, req.(*v1.ReleasePlatformEIPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _PlatformNetworkService_CreateDefaultVPCEgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1307,6 +1409,18 @@ var PlatformNetworkService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.PlatformNetworkService",
 	HandlerType: (*PlatformNetworkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListPlatformEIPs",
+			Handler:    _PlatformNetworkService_ListPlatformEIPs_Handler,
+		},
+		{
+			MethodName: "GetPlatformEIP",
+			Handler:    _PlatformNetworkService_GetPlatformEIP_Handler,
+		},
+		{
+			MethodName: "ReleasePlatformEIP",
+			Handler:    _PlatformNetworkService_ReleasePlatformEIP_Handler,
+		},
 		{
 			MethodName: "CreateDefaultVPCEgress",
 			Handler:    _PlatformNetworkService_CreateDefaultVPCEgress_Handler,

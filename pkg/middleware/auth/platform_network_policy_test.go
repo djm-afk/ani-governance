@@ -13,6 +13,14 @@ func TestPlatformNetworkHTTPContract(t *testing.T) {
 		name, method, path, body string
 		want                     int
 	}{
+		{"eip_page_filter", "GET", base + "/eips?page=3&pageSize=2&tenant_id=17&address=10.10.20.202&scope=public", "", 204},
+		{"eip_detail", "GET", base + "/eips/eip_11111111111111111111111111111111", "", 204},
+		{"eip_release", "DELETE", base + "/eips/eip_11111111111111111111111111111111", "", 204},
+		{"eip_wrong_id", "DELETE", base + "/eips/pool_11111111111111111111111111111111", "", 400},
+		{"eip_duplicate_tenant", "GET", base + "/eips?tenant_id=17&tenant_id=18", "", 400},
+		{"eip_legacy_cursor", "GET", base + "/eips?cursor=a", "", 400},
+		{"eip_page_zero", "GET", base + "/eips?page=0", "", 400},
+		{"eip_page_size_overflow", "GET", base + "/eips?pageSize=101", "", 400},
 		{"list", "GET", base + "/public-address-pools?limit=1&state=available", "", 204},
 		{"default_egress_create", "POST", base + "/default-vpc-egresses", `{"data":{"name":"run-default-egress","pool_id":"pool_0123456789abcdef0123456789abcdef","idempotency_key":"default-egress"}}`, 204},
 		{"default_egress_get", "GET", base + "/default-vpc-egresses/dve_0123456789abcdef0123456789abcdef", "", 204},

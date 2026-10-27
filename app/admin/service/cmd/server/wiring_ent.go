@@ -357,7 +357,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		platformNetworkClient = client
 	}
 	networkService := service.NewNetworkService(networkClient, tenantRepo)
-	platformNetworkService := service.NewPlatformNetworkService(platformNetworkClient)
+	platformNetworkService := service.NewPlatformNetworkService(platformNetworkClient, tenantRepo)
 	imageConfig, err := data.ImageConfigFromEnv()
 	if err != nil {
 		rollback()
