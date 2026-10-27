@@ -995,6 +995,7 @@ POST /api/v1/modeldev/executions/{execution_id}:stop
 ```
 GET /api/v1/modeldev/executions/{execution_id}/artifacts?page=1&pageSize=20
 GET /api/v1/modeldev/artifacts/{artifact_id}/content
+GET /api/v1/modeldev/artifacts/{artifact_id}/download
 ```
 
 产物列表（只返回 `delivery_state=PUBLISHED` 的文件）。真实响应（微调执行，`total=18`，此处节选）：
@@ -1052,10 +1053,37 @@ GET /api/v1/modeldev/artifacts/{artifact_id}/content
 
 - **有效期只有 60 秒**（`X-Amz-Expires=60`）。拿到 URL 后必须立即使用，不要缓存或预先批量换取。
 - **URL 主机是集群内域名**（`ani-rustfs-svc.ani-platform.svc.cluster.local:9000`）且使用自签证书，**从办公网直接访问必然失败**（DNS 不可解析 / 证书不受信）。2026-10-26 实测该 URL 连接超时。
-  - 换 URL 这一步接口本身可用；真实下载需等对象存储提供对外入口，或由运维用 `kubectl port-forward` / 外层网关改写后再验证。
+- **前端请改用 `/download`，不要用这个 URL 直接下载。** `/content` 只负责换取 URL，浏览器拿不到对象存储的可达地址；`/download` 由 BFF 在服务端用内部根证书拉取对象并转发字节，调用方只需能访问 BFF 即可。
 - 产物未发布 → `412 ARTIFACT_NOT_PUBLISHED`；不存在或无权限 → `404 RESOURCE_NOT_FOUND`。
 - 不要把这个 URL 写入日志、埋点、快照或分享链接（含签名，等于临时凭证）。
-- 不要经 BFF 中转二进制；URL 是对象存储直出。
+
+### 13.1 下载产物内容（推荐）
+
+```
+GET /api/v1/modeldev/artifacts/{artifact_id}/download
+```
+
+- **不接受任何 query**；URL 不得带裸 `?`。
+- 返回**二进制流**，不是 JSON：
+  - `Content-Type`：普通文件是 `application/octet-stream`；`application/json`、`text/plain`、`application/x-ndjson` 会原样透出。`text/html`、`image/svg+xml` 等可被浏览器在控制台同源执行的类型强制降为 `application/octet-stream`。
+  - `Content-Disposition: attachment; filename="<文件名>"`，只取最后一段文件名，不含路径。
+  - `X-Content-Type-Options: nosniff`。
+  - 已知大小时带 `Content-Length`，可据此做进度条。
+- 用 `<a download>` 或 `fetch` + `Blob` 均可。**不要用 `iframe` 或直接 `window.open`** 预览，响应头已强制下载。
+- 鉴权与 `/content` 完全一致：同一条 `Authorization` 头，同一个产物权限。
+
+| 状态码 | `reason` | 含义 |
+| --- | --- | --- |
+| `200` | — | 成功，body 为文件字节 |
+| `400` | `INVALID_MODELDEV_QUERY` | `artifact_id` 非规范 UUID，或带了 query |
+| `404` | `RESOURCE_NOT_FOUND` | 产物不存在或无权限 |
+| `412` | `ARTIFACT_NOT_PUBLISHED` | 产物未发布 |
+| `502` | `ARTIFACT_DOWNLOAD_FAILED` | 对象存储不可达或返回错误 |
+| `504` | `ARTIFACT_DOWNLOAD_TIMEOUT` | 拉取超时 |
+
+- 单个连接的最长传输窗口是 **30 分钟**，足够拉取最大约 2 GiB 的合并权重。超过请分段重试，不要在一个连接上无限等待。
+- 该接口**不做断点续传**（不支持 `Range`）：中断后需要整份重下。
+- 服务端不缓存，每次请求都会重新换取一次签名 URL。
 
 ## 14. 恢复模型登记（仅微调）
 
@@ -1169,10 +1197,11 @@ POST :stop → 202
 > 8. 任务列表默认按 `accepted_at` 倒序，支持 `name` 子串筛选（见第 8 节）。
 > 9. 输入版本支持 `format=CSV|JSON` 筛选（见第 6 节）。
 > 10. 微调详情新增 `base_model` 基座身份（见第 9 节）。
+> 11. 产物**可以真实下载了**：新增 `GET /api/v1/modeldev/artifacts/{id}/download`，由 BFF 转发字节，不再受对象存储集群内域名限制（见 13.1 节）。
 
 **联调前请先向后端确认当前镜像状态。** 后端做过多次滚动发布，发布窗口内可能短暂出现 `503 MODELDEV_CREATE_UNAVAILABLE`。这类 503 是发布抖动，重试即可；若持续超过几分钟再找后端。
 
-建议联调顺序：实现目录 → 算力目录 → 输入版本 → 模型（基模）选择 → 创建（含各类 400 负例）→ 列表 → 详情（含 `steps`/`metrics`）→ 日志快照与日志流 → 容器组 → 事件 → 资源曲线 → 产物列表与换 URL → 停止 → 恢复登记。除产物真实下载外，全部可联调。
+建议联调顺序：实现目录 → 算力目录 → 输入版本 → 模型（基模）选择 → 创建（含各类 400 负例）→ 列表 → 详情（含 `steps`/`metrics`）→ 日志快照与日志流 → 容器组 → 事件 → 资源曲线 → 产物列表与下载 → 停止 → 恢复登记。
 
 ## 17. 当前不可用能力
 

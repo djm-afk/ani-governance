@@ -108,6 +108,9 @@ func TestModelDevListAndLogRoutesEnterAuthentication(t *testing.T) {
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/events",
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/logs/stream",
 		"/api/v1/modeldev/executions/11111111-2222-4333-8444-555555555555/resource-metrics?pod_uid=66666666-7777-4888-8999-aaaaaaaaaaaa&container=node&start=2026-10-27T00:00:00Z&end=2026-10-27T01:00:00Z&step_seconds=60&metric_codes=cpu.usage_cores",
+		// The byte relay carries the same authentication and artifact
+		// authorization as the URL exchange.
+		"/api/v1/modeldev/artifacts/11111111-2222-4333-8444-555555555555/download",
 	})
 }
 

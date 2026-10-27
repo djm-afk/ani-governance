@@ -15,6 +15,9 @@ var modelDevLogStreamHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions
 var instanceMetricsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/metrics/(query|latest)$`)
 var modelDevMetricsHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resource-metrics$`)
 var modelDevArtifactHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/artifacts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/content$`)
+// The byte relay streams a checkpoint of up to a few GiB, so the ordinary
+// request timer must not cut it. Its handler owns a bounded lifetime.
+var modelDevArtifactDownloadHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/artifacts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/download$`)
 var modelDevRegistrationHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:resume-model-registration$`)
 var modelUploadHTTPPath = regexp.MustCompile(`^/api/v1/models/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/upload-url$`)
 
@@ -50,7 +53,7 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 				ctx, cancel = context.WithTimeout(ctx, admissionBudget)
 			} else if metrics {
 				ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
-			} else if ordinary > 0 && !(r.Method == http.MethodGet && (instanceLogsHTTPPath.MatchString(r.URL.Path) || modelDevLogStreamHTTPPath.MatchString(r.URL.Path))) {
+			} else if ordinary > 0 && !(r.Method == http.MethodGet && (instanceLogsHTTPPath.MatchString(r.URL.Path) || modelDevLogStreamHTTPPath.MatchString(r.URL.Path) || modelDevArtifactDownloadHTTPPath.MatchString(r.URL.Path))) {
 				ctx, cancel = context.WithTimeout(ctx, ordinary)
 			} else {
 				ctx, cancel = context.WithCancel(ctx)

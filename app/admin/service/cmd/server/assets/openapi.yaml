@@ -8740,6 +8740,39 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AuthorizeArtifactDownloadResponse'
+    /api/v1/modeldev/artifacts/{artifact_id}/download:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_DownloadArtifact
+            description: |-
+                以字节流返回产物内容。与 /content 的区别是：/content 只换取对象存储的短期签名 URL，
+                而该 URL 的主机是集群内域名，浏览器在集群外无法解析；本接口在服务端用内部根证书拉取
+                对象并转发，调用方只需能访问 BFF。
+            parameters:
+                - name: artifact_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/octet-stream:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: 参数非法
+                "404":
+                    description: 产物不存在或无权限
+                "412":
+                    description: 产物未发布
+                "502":
+                    description: 对象存储不可达或返回错误
+                "504":
+                    description: 对象存储超时
     /api/v1/modeldev/executions:
         get:
             tags:
