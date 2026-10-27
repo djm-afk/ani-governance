@@ -87,6 +87,7 @@ func newRestServerWithSwagger(t *testing.T, enableSwagger bool) http.Handler {
 		nil,                               // platformNetworkService
 		nil,                               // acceleratorService
 		nil,                               // imageService
+		nil,                               // storageService
 		nil,                               // modeldevService
 		service.NewInferenceService(nil),  // inferenceService
 		service.NewModelService(nil, nil), // modelService: preserve route registration without a downstream client

@@ -1304,7 +1304,7 @@ Image AK 使用现有 ANI-HMAC-SHA256 七行形式：算法、HTTP method、规�
 
 ## 功能组：ModelDev 训练与微调（MODELDEV-01～08、12）
 
-当前活动合同为单一typed Intent，规则查询与请求见[前端合同](frontend-cpu-training-handoff.md)。同键原意图重放先于新目录解析；当前授权→固定候选 operation/execution/accepted_at→Res TRAINING→ModelDev Prepare/Finalize→Gov单事务持久受理及唯一ModelDevDispatch。网络不进入受理事务，CPU不写GPU原账。
+当前活动合同为单一typed Intent，规则查询与请求见[前端合同](frontend-training-handoff.md)。同键原意图重放先于新目录解析；当前授权→固定候选 operation/execution/accepted_at→Res TRAINING→ModelDev Prepare/Finalize→Gov单事务持久受理及唯一ModelDevDispatch。网络不进入受理事务，CPU不写GPU原账。
 
 FINETUNING 同时省略 `new_model_name` 与 `target_model_id` 表示仅发布训练产物，
 该省略状态进入原 Intent/Snapshot/hash，不增加跳过字段，也不修改已受理意图。
