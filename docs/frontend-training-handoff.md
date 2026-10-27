@@ -33,7 +33,8 @@
    → 日志流 /logs/stream（SSE）可持续跟随
         ↓
 ⑤ 产物发布
-   delivery_state=PUBLISHED，artifacts 可列，下载换短期 URL
+   delivery_state=PUBLISHED，artifacts 可列
+   → 下载字节用 GET /artifacts/{id}/download（BFF 转发，浏览器可直连）
         ↓
 ⑥ 微调可选：模型登记（只有填了 target_model_id 或 new_model_name 才有）
    current_step=REGISTER → model_registration=PENDING / READY / DEPENDENCY_UNAVAILABLE
@@ -300,7 +301,7 @@ GET /api/v1/compute-presets?usage=TRAINING&page=1&pageSize=100
 - 前端请只按 `selectable` 渲染，不要按 `gpu.mode` 或规格名硬编码哪条可用——容量补齐后同一条规格会自行变为可选。
 - 目录接口始终返回全部 GPU 规格（含 `selectable=false`），不会隐藏。
 - GPU 字段、额度语义、释放规则按已验证行为编写；**只要 `selectable` 变 true，调用方无需改动即可用**。
-- **GPU 端到端本期未跑通**：现网 25 条执行全部是 CPU（13 SUCCEEDED / 7 SUBMISSION_CONFIRMED / 3 TRAINING / 2 FAILED），共享 GPU 规格虽然可选，但没有一条真实的 GPU 执行记录。前端可先按可选渲染并允许提交，但首次真机联调请与后端同步。
+- **GPU 端到端本期未跑通**：现网 26 条执行全部是 CPU（14 SUCCEEDED / 7 SUBMISSION_CONFIRMED / 3 TRAINING / 2 FAILED），共享 GPU 规格虽然可选，但没有一条真实的 GPU 执行记录。前端可先按可选渲染并允许提交，但首次真机联调请与后端同步。
 
 ## 6. 输入版本
 
@@ -980,7 +981,7 @@ POST :stop → 202
 | `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：4 条 CPU 全部可选 + 2 条共享 GPU 可选，共 6 条可提交；3 条整卡 GPU 不可选（见 5.1） |
 | `GET /api/v1/models`、`/models/{id}/versions`、`/model-versions/{id}`、`/download-url` | **200** | 微调基模选择可用，`total=3` |
 | `POST /api/v1/modeldev/executions` | **202** | CPU 与 GPU 均 202（GPU 仅限历史上 `selectable=true` 时），幂等重放正常，负例 400 |
-| `GET /api/v1/modeldev/executions` | **200** | 25 条执行全部可列；支持 `page`/`pageSize` 与状态、名称筛选（见第 8 节） |
+| `GET /api/v1/modeldev/executions` | **200** | 26 条执行全部可列；支持 `page`/`pageSize` 与状态、名称筛选（见第 8 节） |
 | `GET /api/v1/modeldev/executions/{id}` | **200** | 四状态 + 参数 + `steps` + `metrics` + `failure` + `managed_settings` + `base_model` |
 | `GET .../{id}/logs` | **200** | 一次性快照（见第 11 节） |
 | `GET .../{id}/logs/stream` | **200** | SSE（见第 11 节） |
@@ -996,14 +997,14 @@ POST :stop → 202
 
 实测补充：
 
-- 25 条执行详情全部 200，`steps` 有值：普通训练 5 步，微调 8 步
+- 26 条执行详情全部 200，`steps` 有值：普通训练 5 步，微调 8 步
 - `steps` / `metrics` 随详情返回，不需要额外请求；微调实测 `metrics` 1000 点
 - 未认证访问详情与子资源均为 **401**；不存在的 UUID 为 **404 `RESOURCE_NOT_FOUND`**（此前为 400，已修正）
 - `page=0`、`pageSize=101`、非 UUID、未知参数仍是 **400 `INVALID_MODELDEV_QUERY`**
 
 ### `steps` / `metrics` 的验证程度（2026-10-27 复核）
 
-上面"200"只说明**接口可达**，不代表内容已验收。2026-10-27 用集群全部 25 条执行做了一次内容核对，结论是主路径可用，但仍有未收敛项：
+上面"200"只说明**接口可达**，不代表内容已验收。2026-10-27 用集群全部 26 条执行做了一次内容核对，结论是主路径可用，但仍有未收敛项：
 
 | 项 | 状态 |
 | --- | --- |
