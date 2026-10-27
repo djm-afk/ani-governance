@@ -291,10 +291,15 @@ GET /api/v1/compute-presets?usage=TRAINING&page=1&pageSize=100
 
 ```
 GET /api/v1/modeldev/input-versions?page=1&pageSize=20&state=READY
+GET /api/v1/modeldev/input-versions?page=1&pageSize=20&format=CSV
 GET /api/v1/modeldev/input-versions/{input_version_id}
 ```
 
 - `state` 可选，取值 `FIXING` / `VALIDATING` / `READY` / `FAILED`；其他值 `400`。
+- `format` 可选，只接受 `CSV` / `JSON`（大写）；其他值（含小写 `csv`、空值、`PARQUET`）一律 `400`，不会静默返回空页。
+- `state` 与 `format` 可同时使用，两个条件取交集。
+- 筛选在分页前生效，`total` 是筛选后的条数，翻页仍以 `total` 为准。
+- 格式与任务的匹配是硬约束：`CSV` 只能用于普通训练，`JSON` 只能用于微调。选数据集时按当前任务类型带对应的 `format`，比在返回里再过滤更可靠。
 - 详情接口不接受任何 query（包括裸 `?`），且直接返回对象本体。
 
 ```json
@@ -583,6 +588,12 @@ GET /api/v1/modeldev/executions/{execution_id}
     "num_train_epochs": "3",
     "optim": "adamw_torch",
     "logging_steps": "1"
+  },
+  "base_model": {
+    "model_id": "5f0d0c1e-8f0a-4b7e-9a2c-1d3e5f7a9b0c",
+    "version_id": "0b1c2d3e-4f5a-6b7c-8d9e-0a1b2c3d4e5f",
+    "family": "Qwen2.5-0.5B-Instruct",
+    "format": "safetensors"
   }
 }
 ```
@@ -601,9 +612,10 @@ GET /api/v1/modeldev/executions/{execution_id}
 | `model_registration` | 仅微调且指定了登记目标时出现；普通训练为 `null` |
 | `history` | 关闭时持久化的控制器证据；缺失字段表示“当时无该证据”，不要补猜 |
 | `steps` | 流水线步骤时间线，按执行顺序排列。普通训练 5 步，微调 8 步；步集由 `kind` 决定，所以 `role` / `state` 是字符串不是枚举 |
-| `metrics` | 训练曲线点，来自已发布的 `METRICS` 产物。目前只有 `train.loss`；`decimal_value` 是字符串，需按十进制解析，`step` 是数字。曲线点数等于实际写入的点数（实测微调可到 1000 点） |
+| `metrics` | 训练曲线点，来自已发布的 `METRICS` 产物。目前只有 `train.loss`；`decimal_value` 是字符串，`step` 也是字符串（int64 序列化为十进制文本，如 `"1"`），两者都需按十进制解析。点数等于实际写入的点数（实测 7~1379 点，最高单次响应约 108 KB）；没有曲线时是**空数组 `[]`**，不是缺字段 |
 | `failure` | 失败诊断，**只有确实失败过才有值**，正常结束或仍在运行时为 `null`。见下方 `failure` 字段 |
 | `managed_settings` | 服务端托管的训练超参，**只读展示**。只有微调才有值，普通训练为 `null`。见下方 `managed_settings` 字段 |
+| `base_model` | 微调所用的基座模型身份。只有微调才有值，普通训练为 `null`。见下方 `base_model` 字段 |
 
 `steps[]` 字段：
 
@@ -635,6 +647,17 @@ GET /api/v1/modeldev/executions/{execution_id}
 服务端托管的训练超参，**创建请求不接受这些字段**，只能读取展示。`stage` 本期恒为 `"sft"`（当前只有 SFT，不存在 DPO/PPO，**不要做成可选项**）。`lora_rank` / `lora_alpha` / `cutoff_len` / `per_device_train_batch_size` / `gradient_accumulation_steps` / `seed` / `data_seed` / `num_train_epochs` / `logging_steps` 是整数；`warmup_ratio` / `weight_decay` / `lora_dropout` 是十进制字符串；`fp16` / `bf16` 是布尔。
 
 不要把 `delivery_state=PUBLISHED` 当成训练成功；判断成功只看 `compute_state`。
+
+`base_model` 字段（微调才有）：
+
+| 字段 | 说明 |
+| --- | --- |
+| `model_id` | 基座模型 ID |
+| `version_id` | 基座模型版本 ID |
+| `family` | 模型族名，如 `Qwen2.5-0.5B-Instruct`，可直接展示 |
+| `format` | 权重格式，如 `safetensors` |
+
+`base_model` **只有身份信息**：没有对象键、存储桶、存储 scope 和文件清单，因此**不能**据此拼下载地址。要下载请走第 13 节的产物接口。普通训练恒为 `null`；微调且登记了基座时才有值。
 
 ### 9.1 容器组
 
@@ -673,7 +696,7 @@ GET /api/v1/modeldev/executions/{execution_id}/pods
 }
 ```
 
-未赋值的字段会被省略（不是 `null`）：Pod 还在运行时没有 `exit_code`，`deletion_timestamp` 为空时不出现。
+**所有字段都会输出，空值不会省略**（BFF 用 `UseProtoNames + EmitUnpopulated` 编码）：字符串为空是 `""`、`null` 只用于消息型字段（如 `last_state`）、数值为 `0`、布尔为 `false`、数组为 `[]`、Map 为 `{}`。所以"Pod 还在运行"时 `exit_code` 是 `0` 而不是缺失，`deletion_timestamp` 是 `""`。前端必须靠 `phase`/`availability` 判断状态，不能靠字段是否存在。
 
 | 字段 | 说明 |
 | --- | --- |
@@ -832,18 +855,24 @@ Pod 的实例归属由服务端从 9.1 的 `metric_instance_id` 取得，不需�
 
 ### 10.5 `current_step`（流水线步骤）
 
-| 值 | 顺序 | 说明 |
-| --- | --- | --- |
-| `PREPARE` | 1 | 准备工作区与输入 |
-| `TRAIN_WAIT` | 2 | 训练执行/等待 |
-| `COLLECT` | 3 | 收集产物 |
-| `PUBLISH` | 4 | 发布产物 |
-| `CLOSE` | 5 | 关闭与清理 |
-| `EXPORT` | 6 | （仅微调）导出合并模型 |
-| `VERIFY` | 7 | （仅微调）校验合并结果 |
-| `REGISTER` | 8 | （仅微调）登记到 Model |
+| 值 | 说明 |
+| --- | --- |
+| `PREPARE` | 准备工作区与输入 |
+| `TRAIN_WAIT` | 训练执行/等待 |
+| `COLLECT` | 收集产物 |
+| `PUBLISH` | 发布产物 |
+| `CLOSE` | 关闭与清理 |
+| `EXPORT` | （仅微调）导出合并模型 |
+| `VERIFY` | （仅微调）校验合并结果 |
+| `REGISTER` | （仅微调）登记到 Model |
 
-普通训练只走 1→2→3→4→5；微调在 `PUBLISH` 之后插入 `EXPORT → VERIFY → REGISTER`（未登记目标时跳过 6–8）。
+枚举里的先后**不是执行顺序**，本表不按流程排序。真实执行顺序以 `steps[]` 数组为准：
+
+- 普通训练：`prepare → train-wait → collect → publish → close`
+- 微调：`prepare → train-wait → export → verify → collect → publish → register → close`
+  （未填登记目标时 `register` 不会成功执行）
+
+`steps[]` 是**有序**数组，前端直接按数组顺序渲染时间线，不要按上面的枚举顺序重排。
 
 ### 10.6 `kind`
 
@@ -1102,6 +1131,22 @@ POST :stop → 202
 - 未认证访问详情与子资源均为 **401**；不存在的 UUID 为 **404 `RESOURCE_NOT_FOUND`**（此前为 400，已修正）
 - `page=0`、`pageSize=101`、非 UUID、未知参数仍是 **400 `INVALID_MODELDEV_QUERY`**
 
+### `steps` / `metrics` 的验证程度（2026-10-27 复核）
+
+上面"200"只说明**接口可达**，不代表内容已验收。2026-10-27 用集群全部 25 条执行做了一次内容核对，结论是主路径可用，但仍有未收敛项：
+
+| 项 | 状态 |
+| --- | --- |
+| 步骤数量与顺序（训练 5 / 微调 8） | **已核实**，与 `steps[]` 实际数组一致 |
+| 失败传播（失败步 FAILED、后续 PENDING、无误报 RUNNING） | **已核实** |
+| `metrics` 解析（7~1379 点）与未发布时为 `[]` | **已核实** |
+| `register` 成功路径（`model_registration.state=READY`） | **已核实** |
+| `register` 在**未登记目标**的成功微调上显示 `STOPPED` | **缺陷，未修**（7 条微调中 4 条命中），前端不要把它当失败渲染 |
+| stop / 步骤超时 / export 失败 / `DEPENDENCY_UNAVAILABLE` | **无样本，未验证** |
+| `metrics` 点数上限 | 实测最高 1379 点、单次响应约 108 KB，**无上限无分页**，前端需自行降采样 |
+
+细节、样本 id 与复现方式见工作区 [流水线进度与训练曲线验证计划](../../../docs/modeldev-流水线进度与训练曲线-验证计划-20261027.md)。
+
 剩余唯一阻断：
 
 **产物下载 URL 集群外不可达**：签名 URL 指向 `ani-rustfs-svc.ani-platform.svc.cluster.local:9000`（自签证书、有效期 60 秒），集群外无法解析与信任。需后端提供对外出口或改签外层域名；换 URL 这一步接口本身可用。
@@ -1129,8 +1174,8 @@ POST :stop → 202
 
 | 能力 | 位置 | 实测 |
 | --- | --- | --- |
-| 流水线步骤明细 | 详情响应的 `steps[]` | **200**，普通训练 5 步、微调 8 步 |
-| 训练曲线 | 详情响应的 `metrics[]` | **200**，微调实测 1000 点 |
+| 流水线步骤明细 | 详情响应的 `steps[]` | **200**，普通训练 5 步、微调 8 步（数量与顺序已核实；`register` 有已知缺陷，见上） |
+| 训练曲线 | 详情响应的 `metrics[]` | **200**，实测 7~1379 点（内容已核实） |
 | 失败诊断 | 详情响应的 `failure` | 见第 9 节字段说明 |
 | 托管超参 | 详情响应的 `managed_settings` | 见第 9 节字段说明 |
 | 容器组 `GET .../pods` | 见 9.1 | **200** |
