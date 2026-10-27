@@ -4,9 +4,9 @@
 
 联调环境：`http://10.10.1.66:30085`（NodePort 30085），租户 `tenant-a`。登录沿用现有接口 `POST /api/v1/auth/password/login`，之后所有请求带 `Authorization: Bearer <access_token>`。
 
-**本文件范围**：接口合同——任务创建（CPU / GPU）、列表、详情基础字段、日志快照、产物、停止、恢复模型登记，覆盖普通训练与微调两条链路。**只描述接口的请求/响应/错误语义，不含页面布局与交互设计建议。**
+**本文件范围**：接口合同——任务创建（CPU / GPU）、列表、详情（含流水线步骤与训练曲线）、日志快照与日志流、容器组、事件、产物、停止、恢复模型登记，覆盖普通训练与微调两条链路。**只描述接口的请求/响应/错误语义，不含页面布局与交互设计建议。**
 
-**不在本文件范围**：**流水线步骤明细、容器组（Pod）、事件、日志流（SSE）**——这些能力当前部署没有可用接口，将另行单独提供对接文档（见第 17.1 节）。
+**当前唯一不可用**：产物真实下载（签名 URL 集群外不可达，见第 13 节）。其余全部可联调。
 
 ## 1. 当前闭环与前端可观察点
 
@@ -27,6 +27,8 @@
         ↓
 ④ 执行（KFP Run/Workflow/Pod，前端只读状态）
    compute_state / delivery_state / current_step 变化
+   → 详情可读 steps（流水线步骤）、metrics（训练曲线）、pods、events
+   → 日志流 /logs/stream（SSE）可持续跟随
         ↓
 ⑤ 产物发布
    delivery_state=PUBLISHED，artifacts 可列，下载换短期 URL
@@ -63,7 +65,10 @@
 | `/api/v1/modeldev/executions` | POST | `modeldev:execution:create` |
 | `/api/v1/modeldev/executions` | GET | `modeldev:execution:list` |
 | `/api/v1/modeldev/executions/{id}` | GET | `modeldev:execution:get` |
+| `/api/v1/modeldev/executions/{id}/pods` | GET | `modeldev:execution:get` |
+| `/api/v1/modeldev/executions/{id}/events` | GET | `modeldev:execution:get` |
 | `/api/v1/modeldev/executions/{id}/logs` | GET | `modeldev:execution:logs` |
+| `/api/v1/modeldev/executions/{id}/logs/stream` | GET | `modeldev:execution:logs` |
 | `/api/v1/modeldev/executions/{id}/artifacts` | GET | `modeldev:artifact:list` |
 | `/api/v1/modeldev/artifacts/{id}/content` | GET | `modeldev:artifact:download` |
 | `/api/v1/modeldev/executions/{id}:stop` | POST | `modeldev:execution:stop` |
@@ -489,7 +494,21 @@ GET /api/v1/modeldev/executions/{execution_id}
     "workflow_finished_at": "2026-10-23T18:02:10Z",
     "workflow_resource_version": "…",
     "workflow_nodes_sha256": "…"
-  }
+  },
+  "steps": [
+    {
+      "role": "prepare",
+      "state": "SUCCEEDED",
+      "started_at": "2026-10-23T09:55:32.051273Z",
+      "finished_at": "2026-10-23T09:56:58Z",
+      "exit_code": 0
+    },
+    {"role": "train-wait", "state": "SUCCEEDED", "started_at": "…", "finished_at": "…", "exit_code": 0},
+    {"role": "export", "state": "SUCCEEDED", "started_at": "…", "finished_at": "…", "exit_code": 0}
+  ],
+  "metrics": [
+    {"name": "train.loss", "decimal_value": "0.7341379523277283", "step": "1"}
+  ]
 }
 ```
 
@@ -506,8 +525,109 @@ GET /api/v1/modeldev/executions/{execution_id}
 | `timing` | 受理时冻结的时长预算 |
 | `model_registration` | 仅微调且指定了登记目标时出现；普通训练为 `null` |
 | `history` | 关闭时持久化的控制器证据；缺失字段表示“当时无该证据”，不要补猜 |
+| `steps` | 流水线步骤时间线，按执行顺序排列。普通训练 5 步，微调 8 步；步集由 `kind` 决定，所以 `role` / `state` 是字符串不是枚举 |
+| `metrics` | 训练曲线点，来自已发布的 `METRICS` 产物。目前只有 `train.loss`；`decimal_value` 是字符串，需按十进制解析，`step` 是数字。曲线点数等于实际写入的点数（实测微调可到 1000 点） |
+
+`steps[]` 字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `role` | 步骤角色，如 `prepare`、`train-wait`、`export`、`collect` |
+| `state` | 步骤状态，如 `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` |
+| `started_at` / `finished_at` | RFC3339；未开始或未结束时为 `null` |
+| `exit_code` | 进程退出码；未结束为 0 |
+| `deadline_at` | 该步的超时截止时间 |
+
+`steps` 与 `metrics` 都随详情一起返回，**不需要额外请求**。`metrics` 为空数组表示该执行没有已发布的 `METRICS` 产物（例如仍在训练或已失败）。
 
 详情中**没有**失败原因字段。失败信息只能从 `compute_state` / `close_state` 推断；不要把 `delivery_state=PUBLISHED` 当成训练成功。
+
+### 9.1 容器组
+
+```
+GET /api/v1/modeldev/executions/{execution_id}/pods
+```
+
+无 query 参数。
+
+```json
+{
+  "pods": [
+    {
+      "pod_name": "md-rtttx-2081272040",
+      "pod_uid": "…",
+      "pod_ip": "10.244.3.51",
+      "phase": "Succeeded",
+      "ready": false,
+      "node_name": "node3",
+      "restarts": 0,
+      "created_at": "2026-10-23T09:55:20Z",
+      "start_time": "2026-10-23T09:55:22Z",
+      "deletion_timestamp": null,
+      "layer": "PIPELINE",
+      "availability": "ORPHANED"
+    }
+  ],
+  "observed_at": "2026-10-27T04:25:00Z",
+  "availability": "LIVE"
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `layer` | `TRAINER`（训练容器）或 `PIPELINE`（流水线控制器） |
+| `availability` | 容器组的存在状态，见下表 |
+| `phase` | **仅** Kubernetes 原始 phase；已回收或从未创建的容器组由 `availability` 表达，`phase` 可能仍是历史值 |
+| `restarts` | 重启次数 |
+
+`availability` 取值：
+
+| 值 | 含义 |
+| --- | --- |
+| `LIVE` | 容器组仍存在 |
+| `RECYCLED` | 曾经存在，已被回收 |
+| `NEVER_CREATED` | 从未创建（通常任务未走到该阶段） |
+| `REJECTED` | 创建被拒绝 |
+| `ORPHANED` | 已不属于当前执行但仍可观测 |
+| `CREATION_PENDING` | 创建中 |
+
+顶层 `availability` 描述**本次查询**能否取到数据，不要和单个容器组的 `availability` 混用。
+
+### 9.2 事件
+
+```
+GET /api/v1/modeldev/executions/{execution_id}/events[?scope=key|all|warning]
+```
+
+`scope` 省略等价于 `key`；传其它值返回 `400 INVALID_MODELDEV_QUERY`。
+
+```json
+{
+  "events": [
+    {
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container",
+      "first_timestamp": "2026-10-23T09:56:30Z",
+      "last_timestamp": "2026-10-23T09:58:10Z",
+      "count": 5,
+      "source": "kubelet",
+      "involved_kind": "Pod",
+      "involved_name": "md-rtttx-2081272040",
+      "involved_uid": "…",
+      "field_path": "",
+      "reporting_instance": "node3"
+    }
+  ],
+  "observed_at": "2026-10-27T04:25:00Z",
+  "retention_hint": "1h",
+  "truncated": false
+}
+```
+
+- `retention_hint`：Kubernetes 事件的保留窗口，当前为 `1h`。**超过窗口的事件不会返回**，`events` 为空是正常结果，不代表出错。
+- `truncated=true` 表示本次结果被截断。
+- 事件来自 Kubernetes Event 对象，不是执行日志的替代品。
 
 ## 10. 枚举取值
 
@@ -593,7 +713,7 @@ GET /api/v1/modeldev/executions/{execution_id}
 GET /api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=16384
 ```
 
-> 本接口是**一次性快照**，可用（2026-10-26 实测 200）。**流式日志 `/logs/stream` 仍不可用**，属于第 17.1 节的后续文档范围。
+> 本接口是**一次性快照**，可用（2026-10-27 实测 200）。流式日志见 11.1。
 > 响应是一次性快照，不含增量或订阅语义。
 
 - 只接受 `tail_lines`（1–1000）与 `max_bytes`（1–65536）。不传时服务端默认 200 行 / 16384 字节。
@@ -605,12 +725,55 @@ GET /api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=163
   "log_id": "…",
   "lines": [{"timestamp":"2026-10-23T08:40:01.123456Z","text":"epoch 1/5 loss=0.42"}],
   "truncated": true,
-  "observed_at": "2026-10-23T09:10:12.345678Z"
+  "observed_at": "2026-10-23T09:10:12.345678Z",
+  "source_kind": "TRAINER",
+  "container_name": "trainer"
 }
 ```
 
-- 没有可用日志来源时返回 **`503 MODELDEV_QUERY_UNAVAILABLE`**，不是 404，可重试。
-- 日志是**一次性快照**，不提供流式推送（见第 17.1 节）。
+- 没有可用日志来源时返回 **`412 ARTIFACT_NOT_PUBLISHED`**（训练尚未产出日志，或日志已随容器回收）。
+- 日志是**一次性快照**；需要持续跟随时用 11.1 的流式接口。
+
+### 11.1 流式日志
+
+```
+GET /api/v1/modeldev/executions/{execution_id}/logs/stream
+```
+
+`Content-Type: text/event-stream`（SSE），无 query 参数。
+
+数据帧格式：
+
+```
+: ready
+
+event: log
+data: {"text":"epoch 1/5 loss=0.42","offset":115}
+
+event: log
+data: {"text":"epoch 2/5 loss=0.31","offset":268}
+
+event: end
+data: {"reason":"LOG_ENDED"}
+```
+
+| 帧 | 说明 |
+| --- | --- |
+| `: ready` | 注释帧，表示连接已建立并开始推送，可直接忽略 |
+| `event: log` | 一行日志。`offset` 是该行在日志流中的累计字节偏移，用于断线续传判断 |
+| `event: end` | 流正常结束。`reason` 取值 `LOG_ENDED` |
+
+流的失败语义（HTTP 状态码在**首帧之前**返回，不是 SSE 帧）：
+
+| 状态码 | `reason` | 含义 |
+| --- | --- | --- |
+| `412` | `LOG_UNAVAILABLE` | 该执行当前没有可读的日志来源 |
+| `404` | `RESOURCE_NOT_FOUND` | 执行不存在 |
+| `401` | — | 未认证 |
+
+已连接的流不会回传错误帧，异常断开就是终止；调用方按 `event: end` 或连接关闭结束读取。
+
+> 注意：训练容器的日志在容器回收后不再可读。已结束较久的执行会返回 `412 LOG_UNAVAILABLE`，这是设计行为，不是故障。
 
 ## 12. 停止任务
 
@@ -745,7 +908,7 @@ POST :stop → 202
 
 ## 16. 现网环境与联调前置
 
-联调地址 `http://10.10.1.66:30085`。2026-10-26 全部逐条实测（Governance 已于当日发布 `mdcontract-687aa2f-r2-20261026`）：
+联调地址 `http://10.10.1.66:30085`。2026-10-27 全量逐条实测（Governance 已发布 `v21-detail-on-dev-20261027`，含执行详情合同）：
 
 | 接口 | 实测 | 说明 |
 | --- | --- | --- |
@@ -755,15 +918,24 @@ POST :stop → 202
 | `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：4 条 CPU 可选，5 条 GPU 全 `selectable=false / GPU_CAPACITY_UNKNOWN` |
 | `GET /api/v1/models`、`/models/{id}/versions`、`/model-versions/{id}`、`/download-url` | **200** | 微调基模选择可用，`total=3` |
 | `POST /api/v1/modeldev/executions` | **202** | CPU 与 GPU 均 202（GPU 仅限历史上 `selectable=true` 时），幂等重放正常，负例 400 |
-| `GET /api/v1/modeldev/executions` | **200** | 已恢复；只接受 `page`/`pageSize` |
-| `GET /api/v1/modeldev/executions/{id}` | **200** | 已恢复；四状态 + 参数 + `model_registration` + `history` |
-| `GET .../{id}/logs` | **200** | 已恢复；一次性快照（非流式）。**仅该执行确实存在可读日志时**才 200，无日志来源返回 `503 MODELDEV_QUERY_UNAVAILABLE`（见第 11 节） |
+| `GET /api/v1/modeldev/executions` | **200** | 22 条执行全部可列；只接受 `page`/`pageSize` |
+| `GET /api/v1/modeldev/executions/{id}` | **200** | 四状态 + 参数 + `model_registration` + `history` + **`steps`** + **`metrics`** |
+| `GET .../{id}/logs` | **200** | 一次性快照。无日志来源返回 `412 ARTIFACT_NOT_PUBLISHED`（见第 11 节） |
+| `GET .../{id}/logs/stream` | **200** | SSE；`: ready` → `event: log` → `event: end`。无日志来源返回 `412 LOG_UNAVAILABLE`（见 11.1） |
 | `GET .../{id}/artifacts` | **200** | 有产出的历史执行可正常列出（微调执行 `total=18`，`filename` 为嵌套相对路径） |
 | `GET /api/v1/modeldev/artifacts/{id}/content` | **200** | 但 URL 是集群内地址 + 60 秒签名，集群外不可达（见第 13 节） |
+| `GET .../{id}/pods` | **200** | 容器组，含 `layer` / `availability`（见 9.1） |
+| `GET .../{id}/events` | **200** | Kubernetes 事件，保留窗口 `1h`（见 9.2）；`scope` 非法值 400 |
 | `POST ...:stop` | **202** | 正常，重复调用 `replayed=true`、`intent_generation` 不变 |
-| `POST ...:resume-model-registration` | **200** | 已恢复，返回与详情同结构的执行本体 |
-| `GET .../{id}/pods`、`/events`、`/logs/stream` | **404** | 当前部署没有这三条路由（见第 17.1 节） |
+| `POST ...:resume-model-registration` | **200** | 权限已绑定；但仅目标条件满足时 200，否则 `412 MODEL_REGISTRATION_UNAVAILABLE` |
 | `GET /api/v1/model-versions`（列表） | **404** | 该路由不存在，只能通过 `/models/{id}/versions` |
+
+实测补充：
+
+- 22 条执行详情全部 200，`steps` 有值：普通训练 5 步，微调 8 步
+- `steps` / `metrics` 随详情返回，不需要额外请求；微调实测 `metrics` 1000 点
+- 未认证访问详情与子资源均为 **401**；不存在的 UUID 为 **404 `RESOURCE_NOT_FOUND`**（此前为 400，已修正）
+- `page=0`、`pageSize=101`、非 UUID、未知参数仍是 **400 `INVALID_MODELDEV_QUERY`**
 
 剩余唯一阻断：
 
@@ -773,25 +945,35 @@ POST :stop → 202
 > 1. 执行列表 / 详情 / 日志曾全 **503**：Governance 依赖的 ModelDev 合同版本落后（`0814ae3`），新版 ModelDev 在 `ExecutionView` 增加 `steps` 字段后，严格未知字段校验 fail-closed。已升级依赖至 `687aa2f`。
 > 2. 恢复登记曾 **403**：路由已注册但未绑定 permission。已补绑 `modeldev:manage_execution`（脚本 `scripts/ops/sql/register-modeldev-resume-registration-permission.sql`）。
 > 3. 产物列表曾 **503**：Governance 侧校验要求 `filename` 是平铺文件名，而 ModelDev 实际返回嵌套相对路径（`export/merged/…`）。已改为允许合法相对路径（仍拒绝 `..`、绝对路径、反斜杠、控制字符），发布 `mdcontract-687aa2f-r2-20261026`。当前 21 条执行里 5 条微调执行各返回 18 个嵌套路径产物，均 **200**。
+>
+> 2026-10-27 已修复：
+> 4. 列表 / 详情再次 **503**：dev 分支锁定的 ModelDev 合同回退到 `af7f9e98`（缺 `steps`），而线上 ModelDev 已是 detail 版。已将执行详情合同并入 dev 并发布 `v21-detail-on-dev-20261027`。
+> 5. `/pods`、`/events`、`/logs/stream` 曾 **404**：这三条路由只在 detail 分支上。现已随同一镜像发布，三条均 **200**。
+> 6. 不存在的执行曾返回 **400**，现为 **404 `RESOURCE_NOT_FOUND`**。
 
-**联调前请先向后端确认当前镜像状态。** 当天后端做过多次滚动发布，发布窗口内可能短暂出现 `503 MODELDEV_CREATE_UNAVAILABLE`。这类 503 是发布抖动，重试即可；若持续超过几分钟再找后端。
+**联调前请先向后端确认当前镜像状态。** 后端做过多次滚动发布，发布窗口内可能短暂出现 `503 MODELDEV_CREATE_UNAVAILABLE`。这类 503 是发布抖动，重试即可；若持续超过几分钟再找后端。
 
-建议联调顺序：实现目录 → 算力目录 → 输入版本 → 模型（基模）选择 → 创建（含各类 400 负例）→ 列表 → 详情 → 日志 → 产物列表与换 URL → 停止 → 恢复登记。除产物真实下载外，全部可联调。
+建议联调顺序：实现目录 → 算力目录 → 输入版本 → 模型（基模）选择 → 创建（含各类 400 负例）→ 列表 → 详情（含 `steps`/`metrics`）→ 日志快照与日志流 → 容器组 → 事件 → 产物列表与换 URL → 停止 → 恢复登记。除产物真实下载外，全部可联调。
 
 ## 17. 当前不可用能力
 
-### 17.1 详情页诊断能力：另出一份文档
+### 17.1 已交付：详情页诊断能力
 
-以下四类属于“任务详情”的诊断能力，**本文件不含对接方案，等后续单独文档**：
+此前列为“另出文档”的四类详情能力，**已随 `v21-detail-on-dev-20261027` 一并交付**，可直接按本文件对接：
 
-| 能力 | 当前状态 |
-| --- | --- |
-| 流水线步骤明细（每步状态/耗时/起止，`ExecutionView.steps`） | ModelDev 侧已有该字段，Governance 的公开 DTO **尚未透出**；仅在分支 `feat/gov-execution-detail-steps` |
-| 容器组（`GET .../pods`） | 仅分支，当前部署 **404** |
-| 事件（`GET .../events`） | 仅分支，当前部署 **404** |
-| 日志流（`GET .../logs/stream`，SSE） | 仅分支，当前部署 **404** |
+| 能力 | 位置 | 实测 |
+| --- | --- | --- |
+| 流水线步骤明细 | 详情响应的 `steps[]` | **200**，普通训练 5 步、微调 8 步 |
+| 训练曲线 | 详情响应的 `metrics[]` | **200**，微调实测 1000 点 |
+| 容器组 `GET .../pods` | 见 9.1 | **200** |
+| 事件 `GET .../events` | 见 9.2 | **200**（保留窗口 `1h`） |
+| 日志流 `GET .../logs/stream` | 见 11.1 | **200**（SSE） |
 
-一次性日志快照 `GET .../logs` 已可用（见第 11 节）。
+注意事项：
+
+- 事件来自 Kubernetes Event，保留窗口仅 `1h`，空结果是正常的。
+- 日志与日志流在容器回收后不可读，返回 `412`，属设计行为。
+- `metrics` 只在 `METRICS` 产物发布后才有点；训练中或已失败的执行可能为空数组。
 
 ### 17.2 其它确定不提供的
 
@@ -874,13 +1056,32 @@ PC 上实测（2026-10-26）：`Content-Type: application/json; charset=utf-8` *
 
 ### 18.4 查询（200）
 
-> 列表、详情、日志均已可用。字段定义以第 9 节为准。
+> 列表、详情、日志、容器组、事件均已可用。字段定义以第 9、11 节为准。
 
 ```bash
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions?page=1&pageSize=20"
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}"
 curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=16384"
+curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/pods"
+curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}/events?scope=all"
 ```
+
+详情响应里的 `steps` / `metrics` 无需额外请求。校验 `steps` 有值：
+
+```bash
+curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/executions/{execution_id}" \
+  | jq '{kind, steps: (.steps|length), metrics: (.metrics|length)}'
+```
+
+### 18.4.1 日志流（SSE，200）
+
+```bash
+curl -sN -H "Authorization: Bearer $TOK" \
+  "$B/api/v1/modeldev/executions/{execution_id}/logs/stream"
+```
+
+期望逐行输出 `: ready`、若干 `event: log` + `data: {...}`，最后 `event: end`。
+没有可读日志来源时会直接返回 `412 LOG_UNAVAILABLE`（不是流帧），不要当成连接失败。
 
 ### 18.5 产物（200）
 
