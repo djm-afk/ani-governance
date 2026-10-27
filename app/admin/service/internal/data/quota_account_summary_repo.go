@@ -21,14 +21,30 @@ type TenantQuotaAccountSummaryFilter struct {
 	QuotaCode      string
 }
 
+// TenantQuotaAccountSummaryPage keeps runtime identity mappings internal to
+// Gov. The public quota messages never expose these cross-service identities.
+type TenantQuotaAccountSummaryPage struct {
+	Items             []*quotapb.TenantQuotaAccountSummary
+	Total             uint64
+	ResourceTenantIDs map[uint32]string
+}
+
 // ListTenantAccountSummaries is a platform-only read projection. Authorization
 // precedes this cross-tenant repository. Query count is bounded independently of
 // page size: definitions, count, tenant page, plans, policies and accounts.
-func (r *QuotaAdminRepo) ListTenantAccountSummaries(ctx context.Context, filter TenantQuotaAccountSummaryFilter) (items []*quotapb.TenantQuotaAccountSummary, total uint64, err error) {
-	if filter.Page == 0 || filter.PageSize == 0 || filter.PageSize > 100 || (filter.TenantID != nil && *filter.TenantID == 0) {
-		return nil, 0, quotapb.ErrorInvalidQuotaRequest("%s", "invalid quota account page or tenant")
+func (r *QuotaAdminRepo) ListTenantAccountSummaries(ctx context.Context, filter TenantQuotaAccountSummaryFilter) ([]*quotapb.TenantQuotaAccountSummary, uint64, error) {
+	page, err := r.ListTenantAccountSummaryPage(ctx, filter)
+	if err != nil {
+		return nil, 0, err
 	}
-	items = []*quotapb.TenantQuotaAccountSummary{}
+	return page.Items, page.Total, nil
+}
+
+func (r *QuotaAdminRepo) ListTenantAccountSummaryPage(ctx context.Context, filter TenantQuotaAccountSummaryFilter) (page *TenantQuotaAccountSummaryPage, err error) {
+	if filter.Page == 0 || filter.PageSize == 0 || filter.PageSize > 100 || (filter.TenantID != nil && *filter.TenantID == 0) {
+		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid quota account page or tenant")
+	}
+	page = &TenantQuotaAccountSummaryPage{Items: []*quotapb.TenantQuotaAccountSummary{}, ResourceTenantIDs: map[uint32]string{}}
 	err = quotaReadSnapshot(ctx, r.entClient.Client(), func(tx *ent.Tx) error {
 		ctx := appViewer.NewSystemViewerContext(ctx)
 		defs, e := quotaSummaryDefinitions(ctx, tx, filter.QuotaCode)
@@ -43,16 +59,19 @@ func (r *QuotaAdminRepo) ListTenantAccountSummaries(ctx context.Context, filter 
 		if e != nil {
 			return e
 		}
-		total = uint64(count)
+		page.Total = uint64(count)
 		offset := (uint64(filter.Page) - 1) * uint64(filter.PageSize)
-		if offset >= total {
+		if offset >= page.Total {
 			return nil
 		}
 		tenants, e := query.Order(ent.Asc(tenant.FieldID)).Offset(int(offset)).Limit(int(filter.PageSize)).All(ctx)
 		if e != nil {
 			return e
 		}
-		items, e = r.quotaAccountSummaries(ctx, tx, tenants, defs)
+		for _, tenant := range tenants {
+			page.ResourceTenantIDs[tenant.ID] = tenant.ResourceTenantID
+		}
+		page.Items, e = r.quotaAccountSummaries(ctx, tx, tenants, defs)
 		return e
 	})
 	return

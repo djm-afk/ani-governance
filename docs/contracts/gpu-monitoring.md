@@ -16,6 +16,7 @@ All methods require a user JWT, current role permission and the registered modul
 | GET/POST `/api/v1/gpu/metrics/latest` or `metrics/query` | `accelerator:usage:list`, authenticated tenant aggregate |
 | GET/POST `/api/v1/gpu/resources/{resource_kind}/{resource_id}/metrics/latest` or `metrics/query` | `accelerator:usage:get`, authenticated tenant; also current owner-type resource-read permission |
 | GET `/api/v1/admin/tenants/quota-account-summaries` | `tenant:quota-read`, platform; `page`, `pageSize`, optional `tenantId`, `quotaCode` |
+| GET `/api/v1/admin/gpu/tenants` | `tenant:quota-read`, platform; `page`, `pageSize` (default/max6), optional `tenantId`; current allocations, latest memory and current quota |
 
 For POST query requests the body is `{ "data": { "window": "24h", "metricCodes": [...] } }`. Use `start` and `end` RFC3339 UTC timestamps instead of `window` for a controlled custom range. `clusterId` and `modelKey` are available only on physical platform reads. Latest requests use query parameters. Unknown/duplicate selector fields, public tenant/owner/Pod selectors and ambiguous JSON are rejected. The route's path identities cannot be supplied through the request body.
 
@@ -43,6 +44,8 @@ Scope pagination uses a fixed snapshot identifier, cycle detection and a 64-page
 ## Quota snapshot and operations
 
 Tenant count/page, quota catalogue, current plan policies and authoritative accounts share one dedicated readonly Repeatable Read transaction with batched queries. Existing admission/refund transactions are unchanged. `configured` comes from policy presence; configured zero and missing policy are distinct. Decimal string `limit`, `occupied`, `available=max(limit-occupied,0)`, `overLimit=occupied>limit` and actual `enforcement` preserve existing numeric behavior. No ACC-derived accounting or historical quota is introduced.
+
+The combined administrator tenant page uses the same quota snapshot, including its internal trusted tenant mapping. After the transaction ends it reads current ACC bindings once and latest usage with two workers. Binding commitments (MiB/count), observed runtime memory/limit (bytes) and quota accounts remain distinct. Unknown allocations keep totals null and expose the known part. The page shares the 128-source/12-curve/8MiB GPU budget and a 30s deadline; budget and timeout failures fail the page explicitly. It never expands historical curves per row.
 
 API catalogue synchronization remains explicit: first the admin CLI dry-run, then synchronization, then [read-API associations](../../scripts/ops/sql/register-gpu-monitoring-read-apis.sql), then the documented policy refresh. The SQL requires existing enabled read permissions and adds no role grants. Source registration alone does not establish live authorization.
 

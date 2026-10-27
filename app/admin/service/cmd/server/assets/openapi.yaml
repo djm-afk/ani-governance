@@ -2251,6 +2251,34 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GpuQueryResponse'
+    /api/v1/admin/gpu/tenants:
+        get:
+            tags:
+                - GpuTenantAdminService
+            operationId: GpuTenantAdminService_ListGpuTenants
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListGpuTenantsResponse'
     /api/v1/admin/gpu/tenants/{tenantId}/metrics/latest:
         get:
             tags:
@@ -15205,6 +15233,50 @@ components:
                 core_limit_percent:
                     type: integer
                     format: uint32
+        GpuTenantCurrentAllocation:
+            type: object
+            properties:
+                memoryMiB:
+                    nullable: true
+                    type: string
+                    description: |-
+                        Trusted ACTIVE binding commitments from ACC; never actual usage or quota.
+                         Exact decimal MiB. Absent unless the allocation scan is complete.
+                bindingCount:
+                    nullable: true
+                    type: string
+                knownMemoryMiB:
+                    nullable: true
+                    type: string
+                    description: Known verified part, including when unknown ownership prevents a total.
+                knownBindingCount:
+                    nullable: true
+                    type: string
+                status:
+                    type: string
+                reason:
+                    type: string
+        GpuTenantCurrentSummary:
+            type: object
+            properties:
+                quota:
+                    allOf:
+                        - $ref: '#/components/schemas/TenantQuotaAccountSummary'
+                    description: Tenant identity and all quota accounts come from one Gov read snapshot.
+                usage:
+                    allOf:
+                        - $ref: '#/components/schemas/GpuQueryResponse'
+                    description: |-
+                        Independent latest observation, never a 30-day range or quota balance.
+                         Absent when usage_status is UNAVAILABLE. Missing values remain null.
+                usageStatus:
+                    type: string
+                    description: AVAILABLE, PARTIAL, NO_DATA or UNAVAILABLE. Inspect each metric's quality.
+                usageReason:
+                    type: string
+                    description: Stable public code only; never a dependency error message or runtime ID.
+                allocation:
+                    $ref: '#/components/schemas/GpuTenantCurrentAllocation'
         GpuTenantQueryRequest:
             type: object
             properties:
@@ -16418,6 +16490,16 @@ components:
                         $ref: '#/components/schemas/AcceleratorDevice'
                 total:
                     type: string
+        ListGpuTenantsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/GpuTenantCurrentSummary'
+                total:
+                    type: string
+                    description: Number of tenants, including those without quota policies or observations.
         ListImagesResponse:
             type: object
             properties:
@@ -22261,6 +22343,8 @@ tags:
       description: |-
         Tenant JWT + current module/role permission. Resource reads additionally ask
          the business owner and original Gov ledger before constructing ACC scopes.
+    - name: GpuTenantAdminService
+      description: Platform JWT plus current Casbin permission; no tenant identity is fabricated.
     - name: ImageService
     - name: InferenceDiagnosticsService
       description: Tenant-authenticated management diagnostics; inference calls remain on Higress.

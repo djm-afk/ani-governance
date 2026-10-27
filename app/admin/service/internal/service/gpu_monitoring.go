@@ -301,7 +301,7 @@ func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32
 	if tenantID == 0 {
 		return nil, "", "", gpuInvalid()
 	}
-	tenant, e := s.accelerator.tenants.ResourceTenantID(ctx, tenantID)
+	tenant, e := gpuTenantMonitoringIdentity(ctx, s.accelerator.tenants, tenantID)
 	if e != nil {
 		return nil, "", "", e
 	}
@@ -541,6 +541,9 @@ func (s *GpuMonitoringService) QueryResourceGpu(ctx context.Context, r *view.Gpu
 func (s *GpuMonitoringService) execute(ctx context.Context, t *gpu.GpuTarget, platform bool, tenant, actor string, cs []string, d *view.GpuQueryData, latest bool) (*view.GpuQueryResponse, error) {
 	if s.monitoring == nil {
 		return nil, errors.ServiceUnavailable("GPU_SOURCE_UNAVAILABLE", "GPU monitoring unavailable")
+	}
+	if err := gpuTenantListReserve(ctx, t, len(cs)); err != nil {
+		return nil, err
 	}
 	var r *gpu.QueryGpuResponse
 	var e error

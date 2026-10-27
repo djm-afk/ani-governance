@@ -123,10 +123,14 @@ func TestQuotaAccountSummariesConsistentReadAndBoundedQueries(t *testing.T) {
 		require.NoError(t, c.Client().Tenant.Create().SetName(fmt.Sprintf("batch-%02d", i)).SetCode(fmt.Sprintf("batch-%02d", i)).SetPlanID(p.ID).Exec(sys))
 	}
 	driver.queries = nil
-	items, total, err = repo.ListTenantAccountSummaries(sys, filter)
+	page, err := repo.ListTenantAccountSummaryPage(sys, filter)
 	require.NoError(t, err)
-	require.EqualValues(t, 40, total)
-	require.Len(t, items, 40)
+	require.EqualValues(t, 40, page.Total)
+	require.Len(t, page.Items, 40)
+	require.Len(t, page.ResourceTenantIDs, 40, "runtime mappings use the same tenant page without extra queries")
+	for _, item := range page.Items {
+		require.NotEmpty(t, page.ResourceTenantIDs[item.TenantId])
+	}
 	require.Len(t, driver.queries, 6, "larger tenant pages must not introduce N+1 reads")
 }
 

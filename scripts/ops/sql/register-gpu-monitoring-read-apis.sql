@@ -7,6 +7,7 @@ DECLARE r record; aid integer; pid integer;
 BEGIN
  FOR r IN SELECT * FROM (VALUES
   ('GET','/api/v1/admin/gpu/devices','accelerator:device:list','ACCELERATOR'),
+  ('GET','/api/v1/admin/gpu/tenants','tenant:quota-read','ACCELERATOR'),
   ('GET','/api/v1/admin/gpu/devices/{device_id}/metrics/latest','accelerator:device:list','ACCELERATOR'),
   ('POST','/api/v1/admin/gpu/devices/{device_id}/metrics/query','accelerator:device:list','ACCELERATOR'),
   ('GET','/api/v1/admin/gpu/metrics/latest','accelerator:device:list','ACCELERATOR'),

@@ -17,6 +17,7 @@ var ServiceTagToBusinessModule = map[string]identityV1.Module{
 	"AcceleratorService":          identityV1.Module_ACCELERATOR,
 	"GpuAdminService":             identityV1.Module_ACCELERATOR,
 	"GpuService":                  identityV1.Module_ACCELERATOR,
+	"GpuTenantAdminService":       identityV1.Module_ACCELERATOR,
 	"QuotaSelfService":            identityV1.Module_TENANT,
 	"PlatformNetworkService":      identityV1.Module_NETWORK,
 	"NetworkService":              identityV1.Module_NETWORK,

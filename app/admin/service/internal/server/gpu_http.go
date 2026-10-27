@@ -171,6 +171,9 @@ func gpuHTTPFilter(next http.Handler) http.Handler {
 }
 
 func validateGpuHTTP(r *http.Request, summary bool) error {
+	if r.URL.Path == gpuTenantListPath {
+		return validateGpuTenantHTTP(r)
+	}
 	invalid := errors.BadRequest("GPU_INVALID_QUERY", "invalid or unsupported GPU query field")
 	if len(r.URL.RawQuery) > 4096 {
 		return invalid
