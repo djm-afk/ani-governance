@@ -11,10 +11,74 @@ import (
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
+	protocol "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	"go-wind-admin/app/admin/service/internal/commandcontract"
 	"go-wind-admin/pkg/middleware/auth"
 )
+
+func TestInferenceStoredGPUBlockMemory(t *testing.T) {
+	for _, tc := range []struct {
+		name, blocks, factor string
+		invalid              bool
+	}{
+		{name: "legacyMiB", blocks: "24570"},
+		{name: "tenMiBBlocks", blocks: "2457", factor: "10"},
+		{name: "zeroFactor", blocks: "2457", factor: "0", invalid: true},
+		{name: "negativeFactor", blocks: "2457", factor: "-10", invalid: true},
+		{name: "nonnumericFactor", blocks: "2457", factor: "bad", invalid: true},
+		{name: "overflowFactor", blocks: "2457", factor: "9223372036854775808", invalid: true},
+		{name: "overflowProduct", blocks: "214748365", factor: "10", invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture, _, _ := gpuVector(t)
+			fixture.Request.ContainerName = "kserve-container"
+			execution := fixture.Resolved.Execution
+			execution.Resources["volcano.sh/vgpu-memory"] = tc.blocks
+			execution.Resources["volcano.sh/vgpu-cores"] = "50"
+			if tc.factor != "" {
+				execution.PodAnnotations["accelerator.ani.io/memory-block-mib"] = tc.factor
+			}
+			var err error
+			execution.ExecutionDigest, err = protocol.GpuExecutionDigest(execution)
+			require.NoError(t, err)
+			fixture.Resolved.QuotaItems[0].Units = 24570
+			selection := inferenceCPUSelection(t)
+			selection.ComputeType = "gpu"
+			selection.Gpu = &compute.GpuSelection{ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion, SpecDigest: fixture.Profile.SpecDigest, DevicesPerUnit: 1, ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, Mode: fixture.Resolved.Selection.Mode, ModelKey: fixture.Resolved.Selection.ModelKey, MemoryMibPerDevice: 24570, CoreLimitPercent: 50}
+			selection.SelectionDigest, err = compute.SelectionDigest(selection)
+			require.NoError(t, err)
+			intent := inferencePublicIntent()
+			binding := NewInferenceComputeBinding(nil, nil, &inferenceModelProbe{response: &modelv1.GetModelVersionResponse{Version: &modelv1.ModelVersion{Id: intent.ModelVersionId, Status: "ready"}}}, &inferenceComputeProbe{selection: selection})
+			tenant, createID, resourceID := "11111111-1111-4111-8111-111111111111", "20000000-0000-4000-8000-000000000001", "20000000-0000-4000-8000-000000000002"
+			prepared, err := binding.PrepareManagedBusiness(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: 7, TenantID: 42}, tenant, intent)
+			require.NoError(t, err)
+			raw, err := prepared.freeze(tenant, "user", "7", createID, resourceID, fixture.Resolved)
+			if tc.invalid {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			canonical, err := commandcontract.DecodeInferenceCanonical(raw)
+			require.NoError(t, err)
+			encoded, err := commandcontract.CanonicalJSON(canonical)
+			require.NoError(t, err)
+			require.Equal(t, raw, encoded, "reading a frozen execution must preserve canonical bytes")
+			sum := sha256.Sum256(raw)
+			if tc.name == "legacyMiB" {
+				require.Equal(t, "d7422dfb83b16155c193d3523232c61a7dc85e32e7adb8bc700b4dbc4a5a4d82", hex.EncodeToString(sum[:]), "pre-fix legacy canonical golden must not change")
+			}
+			t.Logf("canonical SHA256 %s", hex.EncodeToString(sum[:]))
+			stored := commandcontract.StoredCommand{Owner: commandcontract.InferenceOwner, Action: InferenceCreateAction, TenantID: tenant, ResourceID: resourceID, OperationID: createID, ActorType: "user", ActorID: "7", Canonical: raw, RequireChargeIDs: true, Charges: []commandcontract.ChargeRef{{ChargeID: "original", QuotaCode: GpuSharedQuotaCode, ChargedUnits: 24570}}}
+			facts, err := commandcontract.ValidateStoredCommand(stored)
+			require.NoError(t, err)
+			business, err := contractv1.DecodeBusinessPayload(facts.BusinessPayload)
+			require.NoError(t, err)
+			require.Equal(t, tc.blocks, business.GpuExecution.Resources["volcano.sh/vgpu-memory"])
+			require.Equal(t, tc.factor, business.GpuExecution.PodAnnotations["accelerator.ani.io/memory-block-mib"])
+		})
+	}
+}
 
 func TestInferenceStoredCommandVariantsAndDeleteScope(t *testing.T) {
 	for _, gpu := range []bool{false, true} {

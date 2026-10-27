@@ -30,6 +30,8 @@ message CreateInferenceRequest {
   int32 worker_replicas = 14 [json_name = "worker_replicas"];
   // Required for new managed creates. Legacy resource fields remain rejected.
   string preset_id = 15 [json_name = "preset_id"];
+  string image_id = 16 [json_name = "image_id"];
+  string image_scope = 17 [json_name = "image_scope"];
 }
 message GpuSelection {
   string cluster_id = 1 [json_name = "cluster_id"];
@@ -86,6 +88,12 @@ message InferenceView {
   int64 cpu_millis = 23 [json_name = "cpu_millis"];
   int64 memory_mib = 24 [json_name = "memory_mib"];
   string selection_digest = 25 [json_name = "selection_digest"];
+  string image_id = 26 [json_name = "image_id"];
+  string image_scope = 27 [json_name = "image_scope"];
+  string create_operation_id = 28 [json_name = "create_operation_id"];
+  string create_error_code = 29 [json_name = "create_error_code"];
+  string create_error_message = 30 [json_name = "create_error_message"];
+  string close_operation_id = 31 [json_name = "close_operation_id"];
 }
 message ListInferenceResponse {
   repeated InferenceView items = 1;
@@ -113,6 +121,8 @@ message UpdateInferenceRequest {
   inference.view.v1.RuntimeMode runtime_mode = 15 [json_name = "runtime_mode"];
   int32 worker_replicas = 16 [json_name = "worker_replicas"];
   string preset_id = 17 [json_name = "preset_id"];
+  string image_id = 18 [json_name = "image_id"];
+  string image_scope = 19 [json_name = "image_scope"];
 }
 
 message InferenceServiceCommandRequest {

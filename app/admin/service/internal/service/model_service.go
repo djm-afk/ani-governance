@@ -40,10 +40,15 @@ type ModelService struct {
 	adminv1.UnimplementedModelServiceServer
 	client  ModelOwnerClient
 	tenants ResourceTenantResolver
+	images  ModelImageCatalog
 }
 
-func NewModelService(client ModelOwnerClient, tenants ResourceTenantResolver) *ModelService {
-	return &ModelService{client: client, tenants: tenants}
+func NewModelService(client ModelOwnerClient, tenants ResourceTenantResolver, images ...ModelImageCatalog) *ModelService {
+	result := &ModelService{client: client, tenants: tenants}
+	if len(images) > 0 {
+		result.images = images[0]
+	}
+	return result
 }
 
 func (s *ModelService) trustedModelOperator(ctx context.Context) (string, string, error) {
@@ -184,11 +189,15 @@ func (s *ModelService) CreateModelVersion(ctx context.Context, in *catalogv1.Cre
 		return nil, err
 	}
 	d := in
+	image, err := s.modelImageReference(ctx, tenant, actor, d.RecommendedImageId, d.RecommendedImageScope, d.EngineImage)
+	if err != nil {
+		return nil, err
+	}
 	version, err := s.client.CreateModelVersion(ctx, tenant, actor, &modelv1.CreateModelVersionRequest{
 		ModelId: d.ModelId, Version: d.Version, Format: d.Format, StoragePath: d.StoragePath,
 		ChecksumSha256: d.ChecksumSha256, SizeBytes: d.SizeBytes, IsEncrypted: d.IsEncrypted,
 		EncryptAlgo: d.EncryptAlgo, EncryptHint: d.EncryptHint, IdempotencyKey: d.IdempotencyKey,
-		EngineType: d.EngineType, StartupCommand: d.StartupCommand, EngineImage: d.EngineImage,
+		EngineType: d.EngineType, StartupCommand: d.StartupCommand, EngineImage: image, RecommendedImageId: d.RecommendedImageId, RecommendedImageScope: d.RecommendedImageScope,
 	})
 	if err != nil {
 		return nil, mapModelError(err)
@@ -312,7 +321,7 @@ func (s *ModelService) ImportModelBundle(ctx context.Context, in *catalogv1.Impo
 		return nil, kratoserrors.BadRequest("INVALID_MODEL_IMPORT_BUNDLE", "request is required")
 	}
 	d := in
-	if strings.TrimSpace(d.IdempotencyKey) == "" || d.Model == nil || strings.TrimSpace(d.Model.Name) == "" || len(d.Model.Capabilities) == 0 || d.Version == nil || strings.TrimSpace(d.Version.Version) == "" || strings.TrimSpace(d.Version.Format) == "" || strings.TrimSpace(d.Version.EngineType) == "" || strings.TrimSpace(d.Version.EngineImage) == "" || strings.TrimSpace(d.Version.StartupCommand) == "" || d.Source == nil || strings.TrimSpace(d.Source.Provider) == "" || strings.TrimSpace(d.Source.RepoId) == "" || strings.TrimSpace(d.Source.Revision) == "" {
+	if strings.TrimSpace(d.IdempotencyKey) == "" || d.Model == nil || strings.TrimSpace(d.Model.Name) == "" || len(d.Model.Capabilities) == 0 || d.Version == nil || strings.TrimSpace(d.Version.Version) == "" || strings.TrimSpace(d.Version.Format) == "" || strings.TrimSpace(d.Version.EngineType) == "" || strings.TrimSpace(d.Version.StartupCommand) == "" || d.Source == nil || strings.TrimSpace(d.Source.Provider) == "" || strings.TrimSpace(d.Source.RepoId) == "" || strings.TrimSpace(d.Source.Revision) == "" {
 		return nil, kratoserrors.BadRequest("INVALID_MODEL_IMPORT_BUNDLE", "idempotency_key, model, version, source and complete runtime input are required")
 	}
 	tenant, actor, err := s.trustedModelOperator(ctx)
@@ -320,6 +329,10 @@ func (s *ModelService) ImportModelBundle(ctx context.Context, in *catalogv1.Impo
 		return nil, err
 	}
 	v, src := d.Version, d.Source
+	image, err := s.modelImageReference(ctx, tenant, actor, v.RecommendedImageId, v.RecommendedImageScope, v.EngineImage)
+	if err != nil {
+		return nil, err
+	}
 	reply, err := s.client.ImportModelBundle(ctx, tenant, actor, &modelv1.ImportModelBundleRequest{
 		IdempotencyKey: d.IdempotencyKey,
 		Model: &modelv1.ImportModelBundleModelData{
@@ -328,7 +341,7 @@ func (s *ModelService) ImportModelBundle(ctx context.Context, in *catalogv1.Impo
 		},
 		Version: &modelv1.ImportModelBundleVersionData{
 			Version: v.Version, Format: v.Format, EngineType: v.EngineType,
-			EngineImage: v.EngineImage, StartupCommand: v.StartupCommand,
+			EngineImage: image, StartupCommand: v.StartupCommand, RecommendedImageId: v.RecommendedImageId, RecommendedImageScope: v.RecommendedImageScope,
 		},
 		Source: &modelv1.ImportModelBundleSourceData{Provider: src.Provider, RepoId: src.RepoId, Revision: src.Revision},
 	})
@@ -434,6 +447,11 @@ func validateModelVersionReply(version *modelv1.ModelVersion) error {
 	if version == nil || strings.TrimSpace(version.Id) == "" || strings.TrimSpace(version.Version) == "" {
 		return modelInvalidReply()
 	}
+	if version.RecommendedImageId != "" || version.RecommendedImageScope != "" {
+		if !imageIDPattern.MatchString(version.RecommendedImageId) || (version.RecommendedImageScope != "platform" && version.RecommendedImageScope != "tenant") || !strings.Contains(version.EngineImage, "@sha256:") {
+			return modelInvalidReply()
+		}
+	}
 	return nil
 }
 
@@ -485,7 +503,7 @@ func wireModel(model *modelv1.Model) *catalogv1.Model {
 }
 
 func wireModelVersion(version *modelv1.ModelVersion) *catalogv1.ModelVersion {
-	return &catalogv1.ModelVersion{Id: version.Id, ModelId: version.ModelId, Version: version.Version, Format: version.Format, IsEncrypted: version.IsEncrypted, EncryptAlgo: version.EncryptAlgo, EncryptHint: version.EncryptHint, SizeBytes: version.SizeBytes, ChecksumSha256: version.ChecksumSha256, StoragePath: version.StoragePath, CreatedAt: version.CreatedAt, Status: version.Status, EngineType: version.EngineType, StartupCommand: version.StartupCommand, EngineImage: version.EngineImage}
+	return &catalogv1.ModelVersion{Id: version.Id, ModelId: version.ModelId, Version: version.Version, Format: version.Format, IsEncrypted: version.IsEncrypted, EncryptAlgo: version.EncryptAlgo, EncryptHint: version.EncryptHint, SizeBytes: version.SizeBytes, ChecksumSha256: version.ChecksumSha256, StoragePath: version.StoragePath, CreatedAt: version.CreatedAt, Status: version.Status, EngineType: version.EngineType, StartupCommand: version.StartupCommand, EngineImage: version.EngineImage, RecommendedImageId: version.RecommendedImageId, RecommendedImageScope: version.RecommendedImageScope}
 }
 
 func wireImportTask(task *modelv1.ImportTask) *catalogv1.ImportTask {

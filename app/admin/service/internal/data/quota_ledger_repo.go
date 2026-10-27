@@ -546,120 +546,144 @@ func (r *QuotaLedgerRepo) CreateDeleteOperation(ctx context.Context, in *QuotaDe
 		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "incomplete delete input")
 	}
 	err = r.transaction(ctx, func(tx *ent.Tx) error {
-		databaseNow, clockErr := quotaDatabaseNow(ctx, tx)
-		if clockErr != nil {
-			return clockErr
-		}
-		ctx := appViewer.NewSystemViewerContext(ctx)
-		tid := in.TenantID
-		if _, e := lockQuotaTenant(ctx, tx, tid); e != nil {
-			return e
-		}
-		existing, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.ActorTypeEQ(in.ActorType), quotaoperation.ActorIDEQ(in.ActorID), quotaoperation.ActionEQ(in.Action), quotaoperation.IdempotencyKeyEQ(in.IdempotencyKey)).Only(ctx)
-		replay := e == nil
-		if replay && (existing.RequestHash != in.RequestHash || existing.OwnerService != in.OwnerService || existing.ResourceID != in.ResourceID) {
-			return quotapb.ErrorIdempotencyConflict("%s", "delete idempotency mismatch")
-		}
-		if e != nil && !ent.IsNotFound(e) {
-			return e
-		}
-		original, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OwnerServiceEQ(in.OwnerService), quotaoperation.ResourceIDEQ(in.ResourceID), quotaoperation.CreateOperationIDIsNil()).Only(ctx)
-		if ent.IsNotFound(e) {
-			return quotapb.ErrorQuotaNotFound("%s", "resource not found")
-		}
-		if e != nil {
-			return e
-		}
-		if commandcontract.ManagedOwner(in.OwnerService) && !commandcontract.PairedActions(in.OwnerService, original.Action, in.Action) {
-			return quotapb.ErrorInvalidQuotaRequest("%s", "delete action does not match original resource kind")
-		}
-		original, e = tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OperationIDEQ(original.OperationID)).ForUpdate().Only(ctx)
-		if e != nil {
-			return e
-		}
-		charges, e := tx.QuotaCharge.Query().Where(quotacharge.TenantIDEQ(tid), quotacharge.OperationIDEQ(original.OperationID)).Order(ent.Asc(quotacharge.FieldQuotaCode), ent.Asc(quotacharge.FieldChargeID)).ForUpdate().All(ctx)
-		if e != nil {
-			return e
-		}
-		if e = validateOperationCharges(original, charges); e != nil {
-			return e
-		}
-		gpu := false
-		for _, charge := range charges {
-			gpu = gpu || isGPUCode(charge.QuotaCode)
-		}
-		if replay {
-			if e = validateOperationCharges(existing, charges); e != nil {
-				return e
-			}
-			if commandcontract.ManagedOwner(in.OwnerService) {
-				if _, e = commandcontract.DeleteSnapshot(in.OwnerService, original.CanonicalRequest, in.CanonicalRequest); e != nil {
-					return e
-				}
-			}
-			if existing.CreateOperationID == nil || *existing.CreateOperationID != original.OperationID {
-				return quotapb.ErrorIdempotencyConflict("%s", "delete origin mismatch")
-			}
-			if gpu {
-				accepted, e := tx.GpuDeleteAcceptance.Query().Where(gpudeleteacceptance.TenantIDEQ(tid), gpudeleteacceptance.DeleteOperationIDEQ(existing.OperationID)).Only(ctx)
-				if e != nil {
-					return e
-				}
-				if accepted.CreateOperationID != original.OperationID || accepted.RequestHash != in.RequestHash {
-					return quotapb.ErrorIdempotencyConflict("%s", "GPU delete acceptance mismatch")
-				}
-			}
-			out = deleteResult(existing, charges, true)
-			return nil
-		}
-		if in.Action == commandcontract.VMDeleteAction {
-			active, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OwnerServiceEQ(in.OwnerService), quotaoperation.ActionEQ(commandcontract.VMDeleteAction), quotaoperation.ResourceIDEQ(in.ResourceID), quotaoperation.CreateOperationIDEQ(original.OperationID), quotaoperation.DispatchStateNEQ(quotaoperation.DispatchStateRejected)).Exist(ctx)
-			if e != nil {
-				return e
-			}
-			if active {
-				return kratosErrors.Conflict("VM_OPERATION_CONFLICT", "VM final deletion already accepted")
-			}
-		}
-		local := original.DispatchState == "CANCELED_UNSENT" || (original.DispatchState == "QUEUED" && original.AttemptCount == 0)
-		if local {
-			if e = cancelLocked(ctx, tx, original, charges); e != nil {
-				return e
-			}
-		}
-		state := "QUEUED"
-		if local {
-			state = "CANCELED_UNSENT"
-		}
-		// Preserve the original request/plan/charges. The fixed instance owner
-		// additionally freezes the validated deletion version for durable dispatch.
-		canonical := original.CanonicalRequest
-		if commandcontract.ManagedOwner(in.OwnerService) {
-			canonical, e = commandcontract.DeleteSnapshot(in.OwnerService, original.CanonicalRequest, in.CanonicalRequest)
-			if e != nil {
-				return e
-			}
-		}
-		op, e := tx.QuotaOperation.Create().SetInstanceContractVersion(original.InstanceContractVersion).SetCreatedAt(databaseNow).SetUpdatedAt(databaseNow).SetOperationID(generateUUID()).SetTenantID(tid).SetResourceTenantID(original.ResourceTenantID).SetResourceID(original.ResourceID).SetNillableCreateOperationID(&original.OperationID).SetActorType(in.ActorType).SetActorID(in.ActorID).SetOwnerService(in.OwnerService).SetAction(in.Action).SetIdempotencyKey(in.IdempotencyKey).SetRequestHash(in.RequestHash).SetCanonicalRequest(canonical).SetDispatchState(quotaoperation.DispatchState(state)).Save(ctx)
-		if e != nil {
-			return e
-		}
-		if e = validateOperationCharges(op, charges); e != nil {
-			return e
-		}
-		if gpu {
-			result := "OWNER_DELETE"
-			if local {
-				result = "LOCAL_CANCELED"
-			}
-			if e = tx.GpuDeleteAcceptance.Create().SetCreatedAt(databaseNow).SetTenantID(tid).SetActorType(in.ActorType).SetActorID(in.ActorID).SetAction(in.Action).SetIdempotencyKey(in.IdempotencyKey).SetRequestHash(in.RequestHash).SetCreateOperationID(original.OperationID).SetDeleteOperationID(op.OperationID).SetResult(result).Exec(ctx); e != nil {
-				return e
-			}
-		}
-		out = deleteResult(op, charges, false)
-		return nil
+		return createDeleteOperationTx(ctx, tx, in, &out)
 	})
 	return out, err
+}
+
+func createDeleteOperationTx(ctx context.Context, tx *ent.Tx, in *QuotaDeleteInput, out **QuotaDeleteResult) error {
+	databaseNow, clockErr := quotaDatabaseNow(ctx, tx)
+	if clockErr != nil {
+		return clockErr
+	}
+	ctx = appViewer.NewSystemViewerContext(ctx)
+	tid := in.TenantID
+	if _, e := lockQuotaTenant(ctx, tx, tid); e != nil {
+		return e
+	}
+	existing, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.ActorTypeEQ(in.ActorType), quotaoperation.ActorIDEQ(in.ActorID), quotaoperation.ActionEQ(in.Action), quotaoperation.IdempotencyKeyEQ(in.IdempotencyKey)).Only(ctx)
+	replay := e == nil
+	if replay && (existing.RequestHash != in.RequestHash || existing.OwnerService != in.OwnerService || existing.ResourceID != in.ResourceID) {
+		return quotapb.ErrorIdempotencyConflict("%s", "delete idempotency mismatch")
+	}
+	if e != nil && !ent.IsNotFound(e) {
+		return e
+	}
+	original, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OwnerServiceEQ(in.OwnerService), quotaoperation.ResourceIDEQ(in.ResourceID), quotaoperation.CreateOperationIDIsNil()).Only(ctx)
+	if ent.IsNotFound(e) {
+		return quotapb.ErrorQuotaNotFound("%s", "resource not found")
+	}
+	if e != nil {
+		return e
+	}
+	if commandcontract.ManagedOwner(in.OwnerService) && !commandcontract.PairedActions(in.OwnerService, original.Action, in.Action) {
+		return quotapb.ErrorInvalidQuotaRequest("%s", "delete action does not match original resource kind")
+	}
+	original, e = tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OperationIDEQ(original.OperationID)).ForUpdate().Only(ctx)
+	if e != nil {
+		return e
+	}
+	charges, e := tx.QuotaCharge.Query().Where(quotacharge.TenantIDEQ(tid), quotacharge.OperationIDEQ(original.OperationID)).Order(ent.Asc(quotacharge.FieldQuotaCode), ent.Asc(quotacharge.FieldChargeID)).ForUpdate().All(ctx)
+	if e != nil {
+		return e
+	}
+	if e = validateOperationCharges(original, charges); e != nil {
+		return e
+	}
+	// Re-check the automatic close under the tenant lock. The user-facing
+	// service may have read CREATE before the rejection transaction committed.
+	if original.OwnerService == commandcontract.InferenceOwner && original.DispatchState == quotaoperation.DispatchStateRejected && original.AckJSON != nil {
+		var rejection InferenceImageRejection
+		if json.Unmarshal([]byte(*original.AckJSON), &rejection) != nil || rejection.CloseOperationID == "" {
+			return commandcontract.Invalid("invalid persisted inference rejection")
+		}
+		if _, e = commandcontract.DeleteSnapshot(in.OwnerService, original.CanonicalRequest, in.CanonicalRequest); e != nil {
+			return e
+		}
+		close, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OperationIDEQ(rejection.CloseOperationID), quotaoperation.CreateOperationIDEQ(original.OperationID), quotaoperation.OwnerServiceEQ(original.OwnerService), quotaoperation.ResourceIDEQ(original.ResourceID), quotaoperation.ActionEQ(commandcontract.InferenceDeleteAction)).Only(ctx)
+		if e != nil {
+			return e
+		}
+		if e = validateOperationCharges(close, charges); e != nil {
+			return e
+		}
+		*out = deleteResult(close, charges, true)
+		return nil
+	}
+	gpu := false
+	for _, charge := range charges {
+		gpu = gpu || isGPUCode(charge.QuotaCode)
+	}
+	if replay {
+		if e = validateOperationCharges(existing, charges); e != nil {
+			return e
+		}
+		if commandcontract.ManagedOwner(in.OwnerService) {
+			if _, e = commandcontract.DeleteSnapshot(in.OwnerService, original.CanonicalRequest, in.CanonicalRequest); e != nil {
+				return e
+			}
+		}
+		if existing.CreateOperationID == nil || *existing.CreateOperationID != original.OperationID {
+			return quotapb.ErrorIdempotencyConflict("%s", "delete origin mismatch")
+		}
+		if gpu {
+			accepted, e := tx.GpuDeleteAcceptance.Query().Where(gpudeleteacceptance.TenantIDEQ(tid), gpudeleteacceptance.DeleteOperationIDEQ(existing.OperationID)).Only(ctx)
+			if e != nil {
+				return e
+			}
+			if accepted.CreateOperationID != original.OperationID || accepted.RequestHash != in.RequestHash {
+				return quotapb.ErrorIdempotencyConflict("%s", "GPU delete acceptance mismatch")
+			}
+		}
+		*out = deleteResult(existing, charges, true)
+		return nil
+	}
+	if in.Action == commandcontract.VMDeleteAction {
+		active, e := tx.QuotaOperation.Query().Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OwnerServiceEQ(in.OwnerService), quotaoperation.ActionEQ(commandcontract.VMDeleteAction), quotaoperation.ResourceIDEQ(in.ResourceID), quotaoperation.CreateOperationIDEQ(original.OperationID), quotaoperation.DispatchStateNEQ(quotaoperation.DispatchStateRejected)).Exist(ctx)
+		if e != nil {
+			return e
+		}
+		if active {
+			return kratosErrors.Conflict("VM_OPERATION_CONFLICT", "VM final deletion already accepted")
+		}
+	}
+	local := original.DispatchState == "CANCELED_UNSENT" || (original.DispatchState == "QUEUED" && original.AttemptCount == 0)
+	if local {
+		if e = cancelLocked(ctx, tx, original, charges); e != nil {
+			return e
+		}
+	}
+	state := "QUEUED"
+	if local {
+		state = "CANCELED_UNSENT"
+	}
+	// Preserve the original request/plan/charges. The fixed instance owner
+	// additionally freezes the validated deletion version for durable dispatch.
+	canonical := original.CanonicalRequest
+	if commandcontract.ManagedOwner(in.OwnerService) {
+		canonical, e = commandcontract.DeleteSnapshot(in.OwnerService, original.CanonicalRequest, in.CanonicalRequest)
+		if e != nil {
+			return e
+		}
+	}
+	op, e := tx.QuotaOperation.Create().SetInstanceContractVersion(original.InstanceContractVersion).SetCreatedAt(databaseNow).SetUpdatedAt(databaseNow).SetOperationID(generateUUID()).SetTenantID(tid).SetResourceTenantID(original.ResourceTenantID).SetResourceID(original.ResourceID).SetNillableCreateOperationID(&original.OperationID).SetActorType(in.ActorType).SetActorID(in.ActorID).SetOwnerService(in.OwnerService).SetAction(in.Action).SetIdempotencyKey(in.IdempotencyKey).SetRequestHash(in.RequestHash).SetCanonicalRequest(canonical).SetDispatchState(quotaoperation.DispatchState(state)).Save(ctx)
+	if e != nil {
+		return e
+	}
+	if e = validateOperationCharges(op, charges); e != nil {
+		return e
+	}
+	if gpu {
+		result := "OWNER_DELETE"
+		if local {
+			result = "LOCAL_CANCELED"
+		}
+		if e = tx.GpuDeleteAcceptance.Create().SetCreatedAt(databaseNow).SetTenantID(tid).SetActorType(in.ActorType).SetActorID(in.ActorID).SetAction(in.Action).SetIdempotencyKey(in.IdempotencyKey).SetRequestHash(in.RequestHash).SetCreateOperationID(original.OperationID).SetDeleteOperationID(op.OperationID).SetResult(result).Exec(ctx); e != nil {
+			return e
+		}
+	}
+	*out = deleteResult(op, charges, false)
+	return nil
 }
 
 func instanceDeleteSnapshot(original, requested string) (string, error) {

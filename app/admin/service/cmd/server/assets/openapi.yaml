@@ -12652,6 +12652,10 @@ components:
                 preset_id:
                     type: string
                     description: Required for new managed creates. Legacy resource fields remain rejected.
+                image_id:
+                    type: string
+                image_scope:
+                    type: string
             description: |-
                 Public user intent. Trusted attachments, charges, identity and destination
                  are assembled by Governance and have no representation in this DTO.
@@ -12848,6 +12852,10 @@ components:
                 startup_command:
                     type: string
                 engine_image:
+                    type: string
+                recommended_image_id:
+                    type: string
+                recommended_image_scope:
                     type: string
         CreateModelVersionResponse:
             type: object
@@ -14794,6 +14802,10 @@ components:
                     type: string
                 startup_command:
                     type: string
+                recommended_image_id:
+                    type: string
+                recommended_image_scope:
+                    type: string
         ImportModelRequest:
             type: object
             properties:
@@ -14964,6 +14976,18 @@ components:
                 memory_mib:
                     type: string
                 selection_digest:
+                    type: string
+                image_id:
+                    type: string
+                image_scope:
+                    type: string
+                create_operation_id:
+                    type: string
+                create_error_code:
+                    type: string
+                create_error_message:
+                    type: string
+                close_operation_id:
                     type: string
         InfoEntry:
             type: object
@@ -17165,6 +17189,10 @@ components:
                 startup_command:
                     type: string
                 engine_image:
+                    type: string
+                recommended_image_id:
+                    type: string
+                recommended_image_scope:
                     type: string
         MountablePVC:
             type: object
@@ -20398,6 +20426,10 @@ components:
                     type: integer
                     format: int32
                 preset_id:
+                    type: string
+                image_id:
+                    type: string
+                image_scope:
                     type: string
         UpdateInstanceSchedulingSettingsRequest:
             type: object

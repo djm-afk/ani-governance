@@ -62,10 +62,25 @@ func (s *GpuAcceptance) inferenceOperation(ctx context.Context, id string) (*ent
 }
 func acceptedInferenceView(op *ent.QuotaOperation, c *commandcontract.InferenceCanonical) *view.InferenceView {
 	out := &view.InferenceView{Id: op.ResourceID, Phase: string(op.DispatchState)}
+	out.CreateOperationId = op.OperationID
+	if op.DispatchState == "REJECTED" {
+		if saved, ok := inferenceRejectedClose(op.AckJSON); ok {
+			out.CreateErrorCode = saved.Reason
+			out.CreateErrorMessage = saved.Message
+			out.CloseOperationId = saved.CloseOperationID
+		}
+	}
 	if business, e := contractv1.DecodeBusinessPayload(c.BusinessPayload); e == nil {
 		out.Name = business.Name
 		out.ModelVersionId = business.ModelVersionId
 		out.ServedModelName = business.ServedModelName
+		if business.Engine != nil {
+			out.ImageId = business.Engine.ImageId
+			out.ImageScope = business.Engine.ImageScope
+			out.EngineType = business.Engine.Type
+			out.Command = business.Engine.Command
+			out.EngineImage = business.Engine.Image
+		}
 	}
 	applyInferenceSource(out, c)
 	return out
@@ -91,6 +106,13 @@ func acceptedInferenceOperation(op *ent.QuotaOperation, refund string) *operatio
 	}
 	if op.LastErrorCode != nil {
 		out.ErrorCode = *op.LastErrorCode
+	}
+	if op.DispatchState == "REJECTED" {
+		if saved, ok := inferenceRejectedClose(op.AckJSON); ok {
+			out.ErrorMessage = saved.Message
+			out.CloseOperationId = saved.CloseOperationID
+			out.Step = "IMAGE_REJECTED_CLOSING"
+		}
 	}
 	if strings.EqualFold(string(op.DispatchState), "CANCELED_UNSENT") {
 		out.Step = "CANCELED_BEFORE_DISPATCH"

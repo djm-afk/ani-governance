@@ -47,6 +47,8 @@ type CreateInferenceRequest struct {
 	WorkerReplicas int32          `protobuf:"varint,14,opt,name=worker_replicas,proto3" json:"worker_replicas,omitempty"`
 	// Required for new managed creates. Legacy resource fields remain rejected.
 	PresetId      string `protobuf:"bytes,15,opt,name=preset_id,proto3" json:"preset_id,omitempty"`
+	ImageId       string `protobuf:"bytes,16,opt,name=image_id,proto3" json:"image_id,omitempty"`
+	ImageScope    string `protobuf:"bytes,17,opt,name=image_scope,proto3" json:"image_scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -178,6 +180,20 @@ func (x *CreateInferenceRequest) GetWorkerReplicas() int32 {
 func (x *CreateInferenceRequest) GetPresetId() string {
 	if x != nil {
 		return x.PresetId
+	}
+	return ""
+}
+
+func (x *CreateInferenceRequest) GetImageId() string {
+	if x != nil {
+		return x.ImageId
+	}
+	return ""
+}
+
+func (x *CreateInferenceRequest) GetImageScope() string {
+	if x != nil {
+		return x.ImageScope
 	}
 	return ""
 }
@@ -500,34 +516,40 @@ func (x *ListInferenceRequest) GetCapability() string {
 }
 
 type InferenceView struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	DesiredState      string                 `protobuf:"bytes,3,opt,name=desired_state,proto3" json:"desired_state,omitempty"`
-	Generation        int64                  `protobuf:"varint,4,opt,name=generation,proto3" json:"generation,omitempty"`
-	ModelVersionId    string                 `protobuf:"bytes,5,opt,name=model_version_id,proto3" json:"model_version_id,omitempty"`
-	ServedModelName   string                 `protobuf:"bytes,6,opt,name=served_model_name,proto3" json:"served_model_name,omitempty"`
-	Phase             string                 `protobuf:"bytes,7,opt,name=phase,proto3" json:"phase,omitempty"`
-	Health            string                 `protobuf:"bytes,8,opt,name=health,proto3" json:"health,omitempty"`
-	ObservedAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
-	EngineImage       string                 `protobuf:"bytes,10,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
-	EngineType        string                 `protobuf:"bytes,11,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
-	Command           string                 `protobuf:"bytes,12,opt,name=command,proto3" json:"command,omitempty"`
-	Cpu               string                 `protobuf:"bytes,13,opt,name=cpu,proto3" json:"cpu,omitempty"`
-	Memory            string                 `protobuf:"bytes,14,opt,name=memory,proto3" json:"memory,omitempty"`
-	Replicas          int32                  `protobuf:"varint,15,opt,name=replicas,proto3" json:"replicas,omitempty"`
-	RuntimeMode       v1.RuntimeMode         `protobuf:"varint,16,opt,name=runtime_mode,proto3,enum=inference.view.v1.RuntimeMode" json:"runtime_mode,omitempty"`
-	WorkerReplicas    int32                  `protobuf:"varint,17,opt,name=worker_replicas,proto3" json:"worker_replicas,omitempty"`
-	Gpu               *GpuSelection          `protobuf:"bytes,18,opt,name=gpu,proto3" json:"gpu,omitempty"`
-	PublicationPhase  string                 `protobuf:"bytes,19,opt,name=publication_phase,proto3" json:"publication_phase,omitempty"`
-	AppliedGeneration int64                  `protobuf:"varint,20,opt,name=applied_generation,proto3" json:"applied_generation,omitempty"`
-	PresetId          string                 `protobuf:"bytes,21,opt,name=preset_id,proto3" json:"preset_id,omitempty"`
-	PresetCode        string                 `protobuf:"bytes,22,opt,name=preset_code,proto3" json:"preset_code,omitempty"`
-	CpuMillis         int64                  `protobuf:"varint,23,opt,name=cpu_millis,proto3" json:"cpu_millis,omitempty"`
-	MemoryMib         int64                  `protobuf:"varint,24,opt,name=memory_mib,proto3" json:"memory_mib,omitempty"`
-	SelectionDigest   string                 `protobuf:"bytes,25,opt,name=selection_digest,proto3" json:"selection_digest,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	DesiredState       string                 `protobuf:"bytes,3,opt,name=desired_state,proto3" json:"desired_state,omitempty"`
+	Generation         int64                  `protobuf:"varint,4,opt,name=generation,proto3" json:"generation,omitempty"`
+	ModelVersionId     string                 `protobuf:"bytes,5,opt,name=model_version_id,proto3" json:"model_version_id,omitempty"`
+	ServedModelName    string                 `protobuf:"bytes,6,opt,name=served_model_name,proto3" json:"served_model_name,omitempty"`
+	Phase              string                 `protobuf:"bytes,7,opt,name=phase,proto3" json:"phase,omitempty"`
+	Health             string                 `protobuf:"bytes,8,opt,name=health,proto3" json:"health,omitempty"`
+	ObservedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
+	EngineImage        string                 `protobuf:"bytes,10,opt,name=engine_image,proto3" json:"engine_image,omitempty"`
+	EngineType         string                 `protobuf:"bytes,11,opt,name=engine_type,proto3" json:"engine_type,omitempty"`
+	Command            string                 `protobuf:"bytes,12,opt,name=command,proto3" json:"command,omitempty"`
+	Cpu                string                 `protobuf:"bytes,13,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	Memory             string                 `protobuf:"bytes,14,opt,name=memory,proto3" json:"memory,omitempty"`
+	Replicas           int32                  `protobuf:"varint,15,opt,name=replicas,proto3" json:"replicas,omitempty"`
+	RuntimeMode        v1.RuntimeMode         `protobuf:"varint,16,opt,name=runtime_mode,proto3,enum=inference.view.v1.RuntimeMode" json:"runtime_mode,omitempty"`
+	WorkerReplicas     int32                  `protobuf:"varint,17,opt,name=worker_replicas,proto3" json:"worker_replicas,omitempty"`
+	Gpu                *GpuSelection          `protobuf:"bytes,18,opt,name=gpu,proto3" json:"gpu,omitempty"`
+	PublicationPhase   string                 `protobuf:"bytes,19,opt,name=publication_phase,proto3" json:"publication_phase,omitempty"`
+	AppliedGeneration  int64                  `protobuf:"varint,20,opt,name=applied_generation,proto3" json:"applied_generation,omitempty"`
+	PresetId           string                 `protobuf:"bytes,21,opt,name=preset_id,proto3" json:"preset_id,omitempty"`
+	PresetCode         string                 `protobuf:"bytes,22,opt,name=preset_code,proto3" json:"preset_code,omitempty"`
+	CpuMillis          int64                  `protobuf:"varint,23,opt,name=cpu_millis,proto3" json:"cpu_millis,omitempty"`
+	MemoryMib          int64                  `protobuf:"varint,24,opt,name=memory_mib,proto3" json:"memory_mib,omitempty"`
+	SelectionDigest    string                 `protobuf:"bytes,25,opt,name=selection_digest,proto3" json:"selection_digest,omitempty"`
+	ImageId            string                 `protobuf:"bytes,26,opt,name=image_id,proto3" json:"image_id,omitempty"`
+	ImageScope         string                 `protobuf:"bytes,27,opt,name=image_scope,proto3" json:"image_scope,omitempty"`
+	CreateOperationId  string                 `protobuf:"bytes,28,opt,name=create_operation_id,proto3" json:"create_operation_id,omitempty"`
+	CreateErrorCode    string                 `protobuf:"bytes,29,opt,name=create_error_code,proto3" json:"create_error_code,omitempty"`
+	CreateErrorMessage string                 `protobuf:"bytes,30,opt,name=create_error_message,proto3" json:"create_error_message,omitempty"`
+	CloseOperationId   string                 `protobuf:"bytes,31,opt,name=close_operation_id,proto3" json:"close_operation_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *InferenceView) Reset() {
@@ -735,6 +757,48 @@ func (x *InferenceView) GetSelectionDigest() string {
 	return ""
 }
 
+func (x *InferenceView) GetImageId() string {
+	if x != nil {
+		return x.ImageId
+	}
+	return ""
+}
+
+func (x *InferenceView) GetImageScope() string {
+	if x != nil {
+		return x.ImageScope
+	}
+	return ""
+}
+
+func (x *InferenceView) GetCreateOperationId() string {
+	if x != nil {
+		return x.CreateOperationId
+	}
+	return ""
+}
+
+func (x *InferenceView) GetCreateErrorCode() string {
+	if x != nil {
+		return x.CreateErrorCode
+	}
+	return ""
+}
+
+func (x *InferenceView) GetCreateErrorMessage() string {
+	if x != nil {
+		return x.CreateErrorMessage
+	}
+	return ""
+}
+
+func (x *InferenceView) GetCloseOperationId() string {
+	if x != nil {
+		return x.CloseOperationId
+	}
+	return ""
+}
+
 type ListInferenceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*InferenceView       `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -853,6 +917,8 @@ type UpdateInferenceRequest struct {
 	RuntimeMode    v1.RuntimeMode `protobuf:"varint,15,opt,name=runtime_mode,proto3,enum=inference.view.v1.RuntimeMode" json:"runtime_mode,omitempty"`
 	WorkerReplicas int32          `protobuf:"varint,16,opt,name=worker_replicas,proto3" json:"worker_replicas,omitempty"`
 	PresetId       string         `protobuf:"bytes,17,opt,name=preset_id,proto3" json:"preset_id,omitempty"`
+	ImageId        string         `protobuf:"bytes,18,opt,name=image_id,proto3" json:"image_id,omitempty"`
+	ImageScope     string         `protobuf:"bytes,19,opt,name=image_scope,proto3" json:"image_scope,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -999,6 +1065,20 @@ func (x *UpdateInferenceRequest) GetWorkerReplicas() int32 {
 func (x *UpdateInferenceRequest) GetPresetId() string {
 	if x != nil {
 		return x.PresetId
+	}
+	return ""
+}
+
+func (x *UpdateInferenceRequest) GetImageId() string {
+	if x != nil {
+		return x.ImageId
+	}
+	return ""
+}
+
+func (x *UpdateInferenceRequest) GetImageScope() string {
+	if x != nil {
+		return x.ImageScope
 	}
 	return ""
 }
@@ -1179,7 +1259,7 @@ var File_inference_service_v1_owner_proto protoreflect.FileDescriptor
 
 const file_inference_service_v1_owner_proto_rawDesc = "" +
 	"\n" +
-	" inference/service/v1/owner.proto\x12\x14inference.service.v1\x1a\x1cinference/view/v1/view.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$gnostic/openapi/v3/annotations.proto\"\xbd\a\n" +
+	" inference/service/v1/owner.proto\x12\x14inference.service.v1\x1a\x1cinference/view/v1/view.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$gnostic/openapi/v3/annotations.proto\"\xfb\a\n" +
 	"\x16CreateInferenceRequest\x12(\n" +
 	"\x0fidempotency_key\x18\x02 \x01(\tR\x0fidempotency_key\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12*\n" +
@@ -1195,7 +1275,9 @@ const file_inference_service_v1_owner_proto_rawDesc = "" +
 	"\x03gpu\x18\f \x01(\v2\".inference.service.v1.GpuSelectionB\x02\x18\x01R\x03gpu\x12B\n" +
 	"\fruntime_mode\x18\r \x01(\x0e2\x1e.inference.view.v1.RuntimeModeR\fruntime_mode\x12(\n" +
 	"\x0fworker_replicas\x18\x0e \x01(\x05R\x0fworker_replicas\x12\x1c\n" +
-	"\tpreset_id\x18\x0f \x01(\tR\tpreset_id:\x8a\x03\xbaG\x86\x03:\x83\x03\x12\x80\x03{\"idempotency_key\":\"req-001\",\"name\":\"qwen-inference\",\"model_version_id\":\"version-1\",\"served_model_name\":\"qwen2.5-1.5b-instruct\",\"engine_image\":\"registry.example/vllm:latest\",\"engine_type\":\"vllm\",\"command\":\"exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096\",\"cpu\":\"8\",\"memory\":\"32Gi\",\"replicas\":1,\"preset_id\":\"40000000-0000-4000-8000-000000000001\"}J\x04\b\x01\x10\x02R\x04data\"\x92\x01\n" +
+	"\tpreset_id\x18\x0f \x01(\tR\tpreset_id\x12\x1a\n" +
+	"\bimage_id\x18\x10 \x01(\tR\bimage_id\x12 \n" +
+	"\vimage_scope\x18\x11 \x01(\tR\vimage_scope:\x8a\x03\xbaG\x86\x03:\x83\x03\x12\x80\x03{\"idempotency_key\":\"req-001\",\"name\":\"qwen-inference\",\"model_version_id\":\"version-1\",\"served_model_name\":\"qwen2.5-1.5b-instruct\",\"engine_image\":\"registry.example/vllm:latest\",\"engine_type\":\"vllm\",\"command\":\"exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096\",\"cpu\":\"8\",\"memory\":\"32Gi\",\"replicas\":1,\"preset_id\":\"40000000-0000-4000-8000-000000000001\"}J\x04\b\x01\x10\x02R\x04data\"\x92\x01\n" +
 	"\fGpuSelection\x12\x1e\n" +
 	"\n" +
 	"cluster_id\x18\x01 \x01(\tR\n" +
@@ -1226,7 +1308,7 @@ const file_inference_service_v1_owner_proto_rawDesc = "" +
 	"capabilityB\a\n" +
 	"\x05_pageB\f\n" +
 	"\n" +
-	"_page_size\"\x93\a\n" +
+	"_page_size\"\x95\t\n" +
 	"\rInferenceView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -1259,12 +1341,18 @@ const file_inference_service_v1_owner_proto_rawDesc = "" +
 	"\n" +
 	"memory_mib\x18\x18 \x01(\x03R\n" +
 	"memory_mib\x12*\n" +
-	"\x10selection_digest\x18\x19 \x01(\tR\x10selection_digest\"h\n" +
+	"\x10selection_digest\x18\x19 \x01(\tR\x10selection_digest\x12\x1a\n" +
+	"\bimage_id\x18\x1a \x01(\tR\bimage_id\x12 \n" +
+	"\vimage_scope\x18\x1b \x01(\tR\vimage_scope\x120\n" +
+	"\x13create_operation_id\x18\x1c \x01(\tR\x13create_operation_id\x12,\n" +
+	"\x11create_error_code\x18\x1d \x01(\tR\x11create_error_code\x122\n" +
+	"\x14create_error_message\x18\x1e \x01(\tR\x14create_error_message\x12.\n" +
+	"\x12close_operation_id\x18\x1f \x01(\tR\x12close_operation_id\"h\n" +
 	"\x15ListInferenceResponse\x129\n" +
 	"\x05items\x18\x01 \x03(\v2#.inference.service.v1.InferenceViewR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\"B\n" +
 	"\x1cGetInferenceOperationRequest\x12\"\n" +
-	"\foperation_id\x18\x01 \x01(\tR\foperation_id\"\xb2\x05\n" +
+	"\foperation_id\x18\x01 \x01(\tR\foperation_id\"\xf0\x05\n" +
 	"\x16UpdateInferenceRequest\x12(\n" +
 	"\x0fidempotency_key\x18\x02 \x01(\tR\x0fidempotency_key\x12 \n" +
 	"\vresource_id\x18\x03 \x01(\tR\vresource_id\x120\n" +
@@ -1282,7 +1370,9 @@ const file_inference_service_v1_owner_proto_rawDesc = "" +
 	"\x03gpu\x18\x0e \x01(\v2\".inference.service.v1.GpuSelectionB\x02\x18\x01R\x03gpu\x12B\n" +
 	"\fruntime_mode\x18\x0f \x01(\x0e2\x1e.inference.view.v1.RuntimeModeR\fruntime_mode\x12(\n" +
 	"\x0fworker_replicas\x18\x10 \x01(\x05R\x0fworker_replicas\x12\x1c\n" +
-	"\tpreset_id\x18\x11 \x01(\tR\tpreset_idJ\x04\b\x01\x10\x02R\x04data\"\xaa\x01\n" +
+	"\tpreset_id\x18\x11 \x01(\tR\tpreset_id\x12\x1a\n" +
+	"\bimage_id\x18\x12 \x01(\tR\bimage_id\x12 \n" +
+	"\vimage_scope\x18\x13 \x01(\tR\vimage_scopeJ\x04\b\x01\x10\x02R\x04data\"\xaa\x01\n" +
 	"\x1eInferenceServiceCommandRequest\x12(\n" +
 	"\x0fidempotency_key\x18\x02 \x01(\tR\x0fidempotency_key\x12 \n" +
 	"\vresource_id\x18\x03 \x01(\tR\vresource_id\x120\n" +
