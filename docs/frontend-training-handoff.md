@@ -6,7 +6,7 @@
 
 **本文件范围**：接口合同——任务创建（CPU / GPU）、列表、详情（含流水线步骤与训练曲线）、日志快照与日志流、容器组、事件、产物、停止、恢复模型登记，覆盖普通训练与微调两条链路。**只描述接口的请求/响应/错误语义，不含页面布局与交互设计建议。**
 
-**当前唯一不可用**：产物真实下载（签名 URL 集群外不可达，见第 13 节）。其余全部可联调。
+**全部接口均可联调**：产物真实下载已于 2026-10-27 打通，用 `GET /api/v1/modeldev/artifacts/{id}/download`（见 13.1）。
 
 ## 1. 当前闭环与前端可观察点
 
@@ -71,6 +71,7 @@
 | `/api/v1/modeldev/executions/{id}/logs/stream` | GET | `modeldev:execution:logs` |
 | `/api/v1/modeldev/executions/{id}/artifacts` | GET | `modeldev:artifact:list` |
 | `/api/v1/modeldev/artifacts/{id}/content` | GET | `modeldev:artifact:download` |
+| `/api/v1/modeldev/artifacts/{id}/download` | GET | `modeldev:artifact:download` |
 | `/api/v1/modeldev/executions/{id}:stop` | POST | `modeldev:execution:stop` |
 | `/api/v1/modeldev/executions/{id}:resume-model-registration` | POST | `modeldev:manage_execution` + `modeldev:execution:get` + Model 权限（见下） |
 
@@ -1083,6 +1084,17 @@ GET /api/v1/modeldev/artifacts/{artifact_id}/download
 - 该接口**不做断点续传**（不支持 `Range`）：中断后需要整份重下。
 - 服务端不缓存，每次请求都会重新换取一次签名 URL。
 
+现网实测（2026-10-27，`tenant-a` / `admin`）：
+
+| 产物 | 大小 | 结果 |
+| --- | --- | --- |
+| `adapter_config.json` | 855 B | `200`，sha256 `253110ce…b97b55` 一致 |
+| `tokenizer.json` | 11 MB | `200`，sha256 `9c5ae00e…7fdafa` 一致 |
+| `adapter_model.safetensors` | 8.8 MB | `200`，sha256 `23ec9161…c5c9e6` 一致 |
+| `model.safetensors` | 1.98 GB | `200`，耗时 9.8 s，sha256 `0f368830…a3b80e` 一致 |
+
+负例：无 token `401`、非 UUID `400`、带 query `400`、不存在的产物 `404`。
+
 ## 14. 恢复模型登记（仅微调）
 
 ```
@@ -1146,7 +1158,8 @@ POST :stop → 202
 | `GET .../{id}/logs` | **200** | 一次性快照。无日志来源返回 `412 ARTIFACT_NOT_PUBLISHED`（见第 11 节） |
 | `GET .../{id}/logs/stream` | **200** | SSE；`: ready` → `event: log` → `event: end`。无日志来源返回 `412 LOG_UNAVAILABLE`（见 11.1） |
 | `GET .../{id}/artifacts` | **200** | 有产出的历史执行可正常列出（微调执行 `total=18`，`filename` 为嵌套相对路径） |
-| `GET /api/v1/modeldev/artifacts/{id}/content` | **200** | 但 URL 是集群内地址 + 60 秒签名，集群外不可达（见第 13 节） |
+| `GET /api/v1/modeldev/artifacts/{id}/content` | **200** | 返回 `download_url`；该 URL 是集群内地址 + 60 秒签名，集群外不可达，只能由后端使用（见第 13 节） |
+| `GET /api/v1/modeldev/artifacts/{id}/download` | **200** | 二进制流，BFF 转发；855 B / 11 MB / 8.8 MB / 1.98 GB 四档 sha256 全一致（见 13.1） |
 | `GET .../{id}/pods` | **200** | 容器组，含 `layer` / `availability`（见 9.1） |
 | `GET .../{id}/events` | **200** | Kubernetes 事件，保留窗口 `1h`（见 9.2）；`scope` 非法值 400 |
 | `POST ...:stop` | **202** | 正常，重复调用 `replayed=true`、`intent_generation` 不变 |
@@ -1176,9 +1189,7 @@ POST :stop → 202
 
 细节、样本 id 与复现方式见工作区的《流水线进度与训练曲线验证计划》（未随仓库发布）。
 
-剩余唯一阻断：
-
-**产物下载 URL 集群外不可达**：签名 URL 指向 `ani-rustfs-svc.ani-platform.svc.cluster.local:9000`（自签证书、有效期 60 秒），集群外无法解析与信任。需后端提供对外出口或改签外层域名；换 URL 这一步接口本身可用。
+前端联调已无阻塞项。此前的唯一阻断（产物下载）已于 2026-10-27 解除：产物下载不再依赖集群内域名，改用 `GET /api/v1/modeldev/artifacts/{id}/download`，由 BFF 转发字节，前端只需同一条 `Authorization` 头。实测 1.98 GB 合并权重 9.8 秒拉完，sha256 与产物记录一致。原 `/content` 仍返回集群内签名 URL，仅供后端排障，前端不要再用。
 
 > 2026-10-26 已修复的三个问题（保留记录，便于排查历史现象）：
 > 1. 执行列表 / 详情 / 日志曾全 **503**：Governance 依赖的 ModelDev 合同版本落后（`0814ae3`），新版 ModelDev 在 `ExecutionView` 增加 `steps` 字段后，严格未知字段校验 fail-closed。已升级依赖至 `687aa2f`。
@@ -1339,6 +1350,15 @@ curl -s -H "Authorization: Bearer $TOK" "$B/api/v1/modeldev/artifacts/0377b660-d
 ```
 
 第二条返回的 `download_url` 是集群内地址 + 60 秒签名，集群外不可达，见第 13 节。
+
+下载真实字节用第三条（`-OJ` 按 `Content-Disposition` 存盘）：
+
+```bash
+curl -OJ -H "Authorization: Bearer $TOK" \
+  "$B/api/v1/modeldev/artifacts/0349dde2-decb-5de6-ae11-a670e538a39f/download"
+```
+
+期望 `200` + 二进制 body；`adapter_config.json` 应为 855 B，sha256 `253110ce…b97b55`。见 13.1。
 
 ### 18.6 停止（202）
 
