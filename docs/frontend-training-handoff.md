@@ -8,6 +8,8 @@
 
 **当前唯一不可用**：产物真实下载（签名 URL 集群外不可达，见第 13 节）。其余全部可联调。
 
+**详情页四类诊断能力（容器组 / 日志 / 事件 / 资源曲线）的完整参数、字段与错误语义见 [frontend-training-detail-diagnostics.md](frontend-training-detail-diagnostics.md)**，本文对应章节只保留摘要。
+
 ## 1. 当前闭环与前端可观察点
 
 ```
@@ -640,7 +642,7 @@ GET /api/v1/modeldev/executions/{execution_id}
 GET /api/v1/modeldev/executions/{execution_id}/pods
 ```
 
-无 query 参数。
+可选参数 `layer`（`all` 默认 / `trainer` / `pipeline`）与 `includeRecycled`（`true` / `false`，默认 `false`）。**默认不返回已回收的容器组**；要在列表里看到它们必须显式传 `true`。
 
 ```json
 {
@@ -655,15 +657,23 @@ GET /api/v1/modeldev/executions/{execution_id}/pods
       "restarts": 0,
       "created_at": "2026-10-23T09:55:20Z",
       "start_time": "2026-10-23T09:55:22Z",
-      "deletion_timestamp": null,
       "layer": "PIPELINE",
-      "availability": "ORPHANED"
+      "availability": "ORPHANED",
+      "log_id": "…",
+      "log_available": true,
+      "containers": [{"name": "main", "type": "container", "state": "terminated", "exit_code": 0}],
+      "init_containers": [],
+      "ephemeral_containers": [],
+      "api_present": true,
+      "metric_instance_id": "…"
     }
   ],
   "observed_at": "2026-10-27T04:25:00Z",
   "availability": "LIVE"
 }
 ```
+
+未赋值的字段会被省略（不是 `null`）：Pod 还在运行时没有 `exit_code`，`deletion_timestamp` 为空时不出现。
 
 | 字段 | 说明 |
 | --- | --- |
@@ -871,7 +881,8 @@ GET /api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=163
 > 响应是一次性快照，不含增量或订阅语义。
 
 - 只接受 `tail_lines`（1–1000）与 `max_bytes`（1–65536）。不传时服务端默认 200 行 / 16384 字节。
-- **不接受 Pod、namespace、container 等选择器**。
+- 可选 `podUid`（规范 UUID）、`container`（小写容器名）、`previous`（`true` 读上一次终止实例）、`logId`（取自容器组的 `log_id`）。**`podUid` 与 `container` 必须同时传或同时不传**；只传 `container` 返回 `412`。不传任何选择器时走兼容路径：返回该执行训练 worker 的默认日志（`node` 容器）并优先使用归档 tail。
+- 不接受 pod **名字**、namespace 等选择器；选 Pod 一律用 `podUid`。
 - 响应：
 
 ```json
@@ -894,7 +905,7 @@ GET /api/v1/modeldev/executions/{execution_id}/logs?tail_lines=200&max_bytes=163
 GET /api/v1/modeldev/executions/{execution_id}/logs/stream
 ```
 
-`Content-Type: text/event-stream`（SSE），无 query 参数。
+`Content-Type: text/event-stream`（SSE）。可选参数 `podUid`、`container`、`previous`、`sinceBytes`（续传偏移，规范十进制，上限 `2^30`）。服务端每连接最多保留 10 分钟，到期以 `event: end` + `reason: TIME_LIMIT` 正常收口，前端用最后的 `offset` 续传。
 
 数据帧格式：
 
