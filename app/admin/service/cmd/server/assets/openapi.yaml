@@ -9067,6 +9067,11 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: format
+                  in: query
+                  schema:
+                    type: string
+                  description: 只接受 CSV / JSON；其它值返回 400。筛选在分页前生效，total 为筛选后条数。
                 - name: page
                   in: query
                   schema:
@@ -14675,6 +14680,20 @@ components:
                     type: string
                 reporting_instance:
                     type: string
+        ExecutionBaseModelView:
+            type: object
+            properties:
+                model_id:
+                    type: string
+                version_id:
+                    type: string
+                family:
+                    type: string
+                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
+                format:
+                    type: string
+                    description: 权重格式，如 safetensors。
+            description: 微调所用的基座模型身份。不含对象键、存储位置与文件清单，不能据此拼下载地址。
         ExecutionFailureView:
             type: object
             properties:
@@ -15039,6 +15058,10 @@ components:
                     allOf:
                         - $ref: '#/components/schemas/ExecutionManagedSettingsView'
                     description: 服务端托管的训练超参。前端只读展示，创建时不能提交这些字段。
+                base_model:
+                    allOf:
+                        - $ref: '#/components/schemas/ExecutionBaseModelView'
+                    description: 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；普通训练为 null。
         Expression:
             type: object
             properties:

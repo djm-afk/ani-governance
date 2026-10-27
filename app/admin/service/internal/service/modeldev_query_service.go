@@ -310,6 +310,11 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	if managed := execution.ManagedSettings; managed != nil {
 		out.ManagedSettings = modelDevPublicManagedSettings(managed)
 	}
+	if base := execution.BaseModel; base != nil {
+		out.BaseModel = &modeldevv1.ExecutionBaseModelView{
+			ModelId: base.ModelId, VersionId: base.VersionId, Family: base.Family, Format: base.Format,
+		}
+	}
 	if h := execution.History; h != nil {
 		out.History = &modeldevv1.ExecutionHistoryView{RunId: h.RunId, WorkflowUid: h.WorkflowUid, ObservedAt: h.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano), WorkflowResourceVersion: h.WorkflowResourceVersion, WorkflowNodesSha256: h.WorkflowNodesSha256}
 		if h.RunState != 0 {

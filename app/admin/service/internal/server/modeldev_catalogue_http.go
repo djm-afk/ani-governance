@@ -33,11 +33,11 @@ func registerModelDevCatalogueHTTP(server *khttp.Server, modeldev *service.Model
 	route.GET(data.ModelDevListInputVersionsPath, func(ctx khttp.Context) error {
 		modelDevQueryHeaders(ctx)
 		khttp.SetOperation(ctx, adminv1.OperationModelDevServiceListInputVersions)
-		selectors, err := modelDevCatalogueSelectors(ctx.Request(), map[string]bool{"state": true})
+		selectors, err := modelDevCatalogueSelectors(ctx.Request(), map[string]bool{"state": true, "format": true})
 		if err != nil {
 			return err
 		}
-		in := &modeldevv1.ListInputVersionsRequest{Page: selectors.page, PageSize: selectors.pageSize, State: selectors.state}
+		in := &modeldevv1.ListInputVersionsRequest{Page: selectors.page, PageSize: selectors.pageSize, State: selectors.state, Format: selectors.format}
 		handler := ctx.Middleware(func(c context.Context, v interface{}) (interface{}, error) {
 			return modeldev.ListInputVersions(c, v.(*modeldevv1.ListInputVersionsRequest))
 		})
@@ -105,6 +105,17 @@ func modelDevCatalogueSelectors(request *http.Request, allowed map[string]bool) 
 			default:
 				return selector, invalidModelDevQueryHTTP()
 			}
+		case "format":
+			if !allowed["format"] {
+				return selector, invalidModelDevQueryHTTP()
+			}
+			value := values[0]
+			switch value {
+			case "CSV", "JSON":
+				selector.format = &value
+			default:
+				return selector, invalidModelDevQueryHTTP()
+			}
 		default:
 			return selector, invalidModelDevQueryHTTP()
 		}
@@ -122,4 +133,5 @@ type modelDevCatalogueSelector struct {
 	pageSize *uint32
 	state    *string
 	kind     *string
+	format   *string
 }

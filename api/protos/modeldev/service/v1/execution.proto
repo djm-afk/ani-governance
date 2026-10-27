@@ -107,6 +107,10 @@ message ListInputVersionsRequest {
   optional string state = 3;
   optional uint32 page = 4 [json_name = "page"];
   optional uint32 page_size = 5 [json_name = "pageSize"];
+  // 按已校验的数据集格式筛选，在分页前生效，total 为筛选后条数。
+  // 兼容性由格式唯一决定：CSV 只能用于普通训练，JSON 只能用于微调。
+  // 只接受 CSV / JSON，其它值返回 400（不会静默返回空页）。
+  optional string format = 6;
 }
 message ListInputVersionsResponse {
   repeated InputVersionView items = 1;
@@ -382,6 +386,18 @@ message ExecutionView {
   ExecutionFailureView failure = 31;
   // 服务端托管的训练超参。前端只读展示，创建时不能提交这些字段。
   ExecutionManagedSettingsView managed_settings = 32 [json_name = "managed_settings"];
+  // 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；
+  // 普通训练为 null。
+  ExecutionBaseModelView base_model = 33 [json_name = "base_model"];
+}
+// 基座模型的公开身份。不包含存放位置，前端不能据此拼接下载地址。
+message ExecutionBaseModelView {
+  string model_id = 1 [json_name = "model_id"];
+  string version_id = 2 [json_name = "version_id"];
+  // 模型族名，如 Qwen2.5-0.5B-Instruct。
+  string family = 3;
+  // 权重格式，如 safetensors。
+  string format = 4;
 }
 // 历史失败诊断。safe_message 已剔除凭据与存储密钥，可直接展示。
 message ExecutionFailureView {

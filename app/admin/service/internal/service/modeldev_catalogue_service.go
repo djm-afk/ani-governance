@@ -130,7 +130,14 @@ func (s *ModelDevService) ListInputVersions(ctx context.Context, in *modeldevv1.
 		parsed := modeldevcontractv1.InputState(value)
 		state = &parsed
 	}
-	out, err := s.resolver.ListInputVersions(ctx, scope, page, pageSize, state)
+	// Only the formats the owner verifies are accepted. Rejecting an unknown
+	// value keeps it from becoming an empty page that looks like an empty
+	// tenant.
+	format, ok := modelDevInputFormat(in.Format)
+	if !ok {
+		return nil, modelDevQueryInvalid()
+	}
+	out, err := s.resolver.ListInputVersions(ctx, scope, page, pageSize, state, format)
 	if err != nil {
 		return nil, modelDevQueryFailure(err)
 	}
@@ -139,6 +146,22 @@ func (s *ModelDevService) ListInputVersions(ctx context.Context, in *modeldevv1.
 		reply.Items = append(reply.Items, modelDevPublicInput(input))
 	}
 	return reply, nil
+}
+
+// modelDevInputFormat keeps only the two formats the owner verifies. The
+// boolean is false for any other value, so the caller can reject instead of
+// forwarding a filter the upstream would answer with an empty page.
+func modelDevInputFormat(in *string) (*string, bool) {
+	if in == nil {
+		return nil, true
+	}
+	switch *in {
+	case "CSV", "JSON":
+		value := *in
+		return &value, true
+	default:
+		return nil, false
+	}
 }
 
 func modelDevPublicInput(in *modeldevcontractv1.InputVersionView) *modeldevv1.InputVersionView {

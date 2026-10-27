@@ -63,13 +63,13 @@ func (c *ModelDevClient) GetInputVersion(ctx context.Context, scope ModelDevReso
 	return out, nil
 }
 
-func (c *ModelDevClient) ListInputVersions(ctx context.Context, scope ModelDevResolveScope, page, pageSize uint32, state *modeldevv1.InputState) (*modeldevv1.ListInputVersionsResponse, error) {
+func (c *ModelDevClient) ListInputVersions(ctx context.Context, scope ModelDevResolveScope, page, pageSize uint32, state *modeldevv1.InputState, format *string) (*modeldevv1.ListInputVersionsResponse, error) {
 	call, cancel, err := c.queryContext(ctx, scope, modeldevv1.ModelDevQueryService_ListInputVersions_FullMethodName)
 	if err != nil {
 		return nil, err
 	}
 	defer cancel()
-	out, err := modeldevv1.NewModelDevQueryServiceClient(c.connection).ListInputVersions(call, &modeldevv1.ListInputVersionsRequest{Page: &modeldevv1.PageRequest{Page: &page, PageSize: &pageSize}, State: state}, grpc.WaitForReady(true))
+	out, err := modeldevv1.NewModelDevQueryServiceClient(c.connection).ListInputVersions(call, &modeldevv1.ListInputVersionsRequest{Page: &modeldevv1.PageRequest{Page: &page, PageSize: &pageSize}, State: state, Format: format}, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, modelDevQueryError(err)
 	}
