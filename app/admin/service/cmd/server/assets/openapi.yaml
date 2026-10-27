@@ -8772,6 +8772,11 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: name
+                  in: query
+                  description: 按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK

@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/go-kratos/kratos/v2/errors"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
@@ -40,6 +42,8 @@ func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevS
 				in.DeliveryState, err = modelDevStatePointer(values[0])
 			case "close_state":
 				in.CloseState, err = modelDevStatePointer(values[0])
+			case "name":
+				in.Name, err = modelDevNamePointer(values[0])
 			default:
 				return invalidModelDevQueryHTTP()
 			}
@@ -339,6 +343,22 @@ func modelDevStatePointer(value string) (*string, error) {
 	}
 	for _, character := range value {
 		if !(character >= 'A' && character <= 'Z' || character == '_') {
+			return nil, invalidModelDevQueryHTTP()
+		}
+	}
+	parsed := value
+	return &parsed, nil
+}
+
+// modelDevNamePointer accepts one name substring. The admitted name is at most
+// 80 printable runes, so a longer or control-bearing value cannot match any
+// stored row and is rejected rather than answered with an empty page.
+func modelDevNamePointer(value string) (*string, error) {
+	if strings.TrimSpace(value) == "" || utf8.RuneCountInString(value) > 80 {
+		return nil, invalidModelDevQueryHTTP()
+	}
+	for _, character := range value {
+		if unicode.IsControl(character) {
 			return nil, invalidModelDevQueryHTTP()
 		}
 	}

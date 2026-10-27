@@ -24,6 +24,8 @@ type ExecutionFilter struct {
 	ComputeState  *modeldevv1.ComputeState
 	DeliveryState *modeldevv1.DeliveryState
 	CloseState    *modeldevv1.CloseState
+	// Name is an already validated substring; the owner folds case.
+	Name *string
 }
 
 func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResolveScope, page, pageSize uint32, filter ExecutionFilter) (*modeldevv1.ListExecutionsResponse, error) {
@@ -40,6 +42,7 @@ func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResol
 		ComputeState:  filter.ComputeState,
 		DeliveryState: filter.DeliveryState,
 		CloseState:    filter.CloseState,
+		Name:          filter.Name,
 	}
 	out, err := modeldevv1.NewModelDevQueryServiceClient(c.connection).ListExecutions(call, request, grpc.WaitForReady(true))
 	if err != nil {

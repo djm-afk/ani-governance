@@ -30,6 +30,7 @@ func TestModelDevClientForwardsExecutionStateFilters(t *testing.T) {
 	compute := modeldevv1.ComputeState_COMPUTE_STATE_SUCCEEDED
 	delivery := modeldevv1.DeliveryState_DELIVERY_STATE_PUBLISHED
 	closeState := modeldevv1.CloseState_CLOSE_STATE_CLOSED
+	name := "lora"
 
 	for _, test := range []struct {
 		name   string
@@ -47,6 +48,14 @@ func TestModelDevClientForwardsExecutionStateFilters(t *testing.T) {
 		{
 			name:   "a single selector does not imply the others",
 			filter: ExecutionFilter{ComputeState: &compute},
+		},
+		{
+			name:   "the name filter is forwarded",
+			filter: ExecutionFilter{Name: &name},
+		},
+		{
+			name:   "name combines with a state selector",
+			filter: ExecutionFilter{Name: &name, ComputeState: &compute},
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -73,6 +82,7 @@ func TestModelDevClientForwardsExecutionStateFilters(t *testing.T) {
 			require.Equal(t, test.filter.ComputeState, peer.request.ComputeState)
 			require.Equal(t, test.filter.DeliveryState, peer.request.DeliveryState)
 			require.Equal(t, test.filter.CloseState, peer.request.CloseState)
+			require.Equal(t, test.filter.Name, peer.request.Name)
 		})
 	}
 }

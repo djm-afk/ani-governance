@@ -113,6 +113,12 @@ func modelDevExecutionFilter(in *modeldevv1.ListExecutionsRequest) (data.Executi
 		parsed := modeldevcontractv1.CloseState(value)
 		filter.CloseState = &parsed
 	}
+	if in.Name != nil {
+		// The shape is already checked at the HTTP boundary, which is the only
+		// caller; the owner folds case before matching.
+		value := *in.Name
+		filter.Name = &value
+	}
 	return filter, nil
 }
 

@@ -447,6 +447,7 @@ GET /api/v1/models/{model_id}                                  # 登记到已有
 GET /api/v1/modeldev/executions?page=1&pageSize=20
 GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=SUCCEEDED
 GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=FAILED&close_state=NEEDS_REVIEW
+GET /api/v1/modeldev/executions?page=1&pageSize=20&name=lora
 ```
 
 **支持的 query 参数**
@@ -458,12 +459,14 @@ GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=FAILED&close_st
 | `compute_state` | 字符串 | 可选，计算状态筛选 |
 | `delivery_state` | 字符串 | 可选，交付状态筛选 |
 | `close_state` | 字符串 | 可选，关闭状态筛选 |
+| `name` | 字符串 | 可选，任务名筛选，不区分大小写的子串匹配 |
 
-- **三个状态筛选可任意叠加**（AND 语义），都能在分页前生效，`total` 是筛选后的条数。
+- **筛选条件可任意叠加**（AND 语义），都能在分页前生效，`total` 是筛选后的条数。
 - 取值**不带枚举前缀，且只认大写**：`compute_state` 用 `ACCEPTED` / `SUBMITTING` / `SUBMISSION_UNCERTAIN` / `QUEUED` / `PREPARING` / `TRAINING` / `SUCCEEDED` / `FAILED` / `CANCELED`（以及 `SUBMISSION_NOT_SENT`）；`delivery_state` 用 `PENDING` / `PUBLISHING` / `PUBLISHED` / `FAILED`；`close_state` 用 `OPEN` / `CLOSING` / `CLOSED` / `NEEDS_REVIEW`。词汇与响应里的同名字段完全一致。
 - 非法取值一律 `400 INVALID_MODELDEV_QUERY`，**不会静默退化成不筛选**：小写（`succeeded`）、空值、重复（`compute_state=A&compute_state=B`）、`UNSPECIFIED`、以及把某个枚举的成员传给另一个枚举（如 `delivery_state=SUCCEEDED`）都会被拒。
-- `keyword`、`sort`、`limit`、`cursor` 仍未支持，传了返回 `400`。**名称搜索与按时间排序仍需调用方本地完成**。
-- **排序仍是 `execution_id` 字典序（UUID v4），不是时间序**。不要假设“第一页是最新”；需要按时间排请基于 `accepted_at` 在本地排序。
+- `name` 匹配的是创建时提交的 `name`，即响应里的同名字段。空串、纯空白、超过 80 字、含控制字符都返回 `400`——这些值不可能命中任何已存在的任务，拒绝比返回空页更诚实。**服务端不做模糊拼写纠正**，前端做搜索框时按用户输入原样传即可。
+- `keyword`、`sort`、`limit`、`cursor` 仍未支持，传了返回 `400`。
+- **排序是 `accepted_at` 倒序（最新的在前）**，`accepted_at` 相同时用 `execution_id` 倒序稳定并列，所以翻页不会重复或漏行。可以直接用第一页展示"最近的任务"，不需要本地排序。
 - 响应：
 
 ```json
@@ -1161,6 +1164,11 @@ POST :stop → 202
 > 5. `/pods`、`/events`、`/logs/stream` 曾 **404**：这三条路由只在 detail 分支上。现已随同一镜像发布，三条均 **200**。
 > 6. 不存在的执行曾返回 **400**，现为 **404 `RESOURCE_NOT_FOUND`**。
 > 7. 资源曲线曾对新建执行的 step Pod 返回 **412**：实例归属取自运行时历史，而历史是异步写入的。现改为读 Pod 上的 `ani.io/instance-id`（由准入 webhook 写入），历史仅作回落。已在集群实测 `memory.working_set_bytes` 返回真实值。
+>
+> 2026-10-27 新增能力（第二批）：
+> 8. 任务列表默认按 `accepted_at` 倒序，支持 `name` 子串筛选（见第 8 节）。
+> 9. 输入版本支持 `format=CSV|JSON` 筛选（见第 6 节）。
+> 10. 微调详情新增 `base_model` 基座身份（见第 9 节）。
 
 **联调前请先向后端确认当前镜像状态。** 后端做过多次滚动发布，发布窗口内可能短暂出现 `503 MODELDEV_CREATE_UNAVAILABLE`。这类 503 是发布抖动，重试即可；若持续超过几分钟再找后端。
 

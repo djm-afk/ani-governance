@@ -1391,6 +1391,9 @@ type ListExecutionsRequest struct {
 	ComputeState  *string `protobuf:"bytes,5,opt,name=compute_state,proto3,oneof" json:"compute_state,omitempty"`
 	DeliveryState *string `protobuf:"bytes,6,opt,name=delivery_state,proto3,oneof" json:"delivery_state,omitempty"`
 	CloseState    *string `protobuf:"bytes,7,opt,name=close_state,proto3,oneof" json:"close_state,omitempty"`
+	// 按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+	// 名称即创建时提交的 name，与响应里的 name 同源。
+	Name          *string `protobuf:"bytes,8,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1456,6 +1459,13 @@ func (x *ListExecutionsRequest) GetDeliveryState() string {
 func (x *ListExecutionsRequest) GetCloseState() string {
 	if x != nil && x.CloseState != nil {
 		return *x.CloseState
+	}
+	return ""
+}
+
+func (x *ListExecutionsRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
 	}
 	return ""
 }
@@ -4557,19 +4567,21 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\x13GetExecutionRequest\x12\"\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\fexecution_id\"X\n" +
 	"\x14GetExecutionResponse\x12@\n" +
-	"\texecution\x18\x01 \x01(\v2\".modeldev.service.v1.ExecutionViewR\texecution\"\xb8\x02\n" +
+	"\texecution\x18\x01 \x01(\v2\".modeldev.service.v1.ExecutionViewR\texecution\"\xda\x02\n" +
 	"\x15ListExecutionsRequest\x12\x17\n" +
 	"\x04page\x18\x03 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
 	"\tpage_size\x18\x04 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12)\n" +
 	"\rcompute_state\x18\x05 \x01(\tH\x02R\rcompute_state\x88\x01\x01\x12+\n" +
 	"\x0edelivery_state\x18\x06 \x01(\tH\x03R\x0edelivery_state\x88\x01\x01\x12%\n" +
-	"\vclose_state\x18\a \x01(\tH\x04R\vclose_state\x88\x01\x01B\a\n" +
+	"\vclose_state\x18\a \x01(\tH\x04R\vclose_state\x88\x01\x01\x12\x17\n" +
+	"\x04name\x18\b \x01(\tH\x05R\x04name\x88\x01\x01B\a\n" +
 	"\x05_pageB\f\n" +
 	"\n" +
 	"_page_sizeB\x10\n" +
 	"\x0e_compute_stateB\x11\n" +
 	"\x0f_delivery_stateB\x0e\n" +
-	"\f_close_stateJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"{\n" +
+	"\f_close_stateB\a\n" +
+	"\x05_nameJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"{\n" +
 	"\x16ListExecutionsResponse\x128\n" +
 	"\x05items\x18\x01 \x03(\v2\".modeldev.service.v1.ExecutionViewR\x05items\x12\x14\n" +
 	"\x05total\x18\x03 \x01(\x04R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\xad\x02\n" +

@@ -171,6 +171,9 @@ message ListExecutionsRequest {
   optional string compute_state = 5 [json_name = "compute_state"];
   optional string delivery_state = 6 [json_name = "delivery_state"];
   optional string close_state = 7 [json_name = "close_state"];
+  // 按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+  // 名称即创建时提交的 name，与响应里的 name 同源。
+  optional string name = 8;
 }
 message ListExecutionsResponse {
   repeated ExecutionView items = 1;

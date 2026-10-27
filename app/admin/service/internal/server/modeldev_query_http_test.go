@@ -52,6 +52,12 @@ func TestModelDevListAndLogRejectUnboundedSelectors(t *testing.T) {
 		{"/api/v1/modeldev/executions?close_state=closed", ""},
 		{"/api/v1/modeldev/executions?close_state=", ""},
 		{"/api/v1/modeldev/executions?close_state=" + strings.Repeat("A", 49), ""},
+		// The name selector is declared; malformed shapes must still fail here.
+		{"/api/v1/modeldev/executions?name=", ""},
+		{"/api/v1/modeldev/executions?name=%20%20", ""},
+		{"/api/v1/modeldev/executions?name=" + strings.Repeat("x", 81), ""},
+		{"/api/v1/modeldev/executions?name=a&name=b", ""},
+		{"/api/v1/modeldev/executions?name=a&keyword=b", ""},
 		{"/api/v1/modeldev/executions?unknown_state=SUCCEEDED", ""},
 		{"/api/v1/modeldev/executions", "{}"},
 		{"/api/v1/modeldev/executions/id/logs?tail_lines=1001", ""},
