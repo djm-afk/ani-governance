@@ -84,18 +84,146 @@ func (s *ModelDevService) GetExecutionLogs(ctx context.Context, in *modeldevv1.G
 	if err != nil {
 		return nil, err
 	}
-	if in == nil || !modelDevQueryUUID(in.ExecutionId) || in.TailLines > 1000 || in.MaxBytes > 65536 {
+	if in == nil || !modelDevQueryUUID(in.ExecutionId) || in.TailLines > 1000 || in.MaxBytes > 65536 ||
+		(in.LogId != nil && !modelDevQueryUUID(in.GetLogId())) || (in.PodUid != nil && !modelDevQueryUUID(in.GetPodUid())) || !modelDevQueryContainer(in.Container) {
 		return nil, modelDevQueryInvalid()
 	}
-	out, err := s.resolver.GetExecutionLogs(ctx, scope, in.ExecutionId, in.TailLines, in.MaxBytes)
+	selection := data.LogSelection{LogID: in.GetLogId(), PodUID: in.GetPodUid(), Container: in.GetContainer(), Previous: in.GetPrevious()}
+	out, err := s.resolver.GetExecutionLogs(ctx, scope, in.ExecutionId, in.TailLines, in.MaxBytes, selection)
 	if err != nil {
 		return nil, modelDevQueryFailure(err)
 	}
-	reply := &modeldevv1.GetExecutionLogsResponse{LogId: out.Source.LogId, Truncated: out.Truncated, ObservedAt: out.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano)}
+	reply := &modeldevv1.GetExecutionLogsResponse{
+		LogId: out.Source.LogId, Truncated: out.Truncated, ObservedAt: out.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano),
+		SourceKind: strings.TrimPrefix(out.SourceKind.String(), "LOG_SOURCE_KIND_"), ContainerName: out.ContainerName, Previous: out.Previous, Available: out.Available,
+	}
 	for _, line := range out.Lines {
 		reply.Lines = append(reply.Lines, &modeldevv1.ExecutionLogLine{Timestamp: line.Timestamp.AsTime().UTC().Format(time.RFC3339Nano), Text: line.Text})
 	}
 	return reply, nil
+}
+
+// modelDevQueryContainer accepts an absent container and otherwise only the
+// container-name alphabet Kubernetes allows.
+func modelDevQueryContainer(value *string) bool {
+	if value == nil {
+		return true
+	}
+	if *value == "" || len(*value) > 63 {
+		return false
+	}
+	for _, character := range *value {
+		if !(character >= 'a' && character <= 'z' || character >= '0' && character <= '9' || character == '-' || character == '.') {
+			return false
+		}
+	}
+	return true
+}
+
+// ListExecutionPods answers the container-group / orchestration-step tab. A
+// missing layer behaves as all; an unknown value is rejected rather than
+// silently widened.
+func (s *ModelDevService) ListExecutionPods(ctx context.Context, in *modeldevv1.ListExecutionPodsRequest) (*modeldevv1.ListExecutionPodsResponse, error) {
+	scope, err := s.modelDevQueryScope(ctx, data.ModelDevListExecutionPodsPath)
+	if err != nil {
+		return nil, err
+	}
+	if in == nil || !modelDevQueryUUID(in.ExecutionId) {
+		return nil, modelDevQueryInvalid()
+	}
+	layer, valid := data.ParseWorkloadLayer(in.GetLayer())
+	if !valid {
+		return nil, modelDevQueryInvalid()
+	}
+	out, err := s.resolver.ListExecutionPods(ctx, scope, in.ExecutionId, layer, in.GetIncludeRecycled())
+	if err != nil {
+		return nil, modelDevQueryFailure(err)
+	}
+	reply := &modeldevv1.ListExecutionPodsResponse{ObservedAt: out.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano), Availability: strings.TrimPrefix(out.Availability.String(), "POD_AVAILABILITY_")}
+	for _, pod := range out.Pods {
+		reply.Pods = append(reply.Pods, modelDevPublicPod(pod))
+	}
+	return reply, nil
+}
+
+// ListExecutionEvents answers the event tab. An empty list after Kubernetes'
+// retention window is a normal answer, never an error.
+func (s *ModelDevService) ListExecutionEvents(ctx context.Context, in *modeldevv1.ListExecutionEventsRequest) (*modeldevv1.ListExecutionEventsResponse, error) {
+	scope, err := s.modelDevQueryScope(ctx, data.ModelDevListExecutionEventsPath)
+	if err != nil {
+		return nil, err
+	}
+	if in == nil || !modelDevQueryUUID(in.ExecutionId) {
+		return nil, modelDevQueryInvalid()
+	}
+	eventScope, valid := data.ParseEventScope(in.GetScope())
+	if !valid {
+		return nil, modelDevQueryInvalid()
+	}
+	out, err := s.resolver.ListExecutionEvents(ctx, scope, in.ExecutionId, eventScope)
+	if err != nil {
+		return nil, modelDevQueryFailure(err)
+	}
+	reply := &modeldevv1.ListExecutionEventsResponse{
+		ObservedAt: out.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano), RetentionHint: out.RetentionHint, Truncated: out.Truncated,
+	}
+	for _, event := range out.Events {
+		reply.Events = append(reply.Events, &modeldevv1.ExecutionEventView{
+			Type: event.Type, Reason: event.Reason, Message: event.Message,
+			FirstTimestamp: event.FirstTimestamp.AsTime().UTC().Format(time.RFC3339Nano),
+			LastTimestamp:  event.LastTimestamp.AsTime().UTC().Format(time.RFC3339Nano),
+			Count:          event.Count, Source: event.Source, InvolvedKind: event.InvolvedKind,
+			InvolvedName: event.InvolvedName, InvolvedUid: event.InvolvedUid, FieldPath: event.FieldPath,
+			ReportingInstance: event.ReportingInstance,
+		})
+	}
+	return reply, nil
+}
+
+func modelDevPublicPod(pod *modeldevcontractv1.PodView) *modeldevv1.ExecutionPodView {
+	out := &modeldevv1.ExecutionPodView{
+		PodName: pod.PodName, PodUid: pod.PodUid, PodIp: pod.PodIp, Phase: pod.Phase, Ready: pod.Ready,
+		NodeName: pod.NodeName, Restarts: pod.Restarts, Layer: strings.TrimPrefix(pod.Layer.String(), "POD_LAYER_"),
+		Availability: strings.TrimPrefix(pod.Availability.String(), "POD_AVAILABILITY_"), StepName: pod.StepName,
+		Attempt: pod.Attempt, JobIndex: pod.JobIndex, LogId: pod.LogId, LogAvailable: pod.LogAvailable,
+		ApiPresent: pod.ApiPresent, ExitCode: pod.ExitCode,
+	}
+	if at := pod.CreatedAt; at != nil {
+		out.CreatedAt = at.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if at := pod.StartTime; at != nil {
+		out.StartTime = at.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if at := pod.DeletionTimestamp; at != nil {
+		out.DeletionTimestamp = at.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	for _, container := range pod.Containers {
+		out.Containers = append(out.Containers, modelDevPublicContainer(container))
+	}
+	for _, container := range pod.InitContainers {
+		out.InitContainers = append(out.InitContainers, modelDevPublicContainer(container))
+	}
+	for _, container := range pod.EphemeralContainers {
+		out.EphemeralContainers = append(out.EphemeralContainers, modelDevPublicContainer(container))
+	}
+	return out
+}
+
+func modelDevPublicContainer(container *modeldevcontractv1.ContainerView) *modeldevv1.ExecutionContainerView {
+	out := &modeldevv1.ExecutionContainerView{
+		Name: container.Name, Type: container.Type, State: container.State, Reason: container.Reason,
+		Message: container.Message, RestartCount: container.RestartCount, ExitCode: container.ExitCode,
+	}
+	if at := container.StartedAt; at != nil {
+		out.StartedAt = at.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if at := container.FinishedAt; at != nil {
+		out.FinishedAt = at.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if container.LastState != nil {
+		out.LastState = modelDevPublicContainer(container.LastState)
+	}
+	return out
 }
 
 func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *modeldevv1.ExecutionView {
@@ -128,6 +256,12 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	if p := execution.ExplicitFinetuning; p != nil {
 		out.ExplicitParameters = &modeldevv1.ExecutionParameters{LearningRate: p.LearningRate, MaxSteps: p.MaxSteps, PerDeviceTrainBatchSize: p.PerDeviceTrainBatchSize, GradientAccumulationSteps: p.GradientAccumulationSteps, CutoffLen: p.CutoffLen, LoraRank: p.LoraRank, LoraAlpha: p.LoraAlpha, LoraDropout: p.LoraDropout, Seed: p.Seed}
 	}
+	for _, step := range execution.Steps {
+		out.Steps = append(out.Steps, modelDevPublicStep(step))
+	}
+	for _, metric := range execution.Metrics {
+		out.Metrics = append(out.Metrics, &modeldevv1.ExecutionMetricView{Name: metric.Name, DecimalValue: metric.DecimalValue, Step: metric.Step})
+	}
 	if r := execution.ModelRegistration; r != nil {
 		out.ModelRegistration = &modeldevv1.ModelRegistrationView{State: r.State, RegistrationId: r.RegistrationId, ModelId: r.ModelId, ModelVersionId: r.ModelVersionId, FailureCode: r.FailureCode}
 	}
@@ -148,6 +282,22 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 	}
 
 	return out
+}
+
+// modelDevPublicStep keeps the timeline facts ModelDev already derived. Absent
+// timestamps stay empty strings, matching every other time field here.
+func modelDevPublicStep(in *modeldevcontractv1.StepProgress) *modeldevv1.ExecutionStepView {
+	step := &modeldevv1.ExecutionStepView{Role: in.Role, State: in.State, ExitCode: in.ExitCode}
+	if in.StartedAt != nil {
+		step.StartedAt = in.StartedAt.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if in.FinishedAt != nil {
+		step.FinishedAt = in.FinishedAt.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	if in.DeadlineAt != nil {
+		step.DeadlineAt = in.DeadlineAt.AsTime().UTC().Format(time.RFC3339Nano)
+	}
+	return step
 }
 
 func (s *ModelDevService) ListExecutionArtifacts(ctx context.Context, in *modeldevv1.ListExecutionArtifactsRequest) (*modeldevv1.ListExecutionArtifactsResponse, error) {

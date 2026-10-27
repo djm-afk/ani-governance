@@ -56,7 +56,8 @@ func (p *modelDevListLogPeer) GetExecutionLogs(ctx context.Context, in *modeldev
 	if err := p.check(ctx, modeldevv1.ModelDevQueryService_GetExecutionLogs_FullMethodName); err != nil {
 		return nil, err
 	}
-	if in.ExecutionId != p.executionID || in.LogId != nil || in.TailLines != 1 || in.MaxBytes != 32 {
+	if in.ExecutionId != p.executionID || in.LogId != nil || in.TailLines != 1 || in.MaxBytes != 32 ||
+		in.PodUid != nil || in.Container != nil || in.Previous != nil {
 		return nil, status.Error(codes.Internal, "selector mismatch")
 	}
 	return p.logs, nil
@@ -72,7 +73,7 @@ func TestModelDevListLogClientDelegatesCurrentScopeAndBoundsResponses(t *testing
 	execution.AcceptedAt = f.response.Snapshot.Timing.AcceptedAt
 	execution.DeadlineAt = f.response.Snapshot.Timing.ExecutionDeadlineAt
 	list := &modeldevv1.ListExecutionsResponse{Executions: []*modeldevv1.ExecutionView{execution}}
-	logs := &modeldevv1.GetExecutionLogsResponse{Source: &trainingv1.LogRef{LogId: uuid.NewString(), ResourceUid: uuid.NewString(), ContainerName: "node"}, Lines: []*modeldevv1.LogLine{{Timestamp: timestamppb.Now(), Text: "real stdout boundary sample"}}, ObservedAt: timestamppb.Now()}
+	logs := &modeldevv1.GetExecutionLogsResponse{Source: &trainingv1.LogRef{LogId: uuid.NewString(), ResourceUid: uuid.NewString(), ContainerName: "node"}, Lines: []*modeldevv1.LogLine{{Timestamp: timestamppb.Now(), Text: "real stdout boundary sample"}}, ObservedAt: timestamppb.Now(), SourceKind: modeldevv1.LogSourceKind_LOG_SOURCE_KIND_TRAINER, ContainerName: "node"}
 	for _, test := range []struct {
 		name              string
 		change            func(*modelDevListLogPeer)
@@ -121,13 +122,20 @@ func TestModelDevListLogClientDelegatesCurrentScopeAndBoundsResponses(t *testing
 			if _, err := client.ListExecutions(ctx, peer.scope, 1, 101); status.Code(err) != codes.Unavailable {
 				t.Fatal("out-of-range page size was forwarded")
 			}
-			got, err := client.GetExecutionLogs(ctx, peer.scope, id, 1, 32)
+			got, err := client.GetExecutionLogs(ctx, peer.scope, id, 1, 32, LogSelection{})
 			require.Equal(t, test.logCode, status.Code(err))
 			if err != nil {
 				require.Nil(t, got)
 				require.NotContains(t, err.Error(), "private")
 			} else {
 				require.True(t, proto.Equal(peer.logs, got))
+			}
+			// A caller-supplied selector is validated before it reaches the owner.
+			if _, err := client.GetExecutionLogs(ctx, peer.scope, id, 1, 32, LogSelection{PodUID: "not-a-uuid"}); status.Code(err) != codes.Unavailable {
+				t.Fatal("malformed pod UID was forwarded")
+			}
+			if _, err := client.GetExecutionLogs(ctx, peer.scope, id, 1, 32, LogSelection{Container: "Node"}); status.Code(err) != codes.Unavailable {
+				t.Fatal("malformed container name was forwarded")
 			}
 		})
 	}

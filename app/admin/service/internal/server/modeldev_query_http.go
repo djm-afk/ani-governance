@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kratos/kratos/v2/errors"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
+	"github.com/google/uuid"
 	adminv1 "go-wind-admin/api/gen/go/admin/service/v1"
 	modeldevv1 "go-wind-admin/api/gen/go/modeldev/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
@@ -63,6 +64,14 @@ func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevS
 				in.TailLines, err = modelDevQueryPositiveBound(values[0], 1000)
 			case "max_bytes":
 				in.MaxBytes, err = modelDevQueryPositiveBound(values[0], 65536)
+			case "logId":
+				in.LogId, err = modelDevQueryUUIDPointer(values[0])
+			case "podUid":
+				in.PodUid, err = modelDevQueryUUIDPointer(values[0])
+			case "container":
+				in.Container, err = modelDevQueryContainerPointer(values[0])
+			case "previous":
+				in.Previous, err = modelDevQueryBoolPointer(values[0])
 			default:
 				return invalidModelDevQueryHTTP()
 			}
@@ -72,6 +81,77 @@ func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevS
 		}
 		handler := ctx.Middleware(func(c context.Context, v interface{}) (interface{}, error) {
 			return modeldev.GetExecutionLogs(c, v.(*modeldevv1.GetExecutionLogsRequest))
+		})
+		out, err := handler(ctx, &in)
+		if err != nil {
+			return err
+		}
+		return ctx.Result(http.StatusOK, out)
+	})
+	route.GET(data.ModelDevListExecutionPodsPath, func(ctx khttp.Context) error {
+		modelDevQueryHeaders(ctx)
+		khttp.SetOperation(ctx, adminv1.OperationModelDevServiceListExecutionPods)
+		var in modeldevv1.ListExecutionPodsRequest
+		if ctx.BindVars(&in) != nil {
+			return invalidModelDevQueryHTTP()
+		}
+		query, err := modelDevBoundedQuery(ctx.Request())
+		if err != nil {
+			return err
+		}
+		for name, values := range query {
+			switch name {
+			case "layer":
+				layer, valid := data.ParseWorkloadLayer(values[0])
+				if !valid {
+					return invalidModelDevQueryHTTP()
+				}
+				value := string(layer)
+				in.Layer = &value
+			case "includeRecycled":
+				in.IncludeRecycled, err = modelDevQueryBoolPointer(values[0])
+			default:
+				return invalidModelDevQueryHTTP()
+			}
+			if err != nil {
+				return err
+			}
+		}
+		handler := ctx.Middleware(func(c context.Context, v interface{}) (interface{}, error) {
+			return modeldev.ListExecutionPods(c, v.(*modeldevv1.ListExecutionPodsRequest))
+		})
+		out, err := handler(ctx, &in)
+		if err != nil {
+			return err
+		}
+		return ctx.Result(http.StatusOK, out)
+	})
+	route.GET(data.ModelDevListExecutionEventsPath, func(ctx khttp.Context) error {
+		modelDevQueryHeaders(ctx)
+		khttp.SetOperation(ctx, adminv1.OperationModelDevServiceListExecutionEvents)
+		var in modeldevv1.ListExecutionEventsRequest
+		if ctx.BindVars(&in) != nil {
+			return invalidModelDevQueryHTTP()
+		}
+		query, err := modelDevBoundedQuery(ctx.Request())
+		if err != nil {
+			return err
+		}
+		for name, values := range query {
+			switch name {
+			case "scope":
+				scope, valid := data.ParseEventScope(values[0])
+				if !valid {
+					return invalidModelDevQueryHTTP()
+				}
+				value := string(scope)
+				in.Scope = &value
+			default:
+				return invalidModelDevQueryHTTP()
+			}
+		}
+		handler := ctx.Middleware(func(c context.Context, v interface{}) (interface{}, error) {
+			return modeldev.ListExecutionEvents(c, v.(*modeldevv1.ListExecutionEventsRequest))
 		})
 		out, err := handler(ctx, &in)
 		if err != nil {
@@ -190,6 +270,43 @@ func modelDevPageSizePointer(value string) (*uint32, error) {
 		return nil, err
 	}
 	return &n, nil
+}
+
+// modelDevQueryUUIDPointer accepts one canonical UUID query value.
+func modelDevQueryUUIDPointer(value string) (*string, error) {
+	parsed := value
+	if !modelDevQueryCanonicalUUID(parsed) {
+		return nil, invalidModelDevQueryHTTP()
+	}
+	return &parsed, nil
+}
+
+// modelDevQueryContainerPointer accepts one Kubernetes container name.
+func modelDevQueryContainerPointer(value string) (*string, error) {
+	if value == "" || len(value) > 63 {
+		return nil, invalidModelDevQueryHTTP()
+	}
+	for _, character := range value {
+		if !(character >= 'a' && character <= 'z' || character >= '0' && character <= '9' || character == '-' || character == '.') {
+			return nil, invalidModelDevQueryHTTP()
+		}
+	}
+	parsed := value
+	return &parsed, nil
+}
+
+// modelDevQueryBoolPointer accepts the exact literals `true` and `false`.
+func modelDevQueryBoolPointer(value string) (*bool, error) {
+	if value != "true" && value != "false" {
+		return nil, invalidModelDevQueryHTTP()
+	}
+	parsed := value == "true"
+	return &parsed, nil
+}
+
+func modelDevQueryCanonicalUUID(value string) bool {
+	id, err := uuid.Parse(value)
+	return err == nil && id != uuid.Nil && id.String() == value
 }
 
 func modelDevQueryHeaders(ctx khttp.Context) {

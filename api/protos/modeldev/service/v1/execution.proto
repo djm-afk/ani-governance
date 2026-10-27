@@ -160,6 +160,13 @@ message GetExecutionLogsRequest {
   string execution_id = 1 [json_name = "execution_id"];
   uint32 tail_lines = 2 [json_name = "tail_lines"];
   uint32 max_bytes = 3 [json_name = "max_bytes"];
+  // Opaque owner-issued log ID; container selection stays a separate field.
+  optional string log_id = 4 [json_name = "log_id"];
+  // Absent keeps the original single-worker behaviour.
+  optional string pod_uid = 5 [json_name = "pod_uid"];
+  optional string container = 6;
+  // Reads the last terminated instance of the same container.
+  optional bool previous = 7;
 }
 // Bounded actual training output. Pod identity and selectors remain internal.
 message GetExecutionLogsResponse {
@@ -167,10 +174,94 @@ message GetExecutionLogsResponse {
   repeated ExecutionLogLine lines = 2;
   bool truncated = 3;
   string observed_at = 4 [json_name = "observed_at"];
+  // TRAINER or KFP_STEP; decides which plane produced these lines.
+  string source_kind = 5 [json_name = "source_kind"];
+  string container_name = 6 [json_name = "container_name"];
+  bool previous = 7;
+  bool available = 8;
 }
 message ExecutionLogLine {
   string timestamp = 1;
   string text = 2;
+}
+// One container instance as Kubernetes reports it. Display strings keep the
+// BFF free of Kubernetes enum packages; unknown values fail closed downstream.
+message ExecutionContainerView {
+  string name = 1;
+  // container / init_container / ephemeral
+  string type = 2;
+  // running / waiting / terminated / unknown
+  string state = 3;
+  string reason = 4;
+  string message = 5;
+  int32 restart_count = 6 [json_name = "restart_count"];
+  optional int32 exit_code = 7 [json_name = "exit_code"];
+  string started_at = 8 [json_name = "started_at"];
+  string finished_at = 9 [json_name = "finished_at"];
+  ExecutionContainerView last_state = 10 [json_name = "last_state"];
+}
+message ExecutionPodView {
+  string pod_name = 1 [json_name = "pod_name"];
+  string pod_uid = 2 [json_name = "pod_uid"];
+  string pod_ip = 3 [json_name = "pod_ip"];
+  // Kubernetes phase only; recycled and never-created stay in availability.
+  string phase = 4;
+  bool ready = 5;
+  string node_name = 6 [json_name = "node_name"];
+  int32 restarts = 7;
+  string created_at = 8 [json_name = "created_at"];
+  string start_time = 9 [json_name = "start_time"];
+  string deletion_timestamp = 10 [json_name = "deletion_timestamp"];
+  // TRAINER / PIPELINE
+  string layer = 11;
+  // LIVE / RECYCLED / NEVER_CREATED / REJECTED / ORPHANED / CREATION_PENDING
+  string availability = 12;
+  string step_name = 13 [json_name = "step_name"];
+  int32 attempt = 14;
+  int32 job_index = 15 [json_name = "job_index"];
+  string log_id = 16 [json_name = "log_id"];
+  bool log_available = 17 [json_name = "log_available"];
+  repeated ExecutionContainerView containers = 18;
+  repeated ExecutionContainerView init_containers = 19 [json_name = "init_containers"];
+  bool api_present = 20 [json_name = "api_present"];
+  optional int32 exit_code = 21 [json_name = "exit_code"];
+  repeated ExecutionContainerView ephemeral_containers = 22 [json_name = "ephemeral_containers"];
+}
+message ExecutionEventView {
+  string type = 1;
+  string reason = 2;
+  string message = 3;
+  string first_timestamp = 4 [json_name = "first_timestamp"];
+  string last_timestamp = 5 [json_name = "last_timestamp"];
+  int32 count = 6;
+  string source = 7;
+  string involved_kind = 8 [json_name = "involved_kind"];
+  string involved_name = 9 [json_name = "involved_name"];
+  string involved_uid = 10 [json_name = "involved_uid"];
+  string field_path = 11 [json_name = "field_path"];
+  string reporting_instance = 12 [json_name = "reporting_instance"];
+}
+message ListExecutionPodsRequest {
+  string execution_id = 1 [json_name = "execution_id"];
+  // all / trainer / pipeline; absent behaves as all.
+  optional string layer = 2;
+  optional bool include_recycled = 3 [json_name = "include_recycled"];
+}
+message ListExecutionPodsResponse {
+  repeated ExecutionPodView pods = 1;
+  string observed_at = 2 [json_name = "observed_at"];
+  string availability = 3;
+}
+message ListExecutionEventsRequest {
+  string execution_id = 1 [json_name = "execution_id"];
+  // key / all / warning; absent behaves as key.
+  optional string scope = 2;
+}
+message ListExecutionEventsResponse {
+  repeated ExecutionEventView events = 1;
+  string observed_at = 2 [json_name = "observed_at"];
+  string retention_hint = 3 [json_name = "retention_hint"];
+  bool truncated = 4;
 }
 message ExecutionView {
   string operation_id = 1 [json_name = "operation_id"];
@@ -201,6 +292,28 @@ message ExecutionView {
   string accepted_at = 16 [json_name = "accepted_at"];
   string deadline_at = 17 [json_name = "deadline_at"];
   string observed_at = 18 [json_name = "observed_at"];
+  // Mirrors ModelDev ExecutionView.steps (field 31). Role/state stay strings
+  // because the step set depends on kind.
+  repeated ExecutionStepView steps = 29 [json_name = "steps"];
+  // Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
+  // from the published METRICS artifact.
+  repeated ExecutionMetricView metrics = 30 [json_name = "metrics"];
+}
+// One ordered timeline entry. Extended facts mirror ModelDev StepProgress, which
+// uses a google.protobuf.Timestamp there; this contract keeps RFC3339 strings.
+message ExecutionStepView {
+  string role = 1;
+  string state = 2;
+  string started_at = 3 [json_name = "started_at"];
+  string finished_at = 4 [json_name = "finished_at"];
+  int32 exit_code = 5 [json_name = "exit_code"];
+  string deadline_at = 6 [json_name = "deadline_at"];
+}
+message ExecutionMetricView {
+  string name = 1;
+  // Bag of digits as emitted by ModelDev; parsed as a decimal string.
+  string decimal_value = 2 [json_name = "decimal_value"];
+  optional int64 step = 3;
 }
 message ExecutionComputeView {
   string compute_preset_id = 1 [json_name = "compute_preset_id"];

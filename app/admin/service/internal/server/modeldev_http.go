@@ -27,6 +27,9 @@ func registerModelDevHTTP(server *http.Server, modeldev *service.ModelDevService
 	registerModelDevQueryHTTP(server, modeldev)
 	registerModelDevCatalogueHTTP(server, modeldev)
 	registerModelDevRegistrationHTTP(server, modeldev)
+	// The stream route is always registered so the authentication chain runs
+	// before any channel decision; a missing service still fails closed.
+	RegisterExecutionLogStreamHTTP(server, modeldev, DefaultInstanceLogLimits())
 	server.Route("/").POST("/api/v1/modeldev/executions", func(ctx http.Context) error {
 		http.SetOperation(ctx, adminV1.OperationModelDevServiceCreateExecution)
 		request := ctx.Request()
