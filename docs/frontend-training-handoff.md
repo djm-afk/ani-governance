@@ -279,12 +279,13 @@ GET /api/v1/compute-presets?usage=TRAINING&page=1&pageSize=100
 
 ### 5.1 GPU 规格当前全部不可选
 
-现网状态（2026-10-26）：9 条规格中 4 条 CPU 可选，5 条 GPU **全部** `selectable=false / GPU_CAPACITY_UNKNOWN`。
+现网状态（2026-10-27 复核）：9 条规格中 6 条 CPU 可选，3 条 GPU **全部** `selectable=false / GPU_CAPACITY_UNKNOWN`。
 
-- 原因不是代码没实现，而是 **GPU 容量观测不完整**：集群 3 个节点都有 vGPU 可分配（node1/node2 各 2 卡、node3 4 卡），但 Accelerator 上报的容量数据不完整，目录侧只能判定为未知。
+- 原因不是代码没实现，而是 **GPU 容量观测不完整**：集群 3 个节点都有 vGPU 可分配（node1/node2 各 2 卡、node3 4 卡，`volcano.sh/vgpu-number`），但节点上没有 `nvidia.com/gpu` 这一可分配资源，Accelerator 上报的容量数据不完整，目录侧只能判定为未知。
 - 用 `selectable=false` 的 GPU 规格直接提交创建，当前返回 `503 MODELDEV_CREATE_UNAVAILABLE`（2026-10-26 实测），不是 400。
-- GPU 链路本身已有真实的历史执行记录（含训练与微调、额度占用与全额退还），所以本文档的 GPU 字段、额度语义、释放规则都按已验证行为编写；**只要后端补齐容量观测、`selectable` 变 true，调用方无需改动即可用**。
+- GPU 链路已有真实的历史执行记录（含训练与微调、额度占用与全额退还），所以本文档的 GPU 字段、额度语义、释放规则都按已验证行为编写；**只要后端补齐容量观测、`selectable` 变 true，调用方无需改动即可用**。
 - 目录接口始终返回全部 GPU 规格（含 `selectable=false`），不会隐藏；`selectable` 恢复后同一份响应即可提交。
+- **本期未做 GPU 端到端实测**：现网 25 条执行全部是 CPU（13 SUCCEEDED / 7 SUBMISSION_CONFIRMED / 3 TRAINING / 2 FAILED），GPU 创建→训练→产物这条链路本期从未跑通。前端可先把 GPU 选项按不可用渲染，待容量观测补齐后再联调。
 
 ## 6. 输入版本
 
@@ -1150,7 +1151,7 @@ POST :stop → 202
 | `GET /api/v1/modeldev/implementations` | **200** | 2 条（`builtin.mlp` / `builtin.sft_lora`），规则完整 |
 | `GET /api/v1/modeldev/input-versions` | **200** | 2 条 READY（CSV 1379×16、JSON 64 行） |
 | `GET /api/v1/modeldev/input-versions/{id}` | **200** | 详情正常 |
-| `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：4 条 CPU 可选，5 条 GPU 全 `selectable=false / GPU_CAPACITY_UNKNOWN` |
+| `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：6 条 CPU 可选，3 条 GPU 全 `selectable=false / GPU_CAPACITY_UNKNOWN` |
 | `GET /api/v1/models`、`/models/{id}/versions`、`/model-versions/{id}`、`/download-url` | **200** | 微调基模选择可用，`total=3` |
 | `POST /api/v1/modeldev/executions` | **202** | CPU 与 GPU 均 202（GPU 仅限历史上 `selectable=true` 时），幂等重放正常，负例 400 |
 | `GET /api/v1/modeldev/executions` | **200** | 22 条执行全部可列；只接受 `page`/`pageSize` |
