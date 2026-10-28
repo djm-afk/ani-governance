@@ -151,6 +151,7 @@ func TestExempt(t *testing.T) {
 		{"POST", "/api/v1/auth/password/login"},
 		{"GET", "/api/v1/events"},
 		{"GET", "/api/v1/modeldev/executions"},
+		{"POST", "/api/v1/modeldev/finetuning/readiness/check"},
 		{"GET", "/api/v1/auth/api-keys"},
 	}
 	for _, tc := range cases {
@@ -203,10 +204,18 @@ func TestCountsAndKeys(t *testing.T) {
 		"GET /api/v1/observability/resource-trend": {Code: "observability:resource-trend:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
 		"GET /api/v1/overview":                     {Code: "overview:resource-count:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
 	}
+	// The retained instance restart and PVC lifecycle add four capabilities.
+	const instanceSource = "scripts/ops/sql/register-instance-permissions.sql"
+	instanceLifecycle := map[string]expectation{
+		"GET /api/v1/instances/{instance_id}/mountable-pvcs":   {Code: "instance:pvc:attach", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"POST /api/v1/instances/{data.instance_id}:attach-pvc": {Code: "instance:pvc:attach", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"POST /api/v1/instances/{data.instance_id}:detach-pvc": {Code: "instance:pvc:detach", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"POST /api/v1/instances/{data.instance_id}:restart":    {Code: "instance:restart", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+	}
 	if want := 199 + len(gpuReads) + 5 + 3; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
-	if want := 176 + len(platformEIPReadsAndRelease) + len(homepageReads) + 5; CapabilityCount() != want {
+	if want := 176 + len(platformEIPReadsAndRelease) + len(homepageReads) + len(instanceLifecycle) + 5; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
@@ -240,6 +249,12 @@ func TestCountsAndKeys(t *testing.T) {
 				}
 			}
 		})
+	}
+	for key, want := range instanceLifecycle {
+		got, ok := capabilityOperations[key]
+		if !ok || !reflect.DeepEqual(got, want) || !keySet[key] {
+			t.Errorf("retained instance lifecycle capability %q = %+v (ok=%v), want %+v", key, got, ok, want)
+		}
 	}
 	for key, want := range homepageReads {
 		got, ok := capabilityOperations[key]

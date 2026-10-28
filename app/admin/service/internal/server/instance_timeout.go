@@ -2,11 +2,13 @@ package server
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"regexp"
 	"time"
 
 	"go-wind-admin/app/admin/service/internal/data"
+	"go-wind-admin/app/admin/service/internal/modeldevbudget"
 )
 
 var instanceLogsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs$`)
@@ -29,14 +31,17 @@ var modelUploadHTTPPath = regexp.MustCompile(`^/api/v1/models/[0-9a-f]{8}-[0-9a-
 // The dedicated log handler owns its bounded lifetime; neither path detaches
 // the original request's cancellation.
 func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Duration) func(http.Handler) http.Handler {
-	var admissionBudget, modelImportBudget time.Duration
+	var admissionBudget, modelImportBudget, resolutionBudget time.Duration
 	// Optional owner budgets are ModelDev followed by Model. Every route also
 	// inherits an earlier parent deadline and cancellation.
-	if len(ownerBudgets) >= 1 && len(ownerBudgets) <= 2 && ownerBudgets[0] > 0 && ownerBudgets[0] <= 24*time.Hour {
+	if len(ownerBudgets) >= 1 && len(ownerBudgets) <= 3 && ownerBudgets[0] > 0 && ownerBudgets[0] <= 24*time.Hour {
 		admissionBudget = ownerBudgets[0]
 	}
-	if len(ownerBudgets) == 2 && ownerBudgets[1] > 0 && ownerBudgets[1] <= 24*time.Hour {
+	if len(ownerBudgets) >= 2 && len(ownerBudgets) <= 3 && ownerBudgets[1] > 0 && ownerBudgets[1] <= 24*time.Hour {
 		modelImportBudget = ownerBudgets[1]
+	}
+	if len(ownerBudgets) == 3 && ownerBudgets[2] > 0 && ownerBudgets[2] <= time.Duration(math.MaxUint32)*time.Second {
+		resolutionBudget = ownerBudgets[2]
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +52,8 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 			// 首页资源趋势：30d 档 obs 批次预算 15s，gov 客户端 20s，HTTP 预算留余量到 25s。
 			trend := r.Method == http.MethodGet && r.URL.Path == data.ObservabilityResourceTrendPath
 			modeldev := r.Method == http.MethodPost && (r.URL.Path == "/api/v1/modeldev/executions" || modelDevRegistrationHTTPPath.MatchString(r.URL.Path)) || r.Method == http.MethodGet && modelDevArtifactHTTPPath.MatchString(r.URL.Path)
+			readiness := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/finetuning/readiness/check"
+			create := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/executions"
 			modelImport := r.Method == http.MethodPost && (r.URL.Path == "/api/v1/model-versions" || modelUploadHTTPPath.MatchString(r.URL.Path))
 			if r.Method == http.MethodGet && resourceUsageHTTPPath.MatchString(r.URL.Path) {
 				ctx, cancel = context.WithTimeout(ctx, 45*time.Second)
@@ -56,9 +63,12 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 				// CreateModelVersion verifies the entire immutable archive before
 				// returning READY; keep its finite owner budget through HTTP.
 				ctx, cancel = context.WithTimeout(ctx, modelImportBudget)
+			} else if readiness && resolutionBudget > 0 && admissionBudget > 0 {
+				ctx, cancel = context.WithTimeout(ctx, resolutionBudget+admissionBudget)
+			} else if create && resolutionBudget > 0 && admissionBudget > 0 {
+				ctx, cancel = context.WithTimeout(ctx, resolutionBudget+4*admissionBudget)
 			} else if modeldev && admissionBudget > 0 {
-				// Prepare may verify an immutable base-model archive. Its finite
-				// owner RPC budget also bounds short-lived S3 download grants.
+				// Other ModelDev commands and artifact grants retain the short B.
 				ctx, cancel = context.WithTimeout(ctx, admissionBudget)
 			} else if trend {
 				ctx, cancel = context.WithTimeout(ctx, 25*time.Second)
@@ -68,6 +78,12 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 				ctx, cancel = context.WithTimeout(ctx, ordinary)
 			} else {
 				ctx, cancel = context.WithCancel(ctx)
+			}
+			if (readiness || create) && resolutionBudget > 0 && admissionBudget > 0 {
+				overallCancel := cancel
+				var preflightCancel context.CancelFunc
+				ctx, preflightCancel = modeldevbudget.BeginPreflight(ctx, admissionBudget)
+				cancel = func() { preflightCancel(); overallCancel() }
 			}
 			defer cancel()
 			next.ServeHTTP(w, r.WithContext(ctx))
