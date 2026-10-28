@@ -8318,6 +8318,116 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/inference-keys:
+        get:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_ListInferenceKeys
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListInferenceKeysResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_CreateInferenceKey
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateInferenceKeyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKeyCredentials'
+            security:
+                - BearerAuth: []
+    /api/v1/inference-keys/{key_id}:
+        get:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_GetInferenceKey
+            parameters:
+                - name: key_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKey'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - InferenceKeyService
+            description: Revokes the credential; retains its metadata and audit history.
+            operationId: InferenceKeyService_RevokeInferenceKey
+            parameters:
+                - name: key_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKey'
+            security:
+                - BearerAuth: []
+    /api/v1/inference-keys/{key_id}:rotate:
+        post:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_RotateInferenceKey
+            parameters:
+                - name: key_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RotateInferenceKeyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKeyCredentials'
+            security:
+                - BearerAuth: []
     /api/v1/inference/operations/{operation_id}:
         get:
             tags:
@@ -13071,6 +13181,39 @@ components:
                     type: string
                 sshPublicKey:
                     type: string
+        CreateInferenceKeyData:
+            type: object
+            properties:
+                name:
+                    type: string
+                allowed_service_ids:
+                    type: array
+                    items:
+                        type: string
+                allowed_model_names:
+                    type: array
+                    items:
+                        type: string
+                requests_per_second:
+                    type: integer
+                    format: int32
+                requests_per_minute:
+                    type: integer
+                    format: int32
+                requests_per_hour:
+                    type: integer
+                    format: int32
+                expires_at:
+                    type: string
+                    format: date-time
+                idempotency_key:
+                    type: string
+                    description: Required on this HTTP surface. Replays never return the secret again.
+        CreateInferenceKeyRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateInferenceKeyData'
         CreateInferenceRequest:
             example: {"idempotency_key": "req-001", "name": "qwen-inference", "model_version_id": "version-1", "served_model_name": "qwen2.5-1.5b-instruct", "engine_image": "registry.example/vllm:latest", "engine_type": "vllm", "command": "exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096", "cpu": "8", "memory": "32Gi", "replicas": 1, "preset_id": "40000000-0000-4000-8000-000000000001"}
             type: object
@@ -15579,6 +15722,61 @@ components:
                     description: Durable Governance admission; this is not model readiness.
                 dispatch_operation_id:
                     type: string
+        InferenceKey:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                key_prefix:
+                    type: string
+                allowed_service_ids:
+                    type: array
+                    items:
+                        type: string
+                allowed_model_names:
+                    type: array
+                    items:
+                        type: string
+                requests_per_second:
+                    type: integer
+                    format: int32
+                requests_per_minute:
+                    type: integer
+                    format: int32
+                requests_per_hour:
+                    type: integer
+                    format: int32
+                expires_at:
+                    type: string
+                    format: date-time
+                revoked_at:
+                    type: string
+                    format: date-time
+                created_by:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                last_used_at:
+                    type: string
+                    format: date-time
+                version:
+                    type: string
+            description: |-
+                Inference-owned data-plane metadata. Platform AK/SK and tenant identity are
+                 deliberately absent. No read response can contain the secret or its hash.
+        InferenceKeyCredentials:
+            type: object
+            properties:
+                key:
+                    $ref: '#/components/schemas/InferenceKey'
+                secret:
+                    type: string
+                    description: Returned once, only on a new creation or rotation. Use as x-api-key.
+                replayed:
+                    type: boolean
         InferenceMetricPoint:
             type: object
             properties:
@@ -16518,6 +16716,15 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ImplementationView'
+                total:
+                    type: string
+        ListInferenceKeysResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InferenceKey'
                 total:
                     type: string
         ListInferenceOperationsResponse:
@@ -20107,6 +20314,18 @@ components:
                         type: string
                     description: 隐藏字段列表（proto 字段 json_name，如 email）
             description: 角色字段权限条目：角色在某资源上隐藏的字段集（黑名单语义）
+        RotateInferenceKeyData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+        RotateInferenceKeyRequest:
+            type: object
+            properties:
+                key_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RotateInferenceKeyData'
         RuntimeDiagnostics:
             type: object
             properties:
@@ -22380,6 +22599,11 @@ tags:
     - name: ImageService
     - name: InferenceDiagnosticsService
       description: Tenant-authenticated management diagnostics; inference calls remain on Higress.
+    - name: InferenceKeyService
+      description: |-
+        Tenant-user JWT management of Inference-owned iak_ credentials. Requires
+         INFERENCE subscription and explicit inference:key:* permissions. Separate
+         from AccessKeyService and /api/v1/auth/api-keys; never routed through Higress.
     - name: InferenceService
       description: |-
         Requires trusted tenant-user Principal, active tenant and the separately

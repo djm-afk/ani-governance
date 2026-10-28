@@ -23,6 +23,7 @@ var ServiceTagToBusinessModule = map[string]identityV1.Module{
 	"NetworkService":              identityV1.Module_NETWORK,
 	"ModelService":                identityV1.Module_MODEL,
 	"InferenceService":            identityV1.Module_INFERENCE,
+	"InferenceKeyService":         identityV1.Module_INFERENCE,
 	"InferenceDiagnosticsService": identityV1.Module_INFERENCE,
 	"ModelDevService":             identityV1.Module_MODEL,
 	"AdminPortalService":          identityV1.Module_DASHBOARD,

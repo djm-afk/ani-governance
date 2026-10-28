@@ -1,0 +1,182 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ani-service-mtls-reload
+  namespace: ani-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ani-service-mtls-reload
+  namespace: ani-system
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  resourceNames:
+  - ani-governance-client-tls
+  - ani-governance-server-tls
+  - ani-governance-session-client-tls
+  - ani-observability-governance-client-tls
+  - ani-accelerator-server-tls
+  - ani-resource-client-tls
+  - ani-resource-server-tls
+  - ani-node-agent-client-tls
+  - ani-session-gateway-client-tls
+  - ani-session-gateway-server-tls
+  - ani-inference-server-tls
+  - ani-inference-gateway-authz-mtls
+  - inference-accelerator-mtls
+  - inference-model-mtls
+  - ani-model-v21-server-tls
+  - modeldev-v21-owner-client
+  - modeldev-v21-server-tls
+  - ani-observability-server-tls
+  - ani-modeldev-webhook-tls
+  verbs:
+  - get
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  resourceNames:
+  - ani-internal-service-ca
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  resourceNames:
+  - ani-governance
+  - ani-governance-sandbox-20261027
+  - ani-resource-service
+  - ani-resource-sandbox-20261027
+  - ani-accelerator-service
+  - ani-session-gateway
+  - ani-inference-service
+  - ani-model-service
+  - ani-modeldev
+  - ani-observability-service
+  - ani-modeldev-webhook
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  resourceNames:
+  - ani-node-agent
+  verbs:
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ani-service-mtls-reload
+  namespace: ani-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ani-service-mtls-reload
+subjects:
+- kind: ServiceAccount
+  name: ani-service-mtls-reload
+  namespace: ani-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ani-service-mtls-reload
+  namespace: ani-system
+data:
+  bindings: 'deployment|ani-governance|ani-governance-client-tls ani-governance-server-tls
+    ani-governance-session-client-tls ani-observability-governance-client-tls
+
+    deployment|ani-governance-sandbox-20261027|ani-governance-client-tls ani-governance-server-tls
+    ani-governance-session-client-tls ani-observability-governance-client-tls
+
+    deployment|ani-resource-service|ani-resource-client-tls ani-resource-server-tls
+
+    deployment|ani-resource-sandbox-20261027|ani-resource-client-tls ani-resource-server-tls
+
+    deployment|ani-accelerator-service|ani-accelerator-server-tls
+
+    daemonset|ani-node-agent|ani-node-agent-client-tls
+
+    deployment|ani-session-gateway|ani-session-gateway-client-tls ani-session-gateway-server-tls
+
+    deployment|ani-inference-service|ani-inference-server-tls inference-model-mtls
+    inference-accelerator-mtls ani-inference-gateway-authz-mtls
+
+    deployment|ani-model-service|ani-model-v21-server-tls
+
+    deployment|ani-modeldev|modeldev-v21-server-tls modeldev-v21-owner-client
+
+    deployment|ani-observability-service|ani-observability-server-tls
+
+    deployment|ani-modeldev-webhook|ani-modeldev-webhook-tls
+
+    '
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ani-service-mtls-reload
+  namespace: ani-system
+spec:
+  schedule: '*/2 * * * *'
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 180
+      template:
+        spec:
+          serviceAccountName: ani-service-mtls-reload
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: reload
+            image: 10.10.1.66:30003/ani-gpu-platform/service-mtls-reload@sha256:0ea9479d8c55101c776756cbd16eb8dd7232700f08fb2f6a2fde591d171a3943
+            env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 200m
+                memory: 96Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: bindings
+              mountPath: /etc/service-mtls
+              readOnly: true
+            - name: cache
+              mountPath: /tmp
+          volumes:
+          - name: bindings
+            configMap:
+              name: ani-service-mtls-reload
+          - name: cache
+            emptyDir: {}

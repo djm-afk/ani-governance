@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package inference.service.v1;
+
+import "errors/errors.proto";
+import "google/protobuf/timestamp.proto";
+import "redact/v1/redact.proto";
+
+enum InferenceKeyErrorReason {
+  option (errors.default_code) = 500;
+  INVALID_INFERENCE_KEY_REQUEST = 0 [(errors.code) = 400];
+  INFERENCE_KEY_USER_REQUIRED = 1 [(errors.code) = 403];
+  INFERENCE_KEY_NOT_FOUND = 2 [(errors.code) = 404];
+  INFERENCE_KEY_CONFLICT = 3 [(errors.code) = 409];
+  INFERENCE_KEY_UNAVAILABLE = 4 [(errors.code) = 503];
+}
+
+// Inference-owned data-plane metadata. Platform AK/SK and tenant identity are
+// deliberately absent. No read response can contain the secret or its hash.
+message InferenceKey {
+  string id = 1;
+  string name = 2;
+  string key_prefix = 3 [json_name = "key_prefix"];
+  repeated string allowed_service_ids = 4 [json_name = "allowed_service_ids"];
+  repeated string allowed_model_names = 5 [json_name = "allowed_model_names"];
+  int32 requests_per_second = 6 [json_name = "requests_per_second"];
+  int32 requests_per_minute = 7 [json_name = "requests_per_minute"];
+  int32 requests_per_hour = 8 [json_name = "requests_per_hour"];
+  google.protobuf.Timestamp expires_at = 9 [json_name = "expires_at"];
+  google.protobuf.Timestamp revoked_at = 10 [json_name = "revoked_at"];
+  string created_by = 11 [json_name = "created_by"];
+  google.protobuf.Timestamp created_at = 12 [json_name = "created_at"];
+  google.protobuf.Timestamp last_used_at = 13 [json_name = "last_used_at"];
+  int64 version = 14;
+}
+
+message CreateInferenceKeyData {
+  string name = 1;
+  repeated string allowed_service_ids = 2 [json_name = "allowed_service_ids"];
+  repeated string allowed_model_names = 3 [json_name = "allowed_model_names"];
+  int32 requests_per_second = 4 [json_name = "requests_per_second"];
+  int32 requests_per_minute = 5 [json_name = "requests_per_minute"];
+  int32 requests_per_hour = 6 [json_name = "requests_per_hour"];
+  google.protobuf.Timestamp expires_at = 7 [json_name = "expires_at"];
+  // Required on this HTTP surface. Replays never return the secret again.
+  string idempotency_key = 8 [json_name = "idempotency_key"];
+}
+message CreateInferenceKeyRequest { CreateInferenceKeyData data = 1; }
+message InferenceKeyCredentials {
+  InferenceKey key = 1;
+  // Returned once, only on a new creation or rotation. Use as x-api-key.
+  string secret = 2 [(redact.value).string = ""];
+  bool replayed = 3;
+}
+message ListInferenceKeysRequest {
+  optional int32 page = 1;
+  optional int32 page_size = 2 [json_name = "pageSize"];
+}
+message ListInferenceKeysResponse {
+  repeated InferenceKey items = 1;
+  int64 total = 2;
+}
+message GetInferenceKeyRequest { string key_id = 1 [json_name = "key_id"]; }
+message RevokeInferenceKeyRequest { string key_id = 1 [json_name = "key_id"]; }
+message RotateInferenceKeyData { string idempotency_key = 1 [json_name = "idempotency_key"]; }
+message RotateInferenceKeyRequest {
+  string key_id = 1 [json_name = "key_id"];
+  RotateInferenceKeyData data = 2;
+}

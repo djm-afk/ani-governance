@@ -197,10 +197,10 @@ func TestCountsAndKeys(t *testing.T) {
 		"GET /api/v1/admin/networks/eips/{eip_id}":    {Code: "network:platform:eip:get", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
 		"DELETE /api/v1/admin/networks/eips/{eip_id}": {Code: "network:platform:eip:release", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
 	}
-	if want := 199 + len(gpuReads); ManagementCount() != want {
+	if want := 199 + len(gpuReads) + 5; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
-	if want := 166 + len(platformEIPReadsAndRelease); CapabilityCount() != want {
+	if want := 166 + len(platformEIPReadsAndRelease) + 5; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
@@ -259,6 +259,11 @@ func TestLookup(t *testing.T) {
 	for _, route := range []struct{ method, path, code string }{
 		{"GET", "/api/v1/inference/services", "inference:service:read"},
 		{"POST", "/api/v1/inference/services/{resource_id}:delete", "inference:service:delete"},
+		{"POST", "/api/v1/inference-keys", "inference:key:create"},
+		{"GET", "/api/v1/inference-keys", "inference:key:read"},
+		{"GET", "/api/v1/inference-keys/{key_id}", "inference:key:read"},
+		{"DELETE", "/api/v1/inference-keys/{key_id}", "inference:key:revoke"},
+		{"POST", "/api/v1/inference-keys/{key_id}:rotate", "inference:key:rotate"},
 	} {
 		if code, ok := Lookup(route.method, route.path); !ok || code != route.code {
 			t.Errorf("Lookup(%s %s) = (%q,%v), want %q", route.method, route.path, code, ok, route.code)

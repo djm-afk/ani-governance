@@ -74,6 +74,7 @@ func TestServiceTagToBusinessModuleExactMapping(t *testing.T) {
 		"PlatformNetworkService":      identityV1.Module_NETWORK,
 		"ModelService":                identityV1.Module_MODEL,
 		"InferenceService":            identityV1.Module_INFERENCE,
+		"InferenceKeyService":         identityV1.Module_INFERENCE,
 		"InferenceDiagnosticsService": identityV1.Module_INFERENCE,
 		"ModelDevService":             identityV1.Module_MODEL,
 	}
@@ -101,7 +102,7 @@ func TestServiceTagToBusinessModuleReverseMapping(t *testing.T) {
 		identityV1.Module_NETWORK:          {"NetworkService", "PlatformNetworkService"},
 		identityV1.Module_ACCELERATOR:      {"AcceleratorAdminService", "AcceleratorService", "GpuAdminService", "GpuService", "GpuTenantAdminService"},
 		identityV1.Module_MODEL:            {"ModelDevService", "ModelService"},
-		identityV1.Module_INFERENCE:        {"InferenceService", "InferenceDiagnosticsService"},
+		identityV1.Module_INFERENCE:        {"InferenceService", "InferenceDiagnosticsService", "InferenceKeyService"},
 	}
 
 	actual := make(map[identityV1.Module][]string)
