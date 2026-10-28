@@ -101,7 +101,16 @@ func TestImageSignedBodyAndCanonicalQuery(t *testing.T) {
 			t.Fatal("permission mapping missing")
 		}
 	}
-	if allowsAPIKey("/image.v1.ImageRuntimeService/GetTenantPullMaterial") || allowsAPIKey("/admin.service.v1.ImageService/IssuePublisherCredentialExtra") {
-		t.Fatal("internal or wildcard key permission")
+	// Every internal runtime RPC stays outside the public API-key surface,
+	// including the shared tenant pull Secret capability.
+	for _, internal := range []string{
+		"/image.v1.ImageRuntimeService/GetTenantPullMaterial",
+		"/image.v1.ImageRuntimeService/ResolveImageForWorkload",
+		"/image.v1.ImageRuntimeService/EnsureTenantPullSecret",
+		"/admin.service.v1.ImageService/IssuePublisherCredentialExtra",
+	} {
+		if allowsAPIKey(internal) {
+			t.Fatalf("internal or wildcard key permission: %s", internal)
+		}
 	}
 }

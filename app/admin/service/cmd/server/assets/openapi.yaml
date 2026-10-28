@@ -14085,6 +14085,10 @@ components:
                 timeout_seconds:
                     type: integer
                     format: uint64
+                training_image_id:
+                    type: string
+                training_image_scope:
+                    type: string
             description: |-
                 The one active public execution intent. Identity comes from authentication.
                  The custom HTTP adapter preserves optional fields and rejects duplicate keys.
@@ -16099,6 +16103,14 @@ components:
                     description: |-
                         微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；
                          普通训练为 null。
+                training_image_id:
+                    type: string
+                training_image_scope:
+                    type: string
+                training_image_digest:
+                    type: string
+                training_image_registry_authority:
+                    type: string
         Expression:
             type: object
             properties:

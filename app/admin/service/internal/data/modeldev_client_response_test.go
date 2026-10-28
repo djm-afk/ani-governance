@@ -242,9 +242,9 @@ func TestModelDevFinalizeRejectsCorrectlyHashedChangedCandidate(t *testing.T) {
 				require.NoError(t, err)
 				switch field {
 				case "parameters":
-					for i, p := range snapshot.Program.ResolvedParameters {
+					for i, p := range snapshot.TrainingProgram.ResolvedParameters {
 						if p.Name == "epochs" {
-							snapshot.Program.ResolvedParameters[i].Value = "17"
+							snapshot.TrainingProgram.ResolvedParameters[i].Value = "17"
 						}
 					}
 				case "deadline":

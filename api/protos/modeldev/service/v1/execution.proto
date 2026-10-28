@@ -23,6 +23,11 @@ message CreateExecutionRequest {
   string compute_preset_id = 14 [json_name = "compute_preset_id"];
   ExecutionParameters parameters = 15;
   optional uint64 timeout_seconds = 16 [json_name = "timeout_seconds", (gnostic.openapi.v3.property) = {type:"integer" format:"uint64"}];
+  // 训练镜像选择。普通训练可选：缺省时使用受信材料里的系统默认镜像，由
+  // ModelDev 经 Resource 解析；给出时二者必须成对，scope 只接受 platform/tenant。
+  // 微调沿用受信材料固定的内置镜像，两个字段都必须缺失。
+  optional string training_image_id = 17 [json_name = "training_image_id"];
+  optional string training_image_scope = 18 [json_name = "training_image_scope"];
 }
 
 // The implementation's strict parser selects its own typed parameters.
@@ -392,6 +397,13 @@ message ExecutionView {
   // 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；
   // 普通训练为 null。
   ExecutionBaseModelView base_model = 33 [json_name = "base_model"];
+  // 普通训练所选目录镜像的公开事实。训练输出这些字段并把上面的
+  // image_version_id 置空；微调继续只输出 image_version_id，这些字段为空。
+  // 不含凭据：拉取 Secret 名称与内容都不进入公开视图。
+  string training_image_id = 34 [json_name = "training_image_id"];
+  string training_image_scope = 35 [json_name = "training_image_scope"];
+  string training_image_digest = 36 [json_name = "training_image_digest"];
+  string training_image_registry_authority = 37 [json_name = "training_image_registry_authority"];
 }
 // 基座模型的公开身份。不包含存放位置，前端不能据此拼接下载地址。
 message ExecutionBaseModelView {

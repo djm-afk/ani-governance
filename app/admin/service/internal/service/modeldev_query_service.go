@@ -321,6 +321,16 @@ func modelDevPublicExecution(execution *modeldevcontractv1.ExecutionView) *model
 			ModelId: base.ModelId, VersionId: base.VersionId, Family: base.Family, Format: base.Format,
 		}
 	}
+	// A general training execution publishes the catalogue image it actually
+	// runs and leaves the retired image_version_id empty. Finetuning keeps its
+	// own frozen identity and publishes no training image facts.
+	if strings.TrimPrefix(execution.Kind.String(), "EXECUTION_KIND_") == "GENERAL_TRAINING" {
+		out.ImageVersionId = ""
+		out.TrainingImageId = execution.TrainingImageId
+		out.TrainingImageScope = execution.TrainingImageScope
+		out.TrainingImageDigest = execution.TrainingImageDigest
+		out.TrainingImageRegistryAuthority = execution.TrainingImageRegistryAuthority
+	}
 	if h := execution.History; h != nil {
 		out.History = &modeldevv1.ExecutionHistoryView{RunId: h.RunId, WorkflowUid: h.WorkflowUid, ObservedAt: h.ObservedAt.AsTime().UTC().Format(time.RFC3339Nano), WorkflowResourceVersion: h.WorkflowResourceVersion, WorkflowNodesSha256: h.WorkflowNodesSha256}
 		if h.RunState != 0 {

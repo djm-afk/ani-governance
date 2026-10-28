@@ -37,6 +37,11 @@ type CreateExecutionRequest struct {
 	ComputePresetId    string                 `protobuf:"bytes,14,opt,name=compute_preset_id,proto3" json:"compute_preset_id,omitempty"`
 	Parameters         *ExecutionParameters   `protobuf:"bytes,15,opt,name=parameters,proto3" json:"parameters,omitempty"`
 	TimeoutSeconds     *uint64                `protobuf:"varint,16,opt,name=timeout_seconds,proto3,oneof" json:"timeout_seconds,omitempty"`
+	// 训练镜像选择。普通训练可选：缺省时使用受信材料里的系统默认镜像，由
+	// ModelDev 经 Resource 解析；给出时二者必须成对，scope 只接受 platform/tenant。
+	// 微调沿用受信材料固定的内置镜像，两个字段都必须缺失。
+	TrainingImageId    *string `protobuf:"bytes,17,opt,name=training_image_id,proto3,oneof" json:"training_image_id,omitempty"`
+	TrainingImageScope *string `protobuf:"bytes,18,opt,name=training_image_scope,proto3,oneof" json:"training_image_scope,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -146,6 +151,20 @@ func (x *CreateExecutionRequest) GetTimeoutSeconds() uint64 {
 		return *x.TimeoutSeconds
 	}
 	return 0
+}
+
+func (x *CreateExecutionRequest) GetTrainingImageId() string {
+	if x != nil && x.TrainingImageId != nil {
+		return *x.TrainingImageId
+	}
+	return ""
+}
+
+func (x *CreateExecutionRequest) GetTrainingImageScope() string {
+	if x != nil && x.TrainingImageScope != nil {
+		return *x.TrainingImageScope
+	}
+	return ""
 }
 
 // The implementation's strict parser selects its own typed parameters.
@@ -2921,9 +2940,16 @@ type ExecutionView struct {
 	ManagedSettings *ExecutionManagedSettingsView `protobuf:"bytes,32,opt,name=managed_settings,proto3" json:"managed_settings,omitempty"`
 	// 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；
 	// 普通训练为 null。
-	BaseModel     *ExecutionBaseModelView `protobuf:"bytes,33,opt,name=base_model,proto3" json:"base_model,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	BaseModel *ExecutionBaseModelView `protobuf:"bytes,33,opt,name=base_model,proto3" json:"base_model,omitempty"`
+	// 普通训练所选目录镜像的公开事实。训练输出这些字段并把上面的
+	// image_version_id 置空；微调继续只输出 image_version_id，这些字段为空。
+	// 不含凭据：拉取 Secret 名称与内容都不进入公开视图。
+	TrainingImageId                string `protobuf:"bytes,34,opt,name=training_image_id,proto3" json:"training_image_id,omitempty"`
+	TrainingImageScope             string `protobuf:"bytes,35,opt,name=training_image_scope,proto3" json:"training_image_scope,omitempty"`
+	TrainingImageDigest            string `protobuf:"bytes,36,opt,name=training_image_digest,proto3" json:"training_image_digest,omitempty"`
+	TrainingImageRegistryAuthority string `protobuf:"bytes,37,opt,name=training_image_registry_authority,proto3" json:"training_image_registry_authority,omitempty"`
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
 }
 
 func (x *ExecutionView) Reset() {
@@ -3171,6 +3197,34 @@ func (x *ExecutionView) GetBaseModel() *ExecutionBaseModelView {
 		return x.BaseModel
 	}
 	return nil
+}
+
+func (x *ExecutionView) GetTrainingImageId() string {
+	if x != nil {
+		return x.TrainingImageId
+	}
+	return ""
+}
+
+func (x *ExecutionView) GetTrainingImageScope() string {
+	if x != nil {
+		return x.TrainingImageScope
+	}
+	return ""
+}
+
+func (x *ExecutionView) GetTrainingImageDigest() string {
+	if x != nil {
+		return x.TrainingImageDigest
+	}
+	return ""
+}
+
+func (x *ExecutionView) GetTrainingImageRegistryAuthority() string {
+	if x != nil {
+		return x.TrainingImageRegistryAuthority
+	}
+	return ""
 }
 
 // 基座模型的公开身份。不包含存放位置，前端不能据此拼接下载地址。
@@ -4416,7 +4470,7 @@ var File_modeldev_service_v1_execution_proto protoreflect.FileDescriptor
 
 const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\n" +
-	"#modeldev/service/v1/execution.proto\x12\x13modeldev.service.v1\x1a$gnostic/openapi/v3/annotations.proto\"\xd2\x06\n" +
+	"#modeldev/service/v1/execution.proto\x12\x13modeldev.service.v1\x1a$gnostic/openapi/v3/annotations.proto\"\xed\a\n" +
 	"\x16CreateExecutionRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12.\n" +
@@ -4430,12 +4484,16 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\n" +
 	"parameters\x18\x0f \x01(\v2(.modeldev.service.v1.ExecutionParametersR\n" +
 	"parameters\x12E\n" +
-	"\x0ftimeout_seconds\x18\x10 \x01(\x04B\x16\xbaG\x13\xca\x01\ainteger\x9a\x02\x06uint64H\x03R\x0ftimeout_seconds\x88\x01\x01:m\xbaGj\xba\x01\x04name\xba\x01\x04kind\xba\x01\x11implementation_id\xba\x01\x11compute_preset_id\xba\x01\x12dataset_version_id\xba\x01\n" +
+	"\x0ftimeout_seconds\x18\x10 \x01(\x04B\x16\xbaG\x13\xca\x01\ainteger\x9a\x02\x06uint64H\x03R\x0ftimeout_seconds\x88\x01\x01\x121\n" +
+	"\x11training_image_id\x18\x11 \x01(\tH\x04R\x11training_image_id\x88\x01\x01\x127\n" +
+	"\x14training_image_scope\x18\x12 \x01(\tH\x05R\x14training_image_scope\x88\x01\x01:m\xbaGj\xba\x01\x04name\xba\x01\x04kind\xba\x01\x11implementation_id\xba\x01\x11compute_preset_id\xba\x01\x12dataset_version_id\xba\x01\n" +
 	"parameters\xba\x01\x0fidempotency_keyB\x18\n" +
 	"\x16_base_model_version_idB\x12\n" +
 	"\x10_target_model_idB\x11\n" +
 	"\x0f_new_model_nameB\x12\n" +
-	"\x10_timeout_secondsJ\x04\b\x03\x10\x04J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\n" +
+	"\x10_timeout_secondsB\x14\n" +
+	"\x12_training_image_idB\x17\n" +
+	"\x15_training_image_scopeJ\x04\b\x03\x10\x04J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\n" +
 	"\x10\vR\tpreset_idR\x10image_version_idR\x12general_parametersR\x13source_execution_idR\n" +
 	"finetuning\"\xda\x06\n" +
 	"\x13ExecutionParameters\x12)\n" +
@@ -4736,7 +4794,7 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"gap_reason\x18\x03 \x01(\tH\x01R\n" +
 	"gap_reason\x88\x01\x01B\b\n" +
 	"\x06_valueB\r\n" +
-	"\v_gap_reason\"\xa2\r\n" +
+	"\v_gap_reason\"\x88\x0f\n" +
 	"\rExecutionView\x12\"\n" +
 	"\foperation_id\x18\x01 \x01(\tR\foperation_id\x12\"\n" +
 	"\fexecution_id\x18\x02 \x01(\tR\fexecution_id\x12\x12\n" +
@@ -4771,7 +4829,11 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\x10managed_settings\x18  \x01(\v21.modeldev.service.v1.ExecutionManagedSettingsViewR\x10managed_settings\x12K\n" +
 	"\n" +
 	"base_model\x18! \x01(\v2+.modeldev.service.v1.ExecutionBaseModelViewR\n" +
-	"base_modelJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\tpreset_idR\n" +
+	"base_model\x12,\n" +
+	"\x11training_image_id\x18\" \x01(\tR\x11training_image_id\x122\n" +
+	"\x14training_image_scope\x18# \x01(\tR\x14training_image_scope\x124\n" +
+	"\x15training_image_digest\x18$ \x01(\tR\x15training_image_digest\x12L\n" +
+	"!training_image_registry_authority\x18% \x01(\tR!training_image_registry_authorityJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\tpreset_idR\n" +
 	"release_id\"\x84\x01\n" +
 	"\x16ExecutionBaseModelView\x12\x1a\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\bmodel_id\x12\x1e\n" +

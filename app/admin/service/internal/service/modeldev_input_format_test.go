@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -36,6 +37,42 @@ func TestModelDevPublicExecutionExposesBaseModel(t *testing.T) {
 		AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
 	}
 	require.Nil(t, modelDevPublicExecution(general).BaseModel)
+}
+
+// A general training execution publishes the catalogue image it runs and leaves
+// the retired image_version_id empty. Finetuning keeps its own frozen identity
+// and publishes no training image facts.
+func TestModelDevPublicExecutionSplitsTrainingAndFinetuningImageIdentity(t *testing.T) {
+	base := func(kind trainingcontractv1.ExecutionKind) *modeldevcontractv1.ExecutionView {
+		return &modeldevcontractv1.ExecutionView{
+			Identity:   &trainingcontractv1.ExecutionIdentity{OperationId: "operation", ExecutionId: "execution"},
+			Kind:       kind,
+			States:     &modeldevcontractv1.ExecutionStates{},
+			AcceptedAt: timestamppb.New(time.Now()), DeadlineAt: timestamppb.New(time.Now()), ObservedAt: timestamppb.New(time.Now()),
+		}
+	}
+
+	training := base(trainingcontractv1.ExecutionKind_EXECUTION_KIND_GENERAL_TRAINING)
+	training.ImageVersionId = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+	training.TrainingImageId = "img_" + strings.Repeat("a", 32)
+	training.TrainingImageScope = "platform"
+	training.TrainingImageDigest = "sha256:" + strings.Repeat("e", 64)
+	training.TrainingImageRegistryAuthority = "registry.example.test"
+	out := modelDevPublicExecution(training)
+	require.Empty(t, out.ImageVersionId, "training must not publish the retired image identity")
+	require.Equal(t, training.TrainingImageId, out.TrainingImageId)
+	require.Equal(t, "platform", out.TrainingImageScope)
+	require.Equal(t, training.TrainingImageDigest, out.TrainingImageDigest)
+	require.Equal(t, "registry.example.test", out.TrainingImageRegistryAuthority)
+
+	finetuning := base(trainingcontractv1.ExecutionKind_EXECUTION_KIND_FINETUNING)
+	finetuning.ImageVersionId = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+	fine := modelDevPublicExecution(finetuning)
+	require.Equal(t, "ffffffff-ffff-4fff-8fff-ffffffffffff", fine.ImageVersionId)
+	require.Empty(t, fine.TrainingImageId)
+	require.Empty(t, fine.TrainingImageScope)
+	require.Empty(t, fine.TrainingImageDigest)
+	require.Empty(t, fine.TrainingImageRegistryAuthority)
 }
 
 // Only the two verified formats may be forwarded upstream; anything else has to
