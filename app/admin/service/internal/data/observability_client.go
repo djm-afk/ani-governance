@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	gpu "github.com/zhangzhe-ctrl/ani-observability-service/api/observability/gpu/v1"
 	pb "github.com/zhangzhe-ctrl/ani-observability-service/api/observability/monitoring/v1"
+	usage "github.com/zhangzhe-ctrl/ani-observability-service/api/observability/usage/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -19,6 +20,7 @@ import (
 type ObservabilityClient struct {
 	client pb.MonitoringServiceClient
 	gpu    gpu.GpuMonitoringServiceClient
+	usage  usage.ResourceUsageServiceClient
 }
 
 func NewObservabilityClientFromEnv() (*ObservabilityClient, func(), error) {
@@ -38,7 +40,7 @@ func NewObservabilityClientFromEnv() (*ObservabilityClient, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return &ObservabilityClient{client: pb.NewMonitoringServiceClient(conn), gpu: gpu.NewGpuMonitoringServiceClient(conn)}, func() { _ = conn.Close() }, nil
+	return &ObservabilityClient{client: pb.NewMonitoringServiceClient(conn), gpu: gpu.NewGpuMonitoringServiceClient(conn), usage: usage.NewResourceUsageServiceClient(conn)}, func() { _ = conn.Close() }, nil
 }
 
 func observabilityCall[T any](c *ObservabilityClient, ctx context.Context, tenant, actor string, fn func(context.Context) (T, error)) (T, error) {

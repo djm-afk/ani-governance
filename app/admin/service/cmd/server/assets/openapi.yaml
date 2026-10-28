@@ -6365,6 +6365,109 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/RedisCacheMonitorInfo'
+    /api/v1/admin/resource-usage/overview:
+        get:
+            tags:
+                - ResourceUsageAdminService
+            operationId: ResourceUsageAdminService_GetResourceUsageOverview
+            parameters:
+                - name: start
+                  in: query
+                  description: Required RFC3339 whole-second timestamps, within the most recent 30 days.
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: metric
+                  in: query
+                  description: gpu (default), cpu or memory; selects the curve, not the three summary cards.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Overview'
+    /api/v1/admin/resource-usage/tenants:
+        get:
+            tags:
+                - ResourceUsageAdminService
+            operationId: ResourceUsageAdminService_ListResourceUsageTenants
+            parameters:
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: metric
+                  in: query
+                  schema:
+                    type: string
+                - name: keyword
+                  in: query
+                  description: Case-insensitive substring in trusted tenant name or canonical tenant ID.
+                  schema:
+                    type: string
+                - name: order
+                  in: query
+                  description: desc (default) or asc. Unknown values sort last; equal values use tenant ID.
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Ranking'
+    /api/v1/admin/resource-usage/tenants/{tenantId}:
+        get:
+            tags:
+                - ResourceUsageAdminService
+            operationId: ResourceUsageAdminService_GetResourceUsageTenant
+            parameters:
+                - name: tenantId
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: metric
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Detail'
     /api/v1/admin/roles:
         get:
             tags:
@@ -14083,6 +14186,30 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        Detail:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                stepSeconds:
+                    type: integer
+                    format: uint32
+                dataCutoff:
+                    type: string
+                    format: date-time
+                tenantId:
+                    type: integer
+                    format: uint32
+                tenantName:
+                    type: string
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MetricUsage'
         DeviceInfo:
             type: object
             properties:
@@ -18031,6 +18158,41 @@ components:
                 meta:
                     $ref: '#/components/schemas/MenuMeta'
             description: 路由项
+        MetricUsage:
+            type: object
+            properties:
+                metric:
+                    type: string
+                unit:
+                    type: string
+                mean:
+                    nullable: true
+                    type: number
+                    format: double
+                peak:
+                    nullable: true
+                    type: number
+                    format: double
+                knownMean:
+                    nullable: true
+                    type: number
+                    format: double
+                knownPeak:
+                    nullable: true
+                    type: number
+                    format: double
+                peakAt:
+                    type: string
+                    format: date-time
+                quality:
+                    $ref: '#/components/schemas/Quality'
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/UsagePoint'
+                activeTenantCount:
+                    nullable: true
+                    type: string
         Model:
             type: object
             properties:
@@ -18767,6 +18929,25 @@ components:
                     description: 删除时间
                     format: date-time
             description: 组织单元
+        Overview:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                stepSeconds:
+                    type: integer
+                    format: uint32
+                dataCutoff:
+                    type: string
+                    format: date-time
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MetricUsage'
         Parameter:
             type: object
             properties:
@@ -19750,6 +19931,29 @@ components:
                 updatedAt:
                     type: string
                     format: date-time
+        Quality:
+            type: object
+            properties:
+                status:
+                    type: string
+                reasons:
+                    type: array
+                    items:
+                        type: string
+                coverage:
+                    nullable: true
+                    type: number
+                    format: double
+                observedPoints:
+                    type: integer
+                    format: uint32
+                expectedPoints:
+                    type: integer
+                    format: uint32
+                availableFrom:
+                    type: string
+                    format: date-time
+            description: Resource usage is observed business workload demand, never quota or billing.
         QueryInstanceMetricsData:
             type: object
             properties:
@@ -19868,6 +20072,31 @@ components:
                     type: string
                     description: 配额编码
             description: 配额用量项
+        Ranking:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                stepSeconds:
+                    type: integer
+                    format: uint32
+                dataCutoff:
+                    type: string
+                    format: date-time
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MetricUsage'
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TenantUsageRow'
+                total:
+                    type: string
         RecordIntranetPoolVerificationData:
             type: object
             properties:
@@ -21307,6 +21536,23 @@ components:
                         $ref: '#/components/schemas/QuotaUsage'
                     description: 配额上限列表
             description: 租户用量与配额
+        TenantUsageRow:
+            type: object
+            properties:
+                tenantId:
+                    type: integer
+                    format: uint32
+                tenantName:
+                    type: string
+                rank:
+                    nullable: true
+                    type: string
+                share:
+                    nullable: true
+                    type: number
+                    format: double
+                usage:
+                    $ref: '#/components/schemas/MetricUsage'
         TokenPairResponse:
             required:
                 - access_token
@@ -21866,6 +22112,27 @@ components:
                     type: boolean
                     description: 如果设置为true的时候，资源不存在则会新增(插入)，并且在这种情况下`updateMask`字段将会被忽略。
             description: 更新用户 - 请求
+        UsagePoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                value:
+                    nullable: true
+                    type: number
+                    format: double
+                knownValue:
+                    nullable: true
+                    type: number
+                    format: double
+                peak:
+                    nullable: true
+                    type: number
+                    format: double
         User:
             type: object
             properties:
@@ -22672,6 +22939,11 @@ tags:
     - name: QuotaSelfService
     - name: RedisCacheMonitorService
       description: Redis缓存监控管理服务（只读）
+    - name: ResourceUsageAdminService
+      description: |-
+        Platform user JWT, tenant=0 and precise current Casbin permission are required.
+         Only Gov-resolved tenant UUIDs, ACC-managed clusters and historical GPU scopes
+         reach Observability. Unknown/duplicate parameters and GET bodies are rejected.
     - name: RoleService
       description: 角色管理服务
     - name: ServerMonitorService

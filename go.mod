@@ -26,7 +26,7 @@ require (
 	github.com/xiaoqidun/entps v1.50.1
 	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261027163656-86ce81af852a
 	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261023050121-af7f9e989473
-	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261027163848-2889e1744f17
+	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261028072444-5377d534eac6
 	github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261027161557-51eca09b8a47
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
 	github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f
