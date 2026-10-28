@@ -9215,6 +9215,27 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: compute_state
+                  in: query
+                  description: |-
+                    以下三个筛选与响应里的 compute_state / delivery_state / close_state 同词汇
+                     （不带枚举前缀，如 SUCCEEDED / PUBLISHED / CLOSED）。三者在服务端可叠加，
+                     且都在分页前生效，total 为筛选后的条数。
+                  schema:
+                    type: string
+                - name: delivery_state
+                  in: query
+                  schema:
+                    type: string
+                - name: close_state
+                  in: query
+                  schema:
+                    type: string
+                - name: name
+                  in: query
+                  description: 按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -9287,6 +9308,29 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ListExecutionArtifactsResponse'
+    /api/v1/modeldev/executions/{execution_id}/events:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListExecutionEvents
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: scope
+                  in: query
+                  description: key / all / warning; absent behaves as key.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListExecutionEventsResponse'
     /api/v1/modeldev/executions/{execution_id}/logs:
         get:
             tags:
@@ -9308,6 +9352,25 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: log_id
+                  in: query
+                  description: Opaque owner-issued log ID; container selection stays a separate field.
+                  schema:
+                    type: string
+                - name: pod_uid
+                  in: query
+                  description: Absent keeps the original single-worker behaviour.
+                  schema:
+                    type: string
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: previous
+                  in: query
+                  description: Reads the last terminated instance of the same container.
+                  schema:
+                    type: boolean
             responses:
                 "200":
                     description: OK
@@ -9315,6 +9378,82 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetExecutionLogsResponse'
+    /api/v1/modeldev/executions/{execution_id}/pods:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListExecutionPods
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: layer
+                  in: query
+                  description: all / trainer / pipeline; absent behaves as all.
+                  schema:
+                    type: string
+                - name: include_recycled
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListExecutionPodsResponse'
+    /api/v1/modeldev/executions/{execution_id}/resource-metrics:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_QueryExecutionMetrics
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: pod_uid
+                  in: query
+                  description: |-
+                    Pod UID from ListExecutionPods. Kept separate from the pod name so a
+                     recreated Pod never inherits the previous curve.
+                  schema:
+                    type: string
+                - name: container
+                  in: query
+                  description: Container name; "node" for the worker, "main" for a KFP step.
+                  schema:
+                    type: string
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: step_seconds
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: metric_codes
+                  in: query
+                  schema:
+                    type: array
+                    items:
+                        type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/QueryExecutionMetricsResponse'
     /api/v1/modeldev/executions/{execution_id}:resume-model-registration:
         post:
             tags:
@@ -9371,6 +9510,10 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: kind
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -9388,6 +9531,11 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: format
+                  in: query
+                  schema:
+                    type: string
+                  description: 只接受 CSV / JSON；其它值返回 400。筛选在分页前生效，total 为筛选后条数。
                 - name: page
                   in: query
                   schema:
@@ -10766,6 +10914,348 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/storage/buckets:
+        get:
+            tags:
+                - StorageService
+            summary: ListBuckets
+            description: Requires storage:bucket:list. Only buckets configured for the authenticated tenant are returned.
+            operationId: StorageService_ListBuckets
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  description: 筛选在分页前生效，多个条件为 AND；空串表示不筛该字段。
+                  schema:
+                    type: string
+                - name: id
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListBucketsResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/buckets/{bucket_id}/objects:
+        get:
+            tags:
+                - StorageService
+            summary: ListObjects
+            description: 'Requires storage:object:list. Domain cursor exception: limit 1..100 (omitted means 100), opaque cursor bound to bucket and prefix; page/pageSize/offset/token are rejected with 400; no total.'
+            operationId: StorageService_ListObjects
+            parameters:
+                - name: bucket_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: prefix
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  description: 对象列表不接受页码/偏移/旧游标参数；显式声明只为识别后返回 400。
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: offset
+                  in: query
+                  schema:
+                    type: string
+                - name: token
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListObjectsResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/buckets/{data.bucket_id}/objects:download-url:
+        post:
+            tags:
+                - StorageService
+            summary: GetDownloadURL
+            description: Requires storage:object:download. Returns a short-lived GET URL for the fixed object; the URL may be reused until expiry.
+            operationId: StorageService_GetDownloadURL
+            parameters:
+                - name: data.bucket_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/GetDownloadURLRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDownloadURLResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/buckets/{data.bucket_id}/objects:head:
+        post:
+            tags:
+                - StorageService
+            summary: HeadObject
+            description: Requires storage:object:get. key is passed verbatim; no client-side escaping is required.
+            operationId: StorageService_HeadObject
+            parameters:
+                - name: data.bucket_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/HeadObjectRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HeadObjectResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/classes:
+        get:
+            tags:
+                - StorageService
+            summary: ListStorageClasses
+            description: Requires active tenant, STORAGE module and storage:volume:create. page/pageSize with items/total. See docs/contracts/storage-api.md.
+            operationId: StorageService_ListStorageClasses
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListStorageClassesResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/volumes:
+        get:
+            tags:
+                - StorageService
+            summary: ListVolumes
+            description: Requires storage:volume:list. page/pageSize with items/total.
+            operationId: StorageService_ListVolumes
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  description: 筛选在分页前生效，多个条件为 AND；空串表示不筛该字段。
+                  schema:
+                    type: string
+                - name: id
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVolumesResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+        post:
+            tags:
+                - StorageService
+            summary: CreateVolume
+            description: Requires storage:volume:create. create_token is the idempotency key for one create intent. See docs/contracts/storage-api.md.
+            operationId: StorageService_CreateVolume
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVolumeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateVolumeResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/volumes/{data.pvc_name}:delete:
+        post:
+            tags:
+                - StorageService
+            summary: DeleteVolume
+            description: Requires storage:volume:delete. expected_uid binds the delete to the selected object; known consumers block deletion.
+            operationId: StorageService_DeleteVolume
+            parameters:
+                - name: data.pvc_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteVolumeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteVolumeResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/volumes/{data.pvc_name}:update:
+        post:
+            tags:
+                - StorageService
+            summary: UpdateVolume
+            description: Requires storage:volume:update. Only capacity_gb is supported. expected_uid is mandatory.
+            operationId: StorageService_UpdateVolume
+            parameters:
+                - name: data.pvc_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateVolumeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateVolumeResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/storage/volumes/{pvc_name}:
+        get:
+            tags:
+                - StorageService
+            summary: GetVolume
+            description: Requires storage:volume:get. Cross-tenant and unmanaged volumes are hidden.
+            operationId: StorageService_GetVolume
+            parameters:
+                - name: pvc_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetVolumeResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
     /api/v1/virtual-machine-dns-defaults:
         get:
             tags:
@@ -11523,6 +12013,95 @@ paths:
                     description: Connection limit reached
                 "503":
                     description: Diagnostic target or upstream unavailable before READY
+    /api/v1/modeldev/executions/{execution_id}/logs/stream:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_StreamExecutionLogs
+            description: Follow one container of one execution. READY is verified before HTTP headers; later failures arrive as control frames. Reconnect with the server-issued sinceBytes offset.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+                - name: podUid
+                  in: query
+                  schema:
+                    type: string
+                    format: uuid
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: previous
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+                - name: sinceBytes
+                  in: query
+                  schema:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    maximum: 1073741824
+                    default: 0
+            responses:
+                "200":
+                    description: SSE READY/DATA/CLOSED/REJECTED frames with comment heartbeats; no-store and proxy buffering disabled.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                "400":
+                    description: Invalid query
+                "403":
+                    description: Execution access denied
+                "404":
+                    description: Execution or selected Pod absent
+                "429":
+                    description: Connection limit reached
+                "503":
+                    description: Upstream frame stream unavailable before READY
+    /api/v1/modeldev/artifacts/{artifact_id}/download:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_DownloadArtifact
+            description: Relay the artifact bytes. The URL exchange returns a signed URL on the object store's in-cluster host, which a browser cannot reach; this endpoint fetches that object server-side and copies it out. Accepts no query.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: artifact_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            responses:
+                "200":
+                    description: Artifact bytes as an attachment. The type collapses to application/octet-stream unless it is a known safe textual type.
+                    content:
+                        application/octet-stream:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: Invalid UUID or a query was supplied
+                "403":
+                    description: Artifact access denied
+                "404":
+                    description: Artifact absent or not visible
+                "412":
+                    description: Artifact not published
+                "502":
+                    description: Object store unreachable or returned an error
+                "504":
+                    description: Object store timed out
 components:
     schemas:
         NetworkOperation:
@@ -12407,6 +12986,7 @@ components:
                         - INFERENCE
                         - INSTANCE
                         - VIRTUAL_MACHINE
+                        - STORAGE
                     type: string
                     description: 所属业务功能模块（用于套餐白名单过滤）
                     format: enum
@@ -12627,6 +13207,13 @@ components:
             properties:
                 snat:
                     $ref: '#/components/schemas/VPCSnat'
+        Bucket:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
         Callback:
             type: object
             properties:
@@ -13578,6 +14165,33 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        CreateVolumeData:
+            type: object
+            properties:
+                create_token:
+                    type: string
+                display_name:
+                    type: string
+                capacity_gb:
+                    type: string
+                storage_class_name:
+                    type: string
+                volume_mode:
+                    type: string
+                access_modes:
+                    type: array
+                    items:
+                        type: string
+        CreateVolumeRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVolumeData'
+        CreateVolumeResponse:
+            type: object
+            properties:
+                volume:
+                    $ref: '#/components/schemas/Volume'
         CsrfRequest:
             type: object
             properties:
@@ -13940,6 +14554,26 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        DeleteVolumeData:
+            type: object
+            properties:
+                pvc_name:
+                    type: string
+                expected_uid:
+                    type: string
+        DeleteVolumeRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/DeleteVolumeData'
+        DeleteVolumeResponse:
+            type: object
+            properties:
+                state:
+                    type: string
+                    description: SUBMITTED、TERMINATING 或 GONE。
+                volume:
+                    $ref: '#/components/schemas/Volume'
         DeviceInfo:
             type: object
             properties:
@@ -14489,6 +15123,102 @@ components:
                     type: string
                 device_mode:
                     type: string
+        ExecutionContainerView:
+            type: object
+            properties:
+                name:
+                    type: string
+                type:
+                    type: string
+                    description: container / init_container / ephemeral
+                state:
+                    type: string
+                    description: running / waiting / terminated / unknown
+                reason:
+                    type: string
+                message:
+                    type: string
+                restart_count:
+                    type: integer
+                    format: int32
+                exit_code:
+                    type: integer
+                    format: int32
+                started_at:
+                    type: string
+                finished_at:
+                    type: string
+                last_state:
+                    $ref: '#/components/schemas/ExecutionContainerView'
+            description: |-
+                One container instance as Kubernetes reports it. Display strings keep the
+                 BFF free of Kubernetes enum packages; unknown values fail closed downstream.
+        ExecutionEventView:
+            type: object
+            properties:
+                type:
+                    type: string
+                reason:
+                    type: string
+                message:
+                    type: string
+                first_timestamp:
+                    type: string
+                last_timestamp:
+                    type: string
+                count:
+                    type: integer
+                    format: int32
+                source:
+                    type: string
+                involved_kind:
+                    type: string
+                involved_name:
+                    type: string
+                involved_uid:
+                    type: string
+                field_path:
+                    type: string
+                reporting_instance:
+                    type: string
+        ExecutionBaseModelView:
+            type: object
+            properties:
+                model_id:
+                    type: string
+                version_id:
+                    type: string
+                family:
+                    type: string
+                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
+                format:
+                    type: string
+                    description: 权重格式，如 safetensors。
+            description: 微调所用的基座模型身份。不含对象键、存储位置与文件清单，不能据此拼下载地址。
+        ExecutionFailureView:
+            type: object
+            properties:
+                reason:
+                    type: string
+                    description: 不带前缀的原因枚举名，如 INVALID_ARGUMENT / UPSTREAM_UNAVAILABLE。
+                safe_message:
+                    type: string
+                    description: 面向人的安全描述，不含凭据、存储密钥或隐藏的对象事实。
+                violations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionFieldViolationView'
+                correlation_id:
+                    type: string
+                    description: 服务端关联 ID，用于日志检索；不是用户可见的业务标识。
+            description: 历史失败诊断。safe_message 已剔除凭据与存储密钥，可直接展示。
+        ExecutionFieldViolationView:
+            type: object
+            properties:
+                field:
+                    type: string
+                reason:
+                    type: string
         ExecutionHistoryView:
             type: object
             properties:
@@ -14519,6 +15249,103 @@ components:
                 timestamp:
                     type: string
                 text:
+                    type: string
+        ExecutionManagedSettingsView:
+            type: object
+            properties:
+                stage:
+                    type: string
+                    description: 训练阶段。本期只有 sft，不存在 dpo/ppo。
+                finetuning_type:
+                    type: string
+                lora_target:
+                    type: string
+                lora_rank:
+                    type: string
+                lora_alpha:
+                    type: string
+                cutoff_len:
+                    type: string
+                per_device_train_batch_size:
+                    type: string
+                gradient_accumulation_steps:
+                    type: string
+                seed:
+                    type: string
+                data_seed:
+                    type: string
+                device:
+                    type: string
+                fp16:
+                    type: boolean
+                bf16:
+                    type: boolean
+                flash_attn:
+                    type: string
+                report_to:
+                    type: string
+                save_strategy:
+                    type: string
+                template:
+                    type: string
+                train_dtype:
+                    type: string
+                export_dtype:
+                    type: string
+                verify_dtype:
+                    type: string
+                lr_scheduler_type:
+                    type: string
+                warmup_ratio:
+                    type: string
+                weight_decay:
+                    type: string
+                lora_dropout:
+                    type: string
+                num_train_epochs:
+                    type: string
+                optim:
+                    type: string
+                logging_steps:
+                    type: string
+            description: |-
+                服务端托管的训练超参，创建请求不接受这些字段。整数字段在本消息里是原生
+                 整数（与执行详情的其他 int64 一致），不走 explicit_parameters 的字符串编码；
+                 小数型超参（warmup_ratio / weight_decay / lora_dropout）保留十进制字符串。
+        ExecutionMetricPoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                value:
+                    type: string
+                    description: Absent on a gap; decimal string so a large byte count stays exact.
+                gap_reason:
+                    type: string
+                    description: NO_DATA / AMBIGUOUS_SOURCE / INVALID_VALUE / EXPORTER_UNAVAILABLE
+        ExecutionMetricSeries:
+            type: object
+            properties:
+                metric_code:
+                    type: string
+                unit:
+                    type: string
+                status:
+                    type: string
+                    description: OK / PARTIAL / NO_DATA
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionMetricPoint'
+        ExecutionMetricView:
+            type: object
+            properties:
+                name:
+                    type: string
+                decimal_value:
+                    type: string
+                    description: Bag of digits as emitted by ModelDev; parsed as a decimal string.
+                step:
                     type: string
         ExecutionParameters:
             type: object
@@ -14557,6 +15384,91 @@ components:
             description: |-
                 The implementation's strict parser selects its own typed parameters.
                  Omitted fields use implementation defaults; null/unknown fields are rejected.
+        ExecutionPodView:
+            type: object
+            properties:
+                pod_name:
+                    type: string
+                pod_uid:
+                    type: string
+                pod_ip:
+                    type: string
+                phase:
+                    type: string
+                    description: Kubernetes phase only; recycled and never-created stay in availability.
+                ready:
+                    type: boolean
+                node_name:
+                    type: string
+                restarts:
+                    type: integer
+                    format: int32
+                created_at:
+                    type: string
+                start_time:
+                    type: string
+                deletion_timestamp:
+                    type: string
+                layer:
+                    type: string
+                    description: TRAINER / PIPELINE
+                availability:
+                    type: string
+                    description: LIVE / RECYCLED / NEVER_CREATED / REJECTED / ORPHANED / CREATION_PENDING
+                step_name:
+                    type: string
+                attempt:
+                    type: integer
+                    format: int32
+                job_index:
+                    type: integer
+                    format: int32
+                log_id:
+                    type: string
+                log_available:
+                    type: boolean
+                containers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionContainerView'
+                init_containers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionContainerView'
+                api_present:
+                    type: boolean
+                exit_code:
+                    type: integer
+                    format: int32
+                ephemeral_containers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionContainerView'
+                metric_instance_id:
+                    type: string
+                    description: |-
+                        The instance this Pod reports under in the observability training records:
+                         the execution ID for a worker, the KFP run ID for a step. Empty for a Pod
+                         created before metric labelling, so callers must not substitute their own.
+        ExecutionStepView:
+            type: object
+            properties:
+                role:
+                    type: string
+                state:
+                    type: string
+                started_at:
+                    type: string
+                finished_at:
+                    type: string
+                exit_code:
+                    type: integer
+                    format: int32
+                deadline_at:
+                    type: string
+            description: |-
+                One ordered timeline entry. Extended facts mirror ModelDev StepProgress, which
+                 uses a google.protobuf.Timestamp there; this contract keeps RFC3339 strings.
         ExecutionTimingView:
             type: object
             properties:
@@ -14623,6 +15535,34 @@ components:
                     type: string
                 observed_at:
                     type: string
+                steps:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionStepView'
+                    description: |-
+                        Mirrors ModelDev ExecutionView.steps (field 31). Role/state stay strings
+                         because the step set depends on kind.
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionMetricView'
+                    description: |-
+                        Mirrors ModelDev ExecutionView.metrics (field 16): train.loss points read
+                         from the published METRICS artifact.
+                failure:
+                    allOf:
+                        - $ref: '#/components/schemas/ExecutionFailureView'
+                    description: |-
+                        历史失败诊断。仅当这次执行确实失败过才有值；正常结束或仍在运行时为 null。
+                         与 HTTP 错误无关——这是执行结果的一部分，不是接口调用失败。
+                managed_settings:
+                    allOf:
+                        - $ref: '#/components/schemas/ExecutionManagedSettingsView'
+                    description: 服务端托管的训练超参。前端只读展示，创建时不能提交这些字段。
+                base_model:
+                    allOf:
+                        - $ref: '#/components/schemas/ExecutionBaseModelView'
+                    description: 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；普通训练为 null。
         Expression:
             type: object
             properties:
@@ -14718,6 +15658,26 @@ components:
             properties:
                 egress:
                     $ref: '#/components/schemas/DefaultVPCEgress'
+        GetDownloadURLData:
+            type: object
+            properties:
+                bucket_id:
+                    type: string
+                key:
+                    type: string
+        GetDownloadURLRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/GetDownloadURLData'
+        GetDownloadURLResponse:
+            type: object
+            properties:
+                url:
+                    type: string
+                expires_at:
+                    type: string
+                    format: date-time
         GetEIPResponse:
             type: object
             properties:
@@ -14741,6 +15701,15 @@ components:
                     type: boolean
                 observed_at:
                     type: string
+                source_kind:
+                    type: string
+                    description: TRAINER or KFP_STEP; decides which plane produced these lines.
+                container_name:
+                    type: string
+                previous:
+                    type: boolean
+                available:
+                    type: boolean
             description: Bounded actual training output. Pod identity and selectors remain internal.
         GetExecutionResponse:
             type: object
@@ -14955,6 +15924,11 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        GetVolumeResponse:
+            type: object
+            properties:
+                volume:
+                    $ref: '#/components/schemas/VolumeDetail'
         GoRuntimeInfo:
             type: object
             properties:
@@ -15285,6 +16259,23 @@ components:
                     format: uint32
                 data:
                     $ref: '#/components/schemas/GpuQueryData'
+        HeadObjectData:
+            type: object
+            properties:
+                bucket_id:
+                    type: string
+                key:
+                    type: string
+        HeadObjectRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/HeadObjectData'
+        HeadObjectResponse:
+            type: object
+            properties:
+                object:
+                    $ref: '#/components/schemas/ObjectMeta'
         Header:
             type: object
             properties:
@@ -16380,6 +17371,15 @@ components:
                 total:
                     type: string
             description: 查询列表 - 回应
+        ListBucketsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Bucket'
+                total:
+                    type: string
         ListConfigResponse:
             type: object
             properties:
@@ -16471,6 +17471,30 @@ components:
                     items:
                         $ref: '#/components/schemas/ArtifactView'
                 total:
+                    type: string
+        ListExecutionEventsResponse:
+            type: object
+            properties:
+                events:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionEventView'
+                observed_at:
+                    type: string
+                retention_hint:
+                    type: string
+                truncated:
+                    type: boolean
+        ListExecutionPodsResponse:
+            type: object
+            properties:
+                pods:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionPodView'
+                observed_at:
+                    type: string
+                availability:
                     type: string
         ListExecutionsResponse:
             type: object
@@ -16702,6 +17726,21 @@ components:
                 total:
                     type: string
             description: 查询通知渠道列表 - 回应
+        ListObjectsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ObjectItem'
+                common_prefixes:
+                    type: array
+                    items:
+                        type: string
+                next_cursor:
+                    type: string
+                is_truncated:
+                    type: boolean
         ListOnlineSessionResponse:
             type: object
             properties:
@@ -16904,6 +17943,15 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/VMSnapshot'
+        ListStorageClassesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/StorageClass'
+                total:
+                    type: string
         ListSubnetsResponse:
             type: object
             properties:
@@ -17028,6 +18076,15 @@ components:
                         $ref: '#/components/schemas/PlatformResource'
                 next_cursor:
                     type: string
+                total:
+                    type: string
+        ListVolumesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Volume'
                 total:
                     type: string
         LoadBalancer:
@@ -17670,6 +18727,7 @@ components:
                         - INFERENCE
                         - INSTANCE
                         - VIRTUAL_MACHINE
+                        - STORAGE
                     type: string
                     description: 所属业务功能模块
                     format: enum
@@ -18225,6 +19283,32 @@ components:
                     type: string
                     format: date-time
             description: 通知渠道
+        ObjectItem:
+            type: object
+            properties:
+                key:
+                    type: string
+                size:
+                    type: string
+                etag:
+                    type: string
+                last_modified:
+                    type: string
+                    format: date-time
+        ObjectMeta:
+            type: object
+            properties:
+                key:
+                    type: string
+                size:
+                    type: string
+                etag:
+                    type: string
+                content_type:
+                    type: string
+                last_modified:
+                    type: string
+                    format: date-time
         OnlineSession:
             type: object
             properties:
@@ -18620,6 +19704,20 @@ components:
                     type: string
                 validation_description:
                     type: string
+                minimum_inclusive:
+                    type: boolean
+                    description: |-
+                        开闭区间。与 minimum/maximum 成对解读：minimum_inclusive=false 表示下界开，
+                         此时 minimum 本身不可取。未设置（null）表示服务端没有给出区间语义，不要猜测。
+                maximum_inclusive:
+                    type: boolean
+                    description: maximum_inclusive=false 表示上界开，此时 maximum 本身不可取。
+                editable:
+                    type: boolean
+                    description: 该参数是否允许用户改写。当前所有已发布实现均为 true。
+                non_editable_reason:
+                    type: string
+                    description: editable=false 时说明原因；editable=true 时恒为空字符串。
         PasswordLoginRequest:
             type: object
             properties:
@@ -18982,6 +20080,7 @@ components:
                         - INFERENCE
                         - INSTANCE
                         - VIRTUAL_MACHINE
+                        - STORAGE
                     type: string
                     description: 功能模块
                     format: enum
@@ -19539,6 +20638,55 @@ components:
                 updatedAt:
                     type: string
                     format: date-time
+        QueryExecutionMetricsResponse:
+            type: object
+            properties:
+                execution_id:
+                    type: string
+                pod_uid:
+                    type: string
+                pod_name:
+                    type: string
+                container:
+                    type: string
+                start:
+                    type: string
+                end:
+                    type: string
+                step_seconds:
+                    type: integer
+                    format: uint32
+                observed_at:
+                    type: string
+                    description: BFF wall clock at the moment the answer was assembled.
+                source:
+                    type: string
+                    description: |-
+                        PROMETHEUS_CADVISOR_PROJECTION: the source is a recording rule over
+                         cAdvisor, not a direct cAdvisor read.
+                retention_hint:
+                    type: string
+                    description: |-
+                        Prometheus retention as configured today; the frontend must not promise
+                         longer history.
+                device_mode:
+                    type: string
+                    description: cpu / gpu, from ExecutionView.compute.device_mode.
+                gpu_requested:
+                    type: boolean
+                    description: |-
+                        True when the execution requested a GPU. gpu_available additionally
+                         requires a real GPU exporter series, which this environment lacks.
+                gpu_available:
+                    type: boolean
+                series:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExecutionMetricSeries'
+            description: |-
+                Every field the observability contract does not return is synthesized here
+                 and labelled as such, so a consumer never mistakes a derived value for a
+                 measured one.
         QueryInstanceMetricsData:
             type: object
             properties:
@@ -20714,6 +21862,21 @@ components:
                 replayed:
                     type: boolean
             description: Governance acceptance only. ModelDev owns the creation fence and CLOSED.
+        StorageClass:
+            type: object
+            properties:
+                name:
+                    type: string
+                provisioner:
+                    type: string
+                is_default:
+                    type: boolean
+                allow_volume_expansion:
+                    type: boolean
+                volume_binding_mode:
+                    type: string
+                reclaim_policy:
+                    type: string
         StringArray:
             type: object
             properties:
@@ -21615,6 +22778,29 @@ components:
                     type: boolean
                     description: 如果设置为true的时候，资源不存在则会新增(插入)，并且在这种情况下`updateMask`字段将会被忽略。
             description: 更新用户 - 请求
+        UpdateVolumeData:
+            type: object
+            properties:
+                pvc_name:
+                    type: string
+                expected_uid:
+                    type: string
+                capacity_gb:
+                    type: string
+        UpdateVolumeRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/UpdateVolumeData'
+                update_mask:
+                    type: string
+                    description: 只允许 capacity_gb。
+                    format: field-mask
+        UpdateVolumeResponse:
+            type: object
+            properties:
+                volume:
+                    $ref: '#/components/schemas/Volume'
         User:
             type: object
             properties:
@@ -22216,6 +23402,94 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/VirtualSwitchNode'
+        Volume:
+            type: object
+            properties:
+                pvc_name:
+                    type: string
+                uid:
+                    type: string
+                display_name:
+                    type: string
+                storage_class_name:
+                    type: string
+                volume_mode:
+                    type: string
+                access_modes:
+                    type: array
+                    items:
+                        type: string
+                requested_capacity_gb:
+                    type: string
+                observed_capacity_bytes:
+                    type: string
+                observed_capacity_known:
+                    type: boolean
+                observed_capacity_quantity:
+                    type: string
+                phase:
+                    type: string
+                deleting:
+                    type: boolean
+                reclaim_policy:
+                    type: string
+                reclaim_policy_known:
+                    type: boolean
+        VolumeCondition:
+            type: object
+            properties:
+                type:
+                    type: string
+                status:
+                    type: string
+                reason:
+                    type: string
+                message:
+                    type: string
+                last_transition_time:
+                    type: string
+                    format: date-time
+        VolumeConsumer:
+            type: object
+            properties:
+                kind:
+                    type: string
+                namespace:
+                    type: string
+                name:
+                    type: string
+        VolumeDetail:
+            type: object
+            properties:
+                volume:
+                    $ref: '#/components/schemas/Volume'
+                conditions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VolumeCondition'
+                events:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VolumeEvent'
+                consumers:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VolumeConsumer'
+        VolumeEvent:
+            type: object
+            properties:
+                type:
+                    type: string
+                reason:
+                    type: string
+                message:
+                    type: string
+                count:
+                    type: integer
+                    format: int32
+                last_timestamp:
+                    type: string
+                    format: date-time
         VolumeMount:
             type: object
             properties:
@@ -22420,6 +23694,7 @@ tags:
       description: 角色管理服务
     - name: ServerMonitorService
       description: 服务监控管理服务（只读）
+    - name: StorageService
     - name: TaskService
       description: 调度任务管理服务
     - name: TenantService

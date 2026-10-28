@@ -200,12 +200,12 @@ func TestCountsAndKeys(t *testing.T) {
 	if want := 199 + len(gpuReads); ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
-	if want := 166 + len(platformEIPReadsAndRelease); CapabilityCount() != want {
+	if want := 176 + len(platformEIPReadsAndRelease); CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if len(keys) < 262 {
-		t.Errorf("AllKeys() = %d, want >= 262", len(keys))
+	if len(keys) < 272 {
+		t.Errorf("AllKeys() = %d, want >= 272", len(keys))
 	}
 	keySet := make(map[string]bool, len(keys))
 	for _, k := range keys {
