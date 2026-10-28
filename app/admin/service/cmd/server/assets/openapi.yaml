@@ -17148,9 +17148,12 @@ components:
                     format: date-time
                 version:
                     type: string
+                secret:
+                    type: string
+                    description: Legacy hashes have no secret until successful use or explicit rotation.
             description: |-
-                Inference-owned data-plane metadata. Platform AK/SK and tenant identity are
-                 deliberately absent. No read response can contain the secret or its hash.
+                Inference-owned data-plane credential. Authorized list/detail responses
+                 include the full secret; hashes and encryption material are never exposed.
         InferenceKeyCredentials:
             type: object
             properties:
