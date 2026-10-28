@@ -1,4 +1,4 @@
-# Generated with protoc-gen-openapi
+﻿# Generated with protoc-gen-openapi
 # https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
 
 openapi: 3.0.3
@@ -10914,6 +10914,56 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/observability/resource-trend:
+        get:
+            tags:
+                - InstanceService
+            description: 首页资源趋势：HTTP 是专用 GET handler，查询参数在 handler 内严格校验。
+            operationId: InstanceService_QueryResourceTrend
+            parameters:
+                - name: metric
+                  in: query
+                  schema:
+                    type: string
+                - name: range
+                  in: query
+                  schema:
+                    type: string
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: step_seconds
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/QueryResourceTrendResponse'
+    /api/v1/overview:
+        get:
+            tags:
+                - OverviewService
+            description: 获取首页四张资源卡片的计数（实例 / 推理服务 / 模型 / 知识库）
+            operationId: OverviewService_GetOverview
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConsoleOverviewResponse'
     /api/v1/storage/buckets:
         get:
             tags:
@@ -13408,6 +13458,42 @@ components:
                     type: boolean
                 credentialId:
                     type: string
+        ConsoleInstanceOverview:
+            type: object
+            properties:
+                total:
+                    type: string
+                byState:
+                    type: object
+                    additionalProperties:
+                        type: string
+                other:
+                    type: string
+            description: 实例统计：by_state 预置 pending/running/stopped/failed，不含 deleted
+        ConsoleOverviewResponse:
+            type: object
+            properties:
+                instances:
+                    $ref: '#/components/schemas/ConsoleInstanceOverview'
+                inferenceServices:
+                    $ref: '#/components/schemas/ConsoleStatusOverview'
+                models:
+                    $ref: '#/components/schemas/ConsoleStatusOverview'
+                knowledgeBases:
+                    $ref: '#/components/schemas/ConsoleStatusOverview'
+            description: 首页资源统计 - 回应
+        ConsoleStatusOverview:
+            type: object
+            properties:
+                total:
+                    type: string
+                byStatus:
+                    type: object
+                    additionalProperties:
+                        type: string
+                other:
+                    type: string
+            description: 状态统计：by_status 按资源预置状态键
         ControlTaskRequest:
             type: object
             properties:
@@ -20719,6 +20805,11 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/InstanceMetricsRangeData'
+        QueryResourceTrendResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/ResourceTrendData'
         QuotaAccountTotals:
             type: object
             properties:
@@ -20996,6 +21087,49 @@ components:
                 replayUntil:
                     type: string
                     format: date-time
+        ResourceTrendData:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                step_seconds:
+                    type: integer
+                    format: uint32
+                series:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ResourceTrendSeries'
+        ResourceTrendPoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                value:
+                    nullable: true
+                    type: number
+                    format: double
+                gap_reason:
+                    type: string
+        ResourceTrendSeries:
+            type: object
+            properties:
+                metric:
+                    type: string
+                metric_code:
+                    type: string
+                unit:
+                    type: string
+                status:
+                    type: string
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ResourceTrendPoint'
         Response:
             type: object
             properties:
@@ -23697,6 +23831,8 @@ tags:
       description: 操作审计日志管理服务
     - name: OrgUnitService
       description: 组织单元服务
+    - name: OverviewService
+      description: 首页资源统计卡片聚合服务（只读快照）
     - name: PermissionAuditLogService
       description: 权限变更审计日志服务
     - name: PermissionGroupService

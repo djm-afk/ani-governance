@@ -197,10 +197,16 @@ func TestCountsAndKeys(t *testing.T) {
 		"GET /api/v1/admin/networks/eips/{eip_id}":    {Code: "network:platform:eip:get", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
 		"DELETE /api/v1/admin/networks/eips/{eip_id}": {Code: "network:platform:eip:release", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
 	}
+	// 首页资源趋势与首页资源统计卡片（租户级只读，挂 INSTANCE 模块）。
+	const homepageSource = "scripts/ops/sql/register-observability-permissions.sql ; scripts/ops/sql/register-overview-permissions.sql"
+	homepageReads := map[string]expectation{
+		"GET /api/v1/observability/resource-trend": {Code: "observability:resource-trend:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"GET /api/v1/overview":                     {Code: "overview:resource-count:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+	}
 	if want := 199 + len(gpuReads); ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
-	if want := 176 + len(platformEIPReadsAndRelease); CapabilityCount() != want {
+	if want := 176 + len(platformEIPReadsAndRelease) + len(homepageReads); CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
@@ -234,6 +240,15 @@ func TestCountsAndKeys(t *testing.T) {
 				}
 			}
 		})
+	}
+	for key, want := range homepageReads {
+		got, ok := capabilityOperations[key]
+		if !ok || got.Code != want.Code || got.BusinessModule != want.BusinessModule || got.ScopeKind != want.ScopeKind {
+			t.Errorf("homepage capability %q = %+v (ok=%v), want %+v", key, got, ok, want)
+		}
+		if !keySet[key] {
+			t.Errorf("AllKeys() missing %q", key)
+		}
 	}
 	method, path := SplitKey("GET /api/v1/admin/users")
 	if method != "GET" || path != "/api/v1/admin/users" {
