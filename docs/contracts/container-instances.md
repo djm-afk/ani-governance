@@ -97,6 +97,8 @@ Gov 显式结构迁移 `20261019090000_instance_contract_version.sql` 为操作�
 
 Gov 与 Resource 的 `ANI_INSTANCE_NEW_INTENTS_ENABLED` 为维护受理门禁；`ANI_INSTANCE_RESTART_ENABLED` 和 `ANI_INSTANCE_PVC_MUTATIONS_ENABLED` 分别控制新能力，均缺省关闭。CREATE 还要求既有 `ANI_INSTANCE_CONFIG_V2_WRITES=true`。开关不阻止授权的 Lookup/查询/候选、已受理恢复及最终 DELETE。挂卸开放须先完成引用 guard、迁移和初始化证明。
 
+本批权限登记使用[窄增量脚本](../../scripts/ops/sql/register-instance-restart-pvc-permissions.sql)。先用确切合入 dev 版本的 `admin sync-apis --dry-run` 核对目录并备份，再显式给出脚本要求的已审核租户、套餐和角色身份；脚本缺省只预览，`apply=true` 才补本批缺失关联。既有 ID、启停状态及其他权限关联保留，身份或目录漂移会中止。它不修改套餐额度，也不运行 `SyncPermissions`；应用后刷新全部 Gov 实例的策略再验权。
+
 实例新增 `activeOperationId/executionRunState/appliedMountVersion`。configuration 的 `version/applied_mount_version/pending_change` 展示当前权威挂载，原 CREATE 不变。`pending_change` 内固定 `operation_id/intent_version/phase/target_configuration`；operation 新增 `phase/target_configuration/final_run_state/applied_mount_version/completion_scope/failure_reason`。所有 int64 为十进制字符串。无目标变更时 `target_configuration:null`；卸空时为 `{"volume_mounts":[]}`，CurrentMounts 空集合不会回退 CREATE。配置应用和运行完成分别由 `template_applied/runtime_verified` 表示。
 
 只读候选沿用 `{items,total}`，分页缺省 1/20、pageSize 上限 100，显式 0、重复或未知参数拒绝。实例范围候选使用 attach 权，不要求 create 权；创建范围候选仍使用 create 权。

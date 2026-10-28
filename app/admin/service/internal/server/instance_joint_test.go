@@ -730,15 +730,42 @@ func instancePublicHTTPJoint(t *testing.T, newCommands bool) {
 				commandReplays = append(commandReplays, commandReplay{action, r, ack})
 			}
 			finalVersion++
-			require.Eventually(t, func() bool {
+			// The production worker persists a five-second next-attempt time
+			// between lifecycle phases. Allow the complete real cadence while
+			// rejecting failed/blocked results and a phase that stops advancing.
+			deadline, phaseSince := time.Now().Add(120*time.Second), time.Now()
+			lastPhase := "not-observed"
+			for {
 				op, err := owner.Operation(ctx, tenant.ResourceTenantID, "governance:user:"+actorID, ack.OperationId)
-				return err == nil && op.State == "completed"
-			}, 25*time.Second, 50*time.Millisecond, action+" must complete in the real Resource worker before the next intent")
+				require.NoError(t, err)
+				require.NotNil(t, op)
+				if op.Phase != lastPhase {
+					phaseSince, lastPhase = time.Now(), op.Phase
+					t.Logf("%s operation=%s state=%s phase=%s reason=%s failure=%s", action, op.Id, op.State, op.Phase, op.Reason, op.FailureReason)
+					publicOperation := new(view.Operation)
+					request("GET", "/api/v1/instance-operations/"+ack.OperationId, nil, publicOperation, 200, token)
+					require.Equal(t, ack.OperationId, publicOperation.Id)
+					require.EqualValues(t, finalVersion, publicOperation.IntentVersion)
+					if op.Phase != "" {
+						require.NotEmpty(t, publicOperation.Phase, "Gov exposes phase progress; the worker may advance between the two reads")
+					}
+				}
+				if op.State == "completed" {
+					break
+				}
+				require.Equal(t, "accepted", op.State, "terminal/blocked result: phase=%s reason=%s failure=%s", op.Phase, op.Reason, op.FailureReason)
+				require.Less(t, time.Since(phaseSince), 20*time.Second, "phase stopped advancing: %s reason=%s failure=%s", op.Phase, op.Reason, op.FailureReason)
+				require.True(t, time.Now().Before(deadline), "%s exceeded the production lifecycle budget: phase=%s reason=%s failure=%s", action, op.Phase, op.Reason, op.FailureReason)
+				time.Sleep(50 * time.Millisecond)
+			}
 			result := new(view.Operation)
 			request("GET", "/api/v1/instance-operations/"+ack.OperationId, nil, result, 200, token)
 			require.Equal(t, action, result.Action)
 			require.EqualValues(t, finalVersion, result.IntentVersion)
 			require.Equal(t, "completed", result.State)
+			if isNew {
+				require.Equal(t, "done", result.Phase)
+			}
 			request("GET", "/api/v1/instances/"+accepted.ResourceId, nil, instance, 200, token)
 			require.EqualValues(t, finalVersion, instance.Version)
 		}
