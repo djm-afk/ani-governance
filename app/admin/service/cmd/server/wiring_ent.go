@@ -508,6 +508,9 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	}
 	if restServer != nil {
 		server.RegisterVMHTTPServer(restServer, vmService)
+		gpuMonitoringService := service.NewGpuMonitoringService(acceleratorService, observabilityClient, instanceService, inferenceService, data.NewGpuResourceReadAuthorizationRepo(entClient))
+		server.RegisterGpuHTTPServer(restServer, gpuMonitoringService)
+		server.RegisterGpuTenantHTTPServer(restServer, service.NewGpuTenantAdminService(quotaAdminRepo, gpuMonitoringService, acceleratorService))
 	}
 	asynqServer, err := server.NewAsynqServer(ctx, taskService, internalMessageService)
 	if err != nil {

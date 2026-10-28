@@ -19,3 +19,16 @@ message ListTenantQuotaAccountsResponse {
   uint32 tenant_id = 1 [json_name = "tenantId"];
   repeated quota.service.v1.QuotaAccountView items = 2;
 }
+
+message ListTenantQuotaAccountSummariesRequest {
+  optional uint32 page = 1;
+  optional uint32 page_size = 2 [json_name = "pageSize"];
+  optional uint32 tenant_id = 3 [json_name = "tenantId"];
+  // 精确目录编码；缺失政策仍返回configured=false。
+  optional string quota_code = 4 [json_name = "quotaCode"];
+}
+
+message ListTenantQuotaAccountSummariesResponse {
+  repeated quota.service.v1.TenantQuotaAccountSummary items = 1;
+  uint64 total = 2; // 匹配租户总数，不是账户条数。
+}

@@ -2,6 +2,7 @@ package permcode
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -171,15 +172,68 @@ func TestNoConflicts(t *testing.T) {
 
 // TestCountsAndKeys 表体量与键集合自检，防止生成物与实现脱节。
 func TestCountsAndKeys(t *testing.T) {
-	if ManagementCount() != 199 {
-		t.Errorf("ManagementCount() = %d, want 199", ManagementCount())
+	// GPU v1.1 adds these 13 reads to the management mapping. Keep their full
+	// contracts explicit so an unrelated route cannot satisfy the count change.
+	const gpuSource = "GPU monitoring v1.1 read capabilities"
+	gpuReads := map[string]expectation{
+		"GET /api/v1/admin/gpu/devices":                                          {Operation: "GpuAdminService_ListGpuDevices", Code: "accelerator:device:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"GET /api/v1/admin/gpu/devices/{device_id}/metrics/latest":               {Operation: "GpuAdminService_GetPhysicalGpuLatest", Code: "accelerator:device:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"GET /api/v1/admin/gpu/metrics/latest":                                   {Operation: "GpuAdminService_GetPlatformGpuLatest", Code: "accelerator:device:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"GET /api/v1/admin/gpu/tenants":                                          {Operation: "GpuTenantAdminService_ListGpuTenants", Code: "tenant:quota-read", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"GET /api/v1/admin/gpu/tenants/{tenant_id}/metrics/latest":               {Operation: "GpuAdminService_GetTenantGpuLatest", Code: "tenant:quota-read", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"GET /api/v1/admin/tenants/quota-account-summaries":                      {Operation: "QuotaAdminService_ListTenantQuotaAccountSummaries", Code: "tenant:quota-read", Source: gpuSource, BusinessModule: "TENANT", ScopeKind: "platform"},
+		"GET /api/v1/gpu/metrics/latest":                                         {Operation: "GpuService_GetMyGpuLatest", Code: "accelerator:usage:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "tenant"},
+		"GET /api/v1/gpu/resources/{resource_kind}/{resource_id}/metrics/latest": {Operation: "GpuService_GetResourceGpuLatest", Code: "accelerator:usage:get", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "tenant"},
+		"POST /api/v1/admin/gpu/devices/{device_id}/metrics/query":               {Operation: "GpuAdminService_QueryPhysicalGpu", Code: "accelerator:device:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"POST /api/v1/admin/gpu/metrics/query":                                   {Operation: "GpuAdminService_QueryPlatformGpu", Code: "accelerator:device:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"POST /api/v1/admin/gpu/tenants/{tenant_id}/metrics/query":               {Operation: "GpuAdminService_QueryTenantGpu", Code: "tenant:quota-read", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "platform"},
+		"POST /api/v1/gpu/metrics/query":                                         {Operation: "GpuService_QueryMyGpu", Code: "accelerator:usage:list", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "tenant"},
+		"POST /api/v1/gpu/resources/{resource_kind}/{resource_id}/metrics/query": {Operation: "GpuService_QueryResourceGpu", Code: "accelerator:usage:get", Source: gpuSource, BusinessModule: "ACCELERATOR", ScopeKind: "tenant"},
 	}
-	if CapabilityCount() != 166 {
-		t.Errorf("CapabilityCount() = %d, want 166", CapabilityCount())
+	// These three capabilities arrived with the retained platform EIP mainline.
+	const eipSource = "sql/data/20261027_platform_eip_permissions.sql ; pkg/middleware/auth/platform_network_policy.go"
+	platformEIPReadsAndRelease := map[string]expectation{
+		"GET /api/v1/admin/networks/eips":             {Code: "network:platform:eip:list", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
+		"GET /api/v1/admin/networks/eips/{eip_id}":    {Code: "network:platform:eip:get", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
+		"DELETE /api/v1/admin/networks/eips/{eip_id}": {Code: "network:platform:eip:release", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
+	}
+	if want := 199 + len(gpuReads); ManagementCount() != want {
+		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
+	}
+	if want := 166 + len(platformEIPReadsAndRelease); CapabilityCount() != want {
+		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
 	if len(keys) < 262 {
 		t.Errorf("AllKeys() = %d, want >= 262", len(keys))
+	}
+	keySet := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		keySet[k] = true
+	}
+	for _, table := range []struct {
+		name, source string
+		actual, want map[string]expectation
+	}{
+		{"gpu-read-management", gpuSource, managementOperations, gpuReads},
+		{"platform-eip-capability", eipSource, capabilityOperations, platformEIPReadsAndRelease},
+	} {
+		t.Run(table.name, func(t *testing.T) {
+			actual := make(map[string]expectation)
+			for k, v := range table.actual {
+				if v.Source == table.source {
+					actual[k] = v
+				}
+			}
+			if !reflect.DeepEqual(actual, table.want) {
+				t.Errorf("route contracts differ: got %+v, want %+v", actual, table.want)
+			}
+			for k := range table.want {
+				if !keySet[k] {
+					t.Errorf("AllKeys() missing %q", k)
+				}
+			}
+		})
 	}
 	method, path := SplitKey("GET /api/v1/admin/users")
 	if method != "GET" || path != "/api/v1/admin/users" {
