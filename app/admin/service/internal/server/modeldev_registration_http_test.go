@@ -125,6 +125,7 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 		{"/api/v1/modeldev/executions", "POST", 0},
 		{data.ModelDevReadinessPath, "POST", 0},
 		{"/api/v1/compute-presets", "GET", 0},
+		{data.ModelDevListImplementationsPath, "GET", 0},
 	}
 	for i := range routes {
 		code := "registration." + uuid.NewString()
@@ -251,6 +252,7 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 	server := khttp.NewServer(khttp.Middleware(auth.CredentialHeaders(), auth.Server(auth.WithAccessTokenChecker(checker), auth.WithTenantAccessChecker(tenantChecker), auth.WithInjectMetadata(false), auth.WithInjectEnt(true)), authzMiddleware.Server(policy.Engine())))
 	registerModelDevRegistrationHTTP(server, bff)
 	registerModelDevReadinessHTTP(server, bff)
+	registerModelDevCatalogueHTTP(server, bff)
 	web := httptest.NewServer(server)
 	t.Cleanup(web.Close)
 	post := func(execution, body, query, access string) (int, map[string]any) {
@@ -273,6 +275,55 @@ func TestModelDevRegistrationHTTPUsesOriginalSourceAndCurrentGrants(t *testing.T
 		require.Contains(t, resp.Header.Get("Cache-Control"), "no-store")
 		return resp.StatusCode, out
 	}
+
+	t.Run("implementation mode and capability tuple", func(t *testing.T) {
+		get := func(query, access string) (int, map[string]any) {
+			request, e := http.NewRequestWithContext(ctx, "GET", web.URL+data.ModelDevListImplementationsPath+query, nil)
+			require.NoError(t, e)
+			if access != "" {
+				request.Header.Set("Authorization", "Bearer "+access)
+			}
+			response, e := web.Client().Do(request)
+			require.NoError(t, e)
+			defer response.Body.Close()
+			raw, e := io.ReadAll(io.LimitReader(response.Body, cpup01.MaxControlRPCBytes+1))
+			require.NoError(t, e)
+			out := map[string]any{}
+			require.NoError(t, json.Unmarshal(raw, &out))
+			return response.StatusCode, out
+		}
+		for _, mode := range []string{"cpu", "gpu"} {
+			code, out := get("?device_mode="+mode+"&kind=FINETUNING&page=1&pageSize=20", token)
+			require.Equal(t, http.StatusOK, code, "CURRENT_CATALOGUE_HTTP: explicit mode must reach the current owner contract: %v", out)
+			require.Equal(t, "1", out["total"])
+			items := out["items"].([]any)
+			require.Len(t, items, 1)
+			item := items[0].(map[string]any)
+			require.Equal(t, "builtin.sft_lora", item["implementation_id"])
+			caps := catalogueHTTPCapabilities(mode)
+			digest, e := caps.Digest()
+			require.NoError(t, e)
+			require.Equal(t, digest, item["runtime_capabilities_sha256"], "CURRENT_CATALOGUE_CAPABILITIES: preserve exact owner capability digest")
+			wire := item["runtime_capabilities"].(map[string]any)
+			require.Equal(t, caps.ImageDigest, wire["image_digest"])
+			require.Equal(t, caps.EntrypointSHA256, wire["entrypoint_sha256"])
+			require.Equal(t, []any{mode}, item["supported_device_modes"])
+		}
+		require.Equal(t, int32(2), peer.catalogueCalls.Load())
+		code, _ := get("?device_mode=cpu", "")
+		require.Equal(t, http.StatusUnauthorized, code)
+		for _, query := range []string{"", "?device_mode=", "?device_mode=CPU", "?device_mode=tpu", "?device_mode=cpu&device_mode=gpu", "?deviceMode=cpu"} {
+			code, _ := get(query, token)
+			require.Equal(t, http.StatusBadRequest, code, query)
+		}
+		require.Equal(t, int32(2), peer.catalogueCalls.Load(), "invalid or unauthenticated requests must not enter the external owner")
+		calls := peer.catalogueCalls.Load()
+		require.NoError(t, writer.Client().RolePermission.UpdateOneID(routes[10].id).SetStatus(rolepermission.StatusOff).Exec(sys))
+		code, _ = get("?device_mode=cpu", token)
+		require.Equal(t, http.StatusForbidden, code)
+		require.Equal(t, calls, peer.catalogueCalls.Load(), "revoked ordinary list permission must stop before RPC")
+		require.NoError(t, writer.Client().RolePermission.UpdateOneID(routes[10].id).SetStatus(rolepermission.StatusOn).Exec(sys))
+	})
 	// Source-only Readiness runs through the same real JWT, tenant, Casbin and
 	// restricted PG path. Only external service facts are substituted.
 	t.Run("source-only Readiness current HTTP grants", func(t *testing.T) {
@@ -481,6 +532,7 @@ type registrationHTTPPeer struct {
 	ownerpb.UnimplementedModelDevOperationsServiceServer
 	ownerpb.UnimplementedModelDevQueryServiceServer
 	readinessCalls atomic.Int32
+	catalogueCalls atomic.Int32
 	mu             sync.Mutex
 	tenant, actor  string
 	reply          *ownerpb.GetExecutionResponse
@@ -705,4 +757,37 @@ func (p *registrationHTTPPeer) CheckFinetuningReadiness(ctx context.Context, in 
 		ModelId: base.ModelID, ModelVersionId: in.BaseModelVersionId, ModelType: base.Facts.ModelType, ContextLimit: base.Facts.ContextLimit, TemplatePlan: plan,
 		Limits:          &ownerpb.ContentLimits{MaxContentBytes: 9007199254740993},
 		StructureLimits: &ownerpb.StructureLimits{MaxModelFiles: cpup01.MaxModelFiles, MaxOutputFiles: cpup01.MaxOutputFiles, MaxArchiveEntries: cpup01.MaxArchiveEntries, MaxRelativePathBytes: cpup01.MaxRelativePathBytes, MaxStorageKeyBytes: cpup01.MaxStorageKeyBytes, MaxManifestBytes: cpup01.MaxManifestBytes, MaxMaterialBytes: cpup01.MaxMaterialBytes, MaxModelConfigBytes: cpup01.MaxModelConfigBytes, MaxArchiveMetadataBytes: cpup01.MaxArchiveMetadataBytes, MaxRecordBytes: cpup01.MaxRecordBytes, MaxJsonDepth: cpup01.MaxJSONDepth, MaxControlRpcBytes: cpup01.MaxControlRPCBytes, MaxPublicationCandidateBytes: cpup01.MaxPublicationCandidateBytes, MaxPublicationRefBytes: cpup01.MaxPublicationRefBytes}}, nil
+}
+
+func catalogueHTTPCapabilities(mode string) cpup01.RuntimeCapabilities {
+	caps := conformance.FinetuningRuntimeCapabilities()
+	if mode == "gpu" {
+		caps.ImageDigest = "registry.example.test/gpu/sft@sha256:" + strings.Repeat("b", 64)
+	}
+	return caps
+}
+func (p *registrationHTTPPeer) ListImplementations(ctx context.Context, in *ownerpb.ListImplementationsRequest) (*ownerpb.ListImplementationsResponse, error) {
+	p.catalogueCalls.Add(1)
+	md, _ := metadata.FromIncomingContext(ctx)
+	for key, want := range map[string]string{"x-ani-tenant-id": p.tenant, "x-ani-actor": p.actor, "x-ani-data-scope": "tenant-all", "x-ani-authorized-method": ownerpb.ModelDevQueryService_ListImplementations_FullMethodName} {
+		if got := md.Get(key); len(got) != 1 || got[0] != want {
+			return nil, status.Error(codes.PermissionDenied, "delegation mismatch")
+		}
+	}
+	if in.DeviceMode == nil || (*in.DeviceMode != "cpu" && *in.DeviceMode != "gpu") {
+		return nil, status.Error(codes.InvalidArgument, "explicit device mode required")
+	}
+	if in.Kind == nil || *in.Kind != trainingpb.ExecutionKind_EXECUTION_KIND_FINETUNING || in.Page == nil || in.Page.Page == nil || *in.Page.Page != 1 || in.Page.PageSize == nil || *in.Page.PageSize != 20 {
+		return nil, status.Error(codes.InvalidArgument, "kind/page mismatch")
+	}
+	caps := catalogueHTTPCapabilities(*in.DeviceMode)
+	wire, err := contractpb.EncodeRuntimeCapabilities(caps)
+	if err != nil {
+		return nil, err
+	}
+	digest, err := caps.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return &ownerpb.ListImplementationsResponse{Total: 1, Implementations: []*ownerpb.ImplementationView{{ImplementationId: "builtin.sft_lora", Name: "SFT LoRA", Kind: trainingpb.ExecutionKind_EXECUTION_KIND_FINETUNING, Version: "1", ParameterContractVersion: "ani.sft.parameters.v3", SupportedDeviceModes: []string{*in.DeviceMode}, Available: true, RuntimeCapabilities: wire, RuntimeCapabilitiesSha256: digest}}}, nil
 }

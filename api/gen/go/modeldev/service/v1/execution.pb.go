@@ -8,6 +8,7 @@ package servicev1
 
 import (
 	_ "github.com/google/gnostic/openapiv3"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -1189,10 +1190,12 @@ func (x *GeneralParameter) GetValue() string {
 // kind filters by task type before pagination and reuses the value returned in
 // ImplementationView.kind.
 type ListImplementationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Page          *uint32                `protobuf:"varint,3,opt,name=page,proto3,oneof" json:"page,omitempty"`
-	PageSize      *uint32                `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
-	Kind          *string                `protobuf:"bytes,5,opt,name=kind,proto3,oneof" json:"kind,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Page     *uint32                `protobuf:"varint,3,opt,name=page,proto3,oneof" json:"page,omitempty"`
+	PageSize *uint32                `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
+	Kind     *string                `protobuf:"bytes,5,opt,name=kind,proto3,oneof" json:"kind,omitempty"`
+	// Explicit material selector; absence, aliases and unknown modes are rejected.
+	DeviceMode    *string `protobuf:"bytes,6,opt,name=device_mode,proto3,oneof" json:"device_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1244,6 +1247,13 @@ func (x *ListImplementationsRequest) GetPageSize() uint32 {
 func (x *ListImplementationsRequest) GetKind() string {
 	if x != nil && x.Kind != nil {
 		return *x.Kind
+	}
+	return ""
+}
+
+func (x *ListImplementationsRequest) GetDeviceMode() string {
+	if x != nil && x.DeviceMode != nil {
+		return *x.DeviceMode
 	}
 	return ""
 }
@@ -1301,18 +1311,20 @@ func (x *ListImplementationsResponse) GetTotal() uint64 {
 }
 
 type ImplementationView struct {
-	state                          protoimpl.MessageState `protogen:"open.v1"`
-	Name                           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Kind                           string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	ParameterRules                 []*ParameterRule       `protobuf:"bytes,8,rep,name=parameter_rules,proto3" json:"parameter_rules,omitempty"`
-	ImplementationId               string                 `protobuf:"bytes,9,opt,name=implementation_id,proto3" json:"implementation_id,omitempty"`
-	Version                        string                 `protobuf:"bytes,10,opt,name=version,proto3" json:"version,omitempty"`
-	ParameterContractVersion       string                 `protobuf:"bytes,11,opt,name=parameter_contract_version,proto3" json:"parameter_contract_version,omitempty"`
-	SupportedDeviceModes           []string               `protobuf:"bytes,12,rep,name=supported_device_modes,proto3" json:"supported_device_modes,omitempty"`
-	Available                      bool                   `protobuf:"varint,13,opt,name=available,proto3" json:"available,omitempty"`
-	ExecutionTimeoutDefaultSeconds uint64                 `protobuf:"varint,14,opt,name=execution_timeout_default_seconds,proto3" json:"execution_timeout_default_seconds,omitempty"`
-	ExecutionTimeoutMaxSeconds     uint64                 `protobuf:"varint,15,opt,name=execution_timeout_max_seconds,proto3" json:"execution_timeout_max_seconds,omitempty"`
-	StepTimeoutSeconds             uint64                 `protobuf:"varint,16,opt,name=step_timeout_seconds,proto3" json:"step_timeout_seconds,omitempty"`
+	state                          protoimpl.MessageState         `protogen:"open.v1"`
+	Name                           string                         `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Kind                           string                         `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	ParameterRules                 []*ParameterRule               `protobuf:"bytes,8,rep,name=parameter_rules,proto3" json:"parameter_rules,omitempty"`
+	ImplementationId               string                         `protobuf:"bytes,9,opt,name=implementation_id,proto3" json:"implementation_id,omitempty"`
+	Version                        string                         `protobuf:"bytes,10,opt,name=version,proto3" json:"version,omitempty"`
+	ParameterContractVersion       string                         `protobuf:"bytes,11,opt,name=parameter_contract_version,proto3" json:"parameter_contract_version,omitempty"`
+	SupportedDeviceModes           []string                       `protobuf:"bytes,12,rep,name=supported_device_modes,proto3" json:"supported_device_modes,omitempty"`
+	Available                      bool                           `protobuf:"varint,13,opt,name=available,proto3" json:"available,omitempty"`
+	ExecutionTimeoutDefaultSeconds uint64                         `protobuf:"varint,14,opt,name=execution_timeout_default_seconds,proto3" json:"execution_timeout_default_seconds,omitempty"`
+	ExecutionTimeoutMaxSeconds     uint64                         `protobuf:"varint,15,opt,name=execution_timeout_max_seconds,proto3" json:"execution_timeout_max_seconds,omitempty"`
+	StepTimeoutSeconds             uint64                         `protobuf:"varint,16,opt,name=step_timeout_seconds,proto3" json:"step_timeout_seconds,omitempty"`
+	RuntimeCapabilities            *FinetuningRuntimeCapabilities `protobuf:"bytes,17,opt,name=runtime_capabilities,proto3" json:"runtime_capabilities,omitempty"`
+	RuntimeCapabilitiesSha256      string                         `protobuf:"bytes,18,opt,name=runtime_capabilities_sha256,proto3" json:"runtime_capabilities_sha256,omitempty"`
 	unknownFields                  protoimpl.UnknownFields
 	sizeCache                      protoimpl.SizeCache
 }
@@ -1422,6 +1434,20 @@ func (x *ImplementationView) GetStepTimeoutSeconds() uint64 {
 		return x.StepTimeoutSeconds
 	}
 	return 0
+}
+
+func (x *ImplementationView) GetRuntimeCapabilities() *FinetuningRuntimeCapabilities {
+	if x != nil {
+		return x.RuntimeCapabilities
+	}
+	return nil
+}
+
+func (x *ImplementationView) GetRuntimeCapabilitiesSha256() string {
+	if x != nil {
+		return x.RuntimeCapabilitiesSha256
+	}
+	return ""
 }
 
 type ParameterRule struct {
@@ -5274,7 +5300,7 @@ var File_modeldev_service_v1_execution_proto protoreflect.FileDescriptor
 
 const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\n" +
-	"#modeldev/service/v1/execution.proto\x12\x13modeldev.service.v1\x1a$gnostic/openapi/v3/annotations.proto\"\xa1\a\n" +
+	"#modeldev/service/v1/execution.proto\x12\x13modeldev.service.v1\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\xa1\a\n" +
 	"\x16CreateExecutionRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12.\n" +
@@ -5414,18 +5440,20 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\x10GeneralParameter\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05value\"\xab\x01\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\"\xd7\x02\n" +
 	"\x1aListImplementationsRequest\x12\x17\n" +
 	"\x04page\x18\x03 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
 	"\tpage_size\x18\x04 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12\x17\n" +
-	"\x04kind\x18\x05 \x01(\tH\x02R\x04kind\x88\x01\x01B\a\n" +
+	"\x04kind\x18\x05 \x01(\tH\x02R\x04kind\x88\x01\x01\x12\x86\x01\n" +
+	"\vdevice_mode\x18\x06 \x01(\tB_\xe0A\x02\xbaGY\xc2\x01\x05\x12\x03cpu\xc2\x01\x05\x12\x03gpu\x92\x02FRequired exact cpu or gpu; no default and no merged mode capabilities.H\x03R\vdevice_mode\x88\x01\x01:\x11\xbaG\x0e\xba\x01\vdevice_modeB\a\n" +
 	"\x05_pageB\f\n" +
 	"\n" +
 	"_page_sizeB\a\n" +
-	"\x05_kindJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"\x85\x01\n" +
+	"\x05_kindB\x0e\n" +
+	"\f_device_modeJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05limitR\x06cursor\"\x85\x01\n" +
 	"\x1bListImplementationsResponse\x12=\n" +
 	"\x05items\x18\x01 \x03(\v2'.modeldev.service.v1.ImplementationViewR\x05items\x12\x14\n" +
-	"\x05total\x18\x03 \x01(\x04R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\xac\x05\n" +
+	"\x05total\x18\x03 \x01(\x04R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\xd6\x06\n" +
 	"\x12ImplementationView\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x12L\n" +
@@ -5438,7 +5466,9 @@ const file_modeldev_service_v1_execution_proto_rawDesc = "" +
 	"\tavailable\x18\r \x01(\bR\tavailable\x12L\n" +
 	"!execution_timeout_default_seconds\x18\x0e \x01(\x04R!execution_timeout_default_seconds\x12D\n" +
 	"\x1dexecution_timeout_max_seconds\x18\x0f \x01(\x04R\x1dexecution_timeout_max_seconds\x122\n" +
-	"\x14step_timeout_seconds\x18\x10 \x01(\x04R\x14step_timeout_secondsJ\x04\b\x01\x10\x02J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\tpreset_idR\x11image_version_idsR\x11active_release_idR\x12binding_generationR\x17new_submissions_enabled\"\xc1\x05\n" +
+	"\x14step_timeout_seconds\x18\x10 \x01(\x04R\x14step_timeout_seconds\x12f\n" +
+	"\x14runtime_capabilities\x18\x11 \x01(\v22.modeldev.service.v1.FinetuningRuntimeCapabilitiesR\x14runtime_capabilities\x12@\n" +
+	"\x1bruntime_capabilities_sha256\x18\x12 \x01(\tR\x1bruntime_capabilities_sha256J\x04\b\x01\x10\x02J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\tpreset_idR\x11image_version_idsR\x11active_release_idR\x12binding_generationR\x17new_submissions_enabled\"\xc1\x05\n" +
 	"\rParameterRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1a\n" +
@@ -5929,42 +5959,43 @@ var file_modeldev_service_v1_execution_proto_depIdxs = []int32{
 	7,  // 9: modeldev.service.v1.FinetuningTemplatePlan.source:type_name -> modeldev.service.v1.FinetuningTemplateSource
 	15, // 10: modeldev.service.v1.ListImplementationsResponse.items:type_name -> modeldev.service.v1.ImplementationView
 	16, // 11: modeldev.service.v1.ImplementationView.parameter_rules:type_name -> modeldev.service.v1.ParameterRule
-	12, // 12: modeldev.service.v1.ParameterRule.default_value:type_name -> modeldev.service.v1.GeneralParameter
-	12, // 13: modeldev.service.v1.ParameterRule.allowed_values:type_name -> modeldev.service.v1.GeneralParameter
-	12, // 14: modeldev.service.v1.ParameterRule.minimum:type_name -> modeldev.service.v1.GeneralParameter
-	12, // 15: modeldev.service.v1.ParameterRule.maximum:type_name -> modeldev.service.v1.GeneralParameter
-	21, // 16: modeldev.service.v1.GetInputVersionResponse.input_version:type_name -> modeldev.service.v1.InputVersionView
-	21, // 17: modeldev.service.v1.ListInputVersionsResponse.items:type_name -> modeldev.service.v1.InputVersionView
-	44, // 18: modeldev.service.v1.GetExecutionResponse.execution:type_name -> modeldev.service.v1.ExecutionView
-	44, // 19: modeldev.service.v1.ListExecutionsResponse.items:type_name -> modeldev.service.v1.ExecutionView
-	32, // 20: modeldev.service.v1.GetExecutionLogsResponse.lines:type_name -> modeldev.service.v1.ExecutionLogLine
-	33, // 21: modeldev.service.v1.ExecutionContainerView.last_state:type_name -> modeldev.service.v1.ExecutionContainerView
-	33, // 22: modeldev.service.v1.ExecutionPodView.containers:type_name -> modeldev.service.v1.ExecutionContainerView
-	33, // 23: modeldev.service.v1.ExecutionPodView.init_containers:type_name -> modeldev.service.v1.ExecutionContainerView
-	33, // 24: modeldev.service.v1.ExecutionPodView.ephemeral_containers:type_name -> modeldev.service.v1.ExecutionContainerView
-	34, // 25: modeldev.service.v1.ListExecutionPodsResponse.pods:type_name -> modeldev.service.v1.ExecutionPodView
-	35, // 26: modeldev.service.v1.ListExecutionEventsResponse.events:type_name -> modeldev.service.v1.ExecutionEventView
-	42, // 27: modeldev.service.v1.QueryExecutionMetricsResponse.series:type_name -> modeldev.service.v1.ExecutionMetricSeries
-	43, // 28: modeldev.service.v1.ExecutionMetricSeries.points:type_name -> modeldev.service.v1.ExecutionMetricPoint
-	51, // 29: modeldev.service.v1.ExecutionView.compute:type_name -> modeldev.service.v1.ExecutionComputeView
-	12, // 30: modeldev.service.v1.ExecutionView.resolved_parameters:type_name -> modeldev.service.v1.GeneralParameter
-	11, // 31: modeldev.service.v1.ExecutionView.explicit_parameters:type_name -> modeldev.service.v1.ExecutionParameters
-	52, // 32: modeldev.service.v1.ExecutionView.timing:type_name -> modeldev.service.v1.ExecutionTimingView
-	53, // 33: modeldev.service.v1.ExecutionView.model_registration:type_name -> modeldev.service.v1.ModelRegistrationView
-	59, // 34: modeldev.service.v1.ExecutionView.history:type_name -> modeldev.service.v1.ExecutionHistoryView
-	49, // 35: modeldev.service.v1.ExecutionView.steps:type_name -> modeldev.service.v1.ExecutionStepView
-	50, // 36: modeldev.service.v1.ExecutionView.metrics:type_name -> modeldev.service.v1.ExecutionMetricView
-	46, // 37: modeldev.service.v1.ExecutionView.failure:type_name -> modeldev.service.v1.ExecutionFailureView
-	48, // 38: modeldev.service.v1.ExecutionView.managed_settings:type_name -> modeldev.service.v1.ExecutionManagedSettingsView
-	45, // 39: modeldev.service.v1.ExecutionView.base_model:type_name -> modeldev.service.v1.ExecutionBaseModelView
-	47, // 40: modeldev.service.v1.ExecutionFailureView.violations:type_name -> modeldev.service.v1.ExecutionFieldViolationView
-	56, // 41: modeldev.service.v1.ListExecutionArtifactsResponse.items:type_name -> modeldev.service.v1.ArtifactView
-	56, // 42: modeldev.service.v1.AuthorizeArtifactDownloadResponse.artifact:type_name -> modeldev.service.v1.ArtifactView
-	43, // [43:43] is the sub-list for method output_type
-	43, // [43:43] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	6,  // 12: modeldev.service.v1.ImplementationView.runtime_capabilities:type_name -> modeldev.service.v1.FinetuningRuntimeCapabilities
+	12, // 13: modeldev.service.v1.ParameterRule.default_value:type_name -> modeldev.service.v1.GeneralParameter
+	12, // 14: modeldev.service.v1.ParameterRule.allowed_values:type_name -> modeldev.service.v1.GeneralParameter
+	12, // 15: modeldev.service.v1.ParameterRule.minimum:type_name -> modeldev.service.v1.GeneralParameter
+	12, // 16: modeldev.service.v1.ParameterRule.maximum:type_name -> modeldev.service.v1.GeneralParameter
+	21, // 17: modeldev.service.v1.GetInputVersionResponse.input_version:type_name -> modeldev.service.v1.InputVersionView
+	21, // 18: modeldev.service.v1.ListInputVersionsResponse.items:type_name -> modeldev.service.v1.InputVersionView
+	44, // 19: modeldev.service.v1.GetExecutionResponse.execution:type_name -> modeldev.service.v1.ExecutionView
+	44, // 20: modeldev.service.v1.ListExecutionsResponse.items:type_name -> modeldev.service.v1.ExecutionView
+	32, // 21: modeldev.service.v1.GetExecutionLogsResponse.lines:type_name -> modeldev.service.v1.ExecutionLogLine
+	33, // 22: modeldev.service.v1.ExecutionContainerView.last_state:type_name -> modeldev.service.v1.ExecutionContainerView
+	33, // 23: modeldev.service.v1.ExecutionPodView.containers:type_name -> modeldev.service.v1.ExecutionContainerView
+	33, // 24: modeldev.service.v1.ExecutionPodView.init_containers:type_name -> modeldev.service.v1.ExecutionContainerView
+	33, // 25: modeldev.service.v1.ExecutionPodView.ephemeral_containers:type_name -> modeldev.service.v1.ExecutionContainerView
+	34, // 26: modeldev.service.v1.ListExecutionPodsResponse.pods:type_name -> modeldev.service.v1.ExecutionPodView
+	35, // 27: modeldev.service.v1.ListExecutionEventsResponse.events:type_name -> modeldev.service.v1.ExecutionEventView
+	42, // 28: modeldev.service.v1.QueryExecutionMetricsResponse.series:type_name -> modeldev.service.v1.ExecutionMetricSeries
+	43, // 29: modeldev.service.v1.ExecutionMetricSeries.points:type_name -> modeldev.service.v1.ExecutionMetricPoint
+	51, // 30: modeldev.service.v1.ExecutionView.compute:type_name -> modeldev.service.v1.ExecutionComputeView
+	12, // 31: modeldev.service.v1.ExecutionView.resolved_parameters:type_name -> modeldev.service.v1.GeneralParameter
+	11, // 32: modeldev.service.v1.ExecutionView.explicit_parameters:type_name -> modeldev.service.v1.ExecutionParameters
+	52, // 33: modeldev.service.v1.ExecutionView.timing:type_name -> modeldev.service.v1.ExecutionTimingView
+	53, // 34: modeldev.service.v1.ExecutionView.model_registration:type_name -> modeldev.service.v1.ModelRegistrationView
+	59, // 35: modeldev.service.v1.ExecutionView.history:type_name -> modeldev.service.v1.ExecutionHistoryView
+	49, // 36: modeldev.service.v1.ExecutionView.steps:type_name -> modeldev.service.v1.ExecutionStepView
+	50, // 37: modeldev.service.v1.ExecutionView.metrics:type_name -> modeldev.service.v1.ExecutionMetricView
+	46, // 38: modeldev.service.v1.ExecutionView.failure:type_name -> modeldev.service.v1.ExecutionFailureView
+	48, // 39: modeldev.service.v1.ExecutionView.managed_settings:type_name -> modeldev.service.v1.ExecutionManagedSettingsView
+	45, // 40: modeldev.service.v1.ExecutionView.base_model:type_name -> modeldev.service.v1.ExecutionBaseModelView
+	47, // 41: modeldev.service.v1.ExecutionFailureView.violations:type_name -> modeldev.service.v1.ExecutionFieldViolationView
+	56, // 42: modeldev.service.v1.ListExecutionArtifactsResponse.items:type_name -> modeldev.service.v1.ArtifactView
+	56, // 43: modeldev.service.v1.AuthorizeArtifactDownloadResponse.artifact:type_name -> modeldev.service.v1.ArtifactView
+	44, // [44:44] is the sub-list for method output_type
+	44, // [44:44] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_modeldev_service_v1_execution_proto_init() }

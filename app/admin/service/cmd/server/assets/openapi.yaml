@@ -9852,6 +9852,15 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: device_mode
+                  in: query
+                  required: true
+                  description: Explicit material selector; absence, aliases and unknown modes are rejected.
+                  schema:
+                    type: string
+                    enum:
+                        - cpu
+                        - gpu
             responses:
                 "200":
                     description: OK
@@ -17163,6 +17172,10 @@ components:
                 execution_timeout_max_seconds:
                     type: string
                 step_timeout_seconds:
+                    type: string
+                runtime_capabilities:
+                    $ref: '#/components/schemas/FinetuningRuntimeCapabilities'
+                runtime_capabilities_sha256:
                     type: string
         ImportModelBundleModelData:
             type: object
