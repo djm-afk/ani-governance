@@ -21,6 +21,10 @@ Governance BFF 当前提供 `/api/v1/inference/...` 推理服务管理接口，�
 
 ## 1 请求约定
 
+推理调用 Key 管理使用独立 `/api/v1/inference-keys`，其创建、轮换请求保持
+`{data:{...}}`，不属于上述推理服务扁平请求迁移；完整报文、分页上限和一次性
+secret 语义见[推理调用 Key 合同](inference-keys.md)。
+
 - 查询参数放在 URL 中，创建和修改的业务数据使用 JSON 请求体。
 - 业务字段及请求体结构以接口定义为准。模型创建、版本创建、导入、组合导入及推理创建、更新、删除、启动、停止、重启共 10 个接口不使用 `data` 包装；其他接口保持各自已声明结构。
 - 本批次只迁移请求体，响应结构不变。推理路径中的 `resource_id` 为资源身份；请求体可省略该字段，若提供则必须与路径一致。`idempotency_key`、`expected_generation`、`update_mask` 的含义保持不变。

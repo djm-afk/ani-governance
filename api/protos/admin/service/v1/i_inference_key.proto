@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package admin.service.v1;
+
+import "google/api/annotations.proto";
+import "gnostic/openapi/v3/annotations.proto";
+import "inference/service/v1/access_key.proto";
+
+// Tenant-user JWT management of Inference-owned iak_ credentials. Requires
+// INFERENCE subscription and explicit inference:key:* permissions. Separate
+// from AccessKeyService and /api/v1/auth/api-keys; never routed through Higress.
+service InferenceKeyService {
+  rpc CreateInferenceKey(inference.service.v1.CreateInferenceKeyRequest) returns (inference.service.v1.InferenceKeyCredentials) {
+    option (google.api.http) = {post: "/api/v1/inference-keys" body: "*"};
+    option (gnostic.openapi.v3.operation) = {security: {additional_properties: {name: "BearerAuth" value: {}}}};
+  }
+  rpc ListInferenceKeys(inference.service.v1.ListInferenceKeysRequest) returns (inference.service.v1.ListInferenceKeysResponse) {
+    option (google.api.http) = {get: "/api/v1/inference-keys"};
+    option (gnostic.openapi.v3.operation) = {security: {additional_properties: {name: "BearerAuth" value: {}}}};
+  }
+  rpc GetInferenceKey(inference.service.v1.GetInferenceKeyRequest) returns (inference.service.v1.InferenceKey) {
+    option (google.api.http) = {get: "/api/v1/inference-keys/{key_id}"};
+    option (gnostic.openapi.v3.operation) = {security: {additional_properties: {name: "BearerAuth" value: {}}}};
+  }
+  // Revokes the credential; retains its metadata and audit history.
+  rpc RevokeInferenceKey(inference.service.v1.RevokeInferenceKeyRequest) returns (inference.service.v1.InferenceKey) {
+    option (google.api.http) = {delete: "/api/v1/inference-keys/{key_id}"};
+    option (gnostic.openapi.v3.operation) = {security: {additional_properties: {name: "BearerAuth" value: {}}}};
+  }
+  rpc RotateInferenceKey(inference.service.v1.RotateInferenceKeyRequest) returns (inference.service.v1.InferenceKeyCredentials) {
+    option (google.api.http) = {post: "/api/v1/inference-keys/{key_id}:rotate" body: "*"};
+    option (gnostic.openapi.v3.operation) = {security: {additional_properties: {name: "BearerAuth" value: {}}}};
+  }
+}

@@ -399,7 +399,7 @@ def observation(hook, event, evidence, instance_id, configuration, timeout, befo
     require(executable.is_absolute() and executable.is_file() and os.access(executable, os.X_OK), "ABSOLUTE_EXECUTABLE_HOOK_REQUIRED")
     # Explicit observer scope/relay configuration is separate from Gov login.
     # The hook validates these values; no arbitrary environment is inherited.
-    environment_keys = ("PATH", "HOME", "LANG", "TZ", "SSH_AUTH_SOCK", "SSH_AGENT_PID", "ANI_ACCEPTANCE_TENANT_NAMESPACE", "ANI_ACCEPTANCE_SSH_HOST", "ANI_ACCEPTANCE_SSH_PORT", "ANI_ACCEPTANCE_SSH_KNOWN_HOSTS", "ANI_ACCEPTANCE_OBSERVER_CONFIG")
+    environment_keys = ("PATH", "HOME", "LANG", "TZ", "SSH_AUTH_SOCK", "SSH_AGENT_PID", "ANI_ACCEPTANCE_TENANT_NAMESPACE", "ANI_ACCEPTANCE_SSH_HOST", "ANI_ACCEPTANCE_SSH_PORT", "ANI_ACCEPTANCE_SSH_KNOWN_HOSTS", "ANI_ACCEPTANCE_OBSERVER_CONFIG", "ANI_ACCEPTANCE_SSH_BRIDGE_URL", "ANI_ACCEPTANCE_SSH_BRIDGE_TOKEN_FILE")
     environment = {key: os.environ[key] for key in environment_keys if key in os.environ}
     try:
         process = subprocess.run([str(executable)], input=body_bytes(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, env=environment, check=False)

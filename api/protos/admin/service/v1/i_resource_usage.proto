@@ -1,0 +1,20 @@
+syntax = "proto3";
+package admin.service.v1;
+
+import "google/api/annotations.proto";
+import "usage/service/v1/usage.proto";
+
+// Platform user JWT, tenant=0 and precise current Casbin permission are required.
+// Only Gov-resolved tenant UUIDs, ACC-managed clusters and historical GPU scopes
+// reach Observability. Unknown/duplicate parameters and GET bodies are rejected.
+service ResourceUsageAdminService {
+  rpc GetResourceUsageOverview(usage.service.v1.OverviewRequest) returns (usage.service.v1.Overview) {
+    option (google.api.http) = {get: "/api/v1/admin/resource-usage/overview"};
+  }
+  rpc ListResourceUsageTenants(usage.service.v1.TenantsRequest) returns (usage.service.v1.Ranking) {
+    option (google.api.http) = {get: "/api/v1/admin/resource-usage/tenants"};
+  }
+  rpc GetResourceUsageTenant(usage.service.v1.TenantRequest) returns (usage.service.v1.Detail) {
+    option (google.api.http) = {get: "/api/v1/admin/resource-usage/tenants/{tenant_id}"};
+  }
+}
