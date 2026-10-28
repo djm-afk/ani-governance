@@ -4,12 +4,16 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
 	kerrors "github.com/go-kratos/kratos/v2/errors"
+	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -64,6 +68,11 @@ func TestQuotaAccountSummariesPlatformSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, len(cases), result.Total, "total counts tenants and excludes soft-deleted rows")
 	require.Len(t, result.Items, len(cases))
+	require.Equal(t, "4", result.Summary.ConfiguredTenantCount)
+	require.Len(t, result.Summary.Accounts, 1)
+	require.Equal(t, "9223372036854775827", result.Summary.Accounts[0].Limit)
+	require.Equal(t, "9223372036854775823", result.Summary.Accounts[0].Occupied, "unconfigured account occupation is included")
+	require.Equal(t, "11", result.Summary.Accounts[0].Available, "clamp remaining per tenant before summing")
 	for i, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			summary := result.Items[i]
@@ -97,10 +106,11 @@ func TestQuotaAccountSummariesPlatformSnapshot(t *testing.T) {
 		})
 	}
 	for _, page := range []uint32{2, math.MaxUint32} {
-		got, err := svc.ListTenantQuotaAccountSummaries(platform, &admin.ListTenantQuotaAccountSummariesRequest{Page: proto.Uint32(page), PageSize: proto.Uint32(100)})
+		got, err := svc.ListTenantQuotaAccountSummaries(platform, &admin.ListTenantQuotaAccountSummariesRequest{Page: proto.Uint32(page), PageSize: proto.Uint32(100), QuotaCode: proto.String(GpuPhysicalQuotaCode)})
 		require.NoError(t, err)
 		require.Empty(t, got.Items)
 		require.Equal(t, result.Total, got.Total)
+		require.True(t, proto.Equal(result.Summary, got.Summary), "summary covers the same filtered scope even on an empty page")
 	}
 	second, err := svc.ListTenantQuotaAccountSummaries(platform, &admin.ListTenantQuotaAccountSummariesRequest{Page: proto.Uint32(2), PageSize: proto.Uint32(2)})
 	require.NoError(t, err)
@@ -117,9 +127,13 @@ func TestQuotaAccountSummariesPlatformSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, empty.Items)
 	require.Zero(t, empty.Total)
-	json, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(empty)
-	require.NoError(t, err)
-	require.JSONEq(t, `{"items":[],"total":"0"}`, string(json))
+	require.Equal(t, "0", empty.Summary.ConfiguredTenantCount)
+	for _, account := range empty.Summary.Accounts {
+		require.Equal(t, "0", account.ConfiguredTenantCount)
+		require.Equal(t, "0", account.Limit)
+		require.Equal(t, "0", account.Occupied)
+		require.Equal(t, "0", account.Available)
+	}
 
 	for _, request := range []*admin.ListTenantQuotaAccountSummariesRequest{nil, {Page: proto.Uint32(0)}, {PageSize: proto.Uint32(0)}, {PageSize: proto.Uint32(101)}, {TenantId: proto.Uint32(0)}, {QuotaCode: proto.String("")}, {QuotaCode: proto.String("not.registered")}, {QuotaCode: proto.String("' OR 1=1")}} {
 		_, err := svc.ListTenantQuotaAccountSummaries(platform, request)
@@ -131,4 +145,54 @@ func TestQuotaAccountSummariesPlatformSnapshot(t *testing.T) {
 	}
 	_, err = svc.ListTenantQuotaAccountSummaries(context.Background(), &admin.ListTenantQuotaAccountSummariesRequest{})
 	require.Error(t, err)
+}
+
+func TestQuotaAccountSummaryTotalsSharedPlanAndHTTP(t *testing.T) {
+	c := testutil.NewQuotaPGClient(t)
+	testutil.ResetQuotaFixture(t, c)
+	sys := appViewer.NewSystemViewerContext(context.Background())
+	plan, err := c.Client().Plan.Create().SetName("shared-limit").Save(sys)
+	require.NoError(t, err)
+	require.NoError(t, c.Client().PlanQuota.Create().SetPlanID(plan.ID).SetQuotaCode(GpuPhysicalQuotaCode).SetQuotaValue(math.MaxInt64).Exec(sys))
+	var firstID uint32
+	for _, name := range []string{"shared-a", "shared-b", "shared-c"} {
+		tenant, err := c.Client().Tenant.Create().SetName(name).SetCode(name).SetPlanID(plan.ID).Save(sys)
+		require.NoError(t, err)
+		if firstID == 0 {
+			firstID = tenant.ID
+		}
+	}
+	repo := data.NewQuotaAdminRepo(testutil.NewBootstrapContext(nil), c)
+	svc := NewQuotaAdminService(testutil.NewBootstrapContext(nil), repo)
+	platform := auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: 7, TenantID: 0})
+	server := khttp.NewServer()
+	admin.RegisterQuotaAdminServiceHTTPServer(server, svc)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/admin/tenants/quota-account-summaries?page=2&pageSize=1&quotaCode="+GpuPhysicalQuotaCode, nil).WithContext(platform)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	result := &admin.ListTenantQuotaAccountSummariesResponse{}
+	require.NoError(t, protojson.Unmarshal(response.Body.Bytes(), result))
+	require.Len(t, result.Items, 1)
+	require.EqualValues(t, 3, result.Total)
+	require.Equal(t, "3", result.Summary.ConfiguredTenantCount)
+	require.Equal(t, "27670116110564327421", result.Summary.Accounts[0].Limit, "same plan counts once per tenant and sums beyond uint64 stay exact")
+	require.Equal(t, result.Summary.Accounts[0].Limit, result.Summary.Accounts[0].Available)
+	var wire struct {
+		Summary struct {
+			ConfiguredTenantCount string `json:"configuredTenantCount"`
+			Accounts              []struct {
+				QuotaCode string `json:"quotaCode"`
+			} `json:"accounts"`
+		} `json:"summary"`
+	}
+	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &wire))
+	require.Equal(t, "3", wire.Summary.ConfiguredTenantCount)
+	require.Len(t, wire.Summary.Accounts, 1)
+	require.Equal(t, GpuPhysicalQuotaCode, wire.Summary.Accounts[0].QuotaCode)
+
+	filtered, err := svc.ListTenantQuotaAccountSummaries(platform, &admin.ListTenantQuotaAccountSummariesRequest{TenantId: &firstID, QuotaCode: proto.String(GpuPhysicalQuotaCode)})
+	require.NoError(t, err)
+	require.Equal(t, "1", filtered.Summary.ConfiguredTenantCount)
+	require.Equal(t, strconv.FormatInt(math.MaxInt64, 10), filtered.Summary.Accounts[0].Limit)
 }

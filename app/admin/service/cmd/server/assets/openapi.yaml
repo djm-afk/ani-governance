@@ -16943,6 +16943,10 @@ components:
                         $ref: '#/components/schemas/TenantQuotaAccountSummary'
                 total:
                     type: string
+                summary:
+                    allOf:
+                        - $ref: '#/components/schemas/TenantQuotaAccountTotals'
+                    description: 同一筛选范围、同一只读快照的合计，不受 page/pageSize 影响。
         ListTenantQuotaAccountsResponse:
             type: object
             properties:
@@ -19567,6 +19571,24 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/InstanceMetricsRangeData'
+        QuotaAccountTotals:
+            type: object
+            properties:
+                quotaCode:
+                    type: string
+                unit:
+                    type: string
+                configuredTenantCount:
+                    type: string
+                limit:
+                    type: string
+                    description: 合计均为非负十进制字符串，可能超过单账户 uint64 范围。
+                occupied:
+                    type: string
+                    description: 包括未配置政策的账户占用，不代表运行中的 GPU 数量。
+                available:
+                    type: string
+                    description: 每租户 max(limit-occupied,0) 后求和，不是合计 limit-occupied。
         QuotaAccountView:
             type: object
             properties:
@@ -21027,6 +21049,16 @@ components:
                     items:
                         $ref: '#/components/schemas/QuotaAccountView'
             description: 平台管理读取的当前租户与套餐投影；不表示历史配额。
+        TenantQuotaAccountTotals:
+            type: object
+            properties:
+                configuredTenantCount:
+                    type: string
+                    description: 至少配置一个选定配额政策的租户数；共享套餐按租户分别计数。
+                accounts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/QuotaAccountTotals'
         TenantUsage:
             type: object
             properties:

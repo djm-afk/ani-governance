@@ -95,9 +95,10 @@ func TestQuotaAccountSummariesConsistentReadAndBoundedQueries(t *testing.T) {
 			return tx.Tenant.Create().SetName("new-after-count").SetCode("new-after-count").SetPlanID(p.ID).Exec(sys)
 		})
 	}
-	filter := TenantQuotaAccountSummaryFilter{Page: 1, PageSize: 100, QuotaCode: commandcontract.GpuPhysicalQuotaCode}
-	items, total, err := repo.ListTenantAccountSummaries(sys, filter)
+	filter := TenantQuotaAccountSummaryFilter{Page: 1, PageSize: 100, QuotaCode: commandcontract.GpuPhysicalQuotaCode, IncludeTotals: true}
+	page, err := repo.ListTenantAccountSummaryPage(sys, filter)
 	require.NoError(t, err)
+	items, total := page.Items, page.Total
 	require.Nil(t, driver.afterCount, "concurrent writer ran after tenant count")
 	require.EqualValues(t, 2, total)
 	require.Len(t, items, 2, "new tenant must not enter the preexisting page snapshot")
@@ -106,24 +107,31 @@ func TestQuotaAccountSummariesConsistentReadAndBoundedQueries(t *testing.T) {
 	require.Equal(t, "10", items[0].Accounts[0].Limit)
 	require.Equal(t, "2", items[0].Accounts[0].Occupied)
 	require.Equal(t, "8", items[0].Accounts[0].Available)
-	require.Len(t, driver.queries, 6, "six batched queries, independent of tenant page size")
+	require.Equal(t, "2", page.Summary.ConfiguredTenantCount)
+	require.Equal(t, "20", page.Summary.Accounts[0].Limit)
+	require.Equal(t, "2", page.Summary.Accounts[0].Occupied)
+	require.Equal(t, "18", page.Summary.Accounts[0].Available, "aggregate cannot see the concurrent policy/account writes")
+	require.Len(t, driver.queries, 7, "seven batched queries, independent of tenant page size")
 	require.Equal(t, []sql.TxOptions{{Isolation: sql.LevelRepeatableRead, ReadOnly: true}}, driver.options)
 
 	driver.queries = nil
-	items, total, err = repo.ListTenantAccountSummaries(sys, filter)
+	page, err = repo.ListTenantAccountSummaryPage(sys, filter)
 	require.NoError(t, err)
+	items, total = page.Items, page.Total
 	require.EqualValues(t, 3, total)
 	require.Len(t, items, 3)
 	require.Equal(t, "changed-a", items[0].TenantName)
 	require.Equal(t, "changed-plan", items[0].PlanName)
 	require.Equal(t, "20", items[0].Accounts[0].Limit)
 	require.Equal(t, "7", items[0].Accounts[0].Occupied)
-	require.Len(t, driver.queries, 6)
+	require.Equal(t, "60", page.Summary.Accounts[0].Limit)
+	require.Equal(t, "7", page.Summary.Accounts[0].Occupied)
+	require.Len(t, driver.queries, 7)
 	for i := 0; i < 37; i++ {
 		require.NoError(t, c.Client().Tenant.Create().SetName(fmt.Sprintf("batch-%02d", i)).SetCode(fmt.Sprintf("batch-%02d", i)).SetPlanID(p.ID).Exec(sys))
 	}
 	driver.queries = nil
-	page, err := repo.ListTenantAccountSummaryPage(sys, filter)
+	page, err = repo.ListTenantAccountSummaryPage(sys, filter)
 	require.NoError(t, err)
 	require.EqualValues(t, 40, page.Total)
 	require.Len(t, page.Items, 40)
@@ -131,7 +139,16 @@ func TestQuotaAccountSummariesConsistentReadAndBoundedQueries(t *testing.T) {
 	for _, item := range page.Items {
 		require.NotEmpty(t, page.ResourceTenantIDs[item.TenantId])
 	}
-	require.Len(t, driver.queries, 6, "larger tenant pages must not introduce N+1 reads")
+	require.Equal(t, "40", page.Summary.ConfiguredTenantCount)
+	require.Equal(t, "800", page.Summary.Accounts[0].Limit)
+	require.Len(t, driver.queries, 7, "larger tenant pages must not introduce N+1 reads")
+
+	driver.queries = nil
+	filter.IncludeTotals = false
+	page, err = repo.ListTenantAccountSummaryPage(sys, filter)
+	require.NoError(t, err)
+	require.Nil(t, page.Summary)
+	require.Len(t, driver.queries, 6, "GPU tenant monitoring callers do not request or compute full-scope totals")
 }
 
 func TestQuotaReadSnapshotPostgresRejectsWrites(t *testing.T) {
