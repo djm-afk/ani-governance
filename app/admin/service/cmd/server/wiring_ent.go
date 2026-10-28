@@ -374,6 +374,22 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		imageClient = client
 	}
 	imageService := service.NewImageService(imageClient, tenantRepo)
+	storageConfig, err := data.StorageConfigFromEnv()
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	var storageClient *data.StorageClient
+	if storageConfig.Address != "" {
+		client, closeStorage, err := data.NewStorageClient(storageConfig)
+		if err != nil {
+			rollback()
+			return nil, nil, err
+		}
+		cleanups = append(cleanups, closeStorage)
+		storageClient = client
+	}
+	storageService := service.NewStorageService(storageClient, tenantRepo)
 	acceleratorConfig, err := data.AcceleratorConfigFromEnv()
 	if err != nil {
 		rollback()
@@ -460,6 +476,9 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		modeldevGPU.Plans = acceleratorClient.Catalog
 	}
 	modeldevService := service.NewModelDevService(modeldevAuthorizationRepo, tenantRepo, modeldevAcceptanceRepo, modeldevClient, computeOwner, modeldevGPU)
+	if observabilityClient != nil {
+		modeldevService.SetMonitoring(observabilityClient)
+	}
 
 	// ═══════════════════════ 五、传输层(internal/server) ═══════════════════════
 
@@ -496,6 +515,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		platformNetworkService,
 		acceleratorService,
 		imageService,
+		storageService,
 		modeldevService,
 		inferenceService,
 		modelService,

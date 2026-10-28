@@ -26,6 +26,7 @@
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
 | 通用配额、GPU 实例与 Inference 接入 | QUOTA-01～03；INF-01/02；QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 保留 ACC 目录与 Resource 实例执行/释放合同；Inference 管理由 Governance BFF 接入并通过受信 mTLS 客户端投递；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)；源码、部署与真实 GPU 验收分别记录 |
 | ModelDev 训练、微调及原登记恢复 | MODELDEV-01～MODELDEV-08、MODELDEV-12；服务间调用登记 S2S-MODELDEV-CPUP01-01 | 单一 typed 受理/查询及当前授权恢复已实现；原登记 Resume 的 HTTP/JWT/PG/mTLS 边界 GREEN，真实 provider Resume 与完整微调/GPU分别验收；历史 CPU-P01 结果保留原范围 | v2.1，进行中 |
+| 存储接入（独立盘与对象只读） | STORAGE-01～STORAGE-10 | 已实现并在 kcn 新环境完成正/负向验证；对象列表是本登记中唯一分页合同例外 | 待指定；前端合同与交付文档另行提供 |
 
 ## 风格改动批次
 
@@ -1303,7 +1304,7 @@ Image AK 使用现有 ANI-HMAC-SHA256 七行形式：算法、HTTP method、规�
 
 ## 功能组：ModelDev 训练与微调（MODELDEV-01～08、12）
 
-当前活动合同为单一typed Intent，规则查询与请求见[前端合同](frontend-cpu-training-handoff.md)。同键原意图重放先于新目录解析；当前授权→固定候选 operation/execution/accepted_at→Res TRAINING→ModelDev Prepare/Finalize→Gov单事务持久受理及唯一ModelDevDispatch。网络不进入受理事务，CPU不写GPU原账。
+当前活动合同为单一typed Intent，规则查询与请求见[前端合同](frontend-training-handoff.md)。同键原意图重放先于新目录解析；当前授权→固定候选 operation/execution/accepted_at→Res TRAINING→ModelDev Prepare/Finalize→Gov单事务持久受理及唯一ModelDevDispatch。网络不进入受理事务，CPU不写GPU原账。
 
 FINETUNING 同时省略 `new_model_name` 与 `target_model_id` 表示仅发布训练产物，
 该省略状态进入原 Intent/Snapshot/hash，不增加跳过字段，也不修改已受理意图。
@@ -1317,9 +1318,10 @@ FINETUNING 同时省略 `new_model_name` 与 `target_model_id` 表示仅发布�
 | MODELDEV-01 | 创建执行 | implementation/compute/typed parameters/总时长；拒绝旧Release字段；202为持久受理 |
 | MODELDEV-02 | 已退役Release操作 | import-release/enable/pause/binding/generation不再注册；历史证据不作为新受理许可 |
 | MODELDEV-03～06 | 详情、产物、下载、停止、列表、日志 | 原当前授权/租户隔离和正交状态保留；下载不缓存、不存有效URL |
-| MODELDEV-07 | 实现规则与输入 | `/api/v1/modeldev/implementations`；公共compute复用TRAINING目录；输入独立 `modeldev:manage_input`；不要求Release导入批准 |
+| MODELDEV-07 | 实现规则与输入 | `/api/v1/modeldev/implementations`；可选 `kind`（`GENERAL_TRAINING`/`FINETUNING`，分页前筛选，非法值400）；公共compute复用TRAINING目录；输入独立 `modeldev:manage_input`；不要求Release导入批准 |
 | MODELDEV-08 | inspect/reconcile/cleanup | 当前独立execution权限，精确原UID清理；不自动删PVC/publication/模型 |
 | MODELDEV-12 | 恢复原模型登记 | `POST /api/v1/modeldev/executions/{execution_id}:resume-model-registration`；空 body/no query，仅原 CLOSED FINETUNING，当前 manage+GET+Model 原目标分支权限；同详情返回 `model_registration`/`history` |
+| MODELDEV-13 | 资源曲线（一次一个 Pod） | `GET /api/v1/modeldev/executions/{execution_id}/resource-metrics`；必填 `pod_uid`/`container`/`start`/`end`/`metric_codes`，可选 `step_seconds`（30–3600、30 的整数倍）；容器由 layer 钉死（worker=`node`、step=`main`）；namespace 与 cluster 取本租户冻结受理，不接受调用方传值；每租户并发 4，BFF 排队；当前 GPU 无 exporter，`gpu_requested=true` 时 `gpu_available=false` |
 
 源码实现、提供方正式模块、Fedora PG/负载、目标集群身份/执行、BFF/Model独立使用和GPU原账分别验收。用户本轮明确排除前端源码/部署修改；本文件仍交接BFF合同。本轮具体来源与实际结果在唯一活动方案 records 中，不沿用旧CPU-P01/Release实验作为本轮完成证据。
 
@@ -1806,6 +1808,58 @@ actor 和 request ID 从可信上下文重建。HTTP 入口执行正常认证、
 status=ready 返回 total=1/ready，operations 返回 total=1。含斜杠的公开模型名不能
 替代 HTTP path 的资源 UUID。源码修改、部署与前端验收分别记录。
 
+<a id="storage-20261023"></a>
+
+### STORAGE-01～STORAGE-10：存储接入（2026-10-23）
+
+范围：独立盘（PVC）创建、列表、详情、扩容、删除；对象存储只读浏览与短期下载。
+前端合同与样例、实施过程、测试报告和偏离说明另行交付，不在本仓登记。
+
+| 编号 | 方法与路径 | 权限码 |
+| --- | --- | --- |
+| STORAGE-01 | `GET /api/v1/storage/classes` | `storage:volume:create` |
+| STORAGE-02 | `POST /api/v1/storage/volumes` | `storage:volume:create` |
+| STORAGE-03 | `GET /api/v1/storage/volumes` | `storage:volume:list` |
+| STORAGE-04 | `GET /api/v1/storage/volumes/{pvc_name}` | `storage:volume:get` |
+| STORAGE-05 | `POST /api/v1/storage/volumes/{data.pvc_name}:update` | `storage:volume:update` |
+| STORAGE-06 | `POST /api/v1/storage/volumes/{data.pvc_name}:delete` | `storage:volume:delete` |
+| STORAGE-07 | `GET /api/v1/storage/buckets` | `storage:bucket:list` |
+| STORAGE-08 | `GET /api/v1/storage/buckets/{bucket_id}/objects` | `storage:object:list` |
+| STORAGE-09 | `POST /api/v1/storage/buckets/{data.bucket_id}/objects:head` | `storage:object:get` |
+| STORAGE-10 | `POST /api/v1/storage/buckets/{data.bucket_id}/objects:download-url` | `storage:object:download` |
+
+约定：创建/变更使用 `data` 包装；单资源查询直接返回对象；除对象列表外使用
+`page/pageSize` 与 `items/total`（int64 为十进制字符串）。**对象列表是分页合同的
+唯一显式例外**：只接受 `limit`（1–100，缺省 100）与绑定 bucket+prefix 的不透明
+`cursor`；出现 `page/pageSize/offset/token` 一律 400；响应不含 `total`；游标跨桶/
+跨 prefix 复用 400，不降级首页。该例外只适用于 STORAGE-08。
+
+查询参数严格校验（STORAGE-01/03/07/08 四个列表 GET）：参数白名单按路由声明，
+每个参数只允许单值；空值、前导零、重复参数、未声明参数一律 400
+`STORAGE_INVALID_REQUEST`，不静默取默认值。其余 storage 路由（含写接口）不接受
+任何查询串。该过滤器位于生成代码解码之前，与 `docs/contracts/frontend-http-api.md`
+的分页合同对齐。
+
+列表筛选（分页前生效，多条件 AND，`total` 为筛选后总数，排序保持既有唯一键）：
+
+- STORAGE-03：`name` 按 `display_name` 不区分大小写包含；`id` 精确匹配 `pvc_name`
+  或 `uid`；`state` 精确匹配 `phase`，仅接受 `Pending`/`Bound`/`Lost`。
+- STORAGE-07：`name` 按展示名不区分大小写包含；`id` 精确匹配逻辑桶 ID。
+
+认证：存储路由只接受 Bearer 用户身份；`allowsAPIKey` 仅覆盖 Network/Image，
+带 AK/SK 签名头调用返回 403 `USER_REQUIRED`，混用返回 400 `MIXED_AUTHENTICATION`。
+
+幂等与身份：`create_token` 是业务重试键，一次创建意图一个；删除后重放旧 Create
+可能创建同名新 UID，前端不得在删除后自动重试旧请求。扩容与删除必须携带用户选中
+对象的 `expected_uid`，UID 变化返回 `VOLUME_IDENTITY_CHANGED`。扩容只允许增加，
+与 `spec` 当前申请值比较，不允许缩容。
+
+模块与套餐：STORAGE 为新增业务模块；`sys_plan_modules` 是白名单，迁移默认不为
+存量套餐添加。上线时由运营显式开启，未开启返回 403。权限目录脚本
+`sql/data/20261023_storage_permissions.sql` 只建权限点与 API 关联，不授权、不启模块。
+
+未提供：上传/删除对象、建桶/删桶、用户 S3 AK/SK、桶公开访问、容量配额、重命名。
+独立盘不计入 `storage.bytes` 配额。
 ## VM-MVP-20261023：虚拟机 BFF
 
 正式请求/响应及路由输入为 `api/protos/vm/service/v1/vm.proto`、`api/protos/admin/service/v1/i_vm.proto`。Module `VIRTUAL_MACHINE=17`；权限登记复用 [能力映射](contracts/permission-code-capability-map.tsv)，显式目录准备使用 `scripts/ops/sql/register-vm-permissions.sql`，不自动授予角色、套餐或资源额度。共享 compute 路径按 `usage=VIRTUAL_MACHINE` 检查 `vm:compute-preset:read` 及该模块资格。
