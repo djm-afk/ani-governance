@@ -63,7 +63,7 @@ func (p *inferenceKeyOwnerProbe) RotateInferenceKeyTrusted(_ context.Context, te
 }
 
 func inferenceKeyProbe() *inferenceKeyOwnerProbe {
-	return &inferenceKeyOwnerProbe{key: &runtimev1.InferenceAccessKey{Id: inferenceKeyTestID, Name: "app", KeyPrefix: "iak_0123456789ab", AllowedModelNames: []string{"model"}, CreatedAt: timestamppb.Now(), Version: 1}}
+	return &inferenceKeyOwnerProbe{key: &runtimev1.InferenceAccessKey{Id: inferenceKeyTestID, Name: "app", KeyPrefix: inferenceKeyTestSecret[:16], AllowedModelNames: []string{"model"}, CreatedAt: timestamppb.Now(), Version: 1}}
 }
 
 func TestInferenceKeyTrustedManagementAndOneTimeSecret(t *testing.T) {
