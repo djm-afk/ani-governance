@@ -9555,6 +9555,13 @@ paths:
                      名称即创建时提交的 name，与响应里的 name 同源。
                   schema:
                     type: string
+                - name: kind
+                  in: query
+                  description: |-
+                    按任务类型筛选，取值为 GENERAL_TRAINING / FINETUNING，与响应里的 kind 同词汇
+                     （不带枚举前缀）。在分页前生效，total 为筛选后的条数。
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK

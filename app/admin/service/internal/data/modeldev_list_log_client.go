@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	modeldevv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
+	trainingv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/training/v1"
 	"google.golang.org/grpc"
 )
 
@@ -26,6 +27,9 @@ type ExecutionFilter struct {
 	CloseState    *modeldevv1.CloseState
 	// Name is an already validated substring; the owner folds case.
 	Name *string
+	// Kind is the task type the caller asked for; the owner rejects the enum
+	// placeholder rather than treating it as "no filter".
+	Kind *trainingv1.ExecutionKind
 }
 
 func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResolveScope, page, pageSize uint32, filter ExecutionFilter) (*modeldevv1.ListExecutionsResponse, error) {
@@ -43,6 +47,7 @@ func (c *ModelDevClient) ListExecutions(ctx context.Context, scope ModelDevResol
 		DeliveryState: filter.DeliveryState,
 		CloseState:    filter.CloseState,
 		Name:          filter.Name,
+		Kind:          filter.Kind,
 	}
 	out, err := modeldevv1.NewModelDevQueryServiceClient(c.connection).ListExecutions(call, request, grpc.WaitForReady(true))
 	if err != nil {
