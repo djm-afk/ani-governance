@@ -753,6 +753,39 @@ const url = `${BASE_URL}/api/v1/admin/users?${params.toString()}`;
 
 ## 功能组：API Key / AK-SK
 
+### 独立推理 Key HTTP 管理（INF-KEY-01～05，2026-10-28）
+
+Governance 提供 `/api/v1/inference-keys` 创建/列表、`/{key_id}` 详情/撤销及
+`/{key_id}:rotate` 轮换；完整报文和五个内部 RPC 见
+[推理调用 Key 合同](contracts/inference-keys.md)。要求租户用户 JWT、
+`inference:key:create/read/revoke/rotate` 和有效的 `INFERENCE` 套餐。
+平台 AK/SK、推理 Key 和平台租户 0 不能管理这些凭证。
+
+Gov 通过持久化租户映射与现有受管 mTLS 连接调用 Inference；凭证由 Inference
+签发和持久化，secret 仅在首次创建/轮换时交付，列表、详情、重放和审计不返回明文。
+Key 与平台 AK/SK 的路由、权限和存储独立；这些管理接口不进入 Higress。
+新增 API 目录须先 dry-run 再同步，并显式配置权限、角色及套餐后刷新 Casbin。
+
+配套 Inference 修复使列表和 total 使用同一只读 REPEATABLE READ 快照；创建仅对
+租户内创建幂等键执行 ON CONFLICT DO NOTHING，并在 READ COMMITTED 事务读取
+并发获胜记录。两个并发请求只产生一个 Key、一次 secret 交付和一条创建审计；
+异意图重放为 409，其他约束失败仍回滚，不转换成幂等重放。
+
+`scripts/deploy/service-mtls/` 提供现有续期重载 Job 的受限配置与源码；
+`ani-inference-gateway-authz-mtls` 同时进入精确 Secret 读取权限和 Inference
+工作负载绑定，避免鉴权 companion 在证书续期后仍使用旧连接身份。
+
+本地完整 API 生成、构建及相关回归通过；Gov 的外部 owner 用明确协议替身，
+Inference 并发、快照和事务行为用独占 PostgreSQL 验证。用户指定的
+`kubernetes-admin@ani-kcn-full` 已完成真实登录、创建/列表/详情、并发幂等、
+真实模型生成、无/错/旧/撤销 Key 401、模型越权及伪造模型头 403、小时限额 429、
+轮换/撤销和 Higress 管理路径 404 验收。专用鉴权证书实际续期 revision 1→2 后
+自动滚动加载，后续无变化任务不重复重启，真实推理继续通过。
+三个测试 Key 已撤销。实际命令和脱敏结果保留于本地任务工件，并在 PR 中说明。
+验收限于选定租户、服务及 `/v1/completions`；不代表所有模型、协议、限流维度或
+租户策略均已验收。既有环境门控测试仍有 skip，未启用 Sandbox，其他环境及
+既有 Helm 现场覆盖项固化仍需各自的发布流程。
+
 ### 历史交付：AKSK-VPC-20260922（该批已实施及验收）
 
 该历史批次以 [执行文档](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/aksk-vpc-execution-plan.md) 为其最终合同；下列 PASS 仅属该批，2026-10-09 的 Network/Image 当前签名范围以 [AK/SK 合同](contracts/aksk-signature.md) 和本轮登记为准。下面旧版本排查保留为历史，不再描述当前代码。
@@ -891,6 +924,7 @@ Key 绑定同租户启用 TENANT 角色，复用套餐和 Casbin。主密钥文�
 - 本轮仓库只修改本登记文件；没有部署或修改运行数据库。kind、真实 PostgreSQL/Redis 与业务 API 全链路为 `not_verified`。
 
 源码入口：[HTTP 路由](../api/protos/admin/service/v1/i_access_key.proto)、[报文](../api/protos/access_key/service/v1/access_key.proto)、[业务实现](../app/admin/service/internal/service/access_key_service.go)、[仓储](../app/admin/service/internal/data/access_key_repo.go)、[表定义](../app/admin/service/internal/data/ent/schema/access_key.go)、[机器令牌签发与校验](../app/admin/service/internal/data/authenticator.go)、[角色策略来源](../app/admin/service/internal/data/authorizer_provider.go)、[API 审计](../pkg/middleware/logging/api_audit_log.go)、[首次初始化 SQL](../sql/bootstrap/001_initial.sql)、[VPC 入口身份检查](../app/admin/service/internal/service/network_service.go)。
+
 
 ## 功能组：VPC 详情查询的机器调用
 
@@ -1905,3 +1939,20 @@ Linux `DISK_IMAGE` 仅在 Resource 媒体目录 `initializationCapability=CLOUD_
 Contract: [GPU monitoring](contracts/gpu-monitoring.md); authority: [accepted v1.1 plan](plans/gpu-monitoring-backend-phase1-plan.md). Implements dedicated physical, tenant and authorized-resource reads, retained ACC attribution and readonly quota summaries. Container and inference detail types use original UsageRef; ModelDev execution is a reviewed extension contract. GPU transport/response and budget rules are separate from existing CPU/training reads. Implementation, Fedora checks and real-cluster acceptance are tracked separately in the task's single execution index; registration does not assert live completion. API/permission catalogue synchronization is explicit, with no user/role/policy changes.
 
 `GET /api/v1/admin/tenants/quota-account-summaries` additionally returns `summary` with configured-tenant counts and per-quota limit/occupied/available totals. Aggregation retains platform-only `tenant:quota-read`, existing filters and the current read-only snapshot; it is independent of pagination. Shared-plan limits count per tenant, unconfigured account occupation is retained, and every aggregate number is a decimal string. No route, database migration, new permission or quota mutation is added; complete field semantics are maintained in the contract linked above.
+
+## USAGE-01：平台受管业务工作负载使用统计
+
+平台管理员 JWT（tenant=0）及现行 Casbin `resource-usage:read`，模块 DASHBOARD。
+新增 GET `/api/v1/admin/resource-usage/overview`、`/tenants`、`/tenants/{tenant_id}`；
+Proto 唯一合同为 `api/protos/usage/service/v1/usage.proto`。
+查询使用 RFC3339 整秒 start/end（最近30天）、metric=gpu/cpu/memory；排行另支持
+keyword 名称/ID子串、order=asc/desc、page/pageSize（独立默认1/20，上限100），未知、重复、空值和GET body拒绝。
+结果无 data 包装，total/rank/activeTenantCount 为十进制字符串；缺失完整均值、峰值、占比不补零。
+Gov 从同一次租户目录读取持久 UUID，ACC 读取受管集群及历史 GPU scopes；只向已登记
+`/observability.usage.v1.ResourceUsageService/QueryUsage` 发送服务端可信范围，mTLS复用现有Obs连接，
+platform metadata不伪造tenant header，超时40秒、继承父取消、不自动重试。
+Obs先计算全租户时间对齐统计，Gov再排序/搜索/分页，全平台三卡与占比分母不随筛选分页变化；
+数据不完整时不提供精确rank/share；rank始终是全局均值降序名次，asc仅改变展示顺序。最多128租户、16集群，超预算失败不截断。
+范围以Gov仍持久的租户目录为准（含停用、过期、冻结及保留的软删标记行）；完全物理删除且无目录映射的历史不作完整覆盖承诺。
+客户端scope/观测快照按用户、窗口和租户范围短时复用15秒，不复用用户授权结果。
+本条为新增实现合同；部署、权限登记和真实跨仓验收由本任务发布步骤分别确认。

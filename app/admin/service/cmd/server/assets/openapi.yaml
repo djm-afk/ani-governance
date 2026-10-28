@@ -1,4 +1,4 @@
-﻿# Generated with protoc-gen-openapi
+# Generated with protoc-gen-openapi
 # https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
 
 openapi: 3.0.3
@@ -6365,6 +6365,109 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/RedisCacheMonitorInfo'
+    /api/v1/admin/resource-usage/overview:
+        get:
+            tags:
+                - ResourceUsageAdminService
+            operationId: ResourceUsageAdminService_GetResourceUsageOverview
+            parameters:
+                - name: start
+                  in: query
+                  description: Required RFC3339 whole-second timestamps, within the most recent 30 days.
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: metric
+                  in: query
+                  description: gpu (default), cpu or memory; selects the curve, not the three summary cards.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Overview'
+    /api/v1/admin/resource-usage/tenants:
+        get:
+            tags:
+                - ResourceUsageAdminService
+            operationId: ResourceUsageAdminService_ListResourceUsageTenants
+            parameters:
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: metric
+                  in: query
+                  schema:
+                    type: string
+                - name: keyword
+                  in: query
+                  description: Case-insensitive substring in trusted tenant name or canonical tenant ID.
+                  schema:
+                    type: string
+                - name: order
+                  in: query
+                  description: desc (default) or asc. Unknown values sort last; equal values use tenant ID.
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Ranking'
+    /api/v1/admin/resource-usage/tenants/{tenantId}:
+        get:
+            tags:
+                - ResourceUsageAdminService
+            operationId: ResourceUsageAdminService_GetResourceUsageTenant
+            parameters:
+                - name: tenantId
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: start
+                  in: query
+                  schema:
+                    type: string
+                - name: end
+                  in: query
+                  schema:
+                    type: string
+                - name: metric
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Detail'
     /api/v1/admin/roles:
         get:
             tags:
@@ -8318,6 +8421,116 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/inference-keys:
+        get:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_ListInferenceKeys
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListInferenceKeysResponse'
+            security:
+                - BearerAuth: []
+        post:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_CreateInferenceKey
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateInferenceKeyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKeyCredentials'
+            security:
+                - BearerAuth: []
+    /api/v1/inference-keys/{key_id}:
+        get:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_GetInferenceKey
+            parameters:
+                - name: key_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKey'
+            security:
+                - BearerAuth: []
+        delete:
+            tags:
+                - InferenceKeyService
+            description: Revokes the credential; retains its metadata and audit history.
+            operationId: InferenceKeyService_RevokeInferenceKey
+            parameters:
+                - name: key_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKey'
+            security:
+                - BearerAuth: []
+    /api/v1/inference-keys/{key_id}:rotate:
+        post:
+            tags:
+                - InferenceKeyService
+            operationId: InferenceKeyService_RotateInferenceKey
+            parameters:
+                - name: key_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RotateInferenceKeyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InferenceKeyCredentials'
+            security:
+                - BearerAuth: []
     /api/v1/inference/operations/{operation_id}:
         get:
             tags:
@@ -9233,7 +9446,9 @@ paths:
                     type: string
                 - name: name
                   in: query
-                  description: 按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+                  description: |-
+                    按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+                     名称即创建时提交的 name，与响应里的 name 同源。
                   schema:
                     type: string
             responses:
@@ -9531,11 +9746,6 @@ paths:
                   in: query
                   schema:
                     type: string
-                - name: format
-                  in: query
-                  schema:
-                    type: string
-                  description: 只接受 CSV / JSON；其它值返回 400。筛选在分页前生效，total 为筛选后条数。
                 - name: page
                   in: query
                   schema:
@@ -9546,6 +9756,14 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: format
+                  in: query
+                  description: |-
+                    按已校验的数据集格式筛选，在分页前生效，total 为筛选后条数。
+                     兼容性由格式唯一决定：CSV 只能用于普通训练，JSON 只能用于微调。
+                     只接受 CSV / JSON，其它值返回 400（不会静默返回空页）。
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -13744,6 +13962,39 @@ components:
                     type: string
                 sshPublicKey:
                     type: string
+        CreateInferenceKeyData:
+            type: object
+            properties:
+                name:
+                    type: string
+                allowed_service_ids:
+                    type: array
+                    items:
+                        type: string
+                allowed_model_names:
+                    type: array
+                    items:
+                        type: string
+                requests_per_second:
+                    type: integer
+                    format: int32
+                requests_per_minute:
+                    type: integer
+                    format: int32
+                requests_per_hour:
+                    type: integer
+                    format: int32
+                expires_at:
+                    type: string
+                    format: date-time
+                idempotency_key:
+                    type: string
+                    description: Required on this HTTP surface. Replays never return the secret again.
+        CreateInferenceKeyRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateInferenceKeyData'
         CreateInferenceRequest:
             example: {"idempotency_key": "req-001", "name": "qwen-inference", "model_version_id": "version-1", "served_model_name": "qwen2.5-1.5b-instruct", "engine_image": "registry.example/vllm:latest", "engine_type": "vllm", "command": "exec vllm serve /models --served-model-name qwen2.5-1.5b-instruct --max-model-len 4096", "cpu": "8", "memory": "32Gi", "replicas": 1, "preset_id": "40000000-0000-4000-8000-000000000001"}
             type: object
@@ -14660,6 +14911,30 @@ components:
                     description: SUBMITTED、TERMINATING 或 GONE。
                 volume:
                     $ref: '#/components/schemas/Volume'
+        Detail:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                stepSeconds:
+                    type: integer
+                    format: uint32
+                dataCutoff:
+                    type: string
+                    format: date-time
+                tenantId:
+                    type: integer
+                    format: uint32
+                tenantName:
+                    type: string
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MetricUsage'
         DeviceInfo:
             type: object
             properties:
@@ -15196,6 +15471,20 @@ components:
                     type: string
                 expiresAt:
                     type: string
+        ExecutionBaseModelView:
+            type: object
+            properties:
+                model_id:
+                    type: string
+                version_id:
+                    type: string
+                family:
+                    type: string
+                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
+                format:
+                    type: string
+                    description: 权重格式，如 safetensors。
+            description: 基座模型的公开身份。不包含存放位置，前端不能据此拼接下载地址。
         ExecutionComputeView:
             type: object
             properties:
@@ -15267,20 +15556,6 @@ components:
                     type: string
                 reporting_instance:
                     type: string
-        ExecutionBaseModelView:
-            type: object
-            properties:
-                model_id:
-                    type: string
-                version_id:
-                    type: string
-                family:
-                    type: string
-                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
-                format:
-                    type: string
-                    description: 权重格式，如 safetensors。
-            description: 微调所用的基座模型身份。不含对象键、存储位置与文件清单，不能据此拼下载地址。
         ExecutionFailureView:
             type: object
             properties:
@@ -15648,7 +15923,9 @@ components:
                 base_model:
                     allOf:
                         - $ref: '#/components/schemas/ExecutionBaseModelView'
-                    description: 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；普通训练为 null。
+                    description: |-
+                        微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；
+                         普通训练为 null。
         Expression:
             type: object
             properties:
@@ -16656,6 +16933,61 @@ components:
                     description: Durable Governance admission; this is not model readiness.
                 dispatch_operation_id:
                     type: string
+        InferenceKey:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                key_prefix:
+                    type: string
+                allowed_service_ids:
+                    type: array
+                    items:
+                        type: string
+                allowed_model_names:
+                    type: array
+                    items:
+                        type: string
+                requests_per_second:
+                    type: integer
+                    format: int32
+                requests_per_minute:
+                    type: integer
+                    format: int32
+                requests_per_hour:
+                    type: integer
+                    format: int32
+                expires_at:
+                    type: string
+                    format: date-time
+                revoked_at:
+                    type: string
+                    format: date-time
+                created_by:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                last_used_at:
+                    type: string
+                    format: date-time
+                version:
+                    type: string
+            description: |-
+                Inference-owned data-plane metadata. Platform AK/SK and tenant identity are
+                 deliberately absent. No read response can contain the secret or its hash.
+        InferenceKeyCredentials:
+            type: object
+            properties:
+                key:
+                    $ref: '#/components/schemas/InferenceKey'
+                secret:
+                    type: string
+                    description: Returned once, only on a new creation or rotation. Use as x-api-key.
+                replayed:
+                    type: boolean
         InferenceMetricPoint:
             type: object
             properties:
@@ -17628,6 +17960,15 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/ImplementationView'
+                total:
+                    type: string
+        ListInferenceKeysResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/InferenceKey'
                 total:
                     type: string
         ListInferenceOperationsResponse:
@@ -18968,6 +19309,41 @@ components:
                 meta:
                     $ref: '#/components/schemas/MenuMeta'
             description: 路由项
+        MetricUsage:
+            type: object
+            properties:
+                metric:
+                    type: string
+                unit:
+                    type: string
+                mean:
+                    nullable: true
+                    type: number
+                    format: double
+                peak:
+                    nullable: true
+                    type: number
+                    format: double
+                knownMean:
+                    nullable: true
+                    type: number
+                    format: double
+                knownPeak:
+                    nullable: true
+                    type: number
+                    format: double
+                peakAt:
+                    type: string
+                    format: date-time
+                quality:
+                    $ref: '#/components/schemas/Quality'
+                points:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/UsagePoint'
+                activeTenantCount:
+                    nullable: true
+                    type: string
         Model:
             type: object
             properties:
@@ -19730,6 +20106,25 @@ components:
                     description: 删除时间
                     format: date-time
             description: 组织单元
+        Overview:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                stepSeconds:
+                    type: integer
+                    format: uint32
+                dataCutoff:
+                    type: string
+                    format: date-time
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MetricUsage'
         Parameter:
             type: object
             properties:
@@ -20728,6 +21123,29 @@ components:
                 updatedAt:
                     type: string
                     format: date-time
+        Quality:
+            type: object
+            properties:
+                status:
+                    type: string
+                reasons:
+                    type: array
+                    items:
+                        type: string
+                coverage:
+                    nullable: true
+                    type: number
+                    format: double
+                observedPoints:
+                    type: integer
+                    format: uint32
+                expectedPoints:
+                    type: integer
+                    format: uint32
+                availableFrom:
+                    type: string
+                    format: date-time
+            description: Resource usage is observed business workload demand, never quota or billing.
         QueryExecutionMetricsResponse:
             type: object
             properties:
@@ -20900,6 +21318,31 @@ components:
                     type: string
                     description: 配额编码
             description: 配额用量项
+        Ranking:
+            type: object
+            properties:
+                start:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                stepSeconds:
+                    type: integer
+                    format: uint32
+                dataCutoff:
+                    type: string
+                    format: date-time
+                metrics:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MetricUsage'
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TenantUsageRow'
+                total:
+                    type: string
         RecordIntranetPoolVerificationData:
             type: object
             properties:
@@ -21389,6 +21832,18 @@ components:
                         type: string
                     description: 隐藏字段列表（proto 字段 json_name，如 email）
             description: 角色字段权限条目：角色在某资源上隐藏的字段集（黑名单语义）
+        RotateInferenceKeyData:
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+        RotateInferenceKeyRequest:
+            type: object
+            properties:
+                key_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/RotateInferenceKeyData'
         RuntimeDiagnostics:
             type: object
             properties:
@@ -22385,6 +22840,23 @@ components:
                         $ref: '#/components/schemas/QuotaUsage'
                     description: 配额上限列表
             description: 租户用量与配额
+        TenantUsageRow:
+            type: object
+            properties:
+                tenantId:
+                    type: integer
+                    format: uint32
+                tenantName:
+                    type: string
+                rank:
+                    nullable: true
+                    type: string
+                share:
+                    nullable: true
+                    type: number
+                    format: double
+                usage:
+                    $ref: '#/components/schemas/MetricUsage'
         TokenPairResponse:
             required:
                 - access_token
@@ -22967,6 +23439,27 @@ components:
             properties:
                 volume:
                     $ref: '#/components/schemas/Volume'
+        UsagePoint:
+            type: object
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                end:
+                    type: string
+                    format: date-time
+                value:
+                    nullable: true
+                    type: number
+                    format: double
+                knownValue:
+                    nullable: true
+                    type: number
+                    format: double
+                peak:
+                    nullable: true
+                    type: number
+                    format: double
         User:
             type: object
             properties:
@@ -23788,6 +24281,11 @@ tags:
     - name: ImageService
     - name: InferenceDiagnosticsService
       description: Tenant-authenticated management diagnostics; inference calls remain on Higress.
+    - name: InferenceKeyService
+      description: |-
+        Tenant-user JWT management of Inference-owned iak_ credentials. Requires
+         INFERENCE subscription and explicit inference:key:* permissions. Separate
+         from AccessKeyService and /api/v1/auth/api-keys; never routed through Higress.
     - name: InferenceService
       description: |-
         Requires trusted tenant-user Principal, active tenant and the separately
@@ -23858,6 +24356,11 @@ tags:
     - name: QuotaSelfService
     - name: RedisCacheMonitorService
       description: Redis缓存监控管理服务（只读）
+    - name: ResourceUsageAdminService
+      description: |-
+        Platform user JWT, tenant=0 and precise current Casbin permission are required.
+         Only Gov-resolved tenant UUIDs, ACC-managed clusters and historical GPU scopes
+         reach Observability. Unknown/duplicate parameters and GET bodies are rejected.
     - name: RoleService
       description: 角色管理服务
     - name: ServerMonitorService

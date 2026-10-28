@@ -203,10 +203,10 @@ func TestCountsAndKeys(t *testing.T) {
 		"GET /api/v1/observability/resource-trend": {Code: "observability:resource-trend:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
 		"GET /api/v1/overview":                     {Code: "overview:resource-count:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
 	}
-	if want := 199 + len(gpuReads); ManagementCount() != want {
+	if want := 199 + len(gpuReads) + 5 + 3; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
-	if want := 176 + len(platformEIPReadsAndRelease) + len(homepageReads); CapabilityCount() != want {
+	if want := 176 + len(platformEIPReadsAndRelease) + len(homepageReads) + 5; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
@@ -274,6 +274,11 @@ func TestLookup(t *testing.T) {
 	for _, route := range []struct{ method, path, code string }{
 		{"GET", "/api/v1/inference/services", "inference:service:read"},
 		{"POST", "/api/v1/inference/services/{resource_id}:delete", "inference:service:delete"},
+		{"POST", "/api/v1/inference-keys", "inference:key:create"},
+		{"GET", "/api/v1/inference-keys", "inference:key:read"},
+		{"GET", "/api/v1/inference-keys/{key_id}", "inference:key:read"},
+		{"DELETE", "/api/v1/inference-keys/{key_id}", "inference:key:revoke"},
+		{"POST", "/api/v1/inference-keys/{key_id}:rotate", "inference:key:rotate"},
 	} {
 		if code, ok := Lookup(route.method, route.path); !ok || code != route.code {
 			t.Errorf("Lookup(%s %s) = (%q,%v), want %q", route.method, route.path, code, ok, route.code)
@@ -281,5 +286,17 @@ func TestLookup(t *testing.T) {
 	}
 	if _, ok := Lookup("GET", "/api/v1/nope"); ok {
 		t.Error("Lookup unregistered route should miss")
+	}
+}
+
+func TestResourceUsageReadHasIndependentPlatformPermission(t *testing.T) {
+	for _, path := range []string{"/api/v1/admin/resource-usage/overview", "/api/v1/admin/resource-usage/tenants", "/api/v1/admin/resource-usage/tenants/{tenant_id}"} {
+		exp, err := Resolve("GET", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if exp.Code != "resource-usage:read" || exp.BusinessModule != "DASHBOARD" || exp.ScopeKind != "platform" {
+			t.Fatalf("unexpected resource usage grant: %+v", exp)
+		}
 	}
 }
