@@ -82,7 +82,7 @@ func (s *QuotaAdminService) ListTenantQuotaAccountSummaries(ctx context.Context,
 	if req == nil {
 		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "request is required")
 	}
-	filter := data.TenantQuotaAccountSummaryFilter{Page: 1, PageSize: 20, TenantID: req.TenantId, QuotaCode: req.GetQuotaCode()}
+	filter := data.TenantQuotaAccountSummaryFilter{Page: 1, PageSize: 20, TenantID: req.TenantId, QuotaCode: req.GetQuotaCode(), IncludeTotals: true}
 	if req.Page != nil {
 		filter.Page = *req.Page
 	}
@@ -92,9 +92,9 @@ func (s *QuotaAdminService) ListTenantQuotaAccountSummaries(ctx context.Context,
 	if filter.Page == 0 || filter.PageSize == 0 || filter.PageSize > 100 || (filter.TenantID != nil && *filter.TenantID == 0) || (req.QuotaCode != nil && !quotaSummaryCode.MatchString(filter.QuotaCode)) {
 		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid quota account page or filter")
 	}
-	items, total, err := s.quotaAdminRepo.ListTenantAccountSummaries(ctx, filter)
+	page, err := s.quotaAdminRepo.ListTenantAccountSummaryPage(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	return &adminV1.ListTenantQuotaAccountSummariesResponse{Items: items, Total: total}, nil
+	return &adminV1.ListTenantQuotaAccountSummariesResponse{Items: page.Items, Total: page.Total, Summary: page.Summary}, nil
 }
