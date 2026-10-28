@@ -1655,6 +1655,8 @@ main 发布使用 Resource `e7b5a8a3435996181bff62e025a21224c97d2464`，Gov 依�
 
 早期定向联调已使用真实授权、PG/Redis/mTLS 和生产业务代码，GPU/Kubernetes/exec 边界受控；真实 GPU 产品验收仍未完成。2026-10-13 用户授权先推送 main，剩余门禁由后续任务处理：已固定正式 Resource/Acc/SG API 版本并核对下载 SHA/sums，但新版 main 合入后的最终独立构建、定向组合用例及 CI 尚未完成，不声明通过。权威当前状态统一见 Resource `docs/execution/status.md#gpu-container-instance-mvp-v15`。`scripts/ops/sql/register-instance-permissions.sql` 只准备已同步的 API/permission 目录，未执行共享环境授权；本轮没有部署。
 
+2026-10-28 本编号增加 Restart、AttachPVC、DetachPVC 和实例范围候选，当前输入、权限、重放先行、查询与 CPU/GPU DELETE 明确拒绝合同见[容器实例 HTTP 合同](contracts/container-instances.md#重启与已有-pvc-挂卸)。本批仅 Resource/Gov 后端，无 Console/BROWSER 门禁；实现、正式模块、测试部署及验收进度统一在 Resource `docs/execution/status.md#container-restart-pvc-20261028`，不以本登记表示现场通过。
+
 ## MODELDEV-09：产物列表分页参数校验对齐（2026-10-13）
 
 前端联调时提出 `next_page_token` 是否为分页参数、能否与其他 ModelDev 列表对齐。当时四个列表统一使用 `page_size` + `page_token` / `next_page_token`，`presets`、`input-versions`（含 `state` 过滤，`state` 非分页参数）本就一致。

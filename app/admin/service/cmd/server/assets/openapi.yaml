@@ -1,4 +1,4 @@
-﻿# Generated with protoc-gen-openapi
+# Generated with protoc-gen-openapi
 # https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
 
 openapi: 3.0.3
@@ -8792,7 +8792,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Operation'
+                                $ref: '#/components/schemas/InstanceOperation'
     /api/v1/instances:
         get:
             tags:
@@ -8927,6 +8927,78 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ExecInstanceResponse'
+    /api/v1/instances/{data.instance_id}:attach-pvc:
+        post:
+            tags:
+                - InstanceService
+            operationId: InstanceService_AttachInstancePVC
+            parameters:
+                - name: data.instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AttachInstancePVCRequest'
+                required: true
+            responses:
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Acceptance'
+    /api/v1/instances/{data.instance_id}:detach-pvc:
+        post:
+            tags:
+                - InstanceService
+            operationId: InstanceService_DetachInstancePVC
+            parameters:
+                - name: data.instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DetachInstancePVCRequest'
+                required: true
+            responses:
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Acceptance'
+    /api/v1/instances/{data.instance_id}:restart:
+        post:
+            tags:
+                - InstanceService
+            operationId: InstanceService_RestartInstance
+            parameters:
+                - name: data.instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ChangeInstanceRequest'
+                required: true
+            responses:
+                "202":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Acceptance'
     /api/v1/instances/{data.instance_id}:start:
         post:
             tags:
@@ -9071,6 +9143,38 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/QueryInstanceMetricsResponse'
+    /api/v1/instances/{instance_id}/mountable-pvcs:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_ListInstanceMountablePVCs
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListMountablePVCsResponse'
     /api/v1/instances/{instance_id}/runtime:
         get:
             tags:
@@ -9233,7 +9337,9 @@ paths:
                     type: string
                 - name: name
                   in: query
-                  description: 按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+                  description: |-
+                    按任务名做不区分大小写的子串匹配，在分页前生效，total 为筛选后的条数。
+                     名称即创建时提交的 name，与响应里的 name 同源。
                   schema:
                     type: string
             responses:
@@ -9531,11 +9637,6 @@ paths:
                   in: query
                   schema:
                     type: string
-                - name: format
-                  in: query
-                  schema:
-                    type: string
-                  description: 只接受 CSV / JSON；其它值返回 400。筛选在分页前生效，total 为筛选后条数。
                 - name: page
                   in: query
                   schema:
@@ -9546,6 +9647,14 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: format
+                  in: query
+                  description: |-
+                    按已校验的数据集格式筛选，在分页前生效，total 为筛选后条数。
+                     兼容性由格式唯一决定：CSV 只能用于普通训练，JSON 只能用于微调。
+                     只接受 CSV / JSON，其它值返回 400（不会静默返回空页）。
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -12154,6 +12263,35 @@ paths:
                     description: Object store timed out
 components:
     schemas:
+        InstanceOperation:
+            type: object
+            properties:
+                id:
+                    type: string
+                instanceId:
+                    type: string
+                action:
+                    type: string
+                intentVersion:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                phase:
+                    type: string
+                target_configuration:
+                    allOf:
+                        - $ref: '#/components/schemas/MountConfiguration'
+                    nullable: true
+                final_run_state:
+                    type: string
+                applied_mount_version:
+                    type: string
+                completion_scope:
+                    type: string
+                failure_reason:
+                    type: string
         NetworkOperation:
             type: object
             properties:
@@ -13201,6 +13339,28 @@ components:
                     type: string
                 verified_at:
                     type: string
+        AttachInstancePVCData:
+            type: object
+            properties:
+                instanceId:
+                    type: string
+                idempotencyKey:
+                    type: string
+                expectedVersion:
+                    type: string
+                pvc_name:
+                    type: string
+                mount_path:
+                    type: string
+                read_only:
+                    type: boolean
+                restart_if_running:
+                    type: boolean
+        AttachInstancePVCRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/AttachInstancePVCData'
         AuthorizeArtifactDownloadResponse:
             type: object
             properties:
@@ -14660,6 +14820,24 @@ components:
                     description: SUBMITTED、TERMINATING 或 GONE。
                 volume:
                     $ref: '#/components/schemas/Volume'
+        DetachInstancePVCData:
+            type: object
+            properties:
+                instanceId:
+                    type: string
+                idempotencyKey:
+                    type: string
+                expectedVersion:
+                    type: string
+                mount_path:
+                    type: string
+                restart_if_running:
+                    type: boolean
+        DetachInstancePVCRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/DetachInstancePVCData'
         DeviceInfo:
             type: object
             properties:
@@ -15196,6 +15374,20 @@ components:
                     type: string
                 expiresAt:
                     type: string
+        ExecutionBaseModelView:
+            type: object
+            properties:
+                model_id:
+                    type: string
+                version_id:
+                    type: string
+                family:
+                    type: string
+                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
+                format:
+                    type: string
+                    description: 权重格式，如 safetensors。
+            description: 基座模型的公开身份。不包含存放位置，前端不能据此拼接下载地址。
         ExecutionComputeView:
             type: object
             properties:
@@ -15267,20 +15459,6 @@ components:
                     type: string
                 reporting_instance:
                     type: string
-        ExecutionBaseModelView:
-            type: object
-            properties:
-                model_id:
-                    type: string
-                version_id:
-                    type: string
-                family:
-                    type: string
-                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
-                format:
-                    type: string
-                    description: 权重格式，如 safetensors。
-            description: 微调所用的基座模型身份。不含对象键、存储位置与文件清单，不能据此拼下载地址。
         ExecutionFailureView:
             type: object
             properties:
@@ -15648,7 +15826,9 @@ components:
                 base_model:
                     allOf:
                         - $ref: '#/components/schemas/ExecutionBaseModelView'
-                    description: 微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；普通训练为 null。
+                    description: |-
+                        微调所用的基座模型。只暴露身份信息，不含对象键、存储位置与文件清单；
+                         普通训练为 null。
         Expression:
             type: object
             properties:
@@ -16897,6 +17077,12 @@ components:
                     type: boolean
                 volumeReferencesReleased:
                     type: boolean
+                activeOperationId:
+                    type: string
+                executionRunState:
+                    type: string
+                appliedMountVersion:
+                    type: string
         InstanceConfiguration:
             type: object
             properties:
@@ -16926,6 +17112,12 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/InstanceEnvVar'
+                version:
+                    type: string
+                applied_mount_version:
+                    type: string
+                pending_change:
+                    $ref: '#/components/schemas/PendingMountChange'
         InstanceEnvVar:
             type: object
             properties:
@@ -19087,6 +19279,13 @@ components:
                     type: string
                 recommended_image_scope:
                     type: string
+        MountConfiguration:
+            type: object
+            properties:
+                volume_mounts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VolumeMount'
         MountablePVC:
             type: object
             properties:
@@ -19859,6 +20058,17 @@ components:
                     items:
                         $ref: '#/components/schemas/NamedAny'
             description: Describes the operations available on a single path. A Path Item MAY be empty, due to ACL constraints. The path itself is still exposed to the documentation viewer but they will not know which operations and parameters are available.
+        PendingMountChange:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                intent_version:
+                    type: string
+                phase:
+                    type: string
+                target_configuration:
+                    $ref: '#/components/schemas/MountConfiguration'
         Permission:
             type: object
             properties:
