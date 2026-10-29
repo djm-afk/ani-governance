@@ -180,10 +180,13 @@ components:
 """
         result = finalizer.require_compute_usage(text)
         self.assertIn("required: true", result)
-        for usage in ["CONTAINER_INSTANCE", "TRAINING", "INFERENCE", "VIRTUAL_MACHINE"]:
+        for usage in ["SANDBOX", "CONTAINER_INSTANCE", "TRAINING", "INFERENCE", "VIRTUAL_MACHINE"]:
             self.assertIn("- " + usage, result)
         with self.assertRaises(SystemExit):
             finalizer.require_compute_usage(text, 'string usage = 7;')
+        for enum in ['', 'enum: [{yaml: "SANDBOX"}, {yaml: "SANDBOX"}]']:
+            with self.assertRaises(SystemExit):
+                finalizer.require_compute_usage(text, 'string usage = 7 [(google.api.field_behavior) = REQUIRED, ' + enum + '];')
 
     def test_implementation_mode_is_required_and_explicit_in_public_document(self):
         # Read the real generated public operation. The runtime's mandatory

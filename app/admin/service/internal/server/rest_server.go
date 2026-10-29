@@ -198,8 +198,7 @@ func NewRestServer(
 	inferenceService *service.InferenceService,
 	modelService *service.ModelService,
 	computeService *service.ComputePresetService,
-	overviewService *service.OverviewService,
-	instanceServices ...*service.InstanceService,
+	services ...any,
 ) (*http.Server, error) {
 	cfg := ctx.GetConfig()
 
@@ -299,14 +298,24 @@ func NewRestServer(
 	if modelService != nil {
 		adminV1.RegisterModelServiceHTTPServer(srv, modelService)
 	}
-	if len(instanceServices) > 0 && instanceServices[0] != nil {
-		RegisterInstanceHTTPServer(srv, instanceServices[0])
+	for _, candidate := range services {
+		switch typed := candidate.(type) {
+		case *service.InstanceService:
+			if typed != nil {
+				RegisterInstanceHTTPServer(srv, typed)
+			}
+		case *service.OverviewService:
+			if typed != nil {
+				RegisterOverviewHTTP(srv, typed)
+			}
+		case *service.SandboxService:
+			if typed != nil {
+				RegisterSandboxHTTPServer(srv, typed)
+			}
+		}
 	}
 	if computeService != nil {
 		RegisterComputeHTTPServer(srv, computeService)
-	}
-	if overviewService != nil {
-		RegisterOverviewHTTP(srv, overviewService)
 	}
 
 	if cfg.GetServer().GetRest().GetEnableSwagger() {

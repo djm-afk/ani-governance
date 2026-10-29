@@ -164,6 +164,7 @@ func gpuDelete(t *testing.T, in *QuotaOccupyInput) *QuotaDeleteInput {
 	require.NoError(t, err)
 	return &QuotaDeleteInput{TenantID: in.TenantID, ActorType: in.ActorType, ActorID: in.ActorID, OwnerService: in.OwnerService, Action: commandcontract.InstanceDeleteAction, IdempotencyKey: uuid.NewString(), RequestHash: "delete-" + in.ResourceID + "-v1", ResourceID: in.ResourceID, CanonicalRequest: string(canonical)}
 }
+
 func gpuProjectionPayload(in *QuotaOccupyInput, id string, rev int64, hash string) string {
 	b, _ := json.Marshal(map[string]any{"ref": map[string]string{"tenant_id": in.ResourceTenantID, "owner_service": in.OwnerService, "resource_id": in.ResourceID, "create_operation_id": id}, "revision": rev, "state": rev, "payload_digest": hash})
 	return string(b)
