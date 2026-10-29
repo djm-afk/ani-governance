@@ -24,4 +24,5 @@ enum Module {
   INFERENCE = 15;        // Inference service management
   INSTANCE = 16;        // GPU container instances, separate current action grants
   VIRTUAL_MACHINE = 17; // Virtual machines; feature entitlement, no resource charge
+  STORAGE = 18;         // Independent volumes and read-only object browsing
 }

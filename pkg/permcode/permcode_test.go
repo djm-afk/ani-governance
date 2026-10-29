@@ -151,6 +151,7 @@ func TestExempt(t *testing.T) {
 		{"POST", "/api/v1/auth/password/login"},
 		{"GET", "/api/v1/events"},
 		{"GET", "/api/v1/modeldev/executions"},
+		{"POST", "/api/v1/modeldev/finetuning/readiness/check"},
 		{"GET", "/api/v1/auth/api-keys"},
 	}
 	for _, tc := range cases {
@@ -197,15 +198,29 @@ func TestCountsAndKeys(t *testing.T) {
 		"GET /api/v1/admin/networks/eips/{eip_id}":    {Code: "network:platform:eip:get", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
 		"DELETE /api/v1/admin/networks/eips/{eip_id}": {Code: "network:platform:eip:release", Source: eipSource, BusinessModule: "NETWORK", ScopeKind: "platform"},
 	}
-	if want := 199 + len(gpuReads) + 5; ManagementCount() != want {
+	// 首页资源趋势与首页资源统计卡片（租户级只读，挂 INSTANCE 模块）。
+	const homepageSource = "scripts/ops/sql/register-observability-permissions.sql ; scripts/ops/sql/register-overview-permissions.sql"
+	homepageReads := map[string]expectation{
+		"GET /api/v1/observability/resource-trend": {Code: "observability:resource-trend:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"GET /api/v1/overview":                     {Code: "overview:resource-count:read", Source: homepageSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+	}
+	// The retained instance restart and PVC lifecycle add four capabilities.
+	const instanceSource = "scripts/ops/sql/register-instance-permissions.sql"
+	instanceLifecycle := map[string]expectation{
+		"GET /api/v1/instances/{instance_id}/mountable-pvcs":   {Code: "instance:pvc:attach", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"POST /api/v1/instances/{data.instance_id}:attach-pvc": {Code: "instance:pvc:attach", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"POST /api/v1/instances/{data.instance_id}:detach-pvc": {Code: "instance:pvc:detach", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+		"POST /api/v1/instances/{data.instance_id}:restart":    {Code: "instance:restart", Source: instanceSource, BusinessModule: "INSTANCE", ScopeKind: "tenant"},
+	}
+	if want := 199 + len(gpuReads) + 5 + 3; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
-	if want := 166 + len(platformEIPReadsAndRelease) + 5; CapabilityCount() != want {
+	if want := 176 + len(platformEIPReadsAndRelease) + len(homepageReads) + len(instanceLifecycle) + 5; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if len(keys) < 262 {
-		t.Errorf("AllKeys() = %d, want >= 262", len(keys))
+	if len(keys) < 272 {
+		t.Errorf("AllKeys() = %d, want >= 272", len(keys))
 	}
 	keySet := make(map[string]bool, len(keys))
 	for _, k := range keys {
@@ -234,6 +249,21 @@ func TestCountsAndKeys(t *testing.T) {
 				}
 			}
 		})
+	}
+	for key, want := range instanceLifecycle {
+		got, ok := capabilityOperations[key]
+		if !ok || !reflect.DeepEqual(got, want) || !keySet[key] {
+			t.Errorf("retained instance lifecycle capability %q = %+v (ok=%v), want %+v", key, got, ok, want)
+		}
+	}
+	for key, want := range homepageReads {
+		got, ok := capabilityOperations[key]
+		if !ok || got.Code != want.Code || got.BusinessModule != want.BusinessModule || got.ScopeKind != want.ScopeKind {
+			t.Errorf("homepage capability %q = %+v (ok=%v), want %+v", key, got, ok, want)
+		}
+		if !keySet[key] {
+			t.Errorf("AllKeys() missing %q", key)
+		}
 	}
 	method, path := SplitKey("GET /api/v1/admin/users")
 	if method != "GET" || path != "/api/v1/admin/users" {
@@ -271,5 +301,17 @@ func TestLookup(t *testing.T) {
 	}
 	if _, ok := Lookup("GET", "/api/v1/nope"); ok {
 		t.Error("Lookup unregistered route should miss")
+	}
+}
+
+func TestResourceUsageReadHasIndependentPlatformPermission(t *testing.T) {
+	for _, path := range []string{"/api/v1/admin/resource-usage/overview", "/api/v1/admin/resource-usage/tenants", "/api/v1/admin/resource-usage/tenants/{tenant_id}"} {
+		exp, err := Resolve("GET", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if exp.Code != "resource-usage:read" || exp.BusinessModule != "DASHBOARD" || exp.ScopeKind != "platform" {
+			t.Fatalf("unexpected resource usage grant: %+v", exp)
+		}
 	}
 }

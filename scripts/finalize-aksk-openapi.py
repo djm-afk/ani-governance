@@ -108,6 +108,66 @@ def repair_network_operation(text, proto_source=None):
     return text.replace(marker, marker + network_operation_schema(proto_source), 1)
 
 
+def instance_operation_schema(proto_source):
+    """Derive the Instance query DTO alias despite the gnostic name collision."""
+    source = re.sub(r"(?m)//[^\n]*", "", proto_source)
+    messages = re.findall(r"(?m)^message Operation\s*\{([^{}]*)\}", source)
+    if len(messages) != 1:
+        raise SystemExit("expected one public Instance Operation DTO")
+    result = "        InstanceOperation:\n            type: object\n            properties:\n"
+    names, numbers = set(), set()
+    for statement in messages[0].split(";"):
+        if not statement.strip():
+            continue
+        field = re.fullmatch(r'\s*(string|int64|MountConfiguration)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([1-9][0-9]*)(?:\s*\[\s*json_name\s*=\s*"([A-Za-z_][A-Za-z0-9_]*)"\s*\])?\s*', statement)
+        if field is None:
+            raise SystemExit("unsupported public Instance Operation schema field")
+        kind, proto_name, number, explicit_name = field.groups()
+        name = explicit_name or re.sub(r"_([a-z])", lambda m: m.group(1).upper(), proto_name)
+        if name in names or number in numbers:
+            raise SystemExit("duplicate public Instance Operation field")
+        names.add(name)
+        numbers.add(number)
+        result += "                " + name + ":\n"
+        if kind == "MountConfiguration":
+            result += "                    allOf:\n                        - $ref: '#/components/schemas/MountConfiguration'\n                    nullable: true\n"
+        else:
+            # ProtoJSON represents every int64 as a decimal string.
+            result += "                    type: string\n"
+    if not names:
+        raise SystemExit("public Instance Operation schema is empty")
+    return result
+
+
+def repair_instance_operation(text, proto_source=None):
+    operation = "            operationId: InstanceService_GetInstanceOperation\n"
+    if operation not in text:
+        return text
+    if re.search(r"(?m)^        InstanceOperation:\n", text):
+        raise SystemExit("InstanceOperation schema must be derived once during generation")
+    marker = "    /api/v1/instance-operations/{operation_id}:\n"
+    if text.count(marker) != 1:
+        raise SystemExit("expected one Instance operation query route")
+    start = text.index(marker)
+    end = text.find("\n    /", start + len(marker))
+    if end < 0:
+        end = text.index("\ncomponents:", start)
+    section = text[start:end]
+    if section.count(operation) != 1:
+        raise SystemExit("Instance operation query route mismatch")
+    section, count = re.subn(r"(\$ref: ['\"]#/components/schemas/)Operation(['\"])", r"\g<1>InstanceOperation\2", section)
+    if count != 1:
+        raise SystemExit("expected one Instance operation response reference")
+    text = text[:start] + section + text[end:]
+    if proto_source is None:
+        source = pathlib.Path(__file__).resolve().parents[1] / "api/protos/instance/service/v1/instance.proto"
+        proto_source = source.read_text()
+    schemas = "components:\n    schemas:\n"
+    if text.count(schemas) != 1:
+        raise SystemExit("expected one OpenAPI schema component section")
+    return text.replace(schemas, schemas + instance_operation_schema(proto_source), 1)
+
+
 def add_instance_log_stream(text):
     # A protobuf server stream has a dedicated HTTP implementation. Describe
     # its actual SSE wire format instead of gnostic's inferred unary JSON.
@@ -167,6 +227,127 @@ def add_instance_log_stream(text):
     return text.replace(marker, operation + marker, 1)
 
 
+def add_execution_log_stream(text):
+    # The training log channel is a hand-written SSE handler, not a protobuf
+    # annotation, so the generator cannot infer it. The tenant gate still looks
+    # the route up by template, which means the contract has to be declared here.
+    if "            operationId: ModelDevService_ListExecutionEvents\n" not in text:
+        return text
+    route = "    /api/v1/modeldev/executions/{execution_id}/logs/stream:\n"
+    if route in text:
+        raise SystemExit("execution log stream must be declared once as SSE")
+    operation = """    /api/v1/modeldev/executions/{execution_id}/logs/stream:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_StreamExecutionLogs
+            description: Follow one container of one execution. READY is verified before HTTP headers; later failures arrive as control frames. Reconnect with the server-issued sinceBytes offset.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: execution_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+                - name: podUid
+                  in: query
+                  schema:
+                    type: string
+                    format: uuid
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: previous
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+                - name: sinceBytes
+                  in: query
+                  schema:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    maximum: 1073741824
+                    default: 0
+            responses:
+                "200":
+                    description: SSE READY/DATA/CLOSED/REJECTED frames with comment heartbeats; no-store and proxy buffering disabled.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                "400":
+                    description: Invalid query
+                "403":
+                    description: Execution access denied
+                "404":
+                    description: Execution or selected Pod absent
+                "429":
+                    description: Connection limit reached
+                "503":
+                    description: Upstream frame stream unavailable before READY
+"""
+    marker = "components:\n"
+    if text.count(marker) != 1:
+        raise SystemExit("expected one OpenAPI components section")
+    return text.replace(marker, operation + marker, 1)
+
+
+def add_artifact_download(text):
+    # The byte relay is a hand-written handler next to the URL exchange, so the
+    # generator cannot infer it. The tenant gate looks the route up by template,
+    # which means the contract has to be declared here or the route answers 403.
+    if "            operationId: ModelDevService_AuthorizeArtifactDownload\n" not in text:
+        return text
+    route = "    /api/v1/modeldev/artifacts/{artifact_id}/download:\n"
+    if route in text:
+        raise SystemExit("artifact download must be declared once as a byte stream")
+    operation = """    /api/v1/modeldev/artifacts/{artifact_id}/download:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_DownloadArtifact
+            description: Relay the artifact bytes. The URL exchange returns a signed URL on the object store's in-cluster host, which a browser cannot reach; this endpoint fetches that object server-side and copies it out. Accepts no query.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: artifact_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            responses:
+                "200":
+                    description: Artifact bytes as an attachment. The type collapses to application/octet-stream unless it is a known safe textual type.
+                    content:
+                        application/octet-stream:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: Invalid UUID or a query was supplied
+                "403":
+                    description: Artifact access denied
+                "404":
+                    description: Artifact absent or not visible
+                "412":
+                    description: Artifact not published
+                "502":
+                    description: Object store unreachable or returned an error
+                "504":
+                    description: Object store timed out
+"""
+    marker = "components:\n"
+    if text.count(marker) != 1:
+        raise SystemExit("expected one OpenAPI components section")
+    return text.replace(marker, operation + marker, 1)
+
+
 def require_compute_usage(text, proto_source=None):
     # gnostic v0.7.1 does not carry field behavior/property enums into GET
     # query parameters. Keep the emitted contract tied to its Proto input.
@@ -201,7 +382,41 @@ def require_compute_usage(text, proto_source=None):
     return text[:start] + section + text[end:]
 
 
+def require_modeldev_device_mode(text):
+    # The same pinned gnostic GET limitation as compute usage above. This
+    # operation selects one current owner material; it has no default mode.
+    marker = "    /api/v1/modeldev/implementations:\n"
+    if marker not in text:
+        return text
+    if text.count(marker) != 1:
+        raise SystemExit("expected one implementation catalogue route")
+    source = (pathlib.Path(__file__).resolve().parents[1] / "api/protos/modeldev/service/v1/execution.proto").read_text()
+    field = re.search(r"optional string device_mode = 6 \[(.*?)\];", source, re.S)
+    if field is None or "(google.api.field_behavior) = REQUIRED" not in field.group(1):
+        raise SystemExit("implementation device_mode must be required in Proto")
+    values = re.findall(r'yaml:\s*"([a-z]+)"', field.group(1))
+    if values != ["cpu", "gpu"]:
+        raise SystemExit("implementation device_mode enum missing or ambiguous")
+    start = text.index(marker)
+    end = text.find("\n    /", start + len(marker))
+    if end < 0:
+        end = text.index("\ncomponents:", start)
+    section = text[start:end]
+    pattern = r"(                - name: device_mode\n                  in: query\n)(.*?)(?=                - name:|            responses:)"
+    def annotate(match):
+        body = match.group(2)
+        if "required:" in body or "enum:" in body:
+            raise SystemExit("implementation device_mode query was already annotated")
+        body = body.replace("                    type: string\n", "                    type: string\n                    enum:\n" + "".join("                        - " + value + "\n" for value in values), 1)
+        return match.group(1) + "                  required: true\n" + body
+    section, count = re.subn(pattern, annotate, section, flags=re.S)
+    if count != 1:
+        raise SystemExit("expected one implementation device_mode query")
+    return text[:start] + section + text[end:]
+
+
 def finalize(text):
+    text = require_modeldev_device_mode(text)
     text = remove_synthetic_200(text, "/api/v1/auth/api-keys", "201")
     # Minimal generator fixtures may omit ModelDev. Its public contract test
     # separately requires this path in the complete service document.
@@ -214,6 +429,9 @@ def finalize(text):
         ("/api/v1/instances", "202", "post"),
         ("/api/v1/instances/{data.instance_id}:start", "202", "post"),
         ("/api/v1/instances/{data.instance_id}:stop", "202", "post"),
+        ("/api/v1/instances/{data.instance_id}:restart", "202", "post"),
+        ("/api/v1/instances/{data.instance_id}:attach-pvc", "202", "post"),
+        ("/api/v1/instances/{data.instance_id}:detach-pvc", "202", "post"),
         ("/api/v1/instances/{data.instance_id}", "202", "delete"),
         ("/api/v1/instances/{data.instance_id}/exec", "202", "post"),
     ):
@@ -221,7 +439,7 @@ def finalize(text):
             text = remove_synthetic_200(text, route, status, method)
     # response_body endpoints retain their explicit public-object schema,
     # including the Network/Image mutation responses and existing details.
-    return add_instance_log_stream(require_compute_usage(repair_network_operation(remove_shadowed_200(text))))
+    return add_artifact_download(add_execution_log_stream(add_instance_log_stream(require_compute_usage(repair_instance_operation(repair_network_operation(remove_shadowed_200(text)))))))
 
 
 if __name__ == "__main__":

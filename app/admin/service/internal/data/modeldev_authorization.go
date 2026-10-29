@@ -38,6 +38,10 @@ const (
 	modelDevStopAction
 	modelDevListExecutionsAction
 	modelDevGetExecutionLogsAction
+	modelDevListExecutionPodsAction
+	modelDevListExecutionEventsAction
+	modelDevExecutionLogStreamAction
+	modelDevExecutionMetricsAction
 	modelDevListImplementationsAction
 	modelDevGetInputVersionAction
 	modelDevListInputVersionsAction
@@ -46,6 +50,7 @@ const (
 	modelDevFinetuningNewModelAction
 	modelDevResumeRegistrationAction
 	modelDevFinetuningArtifactsAction
+	modelDevFinetuningReadinessAction
 )
 
 const (
@@ -54,8 +59,13 @@ const (
 	ModelDevDownloadArtifactPath    = "/api/v1/modeldev/artifacts/{artifact_id}/content"
 	ModelDevListExecutionsPath      = "/api/v1/modeldev/executions"
 	ModelDevGetExecutionLogsPath    = "/api/v1/modeldev/executions/{execution_id}/logs"
+	ModelDevListExecutionPodsPath   = "/api/v1/modeldev/executions/{execution_id}/pods"
+	ModelDevListExecutionEventsPath = "/api/v1/modeldev/executions/{execution_id}/events"
+	ModelDevExecutionLogStreamPath  = "/api/v1/modeldev/executions/{execution_id}/logs/stream"
+	ModelDevExecutionMetricsPath    = "/api/v1/modeldev/executions/{execution_id}/resource-metrics"
 	ModelDevListImplementationsPath = "/api/v1/modeldev/implementations"
 	ModelDevGetInputVersionPath     = "/api/v1/modeldev/input-versions/{input_version_id}"
+	ModelDevReadinessPath           = "/api/v1/modeldev/finetuning/readiness/check"
 	ModelDevListInputVersionsPath   = "/api/v1/modeldev/input-versions"
 )
 
@@ -74,12 +84,35 @@ func (r *ModelDevAuthorizationRepo) AuthorizeQuery(ctx context.Context, tenantID
 		action = modelDevListExecutionsAction
 	case ModelDevGetExecutionLogsPath:
 		action = modelDevGetExecutionLogsAction
+	case ModelDevListExecutionPodsPath:
+		action = modelDevListExecutionPodsAction
+	case ModelDevListExecutionEventsPath:
+		action = modelDevListExecutionEventsAction
+	case ModelDevExecutionLogStreamPath:
+		action = modelDevExecutionLogStreamAction
+	case ModelDevExecutionMetricsPath:
+		action = modelDevExecutionMetricsAction
 	case ModelDevListImplementationsPath:
 		action = modelDevListImplementationsAction
 	case ModelDevGetInputVersionPath:
 		action = modelDevGetInputVersionAction
 	case ModelDevListInputVersionsPath:
 		action = modelDevListInputVersionsAction
+	case ModelDevReadinessPath:
+		if err := r.authorizeCurrent(ctx, tenantID, userID, modelDevFinetuningReadinessAction); err != nil {
+			return err
+		}
+		// Reuse the existing TRAINING-specific code and MODEL entitlement.
+		// The shared compute directory API itself belongs to SYSTEM.
+		err := NewComputeCatalogAuthorizationRepo(r.entClient).AuthorizeComputeCatalog(ctx, tenantID, userID, "TRAINING")
+		switch {
+		case errors.Is(err, ErrActionAuthorizationDenied):
+			return ErrModelDevAuthorizationDenied
+		case errors.Is(err, ErrActionAuthorizationUnavailable):
+			return ErrModelDevAuthorizationUnavailable
+		default:
+			return err
+		}
 	default:
 		return ErrModelDevAuthorizationDenied
 	}
@@ -245,7 +278,7 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 		permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil(),
 	)
 	switch action {
-	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListImplementationsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction, modelDevFinetuningArtifactsAction:
+	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListExecutionPodsAction, modelDevListExecutionEventsAction, modelDevExecutionLogStreamAction, modelDevExecutionMetricsAction, modelDevListImplementationsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction, modelDevFinetuningArtifactsAction, modelDevFinetuningReadinessAction:
 		// Create retains its permission-to-API check below.
 	case modelDevManageInputAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageInputPermissionCode))
@@ -264,6 +297,13 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 	if action != modelDevManageInputAction && action != modelDevManageExecutionAction {
 		path, method := "/api/v1/modeldev/executions", "POST"
 		switch action {
+		case modelDevFinetuningReadinessAction:
+			for _, required := range []string{"/api/v1/model-versions/{model_version_id}", "/api/v1/model-versions/{model_version_id}/download-url"} {
+				if err := authorizeModelDevAPI(ctx, tx, permissionIDs, required, "GET"); err != nil {
+					return err
+				}
+			}
+			path = ModelDevReadinessPath
 		case modelDevResumeRegistrationAction:
 			path = ModelDevResumeModelRegistrationPath
 		case modelDevStopAction:
@@ -278,6 +318,14 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 			path, method = ModelDevListExecutionsPath, "GET"
 		case modelDevGetExecutionLogsAction:
 			path, method = ModelDevGetExecutionLogsPath, "GET"
+		case modelDevListExecutionPodsAction:
+			path, method = ModelDevListExecutionPodsPath, "GET"
+		case modelDevListExecutionEventsAction:
+			path, method = ModelDevListExecutionEventsPath, "GET"
+		case modelDevExecutionLogStreamAction:
+			path, method = ModelDevExecutionLogStreamPath, "GET"
+		case modelDevExecutionMetricsAction:
+			path, method = ModelDevExecutionMetricsPath, "GET"
 		case modelDevListImplementationsAction:
 			path, method = ModelDevListImplementationsPath, "GET"
 		case modelDevGetInputVersionAction:

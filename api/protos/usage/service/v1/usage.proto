@@ -1,0 +1,90 @@
+syntax = "proto3";
+package usage.service.v1;
+
+import "google/protobuf/timestamp.proto";
+import "gnostic/openapi/v3/annotations.proto";
+
+// Resource usage is observed business workload demand, never quota or billing.
+message Quality {
+  string status = 1;
+  repeated string reasons = 2;
+  optional double coverage = 3 [(gnostic.openapi.v3.property) = {nullable: true}];
+  uint32 observed_points = 4 [json_name="observedPoints"];
+  uint32 expected_points = 5 [json_name="expectedPoints"];
+  google.protobuf.Timestamp available_from = 6 [json_name="availableFrom"];
+}
+message UsagePoint {
+  google.protobuf.Timestamp timestamp = 1;
+  google.protobuf.Timestamp end = 2;
+  optional double value = 3 [(gnostic.openapi.v3.property) = {nullable: true}];
+  optional double known_value = 4 [json_name="knownValue", (gnostic.openapi.v3.property) = {nullable: true}];
+  optional double peak = 5 [(gnostic.openapi.v3.property) = {nullable: true}];
+}
+message MetricUsage {
+  string metric = 1;
+  string unit = 2;
+  optional double mean = 3 [(gnostic.openapi.v3.property) = {nullable: true}];
+  optional double peak = 4 [(gnostic.openapi.v3.property) = {nullable: true}];
+  optional double known_mean = 5 [json_name="knownMean", (gnostic.openapi.v3.property) = {nullable: true}];
+  optional double known_peak = 6 [json_name="knownPeak", (gnostic.openapi.v3.property) = {nullable: true}];
+  google.protobuf.Timestamp peak_at = 7 [json_name="peakAt"];
+  Quality quality = 8;
+  repeated UsagePoint points = 9;
+  optional uint64 active_tenant_count = 10 [json_name="activeTenantCount", (gnostic.openapi.v3.property) = {nullable: true}];
+}
+message OverviewRequest {
+  // Required RFC3339 whole-second timestamps, within the most recent 30 days.
+  string start = 1;
+  string end = 2;
+  // gpu (default), cpu or memory; selects the curve, not the three summary cards.
+  string metric = 3;
+}
+message Overview {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+  uint32 step_seconds = 3 [json_name="stepSeconds"];
+  google.protobuf.Timestamp data_cutoff = 4 [json_name="dataCutoff"];
+  repeated MetricUsage metrics = 5;
+}
+message TenantsRequest {
+  string start = 1;
+  string end = 2;
+  string metric = 3;
+  // Case-insensitive substring in trusted tenant name or canonical tenant ID.
+  string keyword = 4;
+  // desc (default) or asc. Unknown values sort last; equal values use tenant ID.
+  string order = 5;
+  optional uint32 page = 6;
+  optional uint32 page_size = 7 [json_name="pageSize"];
+}
+message TenantUsageRow {
+  uint32 tenant_id = 1 [json_name="tenantId"];
+  string tenant_name = 2 [json_name="tenantName"];
+  optional uint64 rank = 3 [(gnostic.openapi.v3.property) = {nullable: true}];
+  optional double share = 4 [(gnostic.openapi.v3.property) = {nullable: true}];
+  MetricUsage usage = 5;
+}
+message Ranking {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+  uint32 step_seconds = 3 [json_name="stepSeconds"];
+  google.protobuf.Timestamp data_cutoff = 4 [json_name="dataCutoff"];
+  repeated MetricUsage metrics = 5;
+  repeated TenantUsageRow items = 6;
+  uint64 total = 7;
+}
+message TenantRequest {
+  uint32 tenant_id = 1 [json_name="tenantId"];
+  string start = 2;
+  string end = 3;
+  string metric = 4;
+}
+message Detail {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+  uint32 step_seconds = 3 [json_name="stepSeconds"];
+  google.protobuf.Timestamp data_cutoff = 4 [json_name="dataCutoff"];
+  uint32 tenant_id = 5 [json_name="tenantId"];
+  string tenant_name = 6 [json_name="tenantName"];
+  repeated MetricUsage metrics = 7;
+}

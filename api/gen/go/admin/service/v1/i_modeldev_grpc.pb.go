@@ -20,11 +20,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ModelDevService_CheckFinetuningReadiness_FullMethodName  = "/admin.service.v1.ModelDevService/CheckFinetuningReadiness"
 	ModelDevService_ListImplementations_FullMethodName       = "/admin.service.v1.ModelDevService/ListImplementations"
 	ModelDevService_GetInputVersion_FullMethodName           = "/admin.service.v1.ModelDevService/GetInputVersion"
 	ModelDevService_ListInputVersions_FullMethodName         = "/admin.service.v1.ModelDevService/ListInputVersions"
 	ModelDevService_ListExecutions_FullMethodName            = "/admin.service.v1.ModelDevService/ListExecutions"
 	ModelDevService_GetExecutionLogs_FullMethodName          = "/admin.service.v1.ModelDevService/GetExecutionLogs"
+	ModelDevService_ListExecutionPods_FullMethodName         = "/admin.service.v1.ModelDevService/ListExecutionPods"
+	ModelDevService_ListExecutionEvents_FullMethodName       = "/admin.service.v1.ModelDevService/ListExecutionEvents"
+	ModelDevService_QueryExecutionMetrics_FullMethodName     = "/admin.service.v1.ModelDevService/QueryExecutionMetrics"
 	ModelDevService_StopExecution_FullMethodName             = "/admin.service.v1.ModelDevService/StopExecution"
 	ModelDevService_ResumeModelRegistration_FullMethodName   = "/admin.service.v1.ModelDevService/ResumeModelRegistration"
 	ModelDevService_GetExecution_FullMethodName              = "/admin.service.v1.ModelDevService/GetExecution"
@@ -39,11 +43,15 @@ const (
 //
 // CPU-P01 entry in the existing Governance BFF.
 type ModelDevServiceClient interface {
+	CheckFinetuningReadiness(ctx context.Context, in *v1.CheckFinetuningReadinessRequest, opts ...grpc.CallOption) (*v1.CheckFinetuningReadinessResponse, error)
 	ListImplementations(ctx context.Context, in *v1.ListImplementationsRequest, opts ...grpc.CallOption) (*v1.ListImplementationsResponse, error)
 	GetInputVersion(ctx context.Context, in *v1.GetInputVersionRequest, opts ...grpc.CallOption) (*v1.GetInputVersionResponse, error)
 	ListInputVersions(ctx context.Context, in *v1.ListInputVersionsRequest, opts ...grpc.CallOption) (*v1.ListInputVersionsResponse, error)
 	ListExecutions(ctx context.Context, in *v1.ListExecutionsRequest, opts ...grpc.CallOption) (*v1.ListExecutionsResponse, error)
 	GetExecutionLogs(ctx context.Context, in *v1.GetExecutionLogsRequest, opts ...grpc.CallOption) (*v1.GetExecutionLogsResponse, error)
+	ListExecutionPods(ctx context.Context, in *v1.ListExecutionPodsRequest, opts ...grpc.CallOption) (*v1.ListExecutionPodsResponse, error)
+	ListExecutionEvents(ctx context.Context, in *v1.ListExecutionEventsRequest, opts ...grpc.CallOption) (*v1.ListExecutionEventsResponse, error)
+	QueryExecutionMetrics(ctx context.Context, in *v1.QueryExecutionMetricsRequest, opts ...grpc.CallOption) (*v1.QueryExecutionMetricsResponse, error)
 	StopExecution(ctx context.Context, in *v1.StopExecutionRequest, opts ...grpc.CallOption) (*v1.StopExecutionResponse, error)
 	ResumeModelRegistration(ctx context.Context, in *v1.ResumeModelRegistrationRequest, opts ...grpc.CallOption) (*v1.GetExecutionResponse, error)
 	GetExecution(ctx context.Context, in *v1.GetExecutionRequest, opts ...grpc.CallOption) (*v1.GetExecutionResponse, error)
@@ -58,6 +66,16 @@ type modelDevServiceClient struct {
 
 func NewModelDevServiceClient(cc grpc.ClientConnInterface) ModelDevServiceClient {
 	return &modelDevServiceClient{cc}
+}
+
+func (c *modelDevServiceClient) CheckFinetuningReadiness(ctx context.Context, in *v1.CheckFinetuningReadinessRequest, opts ...grpc.CallOption) (*v1.CheckFinetuningReadinessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CheckFinetuningReadinessResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_CheckFinetuningReadiness_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *modelDevServiceClient) ListImplementations(ctx context.Context, in *v1.ListImplementationsRequest, opts ...grpc.CallOption) (*v1.ListImplementationsResponse, error) {
@@ -104,6 +122,36 @@ func (c *modelDevServiceClient) GetExecutionLogs(ctx context.Context, in *v1.Get
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetExecutionLogsResponse)
 	err := c.cc.Invoke(ctx, ModelDevService_GetExecutionLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ListExecutionPods(ctx context.Context, in *v1.ListExecutionPodsRequest, opts ...grpc.CallOption) (*v1.ListExecutionPodsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListExecutionPodsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ListExecutionPods_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ListExecutionEvents(ctx context.Context, in *v1.ListExecutionEventsRequest, opts ...grpc.CallOption) (*v1.ListExecutionEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListExecutionEventsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ListExecutionEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) QueryExecutionMetrics(ctx context.Context, in *v1.QueryExecutionMetricsRequest, opts ...grpc.CallOption) (*v1.QueryExecutionMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.QueryExecutionMetricsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_QueryExecutionMetrics_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +224,15 @@ func (c *modelDevServiceClient) CreateExecution(ctx context.Context, in *v1.Crea
 //
 // CPU-P01 entry in the existing Governance BFF.
 type ModelDevServiceServer interface {
+	CheckFinetuningReadiness(context.Context, *v1.CheckFinetuningReadinessRequest) (*v1.CheckFinetuningReadinessResponse, error)
 	ListImplementations(context.Context, *v1.ListImplementationsRequest) (*v1.ListImplementationsResponse, error)
 	GetInputVersion(context.Context, *v1.GetInputVersionRequest) (*v1.GetInputVersionResponse, error)
 	ListInputVersions(context.Context, *v1.ListInputVersionsRequest) (*v1.ListInputVersionsResponse, error)
 	ListExecutions(context.Context, *v1.ListExecutionsRequest) (*v1.ListExecutionsResponse, error)
 	GetExecutionLogs(context.Context, *v1.GetExecutionLogsRequest) (*v1.GetExecutionLogsResponse, error)
+	ListExecutionPods(context.Context, *v1.ListExecutionPodsRequest) (*v1.ListExecutionPodsResponse, error)
+	ListExecutionEvents(context.Context, *v1.ListExecutionEventsRequest) (*v1.ListExecutionEventsResponse, error)
+	QueryExecutionMetrics(context.Context, *v1.QueryExecutionMetricsRequest) (*v1.QueryExecutionMetricsResponse, error)
 	StopExecution(context.Context, *v1.StopExecutionRequest) (*v1.StopExecutionResponse, error)
 	ResumeModelRegistration(context.Context, *v1.ResumeModelRegistrationRequest) (*v1.GetExecutionResponse, error)
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v1.GetExecutionResponse, error)
@@ -197,6 +249,9 @@ type ModelDevServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedModelDevServiceServer struct{}
 
+func (UnimplementedModelDevServiceServer) CheckFinetuningReadiness(context.Context, *v1.CheckFinetuningReadinessRequest) (*v1.CheckFinetuningReadinessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckFinetuningReadiness not implemented")
+}
 func (UnimplementedModelDevServiceServer) ListImplementations(context.Context, *v1.ListImplementationsRequest) (*v1.ListImplementationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListImplementations not implemented")
 }
@@ -211,6 +266,15 @@ func (UnimplementedModelDevServiceServer) ListExecutions(context.Context, *v1.Li
 }
 func (UnimplementedModelDevServiceServer) GetExecutionLogs(context.Context, *v1.GetExecutionLogsRequest) (*v1.GetExecutionLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetExecutionLogs not implemented")
+}
+func (UnimplementedModelDevServiceServer) ListExecutionPods(context.Context, *v1.ListExecutionPodsRequest) (*v1.ListExecutionPodsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListExecutionPods not implemented")
+}
+func (UnimplementedModelDevServiceServer) ListExecutionEvents(context.Context, *v1.ListExecutionEventsRequest) (*v1.ListExecutionEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListExecutionEvents not implemented")
+}
+func (UnimplementedModelDevServiceServer) QueryExecutionMetrics(context.Context, *v1.QueryExecutionMetricsRequest) (*v1.QueryExecutionMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QueryExecutionMetrics not implemented")
 }
 func (UnimplementedModelDevServiceServer) StopExecution(context.Context, *v1.StopExecutionRequest) (*v1.StopExecutionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopExecution not implemented")
@@ -249,6 +313,24 @@ func RegisterModelDevServiceServer(s grpc.ServiceRegistrar, srv ModelDevServiceS
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ModelDevService_ServiceDesc, srv)
+}
+
+func _ModelDevService_CheckFinetuningReadiness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CheckFinetuningReadinessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).CheckFinetuningReadiness(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_CheckFinetuningReadiness_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).CheckFinetuningReadiness(ctx, req.(*v1.CheckFinetuningReadinessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ModelDevService_ListImplementations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -337,6 +419,60 @@ func _ModelDevService_GetExecutionLogs_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ModelDevServiceServer).GetExecutionLogs(ctx, req.(*v1.GetExecutionLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ListExecutionPods_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListExecutionPodsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ListExecutionPods(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ListExecutionPods_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ListExecutionPods(ctx, req.(*v1.ListExecutionPodsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ListExecutionEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListExecutionEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ListExecutionEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ListExecutionEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ListExecutionEvents(ctx, req.(*v1.ListExecutionEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_QueryExecutionMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.QueryExecutionMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).QueryExecutionMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_QueryExecutionMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).QueryExecutionMetrics(ctx, req.(*v1.QueryExecutionMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -457,6 +593,10 @@ var ModelDevService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ModelDevServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "CheckFinetuningReadiness",
+			Handler:    _ModelDevService_CheckFinetuningReadiness_Handler,
+		},
+		{
 			MethodName: "ListImplementations",
 			Handler:    _ModelDevService_ListImplementations_Handler,
 		},
@@ -475,6 +615,18 @@ var ModelDevService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetExecutionLogs",
 			Handler:    _ModelDevService_GetExecutionLogs_Handler,
+		},
+		{
+			MethodName: "ListExecutionPods",
+			Handler:    _ModelDevService_ListExecutionPods_Handler,
+		},
+		{
+			MethodName: "ListExecutionEvents",
+			Handler:    _ModelDevService_ListExecutionEvents_Handler,
+		},
+		{
+			MethodName: "QueryExecutionMetrics",
+			Handler:    _ModelDevService_QueryExecutionMetrics_Handler,
 		},
 		{
 			MethodName: "StopExecution",

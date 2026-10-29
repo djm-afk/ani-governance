@@ -193,10 +193,12 @@ func NewRestServer(
 	platformNetworkService *service.PlatformNetworkService,
 	acceleratorService *service.AcceleratorService,
 	imageService *service.ImageService,
+	storageService *service.StorageService,
 	modeldevService *service.ModelDevService,
 	inferenceService *service.InferenceService,
 	modelService *service.ModelService,
 	computeService *service.ComputePresetService,
+	overviewService *service.OverviewService,
 	instanceServices ...*service.InstanceService,
 ) (*http.Server, error) {
 	cfg := ctx.GetConfig()
@@ -219,7 +221,7 @@ func NewRestServer(
 	if err != nil || modelConfig.Timeout > 24*time.Hour {
 		return nil, fmt.Errorf("invalid bounded model import HTTP budget")
 	}
-	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter},
+	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout, modeldevConfig.ModelResolutionTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter, storageQueryHTTPFilter},
 		middlewares...,
 	)
 	if err != nil {
@@ -285,6 +287,7 @@ func NewRestServer(
 	adminV1.RegisterNetworkServiceHTTPServer(srv, networkService)
 	adminV1.RegisterPlatformNetworkServiceHTTPServer(srv, platformNetworkService)
 	adminV1.RegisterImageServiceHTTPServer(srv, imageService)
+	adminV1.RegisterStorageServiceHTTPServer(srv, storageService)
 	adminV1.RegisterAcceleratorAdminServiceHTTPServer(srv, acceleratorService)
 	adminV1.RegisterAcceleratorServiceHTTPServer(srv, acceleratorService)
 	adminV1.RegisterQuotaSelfServiceHTTPServer(srv, acceleratorService)
@@ -301,6 +304,9 @@ func NewRestServer(
 	}
 	if computeService != nil {
 		RegisterComputeHTTPServer(srv, computeService)
+	}
+	if overviewService != nil {
+		RegisterOverviewHTTP(srv, overviewService)
 	}
 
 	if cfg.GetServer().GetRest().GetEnableSwagger() {
