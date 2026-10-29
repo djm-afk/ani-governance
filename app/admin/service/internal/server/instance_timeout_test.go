@@ -245,3 +245,89 @@ func TestModelDevHTTPPreflightCannotBorrowResolutionBudget(t *testing.T) {
 		})
 	}
 }
+
+func TestInferenceDiagnosticHTTPBudgetsOnlyApplyToExactGETRoutes(t *testing.T) {
+	base := "/api/v1/inference/services/10000000-0000-4000-8000-000000000001"
+	for _, tc := range []struct {
+		method, path string
+		want         time.Duration
+	}{
+		{"GET", base + "/runtime", 20 * time.Second},
+		{"GET", base + "/metrics", 30 * time.Second},
+		{"POST", base + "/runtime", 3 * time.Second},
+		{"POST", base + "/metrics", 3 * time.Second},
+		{"GET", base + "/runtime/extra", 3 * time.Second},
+		{"GET", base + "/metrics/latest", 3 * time.Second},
+		{"GET", base + "/logs", 20 * time.Second},
+		{"POST", base + "/logs", 3 * time.Second},
+		{"GET", base + "/logs/extra", 3 * time.Second},
+		{"GET", base + "/events", 3 * time.Second},
+		{"GET", base + "/policy", 3 * time.Second},
+		{"GET", "/api/v1/inference/services/not-a-uuid/runtime", 3 * time.Second},
+		{"GET", "/api/v1/inference/services/not-a-uuid/metrics", 3 * time.Second},
+		{"GET", "/api/v1/inference/services", 3 * time.Second},
+	} {
+		t.Run(tc.method+tc.path, func(t *testing.T) {
+			instanceHTTPTimeoutFilter(3*time.Second)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				deadline, ok := r.Context().Deadline()
+				if !ok || time.Until(deadline) > tc.want || time.Until(deadline) < tc.want-time.Second {
+					t.Fatalf("remaining budget %v want %v", time.Until(deadline), tc.want)
+				}
+			})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.path, nil))
+		})
+	}
+	for _, suffix := range []string{"/runtime", "/metrics", "/logs"} {
+		parent, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		instanceHTTPTimeoutFilter(3*time.Second)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			actual, _ := r.Context().Deadline()
+			want, _ := parent.Deadline()
+			if !actual.Equal(want) {
+				t.Fatal("inference diagnostic extended caller deadline")
+			}
+			cancel()
+			if r.Context().Err() != context.Canceled {
+				t.Fatal("inference diagnostic lost caller cancellation")
+			}
+		})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", base+suffix, nil).WithContext(parent))
+		cancel()
+	}
+}
+
+func TestInferenceLogStreamHTTPBudgetPreservesHandlerLifetimeAndCaller(t *testing.T) {
+	path := "/api/v1/inference/services/10000000-0000-4000-8000-000000000001/logs:stream"
+	for _, tc := range []struct {
+		method, path string
+		stream       bool
+	}{
+		{"GET", path, true},
+		{"POST", path, false},
+		{"GET", path + "/extra", false},
+		{"GET", "/api/v1/inference/services/not-a-uuid/logs:stream", false},
+	} {
+		t.Run(tc.method+tc.path, func(t *testing.T) {
+			instanceHTTPTimeoutFilter(3*time.Second)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				deadline, ok := r.Context().Deadline()
+				if tc.stream {
+					if ok {
+						t.Fatal("ordinary HTTP deadline truncates the handler's bounded stream")
+					}
+				} else if !ok || time.Until(deadline) > 3*time.Second || time.Until(deadline) < 2*time.Second {
+					t.Fatal("unrelated path lost its ordinary deadline")
+				}
+			})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.path, nil))
+		})
+	}
+	parent, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	instanceHTTPTimeoutFilter(3*time.Second)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		actual, _ := r.Context().Deadline()
+		want, _ := parent.Deadline()
+		if !actual.Equal(want) {
+			t.Fatal("stream extended caller deadline")
+		}
+		cancel()
+		if r.Context().Err() != context.Canceled {
+			t.Fatal("stream lost caller cancellation")
+		}
+	})).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", path, nil).WithContext(parent))
+}
