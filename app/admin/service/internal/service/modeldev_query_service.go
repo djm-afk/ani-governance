@@ -9,6 +9,7 @@ import (
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
 	modeldevcontractv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
+	trainingv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/training/v1"
 	modeldevv1 "go-wind-admin/api/gen/go/modeldev/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/pkg/middleware/auth"
@@ -118,6 +119,17 @@ func modelDevExecutionFilter(in *modeldevv1.ListExecutionsRequest) (data.Executi
 		// caller; the owner folds case before matching.
 		value := *in.Name
 		filter.Name = &value
+	}
+	if in.Kind != nil {
+		// Kind reuses the response vocabulary, so a typo, a lower-case value or
+		// the placeholder UNSPECIFIED is rejected here instead of silently
+		// returning an unfiltered page.
+		value, ok := trainingv1.ExecutionKind_value["EXECUTION_KIND_"+*in.Kind]
+		if !ok || value == 0 {
+			return data.ExecutionFilter{}, modelDevQueryInvalid()
+		}
+		parsed := trainingv1.ExecutionKind(value)
+		filter.Kind = &parsed
 	}
 	return filter, nil
 }
