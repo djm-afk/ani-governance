@@ -17,6 +17,10 @@ var instanceLogsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0
 // owns the bounded lifetime, so the shared ordinary timeout must not cut it.
 var modelDevLogStreamHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs/stream$`)
 var instanceMetricsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/metrics/(query|latest)$`)
+var inferenceRuntimeHTTPPath = regexp.MustCompile(`^/api/v1/inference/services/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/runtime$`)
+var inferenceMetricsHTTPPath = regexp.MustCompile(`^/api/v1/inference/services/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/metrics$`)
+var inferenceLogsHTTPPath = regexp.MustCompile(`^/api/v1/inference/services/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs$`)
+var inferenceLogsStreamHTTPPath = regexp.MustCompile(`^/api/v1/inference/services/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs:stream$`)
 var modelDevMetricsHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/executions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resource-metrics$`)
 var modelDevArtifactHTTPPath = regexp.MustCompile(`^/api/v1/modeldev/artifacts/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/content$`)
 
@@ -59,7 +63,13 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 			readiness := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/finetuning/readiness/check"
 			create := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/executions"
 			modelImport := r.Method == http.MethodPost && (r.URL.Path == "/api/v1/model-versions" || modelUploadHTTPPath.MatchString(r.URL.Path))
-			if r.Method == http.MethodGet && resourceUsageHTTPPath.MatchString(r.URL.Path) {
+			if r.Method == http.MethodGet && (inferenceRuntimeHTTPPath.MatchString(r.URL.Path) || inferenceLogsHTTPPath.MatchString(r.URL.Path)) {
+				// Runtime probes and log reads have a fifteen-second owner budget.
+				ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
+			} else if r.Method == http.MethodGet && inferenceMetricsHTTPPath.MatchString(r.URL.Path) {
+				// Runtime identity lookup precedes two bounded Prometheus reads.
+				ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+			} else if r.Method == http.MethodGet && resourceUsageHTTPPath.MatchString(r.URL.Path) {
 				ctx, cancel = context.WithTimeout(ctx, 45*time.Second)
 			} else if gpuHTTPPath.MatchString(r.URL.Path) {
 				ctx, cancel = context.WithTimeout(ctx, 35*time.Second)
@@ -78,7 +88,7 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 				ctx, cancel = context.WithTimeout(ctx, 25*time.Second)
 			} else if metrics {
 				ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
-			} else if ordinary > 0 && !(r.Method == http.MethodGet && (instanceLogsHTTPPath.MatchString(r.URL.Path) || modelDevLogStreamHTTPPath.MatchString(r.URL.Path) || modelDevArtifactDownloadHTTPPath.MatchString(r.URL.Path) || platformComponentLogStreamHTTPPath.MatchString(r.URL.Path))) {
+			} else if ordinary > 0 && !(r.Method == http.MethodGet && (instanceLogsHTTPPath.MatchString(r.URL.Path) || inferenceLogsStreamHTTPPath.MatchString(r.URL.Path) || modelDevLogStreamHTTPPath.MatchString(r.URL.Path) || modelDevArtifactDownloadHTTPPath.MatchString(r.URL.Path) || platformComponentLogStreamHTTPPath.MatchString(r.URL.Path))) {
 				ctx, cancel = context.WithTimeout(ctx, ordinary)
 			} else {
 				ctx, cancel = context.WithCancel(ctx)

@@ -252,6 +252,10 @@ github.com/liangzai006/ani-inference-service/api v0.1.2-image-registry.2 h1:L0hv
 github.com/liangzai006/ani-inference-service/api v0.1.2-image-registry.2/go.mod h1:LL8ApWoysh2oFryZhi+2A07DfyVoIVd8m0Lpu1vCcbk=
 github.com/liangzai006/ani-inference-service/api v0.1.2-image-registry.2.0.20261028083400-ca48688ad918 h1:WA7evm1q9/GjOEuxTzJ1atQvzlH/vr0CMW8rUsB/hwA=
 github.com/liangzai006/ani-inference-service/api v0.1.2-image-registry.2.0.20261028083400-ca48688ad918/go.mod h1:LL8ApWoysh2oFryZhi+2A07DfyVoIVd8m0Lpu1vCcbk=
+github.com/liangzai006/ani-inference-service/api v0.1.2-image-registry.2.0.20261029033104-a8b505b9e2ea h1:XN8N5J73zhAaB5SZZbMPzQVfnr9DZyg1XkI0a6Y+ZN0=
+github.com/liangzai006/ani-inference-service/api v0.1.2-image-registry.2.0.20261029033104-a8b505b9e2ea/go.mod h1:LL8ApWoysh2oFryZhi+2A07DfyVoIVd8m0Lpu1vCcbk=
+github.com/liangzai006/ani-model-service/api v0.0.0-20261022121005-cf833e370815 h1:qGtbMNzopK4Pczb6XjXcDrvRq4MR1TEBY1uUVCRXCqI=
+github.com/liangzai006/ani-model-service/api v0.0.0-20261022121005-cf833e370815/go.mod h1:JsFcJK23M4jXHkXdX9U28lEArWVkp9SS6h2hGroLjIM=
 github.com/liangzai006/ani-model-service/api v0.0.0-20261026094610-7c852d6048a9 h1:2MMk7FTsV+TQz591z4ihUMALYVUa71AHz5mPoSrcj5Y=
 github.com/liangzai006/ani-model-service/api v0.0.0-20261026094610-7c852d6048a9/go.mod h1:JsFcJK23M4jXHkXdX9U28lEArWVkp9SS6h2hGroLjIM=
 github.com/liangzai006/ani-model-service/api v0.0.0-20261028165608-620bcb1503a6 h1:85qny4YjPpLVqkBx8OwPyF9nfqv/w4LGZZ2RnwkYf8k=
@@ -430,12 +434,16 @@ github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261027054328-d7b01167cb92
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261027054328-d7b01167cb92/go.mod h1:ce80VIH0yy5ca08sma0nuIi2badoIwHqAa73pRlpjCU=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261027161557-51eca09b8a47 h1:As0P8vudnMsy5uiXkUxgOXFxezwj/e+V1eY1ZwFMyAU=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261027161557-51eca09b8a47/go.mod h1:ce80VIH0yy5ca08sma0nuIi2badoIwHqAa73pRlpjCU=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028060700-55092dbf05c2 h1:z2xL4wWsJx28WcPf6KxSE4EkT4omfKC23cv7GXMe/XE=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028060700-55092dbf05c2/go.mod h1:Sh/MgO23x6fC11jxqP3aTNs7iYKje7SF/67grYPA1wc=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028084146-fdb583f0acfb h1:tbtzDs1u2nPZZMiPHxdICJZW3MAsAyELr/5hQWgqfOc=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028084146-fdb583f0acfb/go.mod h1:Sh/MgO23x6fC11jxqP3aTNs7iYKje7SF/67grYPA1wc=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028090831-8fe1b0ce8f10 h1:bsBE6/sUu3C94iGzEZOEzCL+xruiPqNw51ZLe1uy7z8=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028090831-8fe1b0ce8f10/go.mod h1:6ZJcttlKHaHiKhdPJ3EZZo66xM4wxrsyK7k5MMdvERg=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028103449-1498c0b20005 h1:HIjAOKYqrFo5QDxr6o8uR+mOgzCyQj7+aX6/RBhiXAI=
 github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261028103449-1498c0b20005/go.mod h1:6ZJcttlKHaHiKhdPJ3EZZo66xM4wxrsyK7k5MMdvERg=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261029065006-6db3134ba756 h1:vIAe7xa/P+rg7OWAhTqLtgyF7//uqQnCd4UNoxOrE+w=
+github.com/zhangzhe-ctrl/ani-resource-service v0.0.0-20261029065006-6db3134ba756/go.mod h1:6ZJcttlKHaHiKhdPJ3EZZo66xM4wxrsyK7k5MMdvERg=
 github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c h1:+Z/R4AX9U0RpY+smnrCO9cVFTxLqjjp0r7NbUWdchNE=
 github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c/go.mod h1:8N+MSiQHH8SrwQ6HOvEunPq37KNHiTr2/78mhzraFSw=
 github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f h1:dC5v8SPszcnt5W0pl5rBOSCL85nDJnQJkjy1YcWFZLs=

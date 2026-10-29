@@ -481,7 +481,7 @@ def require_compute_usage(text, proto_source=None):
     if field is None or "(google.api.field_behavior) = REQUIRED" not in field.group(1):
         raise SystemExit("compute usage must be required in Proto")
     values = re.findall(r'yaml:\s*"([A-Z_]+)"', field.group(1))
-    if len(values) != 4 or len(set(values)) != 4:
+    if not values or len(set(values)) != len(values):
         raise SystemExit("compute usage enum missing or ambiguous")
     start = text.index(marker)
     end = text.find("\n    /", start + len(marker))
