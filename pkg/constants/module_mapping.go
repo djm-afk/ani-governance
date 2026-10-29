@@ -9,10 +9,10 @@ import (
 // 新增服务时必须在此登记，否则其 API 的 business_module 将为 UNSPECIFIED，
 // 租户白名单过滤会把 UNSPECIFIED 视为"不在任何白名单内"而拒绝访问。
 var ServiceTagToBusinessModule = map[string]identityV1.Module{
-	"ImageService":                identityV1.Module_IMAGE,
-	"InstanceService":             identityV1.Module_INSTANCE,
+	"ImageService":    identityV1.Module_IMAGE,
+	"InstanceService": identityV1.Module_INSTANCE,
 	// 首页资源统计卡片为租户级只读聚合，挂 INSTANCE 模块（现有套餐均含 INSTANCE）。
-	"OverviewService": identityV1.Module_INSTANCE,
+	"OverviewService":             identityV1.Module_INSTANCE,
 	"StorageService":              identityV1.Module_STORAGE,
 	"VMService":                   identityV1.Module_VIRTUAL_MACHINE,
 	"ComputePresetService":        identityV1.Module_SYSTEM,
@@ -79,4 +79,7 @@ var ServiceTagToBusinessModule = map[string]identityV1.Module{
 	//（§10.1/§10.2；实验路由仅 quota_lab 构建的 OpenAPI 之外手动登记）。
 	"QuotaAdminService": identityV1.Module_TENANT,
 	"QuotaLabService":   identityV1.Module_TENANT,
+
+	// 平台组件健康快照（BOSS 组件状态页）：平台级只读接口，仅 platform:admin 可达。
+	"PlatformComponentService": identityV1.Module_SYSTEM,
 }

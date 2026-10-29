@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package admin.service.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+// 平台组件健康快照服务（BOSS「组件状态」页表格数据源，只读）
+service PlatformComponentService {
+  // 获取平台全部组件（service / dependency / platform 三组）的实时状态快照。
+  // 单个工作负载读取失败降级为 unknown，不返回 5xx；仅 Kubernetes 客户端
+  // 未配置时返回 500 COMPONENT_STATUS_FAILED。
+  rpc ListPlatformComponents (google.protobuf.Empty) returns (PlatformComponentStatusResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/platform/components"
+    };
+  }
+
+  // 读取某个组件的日志流（完成为 8 秒的短连接 SSE，前端自行重连）。
+  //
+  // 刻意不加 google.api.http 注解：HTTP 由 server 层手写 SSE handler 承担，
+  // OpenAPI 由 scripts/finalize-aksk-openapi.py 在生成后补写，与实例日志、
+  // 训练日志同一模式。加上注解会生成第二条同路径 handler。
+  rpc StreamComponentLogs (PlatformComponentLogsRequest) returns (stream PlatformComponentLogFrame);
+}
+
+// 组件日志流请求。limit 与 interval_seconds 用 optional 区分"未传"与"显式零值"，
+// 显式零值必须报 400 而不是被当成默认值。
+message PlatformComponentLogsRequest {
+  string component = 1;                        // 路径参数，必须是注册表内的组件名
+  optional int32 limit = 2;                    // 首次回放条数，1..200，默认 100
+  optional int32 interval_seconds = 3;         // 增量查询间隔秒，1..5，默认 2
+}
+
+// 组件日志流的一帧。六字段与旧契约完全一致，都是非空 string；
+// kind 只用于区分帧类型，不进入 data 的六字段投影。
+message PlatformComponentLogFrame {
+  string container = 1;
+  string level = 2;
+  string message = 3;
+  string pod = 4;
+  string stream = 5;
+  string timestamp = 6;                        // UTC RFC3339，毫秒精度
+}
+
+// 组件状态快照 - 回应
+message PlatformComponentStatusResponse {
+  string observed_at = 1;                        // 观测时间（UTC RFC3339，秒级）
+  repeated PlatformComponentGroup groups = 2;     // 固定三组、固定顺序：service / dependency / platform
+  PlatformComponentDevProfile dev_profile = 3;    // 数据来源画像（前端仅调试用）
+}
+
+// 组件分组
+message PlatformComponentGroup {
+  string name = 1;                        // service / dependency / platform
+  repeated PlatformComponent components = 2;
+}
+
+// 单个组件状态。desired_replicas / ready_replicas / version / scrape_status /
+// reason 在快照中允许为 null，HTTP 层按契约输出 null 而不是 0 或空串。
+message PlatformComponent {
+  string name = 1;                 // 工作负载名
+  string kind = 2;                 // Deployment / StatefulSet / DaemonSet
+  string namespace = 3;
+  string group = 4;                // service / dependency / platform
+  string status = 5;               // running / degraded / stopped / unknown
+  int32 desired_replicas = 6;      // unknown 时 HTTP 层输出 null
+  int32 ready_replicas = 7;        // unknown 时 HTTP 层输出 null
+  string version = 8;              // 镜像 tag；无 tag 时 HTTP 层输出 null
+  string scrape_status = 9;        // 仅 service 组：reachable / unreachable / unknown
+  string reason = 10;              // 降级原因；正常时 HTTP 层输出 null
+}
+
+// 数据来源画像
+message PlatformComponentDevProfile {
+  string mode = 1;           // real
+  string provider = 2;       // kubernetes-component-status
+  bool real_provider = 3;    // 存在 unknown 组件时为 false
+  string reason = 4;         // 正常为空串
+}

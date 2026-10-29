@@ -199,6 +199,7 @@ func NewRestServer(
 	modelService *service.ModelService,
 	computeService *service.ComputePresetService,
 	overviewService *service.OverviewService,
+	platformComponentService *service.PlatformComponentService,
 	instanceServices ...*service.InstanceService,
 ) (*http.Server, error) {
 	cfg := ctx.GetConfig()
@@ -308,6 +309,9 @@ func NewRestServer(
 	if overviewService != nil {
 		RegisterOverviewHTTP(srv, overviewService)
 	}
+	RegisterPlatformComponentHTTP(srv, platformComponentService)
+	// 组件日志流与状态查询共用同一份受控组件清单与同一个 service 实例。
+	RegisterPlatformComponentLogHTTP(srv, platformComponentService)
 
 	if cfg.GetServer().GetRest().GetEnableSwagger() {
 		swaggerUI.RegisterSwaggerUIServerWithOption(
