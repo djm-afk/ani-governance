@@ -151,6 +151,7 @@ func TestExempt(t *testing.T) {
 		{"POST", "/api/v1/auth/password/login"},
 		{"GET", "/api/v1/events"},
 		{"GET", "/api/v1/modeldev/executions"},
+		{"POST", "/api/v1/modeldev/finetuning/readiness/check"},
 		{"GET", "/api/v1/auth/api-keys"},
 	}
 	for _, tc := range cases {

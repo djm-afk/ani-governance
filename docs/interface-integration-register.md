@@ -1358,7 +1358,7 @@ FINETUNING 同时省略 `new_model_name` 与 `target_model_id` 表示仅发布�
 | MODELDEV-01 | 创建执行 | implementation/compute/typed parameters/总时长；拒绝旧Release字段；202为持久受理 |
 | MODELDEV-02 | 已退役Release操作 | import-release/enable/pause/binding/generation不再注册；历史证据不作为新受理许可 |
 | MODELDEV-03～06 | 详情、产物、下载、停止、列表、日志 | 原当前授权/租户隔离和正交状态保留；下载不缓存、不存有效URL |
-| MODELDEV-07 | 实现规则与输入 | `/api/v1/modeldev/implementations`；可选 `kind`（`GENERAL_TRAINING`/`FINETUNING`，分页前筛选，非法值400）；公共compute复用TRAINING目录；输入独立 `modeldev:manage_input`；不要求Release导入批准 |
+| MODELDEV-07 | 实现规则与输入 | `/api/v1/modeldev/implementations`；必填 `device_mode`（`cpu`/`gpu`），缺失/空值/非法/重复值400，无默认值；能力摘要仅来自该模式材料，按现有Readiness类型公开 `runtime_capabilities`/`runtime_capabilities_sha256`；可选 `kind`（`GENERAL_TRAINING`/`FINETUNING`，分页前筛选，非法值400）；公共compute复用TRAINING目录；输入独立 `modeldev:manage_input`；不要求Release导入批准 |
 | MODELDEV-08 | inspect/reconcile/cleanup | 当前独立execution权限，精确原UID清理；不自动删PVC/publication/模型 |
 | MODELDEV-12 | 恢复原模型登记 | `POST /api/v1/modeldev/executions/{execution_id}:resume-model-registration`；空 body/no query，仅原 CLOSED FINETUNING，当前 manage+GET+Model 原目标分支权限；同详情返回 `model_registration`/`history` |
 | MODELDEV-13 | 资源曲线（一次一个 Pod） | `GET /api/v1/modeldev/executions/{execution_id}/resource-metrics`；必填 `pod_uid`/`container`/`start`/`end`/`metric_codes`，可选 `step_seconds`（30–3600、30 的整数倍）；容器由 layer 钉死（worker=`node`、step=`main`）；namespace 与 cluster 取本租户冻结受理，不接受调用方传值；每租户并发 4，BFF 排队；当前 GPU 无 exporter，`gpu_requested=true` 时 `gpu_available=false` |
@@ -1397,21 +1397,21 @@ implementation/compute、原 accepted_at/deadline/Timing 均与原 source 绑定
 | 调用服务身份 | 客户端唯一精确 DNS SAN `ani-governance`（无 URI/IP/email） | `data/modeldev_client.go` |
 | 接收服务身份 | 服务器字面 DNS SAN `ani-modeldev-service`（固定 `ServerName` 校验） | `data/modeldev_client.go` |
 | 传输 | TLS 1.3、双向证书、`RequireAndVerifyClientCert`，无明文 fallback | 双方 |
-| 允许清单 | 接收方按精确 `FullMethod` 白名单，未知方法默认 `PermissionDenied`，流式一律拒绝 | `internal/server/governance_command.go` |
+| 允许清单 | 接收方按精确 `FullMethod` 白名单，未知方法默认 `PermissionDenied`；训练日志流仅允许登记的 GetExecutionLogStream | `internal/server/governance_command.go` |
 | 用户委托 | `PrepareAdmission`、`FinalizeAdmission`（两次只读计划）；Query/Management/Operations 各方法（新签发 mTLS 委派，附 `x-ani-authorized-method` 与 `x-ani-data-scope=tenant-all`） | 见下 RPC 列表 |
 | 后台事实 | `AcceptExecution`、`ApplyCloseIntent`（持久投递事实，不伪造用户 Principal） | `data/modeldev_dispatch_client.go`、`data/modeldev_close_client.go` |
 | 允许业务范围 | v2.1 单一 typed 普通训练/微调及原登记恢复；历史 CPU-P01 见下节 | 本组 |
 | 租户来源 | Governance 已持久化的内部租户主键 → 业务租户 UUID 映射（ResourceTenantResolver），不使用公网 tenant | MODELDEV-01 |
 | 幂等键 | `operation_id`（受理/投递）；关闭意图 `intent_generation` | — |
-| 超时 | `ANI_MODELDEV_TIMEOUT` 默认 3s；精确 owner HTTP 入口接受最大24h有限预算，继承更短父 deadline/取消，单次 RPC、不自动 retry | `data/modeldev_client_config.go`、`server/instance_timeout.go` |
-| 出站元数据 | 每次重建 `x-ani-tenant-id`/`x-ani-actor`/`x-ani-request-id`；查询另加 `x-ani-authorized-method`、`x-ani-data-scope`；不透传 Authorization/AK-SK/身份头 | 各 client |
+| 超时 | B=`ANI_MODELDEV_TIMEOUT` 默认3s；R=`ANI_MODELDEV_MODEL_RESOLUTION_TIMEOUT_SECONDS` 正整数秒、默认300。Readiness HTTP=R+B（前置B、RPC R）；Create HTTP=R+4B（前置B、Prepare R、GPU B、Finalize B、持久受理B）。AcceptedAt 在Prepare前冻结，后续各阶段同时受 AcceptedAt+T 和更短父deadline/取消约束；不自动retry | `data/modeldev_client_config.go`、`server/instance_timeout.go` |
+| 出站元数据 | 每次重建 `x-ani-tenant-id`/`x-ani-actor`/`x-ani-request-id`；可信浏览器request_id另以 `x-ani-parent-request-id` 关联；查询另加 `x-ani-authorized-method`、`x-ani-data-scope`；不透传 Authorization/AK-SK/身份头 | 各 client |
 | 证书轮换 | 客户端与服务器证书仅在启动期读取一次，续期后必须重启 Pod | — |
 
 RPC 方法清单（接收方白名单，精确 FullMethod）：
 
 - `ModelDevAdmissionService/PrepareAdmission`、`ModelDevAdmissionService/FinalizeAdmission`
 - `ModelDevCommandService/AcceptExecution`、`ModelDevCommandService/ApplyCloseIntent`
-- `ModelDevQueryService/GetExecution`、`ListExecutions`、`GetExecutionLogs`、`ListExecutionArtifacts`、`AuthorizeArtifactDownload`、`ListImplementations`、`GetInputVersion`、`ListInputVersions`
+- `ModelDevQueryService/GetExecution`、`ListExecutions`、`GetExecutionLogs`、`ListExecutionArtifacts`、`AuthorizeArtifactDownload`、`ListImplementations`、`GetInputVersion`、`ListInputVersions`、`CheckFinetuningReadiness`、`ListExecutionPods`
 - `ModelDevManagementService/ImportCSV`、`ImportFinetuningDataset`
 - `ModelDevOperationsService/InspectExecution`、`ReconcileExecution`、`PlanExecutionCleanup`、`ApplyExecutionCleanup`、`ResumeModelRegistration`（完整方法 `/ani.modeldev.v1.ModelDevOperationsService/ResumeModelRegistration`）
 
@@ -1419,13 +1419,23 @@ Resume 沿 Query/Operations 的当前方法委派重建 tenant/actor/request ID�
 未知结果先按原 execution 查询或由 owner 核实原 key。严格 mTLS/CA/精确 SAN 和接收方法白名单保持，
 不能以裸 gRPC、客户端重试或原受理时的权限替代当前授权。
 
-Model 和 ModelDev 的 owner RPC/HTTP 预算均为有限配置，部署目标最大24h；Model 默认30s，ModelDev默认3s，
-更短父 deadline 与取消始终生效。当前 Model client 已在 env/构造处拒绝超过24h，有限预算 RED/GREEN 收据为
-任务目录 `contracts/governance-model-budget/receipt.json`。HTTP 仅以下精确入口取对应 owner 配置：
-ModelDev POST executions、GET artifacts/{UUID}/content、POST executions/{UUID}:resume-model-registration；
-Model POST models/{UUID}/upload-url 和 POST model-versions。Model CreateModelVersion 的原存储导入同步校验全量对象，
-因此其调用预算必须贯穿 HTTP/consumer/provider。其他 API 沿原普通短预算，admin/shutdown 不随之放大；
-不因扩大配置上限宣称真实大对象导入或 Resume 已通过。
+日志 tail 与 SSE 均要求显式 `pod_uid`，来源为当前授权 `ListExecutionPods` 返回的原始 UID；无 UID 默认 worker 分支已删除。Pods 返回字段 `pods`、`layer=all/trainer/pipeline` 和 `includeRecycled` 保持现有合同。
+
+新增 Readiness route-map 记录的 `source_sha` 为所列 BFF Proto 文件的 SHA-256。
+
+Readiness 的公开请求仅 `base_model_version_id`、`compute_preset_id` 与可选 `finetuning_template`。
+当前读取授权包括独立Readiness API、源版本详情/下载与TRAINING计算目录权，后者沿用
+`modeldev:compute-preset:read`（SYSTEM目录API、MODEL套餐）。检查不要求目标写权，不分配GPU，
+不创建受理或执行；200的ELIGIBLE/TEMPLATE_REQUIRED/UNSUPPORTED不是创建/训练成功。
+响应仅有限能力、结构限额、模板计划与归一化模型概要；所有int64以十进制字符串编码。
+
+模型读取/内容/结构/模板拒绝采用当前有限ErrorDetail原因：422不支持/内容策略，429验证并发忙，
+403权限、404可见源不存在、409幂等冲突、503真实依赖不可用、504期限。下游私有消息、配置正文、
+访问URL和凭据不得穿透。浏览器request_id与可信内部correlation_id需可关联。
+
+Model导入仅其精确上传/版本入口扩大；ModelDev同步导入在现有管理CLI与ImportCSV/ImportFinetuningDataset使用 `ANI_MODELDEV_IMPORT_TIMEOUT_SECONDS`（正uint32秒，默认1800），保留更早父期限。其他ModelDev查询/命令保持B。
+显式日志请求必须选择原Pod UID；通过 `/api/v1/modeldev/executions/{execution_id}/pods` 获取
+TRAINER/PIPELINE和LIVE/RECYCLED的真实owner视图，禁止猜单worker或用同名Pod替代原UID。
 
 配置依赖定性（本轮评审确认）：Governance 对 ModelDev 为**可选依赖**。`ANI_MODELDEV_*` 全空时客户端置 nil，仅禁用远程解析/投递并返回不可用，不启动失败。
 

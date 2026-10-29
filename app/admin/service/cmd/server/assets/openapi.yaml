@@ -9685,7 +9685,7 @@ paths:
                     type: string
                 - name: pod_uid
                   in: query
-                  description: Absent keeps the original single-worker behaviour.
+                  description: Required original Pod UID from ListExecutionPods; no worker fallback.
                   schema:
                     type: string
                 - name: container
@@ -9820,6 +9820,25 @@ paths:
                                 $ref: '#/components/schemas/StopExecutionResponse'
             security:
                 - BearerAuth: []
+    /api/v1/modeldev/finetuning/readiness/check:
+        post:
+            tags:
+                - ModelDevService
+            description: Source-only model eligibility under current model-read and training compute-catalog grants; no target write or GPU allocation. 200 assessment is not execution acceptance.
+            operationId: ModelDevService_CheckFinetuningReadiness
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CheckFinetuningReadinessRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CheckFinetuningReadinessResponse'
     /api/v1/modeldev/implementations:
         get:
             tags:
@@ -9840,6 +9859,15 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: device_mode
+                  in: query
+                  required: true
+                  description: Explicit material selector; absence, aliases and unknown modes are rejected.
+                  schema:
+                    type: string
+                    enum:
+                        - cpu
+                        - gpu
             responses:
                 "200":
                     description: OK
@@ -13842,6 +13870,52 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/ChangeVMData'
+        CheckFinetuningReadinessRequest:
+            required:
+                - base_model_version_id
+                - compute_preset_id
+            type: object
+            properties:
+                base_model_version_id:
+                    type: string
+                compute_preset_id:
+                    type: string
+                finetuning_template:
+                    type: string
+            description: |-
+                Source-only check. Tenant/actor, compute observations and registration targets
+                 are deliberately absent; they come from current authorization and resolution.
+        CheckFinetuningReadinessResponse:
+            type: object
+            properties:
+                assessment:
+                    type: string
+                reason:
+                    type: string
+                template_candidates:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/FinetuningRegisteredTemplate'
+                runtime_capabilities:
+                    $ref: '#/components/schemas/FinetuningRuntimeCapabilities'
+                runtime_capabilities_sha256:
+                    type: string
+                limits:
+                    $ref: '#/components/schemas/FinetuningContentLimits'
+                structure_limits:
+                    $ref: '#/components/schemas/FinetuningStructureLimits'
+                runtime_validation_required:
+                    type: boolean
+                model_id:
+                    type: string
+                model_version_id:
+                    type: string
+                template_plan:
+                    $ref: '#/components/schemas/FinetuningTemplatePlan'
+                model_type:
+                    type: string
+                context_limit:
+                    type: string
         CleanupTenantDataRequest:
             type: object
             properties:
@@ -14228,6 +14302,8 @@ components:
                 timeout_seconds:
                     type: integer
                     format: uint64
+                finetuning_template:
+                    type: string
             description: |-
                 The one active public execution intent. Identity comes from authentication.
                  The custom HTTP adapter preserves optional fields and rejects duplicate keys.
@@ -15794,9 +15870,6 @@ components:
                     type: string
                 version_id:
                     type: string
-                family:
-                    type: string
-                    description: 模型族名，如 Qwen2.5-0.5B-Instruct。
                 format:
                     type: string
                     description: 权重格式，如 safetensors。
@@ -15962,8 +16035,6 @@ components:
                 report_to:
                     type: string
                 save_strategy:
-                    type: string
-                template:
                     type: string
                 train_dtype:
                     type: string
@@ -16190,7 +16261,11 @@ components:
                     $ref: '#/components/schemas/ExecutionHistoryView'
                 input_version_id:
                     type: string
-                image_version_id:
+                image_id:
+                    type: string
+                image_version:
+                    type: string
+                image_scope:
                     type: string
                 compute_state:
                     type: string
@@ -16285,6 +16360,126 @@ components:
                 updated_at:
                     type: string
                     format: date-time
+        FinetuningContentLimits:
+            type: object
+            properties:
+                max_content_bytes:
+                    type: string
+        FinetuningContextLimitField:
+            type: object
+            properties:
+                source:
+                    type: string
+                field:
+                    type: string
+        FinetuningRegisteredTemplate:
+            type: object
+            properties:
+                id:
+                    type: string
+                source_sha256:
+                    type: string
+                supports_system:
+                    type: boolean
+                supports_multi_turn:
+                    type: boolean
+        FinetuningRuntimeCapabilities:
+            type: object
+            properties:
+                schema_version:
+                    type: string
+                image_digest:
+                    type: string
+                entrypoint_sha256:
+                    type: string
+                packages:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/FinetuningRuntimePackage'
+                causal_lm_model_types:
+                    type: array
+                    items:
+                        type: string
+                registered_templates:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/FinetuningRegisteredTemplate'
+                context_limit_fields:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/FinetuningContextLimitField'
+        FinetuningRuntimePackage:
+            type: object
+            properties:
+                name:
+                    type: string
+                version:
+                    type: string
+        FinetuningStructureLimits:
+            type: object
+            properties:
+                max_model_files:
+                    type: string
+                max_output_files:
+                    type: string
+                max_archive_entries:
+                    type: string
+                max_relative_path_bytes:
+                    type: string
+                max_storage_key_bytes:
+                    type: string
+                max_manifest_bytes:
+                    type: string
+                max_model_config_bytes:
+                    type: string
+                max_material_bytes:
+                    type: string
+                max_archive_metadata_bytes:
+                    type: string
+                max_record_bytes:
+                    type: string
+                max_json_depth:
+                    type: string
+                max_control_rpc_bytes:
+                    type: string
+                max_publication_candidate_bytes:
+                    type: string
+                max_publication_ref_bytes:
+                    type: string
+        FinetuningTemplatePlan:
+            type: object
+            properties:
+                schema_version:
+                    type: string
+                mode:
+                    type: string
+                selection_source:
+                    type: string
+                template_id:
+                    type: string
+                source:
+                    $ref: '#/components/schemas/FinetuningTemplateSource'
+                source_sha256:
+                    type: string
+                runtime_capabilities_sha256:
+                    type: string
+                image_digest:
+                    type: string
+        FinetuningTemplateSource:
+            type: object
+            properties:
+                kind:
+                    type: string
+                path:
+                    type: string
+                name:
+                    type: string
+                default:
+                    type: boolean
+                size_bytes:
+                    type: string
+                sha256:
+                    type: string
         ForceLogoutSessionRequest:
             type: object
             properties:
@@ -16389,7 +16584,9 @@ components:
                     type: boolean
                 available:
                     type: boolean
-            description: Bounded actual training output. Pod identity and selectors remain internal.
+                pod_uid:
+                    type: string
+            description: Bounded actual output bound to the explicitly selected original Pod UID.
         GetExecutionResponse:
             type: object
             properties:
@@ -17119,6 +17316,10 @@ components:
                     type: string
                 step_timeout_seconds:
                     type: string
+                runtime_capabilities:
+                    $ref: '#/components/schemas/FinetuningRuntimeCapabilities'
+                runtime_capabilities_sha256:
+                    type: string
         ImportModelBundleModelData:
             type: object
             properties:
@@ -17481,8 +17682,7 @@ components:
                 sha256:
                     type: string
                 row_count:
-                    type: integer
-                    format: uint32
+                    type: string
                 feature_count:
                     type: integer
                     format: uint32
