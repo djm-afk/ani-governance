@@ -6,7 +6,7 @@
 
 **本文件范围**：接口合同——目录与输入、任务创建（CPU / GPU）、列表、详情基础字段与 `steps` / `metrics` / `failure`，以及产物、停止、恢复模型登记，覆盖普通训练与微调两条链路。**只描述接口的请求/响应/错误语义，不含页面布局与交互设计建议。**
 
-**详情页四类读取能力另见一份文档**：容器组（Pod）、日志（快照 + SSE 流）、事件、资源曲线见配套 handout `frontend-training-detail-diagnostics.md`（不随本仓发布）。本文件只在第 9.1 节保留一张指向表，不再重复其字段与参数。
+**详情页四类读取能力另见一份文档**：容器组（Pod）、日志（快照 + SSE 流）、事件、资源曲线见配套 handout `frontend-training-detail-diagnostics.md`（同目录）。本文件只在第 9.1 节保留一张指向表，不再重复其字段与参数。
 
 **全部接口均可联调**：产物真实下载已于 2026-10-27 打通，用 `GET /api/v1/modeldev/artifacts/{id}/download`（见 13.1）。
 
@@ -99,7 +99,7 @@
 
 - 列表统一 `page` / `pageSize`（camelCase），响应 `items` / `total`。默认 `page=1`、`pageSize=20`，`pageSize` 上限 100。显式传 `0`、负数、前导零、小数、重复参数或未声明的参数，一律 `400`，不静默修正。
 - **响应里的 `int64`/`uint64` 字段是十进制字符串**：`total`、`cpu_millis`、`memory_mib`、`size_bytes`、`close_generation`、`execution_timeout_*_seconds`、`step_timeout_seconds`、`explicit_parameters` 里的整数参数等。
-- **唯一例外是详情里的 `seed`**：`explicit_parameters` 与 `resolved_parameters` 里 `seed` 是 JSON 数字（因为契约声明它是 `uint32`），而 `managed_settings.seed` / `data_seed` 是十进制字符串（契约声明 `int64`）。同一个字段名在响应里出现两种类型，前端请按所在对象分别处理，见 7.5 与第 9 节。
+- **唯一例外是 `explicit_parameters.seed`**：它是 JSON 数字（因为契约声明 `uint32`），而 `resolved_parameters[].value` 一律字符串（含 `seed` 的 `"42"`）、`managed_settings.seed` / `data_seed` 也是十进制字符串（契约声明 `int64`）。同一个字段名在响应里出现两种类型，前端请按所在对象分别处理，见 7.5 与第 9 节。
 - **请求体里的整型参数是 JSON 数字，不是字符串**——这条与上面的响应规则相反，容易踩坑，详见 7.5。传成字符串会 `400 INVALID_MODELDEV_CREATE`（2026-10-26 现网实测）。
 - 时间字段是 RFC3339Nano UTC 字符串（如 `2026-10-23T08:35:54.775435Z`）。
 - 所有 modeldev 读接口响应带 `Cache-Control: no-store`、`Pragma: no-cache`、`Referrer-Policy: no-referrer`；不要做本地缓存或共享缓存。
@@ -123,6 +123,7 @@
 | 403 | `QUOTA_NOT_CONFIGURED` | 租户未配置 GPU 额度 | 不可重试 |
 | 403 | `QUOTA_ADMISSION_DENIED` | 额度准入被拒 | 不可重试 |
 | 412 | `INPUT_NOT_READY` | 数据集不是 READY | 不可重试，需换数据集 |
+| 412 | `UNSUPPORTED_BASE_MODEL` | 基模架构不在受管实现可训练的架构白名单内 | 不可重试，需换基模 |
 | 412 | `EXECUTION_DEADLINE_EXCEEDED` | 受理窗口已过（极少见） | 可重试 |
 | 404 | `RESOURCE_NOT_FOUND` | 引用的数据集/实现/规格不存在 | 不可重试，需刷新目录 |
 | 503 | `ENVIRONMENT_NOT_READY` | 受管准入环境未就绪 | 可重试 |
@@ -194,7 +195,7 @@ GET /api/v1/modeldev/implementations?kind=FINETUNING
 - 一对一关系是服务端强制的：`kind=FINETUNING` 配 `implementation_id=builtin.mlp`（或反向错配）在创建时返回 `400 INVALID_MODELDEV_CREATE`（2026-10-26 实测）。因此创建时 `implementation_id` 可由 `kind` 唯一推导，但仍必须显式提交该字段。
 - 可选 `kind` 取值为 `GENERAL_TRAINING` / `FINETUNING`，与响应 `kind` 同词汇。筛选在分页前执行，`total` 为筛选后条数，无匹配返回 `items: []`／`total: "0"`。
 - `kind` 表达任务类型而不是实现标识；同一 `kind` 后续可能对应多个 `implementation_id`，前端须按返回项渲染，不能把 `kind` 当 `implementation_id` 的别名。
-- `kind` 只在本接口接受，且只认大写枚举值：小写、`UNSPECIFIED`、空值、重复 `kind`、与 `state` 混用，以及 `implementation_id` 等未声明参数都返回 `400 INVALID_MODELDEV_QUERY`（2026-10-26 实测口径）。
+- `kind` 在本接口与任务列表（第 8 节）都接受，语义相同、都只认大写枚举值：小写、`UNSPECIFIED`、空值、重复 `kind`、与 `state` 混用，以及 `implementation_id` 等未声明参数都返回 `400 INVALID_MODELDEV_QUERY`（2026-10-26 实测口径）。
 - 分页对本接口生效，**页边界随筛选后的 `total` 收缩**：
   - 不带 `kind`：`total` 为 `"2"`，`pageSize=1` 时 `page=1` 返回 `GENERAL_TRAINING`、`page=2` 返回 `FINETUNING`、`page>=3` 返回空数组。
   - 带 `kind=FINETUNING`：`total` 为 `"1"`，`page=1` 返回 `builtin.sft_lora`，`page>=2` 即为空数组。
@@ -464,6 +465,7 @@ GET /api/v1/modeldev/executions?page=1&pageSize=20
 GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=SUCCEEDED
 GET /api/v1/modeldev/executions?page=1&pageSize=20&compute_state=FAILED&close_state=NEEDS_REVIEW
 GET /api/v1/modeldev/executions?page=1&pageSize=20&name=lora
+GET /api/v1/modeldev/executions?page=1&pageSize=20&kind=FINETUNING
 ```
 
 **支持的 query 参数**
@@ -476,11 +478,13 @@ GET /api/v1/modeldev/executions?page=1&pageSize=20&name=lora
 | `delivery_state` | 字符串 | 可选，交付状态筛选 |
 | `close_state` | 字符串 | 可选，关闭状态筛选 |
 | `name` | 字符串 | 可选，任务名筛选，不区分大小写的子串匹配 |
+| `kind` | 字符串 | 可选，任务类型筛选：`GENERAL_TRAINING` / `FINETUNING` |
 
 - **筛选条件可任意叠加**（AND 语义），都能在分页前生效，`total` 是筛选后的条数。
-- 取值**不带枚举前缀，且只认大写**：`compute_state` 用 `ACCEPTED` / `SUBMITTING` / `SUBMISSION_UNCERTAIN` / `QUEUED` / `PREPARING` / `TRAINING` / `SUCCEEDED` / `FAILED` / `CANCELED`（以及 `SUBMISSION_NOT_SENT`）；`delivery_state` 用 `PENDING` / `PUBLISHING` / `PUBLISHED` / `FAILED`；`close_state` 用 `OPEN` / `CLOSING` / `CLOSED` / `NEEDS_REVIEW`。词汇与响应里的同名字段完全一致。
+- 取值**不带枚举前缀，且只认大写**：`compute_state` 用 `ACCEPTED` / `SUBMITTING` / `SUBMISSION_UNCERTAIN` / `QUEUED` / `PREPARING` / `TRAINING` / `SUCCEEDED` / `FAILED` / `CANCELED`（以及 `SUBMISSION_NOT_SENT`）；`delivery_state` 用 `PENDING` / `PUBLISHING` / `PUBLISHED` / `FAILED`；`close_state` 用 `OPEN` / `CLOSING` / `CLOSED` / `NEEDS_REVIEW`；`kind` 用 `GENERAL_TRAINING` / `FINETUNING`。词汇与响应里的同名字段完全一致。
 - 非法取值一律 `400 INVALID_MODELDEV_QUERY`，**不会静默退化成不筛选**：小写（`succeeded`）、空值、重复（`compute_state=A&compute_state=B`）、`UNSPECIFIED`、以及把某个枚举的成员传给另一个枚举（如 `delivery_state=SUCCEEDED`）都会被拒。
 - `name` 匹配的是创建时提交的 `name`，即响应里的同名字段。空串、纯空白、超过 80 字、含控制字符都返回 `400`——这些值不可能命中任何已存在的任务，拒绝比返回空页更诚实。**服务端不做模糊拼写纠正**，前端做搜索框时按用户输入原样传即可。
+- `kind` 就是响应里的同名字段，所以「微调列表」直接传 `kind=FINETUNING` 即可，不需要拉全量再本地过滤。
 - `keyword`、`sort`、`limit`、`cursor` 仍未支持，传了返回 `400`。
 - **排序是 `accepted_at` 倒序（最新的在前）**，`accepted_at` 相同时用 `execution_id` 倒序稳定并列，所以翻页不会重复或漏行。可以直接用第一页展示"最近的任务"，不需要本地排序。
 - 响应：
@@ -981,7 +985,7 @@ POST :stop → 202
 | `GET /api/v1/compute-presets?usage=TRAINING` | **200** | 9 条：4 条 CPU 全部可选 + 2 条共享 GPU 可选，共 6 条可提交；3 条整卡 GPU 不可选（见 5.1） |
 | `GET /api/v1/models`、`/models/{id}/versions`、`/model-versions/{id}`、`/download-url` | **200** | 微调基模选择可用，`total=3` |
 | `POST /api/v1/modeldev/executions` | **202** | CPU 与 GPU 均 202（GPU 仅限历史上 `selectable=true` 时），幂等重放正常，负例 400 |
-| `GET /api/v1/modeldev/executions` | **200** | 26 条执行全部可列；支持 `page`/`pageSize` 与状态、名称筛选（见第 8 节） |
+| `GET /api/v1/modeldev/executions` | **200** | 26 条执行全部可列；支持 `page`/`pageSize` 与状态、名称、`kind` 筛选（见第 8 节） |
 | `GET /api/v1/modeldev/executions/{id}` | **200** | 四状态 + 参数 + `steps` + `metrics` + `failure` + `managed_settings` + `base_model` |
 | `GET .../{id}/logs` | **200** | 一次性快照（见第 11 节） |
 | `GET .../{id}/logs/stream` | **200** | SSE（见第 11 节） |

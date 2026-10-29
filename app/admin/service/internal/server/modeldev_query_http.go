@@ -44,6 +44,8 @@ func registerModelDevQueryHTTP(server *khttp.Server, modeldev *service.ModelDevS
 				in.CloseState, err = modelDevStatePointer(values[0])
 			case "name":
 				in.Name, err = modelDevNamePointer(values[0])
+			case "kind":
+				in.Kind, err = modelDevStatePointer(values[0])
 			default:
 				return invalidModelDevQueryHTTP()
 			}
