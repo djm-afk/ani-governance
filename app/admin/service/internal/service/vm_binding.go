@@ -12,6 +12,7 @@ import (
 	"go-wind-admin/app/admin/service/internal/data"
 	appcrypto "go-wind-admin/pkg/crypto"
 	"go-wind-admin/pkg/middleware/auth"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -30,6 +31,7 @@ type VMOwnerClient interface {
 	Change(context.Context, string, string, string, proto.Message) (*vm.Operation, error)
 	Read(context.Context, string, string, string, string, string) (proto.Message, error)
 	Target(context.Context, string, string, string, int64) (*console.VMConsoleBinding, error)
+	Logs(context.Context, string, string, string, uint32, bool) (grpc.ServerStreamingClient[vm.VMLogFrame], error)
 }
 type VMBinding struct {
 	client           VMOwnerClient

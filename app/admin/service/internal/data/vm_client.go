@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	console "github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console/v1"
 	vm "github.com/zhangzhe-ctrl/ani-resource-service/api/vm/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -26,6 +27,19 @@ func vmCall[T any](c *VMClient, ctx context.Context, tenant, actor string, invok
 	defer cancel()
 	call = metadata.NewOutgoingContext(call, metadata.Pairs("x-ani-tenant-id", tenant, "x-ani-actor", actor, "x-ani-request-id", uuid.NewString()))
 	return invoke(call)
+}
+
+// Logs deliberately inherits the caller's stream lifetime; the unary 30 second
+// deadline would cut idle follow streams.
+func (c *VMClient) Logs(ctx context.Context, tenant, actor, id string, tail uint32, follow bool) (grpc.ServerStreamingClient[vm.VMLogFrame], error) {
+	if c == nil || c.client == nil {
+		return nil, status.Error(codes.Unavailable, "VM_ADAPTER_UNAVAILABLE")
+	}
+	if !validResourceIdentity(tenant, actor) {
+		return nil, status.Error(codes.Unauthenticated, "VM_SCOPE_DENIED")
+	}
+	call := metadata.NewOutgoingContext(ctx, metadata.Pairs("x-ani-tenant-id", tenant, "x-ani-actor", actor, "x-ani-request-id", uuid.NewString()))
+	return c.client.StreamVMLogs(call, &vm.StreamVMLogsRequest{TenantId: tenant, VmId: id, TailLines: tail, Follow: follow}, grpc.MaxCallRecvMsgSize(20*1024))
 }
 func (c *VMClient) Resolve(ctx context.Context, t, a string, in *vm.CreateVMData) (*vm.ResolveCreateSpecResponse, error) {
 	return vmCall(c, ctx, t, a, func(ctx context.Context) (*vm.ResolveCreateSpecResponse, error) {
