@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	kratosErrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
@@ -334,14 +335,16 @@ func TestQuotaGpuAtomicCancelAndSameKey(t *testing.T) {
 	require.Equal(t, v.OperationID, replay.OperationID)
 	del.IdempotencyKey = uuid.NewString()
 	second, e := r.CreateDeleteOperation(ctx, del)
-	require.NoError(t, e)
-	require.True(t, second.LocalCanceled)
-	require.NotEqual(t, v.OperationID, second.OperationID)
+	// A fresh DELETE intent cannot repeat an accepted local cancellation or refund.
+	require.Error(t, e)
+	require.Nil(t, second)
+	require.Equal(t, "INSTANCE_DELETING", kratosErrors.FromError(e).Reason)
 	dispatch, e := r.ClaimDispatchable(ctx, "worker", time.Minute, 10)
 	require.NoError(t, e)
 	require.Empty(t, dispatch)
 	balances, e := r.RecomputeInvariants(ctx, tid)
 	require.NoError(t, e)
+	require.NotEmpty(t, balances)
 	for _, row := range balances {
 		require.Zero(t, row.OccupiedUnits)
 		require.True(t, row.Balanced)
