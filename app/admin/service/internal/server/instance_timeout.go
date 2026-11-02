@@ -63,7 +63,11 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 			readiness := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/finetuning/readiness/check"
 			create := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/executions"
 			modelImport := r.Method == http.MethodPost && (r.URL.Path == "/api/v1/model-versions" || modelUploadHTTPPath.MatchString(r.URL.Path))
-			if r.Method == http.MethodGet && (inferenceRuntimeHTTPPath.MatchString(r.URL.Path) || inferenceLogsHTTPPath.MatchString(r.URL.Path)) {
+			if r.Method == http.MethodPost && r.URL.Path == data.ModelDevEnsureEnvironmentPath {
+				ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+			} else if r.Method == http.MethodGet && r.URL.Path == data.ModelDevGetEnvironmentPath {
+				ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+			} else if r.Method == http.MethodGet && (inferenceRuntimeHTTPPath.MatchString(r.URL.Path) || inferenceLogsHTTPPath.MatchString(r.URL.Path)) {
 				// Runtime probes and log reads have a fifteen-second owner budget.
 				ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
 			} else if r.Method == http.MethodGet && inferenceMetricsHTTPPath.MatchString(r.URL.Path) {

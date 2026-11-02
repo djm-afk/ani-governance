@@ -288,3 +288,36 @@ Gov 复用已登记的 Resource TLS 1.3 双向连接和精确 DNS SAN，新增�
 | GetSecurityGroupOperation | 当前租户安全组或 EIP 安全组操作；响应 tenant 和 operation_id 必须与请求一致。 |
 
 实例与 VM 的创建字段 `security_group_ids` 进入原冻结意图和 owner 持久幂等。修改分别调用 `/instance.v1.InstanceService/SetSecurityGroups`、`/vm.v1.VMService/SetSecurityGroups`，复用原 INSTANCE / VIRTUAL_MACHINE 用户权限、删除 fence、canonical command 和 `LookupCommandReplay`，action 为 `set-security-groups`，30 秒 unary 超时与原 client metadata 重建合同不变。用户清空必须显式发送空列表；不能用省略或 null 触发解绑。SDK 最终须固定支持这些 RPC 的正式 Resource 模块版本；临时 go.work 联合验证不是正式发布依赖。
+
+## ModelDev Tenant Environment delegation
+
+Gov → `ani-modeldev-service` uses the existing mTLS connection for
+`/ani.modeldev.v1.ModelDevTenantEnvironmentService/EnsureTenantExecutionEnvironment`
+and `/ani.modeldev.v1.ModelDevTenantEnvironmentService/GetTenantExecutionEnvironment`.
+Current-tenant manage/view authorization is checked on every call. Resource UUID
+comes from the current authoritative tenant mapping; actor comes from the user
+Principal. Outgoing metadata is rebuilt with a fresh request UUID, that exact
+full method, and `x-ani-data-scope=tenant-all`. Public metadata is discarded.
+Ensure forwards the canonical Idempotency-Key as operation_id only; no execution
+or quota operation is created. RPC budgets are at most28s/3s and exact HTTP paths
+at most30s/5s, each bounded by the remaining upstream deadline.
+
+The formal ModelDev module supplies request/response/view/ErrorReason38. Unknown
+protobuf fields, invalid enums and incomplete READY are rejected. Get's
+NotFound+ENVIRONMENT_NOT_REGISTERED has its own strict correlated conversion.
+Prepare/Finalize's Unavailable+ENVIRONMENT_NOT_READY permits only
+kind=tenant_environment and one field=environment violation with a frozen finite
+cause; HTTP emits only metadata.environment_reason from that cause. No arbitrary
+upstream text or new target identity is trusted.
+
+For the one-time ModelDev environment cutover, `ANI_MODELDEV_CREATE_PAUSED=true`
+blocks only ModelDev Create admission and its publisher's new Create claims.
+The default is `false`; any other nonempty spelling fails startup. The
+composition root shares the gate with the existing worker. Worker shutdown
+first pauses new work and drains current Create requests/claims for up to 20
+seconds (or the earlier shutdown deadline), including this publisher’s active
+database leases after a lost writeback, then joins the original loop.
+A drain timeout is an error, and uncertain original operations still require
+reconciliation. Stop/close and quota release retain their existing paths;
+close delivery continues while Create is paused. Switch back to `false` and
+restart after reviewed cleanup; this setting does not delete or refund data.

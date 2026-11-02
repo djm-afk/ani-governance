@@ -2116,3 +2116,18 @@ Deployment/StatefulSet/DaemonSet），并额外 `must_not` 排除 Pod 名含 `sa
 本批源码验证：Fedora Go 1.26.10 的完整 `make api`、auth/data/service/server 定向行为测试、`go test ./pkg/permcode` 均 pass。正式 Resource SDK 固定为 `v0.0.0-20261030064014-84d2cee37810`（提交 `84d2cee378106a4cb7d0fbb3fc765c50e07c4120`）。在 `GOWORK=off` 下，`go mod tidy -diff`、上述受影响测试与完整 `go build -mod=readonly -trimpath ./app/admin/service/cmd/server` 均 pass；发布依赖没有 go.work 或 replace。证据为 Fedora `/home/chabking/task-runs/network-security-groups-20261030/governance-formal-sdk-02.log`。
 
 `TestNetworkJointHTTP/security_groups` 的真实 HTTP/JWT/AK/Casbin/plan/tenant → mTLS Resource → PostgreSQL → 持久 worker 闭环 pass，覆盖默认拒绝规则、规则版本变化、EIP 未绑定等待与绑定后应用、幂等、跨租户拒绝、占用删除拒绝、清空解绑和产品清理。该用例复用隔离联合工作区，仅替身 Kubernetes/KCN 外部边界，证据为同目录 `governance-joint-sg-02.log`；权限目录同步/角色授权、Governance 部署和容器/VM/EIP 真实新连接允许及拒绝不由该替身用例证明，仍独立验收。
+
+### S2S-MODELDEV-TENANT-ENV-01 — explicit current-tenant environment
+
+Gov POST `/api/v1/modeldev/environment:ensure` and GET
+`/api/v1/modeldev/environment` delegate the two formal ModelDev tenant-environment
+RPCs over existing mTLS after current user/tenant/role/ALL scope, independent
+manage_environment/view_environment Permission and exact API grant checks.
+Request shape, response state/optional fields, budgets and strict typed failure
+boundary are defined in [frontend contract](contracts/frontend-http-api.md#modeldev-当前租户执行环境)
+and [service contract](contracts/service-to-service-calls.md#modeldev-tenant-environment-delegation).
+No acceptance/quota/outbox or implicit provisioning is added. After reviewed API
+catalog sync, explicitly apply
+`sql/data/20261101010000_modeldev_environment_permissions.sql` for Permission/API
+links and exact default tenant-manager/template grants; other read-only roles
+require explicit grants. Live A/B acceptance remains pending coordinated cutover.

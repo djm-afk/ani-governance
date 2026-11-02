@@ -179,3 +179,28 @@ Gov 通过 [go.mod](https://github.com/zhangzhe-ctrl/ani-governance/blob/ba7db4c
 
 模型详情 `GET /api/v1/models/{model_id}` 的 HTTP 响应直接返回 Model 资源，
 没有 `model` 外层；内部 RPC 的 GetModelResponse 保持原形状。
+
+## ModelDev 当前租户执行环境
+
+`POST /api/v1/modeldev/environment:ensure` 显式开通当前租户环境；请求必须为
+`application/json` 空对象 `{}`（最多1024字节并紧接EOF），不允许query，且恰有一个
+规范非零UUID `Idempotency-Key`。`GET /api/v1/modeldev/environment` 无body/query，
+仅返回持久观察。两接口返回 `{"environment": <view>}`，采用snake_case，state为
+`PROVISIONING/READY/BLOCKED/NEEDS_REVIEW`，phase为
+`NAMESPACE/RESOURCES/EXPERIMENT/VERIFY/PUBLISH/COMPLETE`。未确认的namespace_uid、
+experiment_id、binding_digest与last_verified_at省略。只有PROVISIONING返回202和
+`Retry-After: 2`；其他存在状态返回200，无登记Get返回404
+`ENVIRONMENT_NOT_REGISTERED`。Get不表示本次live健康探测，BLOCKED不表示开通成功。
+
+两接口要求当前tenant用户、当前有效角色的ALL数据范围、独立
+`modeldev:manage_environment`/`modeldev:view_environment`权限及对应精确API grant，
+仍服从既有MODEL套餐/租户闸门。相同key重试重新授权并读取最新结果，不缓存首次状态。
+浏览器不能指定tenant/namespace/cluster/Experiment或覆盖出站x-ani-*。
+Ensure/Get不进入执行acceptance、quota或可靠CREATE链。
+Prepare/Finalize的严格环境拒绝只输出有限`metadata.environment_reason`，不转发上游message。
+
+During the one-time ModelDev environment maintenance window, startup setting
+`ANI_MODELDEV_CREATE_PAUSED=true` returns HTTP 503 with reason
+`MODELDEV_CREATE_MAINTENANCE` only for the ModelDev Create action. Existing
+authentication and tenant-user restrictions still run; Ensure/Get, queries,
+Stop and quota release do not use that gate.

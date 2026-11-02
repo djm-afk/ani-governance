@@ -9510,6 +9510,63 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AuthorizeArtifactDownloadResponse'
+    /api/v1/modeldev/environment:
+        get:
+            tags:
+                - ModelDevService
+            description: Read current-tenant persistent environment observation. No body/query, no provisioning or live probe.
+            operationId: ModelDevService_GetTenantExecutionEnvironment
+            responses:
+                "200":
+                    description: Persistent environment observation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetTenantExecutionEnvironmentResponse'
+                "404":
+                    description: ENVIRONMENT_NOT_REGISTERED; no row is created
+            security:
+                - BearerAuth: []
+    /api/v1/modeldev/environment:ensure:
+        post:
+            tags:
+                - ModelDevService
+            description: Explicit current-tenant environment provisioning. Exactly one canonical UUID Idempotency-Key header, empty JSON object at most 1024 bytes, no query. No execution or quota admission.
+            operationId: ModelDevService_EnsureTenantExecutionEnvironment
+            parameters:
+                - name: Idempotency-Key
+                  in: header
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/EnsureTenantExecutionEnvironmentRequest'
+                required: true
+            responses:
+                "200":
+                    description: Persistent READY, BLOCKED or NEEDS_REVIEW observation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EnsureTenantExecutionEnvironmentResponse'
+                "202":
+                    description: Persistent PROVISIONING; explicitly retry the same key
+                    headers:
+                        Retry-After:
+                            required: true
+                            schema:
+                                type: integer
+                                format: int32
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EnsureTenantExecutionEnvironmentResponse'
+            security:
+                - BearerAuth: []
     /api/v1/modeldev/executions:
         get:
             tags:
@@ -16427,6 +16484,18 @@ components:
             properties:
                 space:
                     $ref: '#/components/schemas/ImageSpace'
+        EnsureTenantExecutionEnvironmentRequest:
+            type: object
+            properties: {}
+            additionalProperties: false
+            description: |-
+                Current authenticated tenant only. The Ensure operation UUID is supplied in
+                 the mandatory Idempotency-Key header, never in the JSON object.
+        EnsureTenantExecutionEnvironmentResponse:
+            type: object
+            properties:
+                environment:
+                    $ref: '#/components/schemas/TenantExecutionEnvironmentView'
         EnvironmentSource:
             type: object
             properties:
@@ -17351,6 +17420,11 @@ components:
             properties:
                 subnet:
                     $ref: '#/components/schemas/Subnet'
+        GetTenantExecutionEnvironmentResponse:
+            type: object
+            properties:
+                environment:
+                    $ref: '#/components/schemas/TenantExecutionEnvironmentView'
         GetUploadURLData:
             type: object
             properties:
@@ -24309,6 +24383,38 @@ components:
                     description: 删除时间
                     format: date-time
             description: 租户
+        TenantExecutionEnvironmentView:
+            type: object
+            properties:
+                environment_id:
+                    type: string
+                cluster_id:
+                    type: string
+                namespace_name:
+                    type: string
+                namespace_uid:
+                    type: string
+                state:
+                    type: string
+                phase:
+                    type: string
+                reason_code:
+                    type: string
+                retryable:
+                    type: boolean
+                retry_after_seconds:
+                    type: integer
+                    format: uint32
+                binding_digest:
+                    type: string
+                experiment_id:
+                    type: string
+                updated_at:
+                    type: string
+                    format: date-time
+                last_verified_at:
+                    type: string
+                    format: date-time
         TenantExistsResponse:
             type: object
             properties:
