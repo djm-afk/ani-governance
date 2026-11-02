@@ -2865,6 +2865,12 @@ var (
 		{Name: "deleted_by", Type: field.TypeUint32, Nullable: true, Comment: "删除者ID"},
 		{Name: "remark", Type: field.TypeString, Nullable: true, Comment: "备注"},
 		{Name: "resource_tenant_id", Type: field.TypeString, Unique: true},
+		{Name: "tenant_space_state", Type: field.TypeEnum, Enums: []string{"LEGACY", "QUEUED", "DISPATCHING", "UNKNOWN", "READY", "CLOSING", "CLOSED"}, Default: "LEGACY"},
+		{Name: "tenant_space_operation_id", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "tenant_space_lease_generation", Type: field.TypeInt64, Default: 0},
+		{Name: "tenant_space_lease_owner", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "tenant_space_lease_until", Type: field.TypeTime, Nullable: true},
+		{Name: "tenant_space_next_attempt_at", Type: field.TypeTime, Nullable: true},
 		{Name: "name", Type: field.TypeString, Nullable: true, Comment: "租户名称"},
 		{Name: "code", Type: field.TypeString, Unique: true, Nullable: true, Comment: "租户编号"},
 		{Name: "logo_url", Type: field.TypeString, Nullable: true, Comment: "租户logo地址"},
@@ -2889,7 +2895,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sys_tenants_sys_plans_tenants",
-				Columns:    []*schema.Column{SysTenantsColumns[22]},
+				Columns:    []*schema.Column{SysTenantsColumns[28]},
 				RefColumns: []*schema.Column{SysPlansColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -2903,42 +2909,42 @@ var (
 			{
 				Name:    "idx_sys_tenant_name",
 				Unique:  true,
-				Columns: []*schema.Column{SysTenantsColumns[9]},
+				Columns: []*schema.Column{SysTenantsColumns[15]},
 			},
 			{
 				Name:    "idx_sys_tenant_code",
 				Unique:  true,
-				Columns: []*schema.Column{SysTenantsColumns[10]},
+				Columns: []*schema.Column{SysTenantsColumns[16]},
 			},
 			{
 				Name:    "idx_sys_tenant_domain",
 				Unique:  false,
-				Columns: []*schema.Column{SysTenantsColumns[12]},
+				Columns: []*schema.Column{SysTenantsColumns[18]},
 			},
 			{
 				Name:    "idx_sys_tenant_admin_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{SysTenantsColumns[14]},
+				Columns: []*schema.Column{SysTenantsColumns[20]},
 			},
 			{
 				Name:    "idx_sys_tenant_status_audit_status",
 				Unique:  false,
-				Columns: []*schema.Column{SysTenantsColumns[15], SysTenantsColumns[17]},
+				Columns: []*schema.Column{SysTenantsColumns[21], SysTenantsColumns[23]},
 			},
 			{
 				Name:    "idx_sys_tenant_type_expired_at",
 				Unique:  false,
-				Columns: []*schema.Column{SysTenantsColumns[16], SysTenantsColumns[21]},
+				Columns: []*schema.Column{SysTenantsColumns[22], SysTenantsColumns[27]},
 			},
 			{
 				Name:    "idx_sys_tenant_subscription_at",
 				Unique:  false,
-				Columns: []*schema.Column{SysTenantsColumns[18]},
+				Columns: []*schema.Column{SysTenantsColumns[24]},
 			},
 			{
 				Name:    "idx_sys_tenant_expired_at",
 				Unique:  false,
-				Columns: []*schema.Column{SysTenantsColumns[21]},
+				Columns: []*schema.Column{SysTenantsColumns[27]},
 			},
 			{
 				Name:    "idx_sys_tenant_created_by_created_at",

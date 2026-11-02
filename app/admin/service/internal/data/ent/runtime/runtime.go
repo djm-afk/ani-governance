@@ -1647,12 +1647,26 @@ func init() {
 	tenant.DefaultResourceTenantID = tenantDescResourceTenantID.Default.(func() string)
 	// tenant.ResourceTenantIDValidator is a validator for the "resource_tenant_id" field. It is called by the builders before save.
 	tenant.ResourceTenantIDValidator = tenantDescResourceTenantID.Validators[0].(func(string) error)
+	// tenantDescTenantSpaceOperationID is the schema descriptor for tenant_space_operation_id field.
+	tenantDescTenantSpaceOperationID := tenantFields[2].Descriptor()
+	// tenant.TenantSpaceOperationIDValidator is a validator for the "tenant_space_operation_id" field. It is called by the builders before save.
+	tenant.TenantSpaceOperationIDValidator = tenantDescTenantSpaceOperationID.Validators[0].(func(string) error)
+	// tenantDescTenantSpaceLeaseGeneration is the schema descriptor for tenant_space_lease_generation field.
+	tenantDescTenantSpaceLeaseGeneration := tenantFields[3].Descriptor()
+	// tenant.DefaultTenantSpaceLeaseGeneration holds the default value on creation for the tenant_space_lease_generation field.
+	tenant.DefaultTenantSpaceLeaseGeneration = tenantDescTenantSpaceLeaseGeneration.Default.(int64)
+	// tenant.TenantSpaceLeaseGenerationValidator is a validator for the "tenant_space_lease_generation" field. It is called by the builders before save.
+	tenant.TenantSpaceLeaseGenerationValidator = tenantDescTenantSpaceLeaseGeneration.Validators[0].(func(int64) error)
+	// tenantDescTenantSpaceLeaseOwner is the schema descriptor for tenant_space_lease_owner field.
+	tenantDescTenantSpaceLeaseOwner := tenantFields[4].Descriptor()
+	// tenant.TenantSpaceLeaseOwnerValidator is a validator for the "tenant_space_lease_owner" field. It is called by the builders before save.
+	tenant.TenantSpaceLeaseOwnerValidator = tenantDescTenantSpaceLeaseOwner.Validators[0].(func(string) error)
 	// tenantDescName is the schema descriptor for name field.
-	tenantDescName := tenantFields[1].Descriptor()
+	tenantDescName := tenantFields[7].Descriptor()
 	// tenant.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	tenant.NameValidator = tenantDescName.Validators[0].(func(string) error)
 	// tenantDescCode is the schema descriptor for code field.
-	tenantDescCode := tenantFields[2].Descriptor()
+	tenantDescCode := tenantFields[8].Descriptor()
 	// tenant.CodeValidator is a validator for the "code" field. It is called by the builders before save.
 	tenant.CodeValidator = tenantDescCode.Validators[0].(func(string) error)
 	// tenantDescID is the schema descriptor for id field.

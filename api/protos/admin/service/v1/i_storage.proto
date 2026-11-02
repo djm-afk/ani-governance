@@ -83,7 +83,27 @@ service StorageService {
         { additional_properties: [{ name: "AccessKeyAuth" value: {} }, { name: "SignatureAuth" value: {} }, { name: "SignatureTime" value: {} }] }
       ]
       summary: "ListBuckets"
-      description: "Requires storage:bucket:list. Only buckets configured for the authenticated tenant are returned."
+      description: "Requires storage:bucket:list. Returns configured and dynamically created buckets belonging to the authenticated tenant."
+    };
+  }
+  rpc GetBucketStats(storage.service.v1.GetBucketStatsRequest) returns (storage.service.v1.GetBucketStatsResponse) {
+    option (google.api.http) = { get: "/api/v1/storage/buckets/{bucket_id}/stats" };
+    option (gnostic.openapi.v3.operation) = {
+      security: [
+        { additional_properties: [{ name: "BearerAuth" value: {} }] }
+      ]
+      summary: "GetBucketStats"
+      description: "Requires storage:bucket:list. On-demand object count and total size for one bucket; scanning is capped and truncated=true means the numbers are lower bounds."
+    };
+  }
+  rpc CreateBucket(storage.service.v1.CreateBucketRequest) returns (storage.service.v1.CreateBucketResponse) {
+    option (google.api.http) = { post: "/api/v1/storage/buckets" body: "*" response_body: "bucket" };
+    option (gnostic.openapi.v3.operation) = {
+      security: [
+        { additional_properties: [{ name: "BearerAuth" value: {} }] }
+      ]
+      summary: "CreateBucket"
+      description: "Requires storage:bucket:create. Logical name is S3-compatible lowercase ASCII; physical name is derived by the server. Repeat create is idempotent."
     };
   }
   rpc ListObjects(storage.service.v1.ListObjectsRequest) returns (storage.service.v1.ListObjectsResponse) {
@@ -117,6 +137,26 @@ service StorageService {
       ]
       summary: "GetDownloadURL"
       description: "Requires storage:object:download. Returns a short-lived GET URL for the fixed object; the URL may be reused until expiry."
+    };
+  }
+  rpc GetUploadURL(storage.service.v1.GetUploadURLRequest) returns (storage.service.v1.GetUploadURLResponse) {
+    option (google.api.http) = { post: "/api/v1/storage/buckets/{data.bucket_id}/objects:upload-url" body: "*" };
+    option (gnostic.openapi.v3.operation) = {
+      security: [
+        { additional_properties: [{ name: "BearerAuth" value: {} }] }
+      ]
+      summary: "GetUploadURL"
+      description: "Requires storage:object:upload. Returns a short-lived presigned PUT URL bound to one key; the client sends the file directly to object storage with the returned headers."
+    };
+  }
+  rpc DeleteObject(storage.service.v1.DeleteObjectRequest) returns (storage.service.v1.DeleteObjectResponse) {
+    option (google.api.http) = { post: "/api/v1/storage/buckets/{data.bucket_id}/objects:delete" body: "*" };
+    option (gnostic.openapi.v3.operation) = {
+      security: [
+        { additional_properties: [{ name: "BearerAuth" value: {} }] }
+      ]
+      summary: "DeleteObject"
+      description: "Requires storage:object:delete. Deletes exactly one object key; repeat delete returns GONE. Directory prefixes are not recursive."
     };
   }
 }

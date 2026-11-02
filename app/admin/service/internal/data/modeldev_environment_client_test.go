@@ -110,6 +110,14 @@ func TestModelDevEnvironmentRejectsUnknownAndIncompleteREADY(t *testing.T) {
 		})
 	}
 }
+
+func TestModelDevEnvironmentRejectsBusinessNamespaceSuffix(t *testing.T) {
+	tenant := uuid.NewString()
+	v := environmentReadyFixture(tenant)
+	require.True(t, modelDevValidEnvironment(v, tenant))
+	v.NamespaceName += "-inference"
+	require.False(t, modelDevValidEnvironment(v, tenant))
+}
 func TestModelDevEnvironmentErrorWhitelistRejectsExtras(t *testing.T) {
 	const correlation = "11111111-1111-4111-8111-111111111111"
 	for reason := range modelDevEnvironmentReasons {

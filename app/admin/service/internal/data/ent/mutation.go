@@ -70121,40 +70121,47 @@ func (m *TaskMutation) ResetEdge(name string) error {
 // TenantMutation represents an operation that mutates the Tenant nodes in the graph.
 type TenantMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *uint32
-	created_at         *time.Time
-	updated_at         *time.Time
-	deleted_at         *time.Time
-	created_by         *uint32
-	addcreated_by      *int32
-	updated_by         *uint32
-	addupdated_by      *int32
-	deleted_by         *uint32
-	adddeleted_by      *int32
-	remark             *string
-	resource_tenant_id *string
-	name               *string
-	code               *string
-	logo_url           *string
-	domain             *string
-	industry           *string
-	admin_user_id      *uint32
-	addadmin_user_id   *int32
-	status             *tenant.Status
-	_type              *tenant.Type
-	audit_status       *tenant.AuditStatus
-	subscription_at    *time.Time
-	unsubscribe_at     *time.Time
-	subscription_plan  *string
-	expired_at         *time.Time
-	clearedFields      map[string]struct{}
-	plan               *uint32
-	clearedplan        bool
-	done               bool
-	oldValue           func(context.Context) (*Tenant, error)
-	predicates         []predicate.Tenant
+	op                               Op
+	typ                              string
+	id                               *uint32
+	created_at                       *time.Time
+	updated_at                       *time.Time
+	deleted_at                       *time.Time
+	created_by                       *uint32
+	addcreated_by                    *int32
+	updated_by                       *uint32
+	addupdated_by                    *int32
+	deleted_by                       *uint32
+	adddeleted_by                    *int32
+	remark                           *string
+	resource_tenant_id               *string
+	tenant_space_state               *tenant.TenantSpaceState
+	tenant_space_operation_id        *string
+	tenant_space_lease_generation    *int64
+	addtenant_space_lease_generation *int64
+	tenant_space_lease_owner         *string
+	tenant_space_lease_until         *time.Time
+	tenant_space_next_attempt_at     *time.Time
+	name                             *string
+	code                             *string
+	logo_url                         *string
+	domain                           *string
+	industry                         *string
+	admin_user_id                    *uint32
+	addadmin_user_id                 *int32
+	status                           *tenant.Status
+	_type                            *tenant.Type
+	audit_status                     *tenant.AuditStatus
+	subscription_at                  *time.Time
+	unsubscribe_at                   *time.Time
+	subscription_plan                *string
+	expired_at                       *time.Time
+	clearedFields                    map[string]struct{}
+	plan                             *uint32
+	clearedplan                      bool
+	done                             bool
+	oldValue                         func(context.Context) (*Tenant, error)
+	predicates                       []predicate.Tenant
 }
 
 var _ ent.Mutation = (*TenantMutation)(nil)
@@ -70701,6 +70708,294 @@ func (m *TenantMutation) OldResourceTenantID(ctx context.Context) (v string, err
 // ResetResourceTenantID resets all changes to the "resource_tenant_id" field.
 func (m *TenantMutation) ResetResourceTenantID() {
 	m.resource_tenant_id = nil
+}
+
+// SetTenantSpaceState sets the "tenant_space_state" field.
+func (m *TenantMutation) SetTenantSpaceState(tss tenant.TenantSpaceState) {
+	m.tenant_space_state = &tss
+}
+
+// TenantSpaceState returns the value of the "tenant_space_state" field in the mutation.
+func (m *TenantMutation) TenantSpaceState() (r tenant.TenantSpaceState, exists bool) {
+	v := m.tenant_space_state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSpaceState returns the old "tenant_space_state" field's value of the Tenant entity.
+// If the Tenant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TenantMutation) OldTenantSpaceState(ctx context.Context) (v tenant.TenantSpaceState, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSpaceState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSpaceState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSpaceState: %w", err)
+	}
+	return oldValue.TenantSpaceState, nil
+}
+
+// ResetTenantSpaceState resets all changes to the "tenant_space_state" field.
+func (m *TenantMutation) ResetTenantSpaceState() {
+	m.tenant_space_state = nil
+}
+
+// SetTenantSpaceOperationID sets the "tenant_space_operation_id" field.
+func (m *TenantMutation) SetTenantSpaceOperationID(s string) {
+	m.tenant_space_operation_id = &s
+}
+
+// TenantSpaceOperationID returns the value of the "tenant_space_operation_id" field in the mutation.
+func (m *TenantMutation) TenantSpaceOperationID() (r string, exists bool) {
+	v := m.tenant_space_operation_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSpaceOperationID returns the old "tenant_space_operation_id" field's value of the Tenant entity.
+// If the Tenant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TenantMutation) OldTenantSpaceOperationID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSpaceOperationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSpaceOperationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSpaceOperationID: %w", err)
+	}
+	return oldValue.TenantSpaceOperationID, nil
+}
+
+// ClearTenantSpaceOperationID clears the value of the "tenant_space_operation_id" field.
+func (m *TenantMutation) ClearTenantSpaceOperationID() {
+	m.tenant_space_operation_id = nil
+	m.clearedFields[tenant.FieldTenantSpaceOperationID] = struct{}{}
+}
+
+// TenantSpaceOperationIDCleared returns if the "tenant_space_operation_id" field was cleared in this mutation.
+func (m *TenantMutation) TenantSpaceOperationIDCleared() bool {
+	_, ok := m.clearedFields[tenant.FieldTenantSpaceOperationID]
+	return ok
+}
+
+// ResetTenantSpaceOperationID resets all changes to the "tenant_space_operation_id" field.
+func (m *TenantMutation) ResetTenantSpaceOperationID() {
+	m.tenant_space_operation_id = nil
+	delete(m.clearedFields, tenant.FieldTenantSpaceOperationID)
+}
+
+// SetTenantSpaceLeaseGeneration sets the "tenant_space_lease_generation" field.
+func (m *TenantMutation) SetTenantSpaceLeaseGeneration(i int64) {
+	m.tenant_space_lease_generation = &i
+	m.addtenant_space_lease_generation = nil
+}
+
+// TenantSpaceLeaseGeneration returns the value of the "tenant_space_lease_generation" field in the mutation.
+func (m *TenantMutation) TenantSpaceLeaseGeneration() (r int64, exists bool) {
+	v := m.tenant_space_lease_generation
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSpaceLeaseGeneration returns the old "tenant_space_lease_generation" field's value of the Tenant entity.
+// If the Tenant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TenantMutation) OldTenantSpaceLeaseGeneration(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSpaceLeaseGeneration is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSpaceLeaseGeneration requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSpaceLeaseGeneration: %w", err)
+	}
+	return oldValue.TenantSpaceLeaseGeneration, nil
+}
+
+// AddTenantSpaceLeaseGeneration adds i to the "tenant_space_lease_generation" field.
+func (m *TenantMutation) AddTenantSpaceLeaseGeneration(i int64) {
+	if m.addtenant_space_lease_generation != nil {
+		*m.addtenant_space_lease_generation += i
+	} else {
+		m.addtenant_space_lease_generation = &i
+	}
+}
+
+// AddedTenantSpaceLeaseGeneration returns the value that was added to the "tenant_space_lease_generation" field in this mutation.
+func (m *TenantMutation) AddedTenantSpaceLeaseGeneration() (r int64, exists bool) {
+	v := m.addtenant_space_lease_generation
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTenantSpaceLeaseGeneration resets all changes to the "tenant_space_lease_generation" field.
+func (m *TenantMutation) ResetTenantSpaceLeaseGeneration() {
+	m.tenant_space_lease_generation = nil
+	m.addtenant_space_lease_generation = nil
+}
+
+// SetTenantSpaceLeaseOwner sets the "tenant_space_lease_owner" field.
+func (m *TenantMutation) SetTenantSpaceLeaseOwner(s string) {
+	m.tenant_space_lease_owner = &s
+}
+
+// TenantSpaceLeaseOwner returns the value of the "tenant_space_lease_owner" field in the mutation.
+func (m *TenantMutation) TenantSpaceLeaseOwner() (r string, exists bool) {
+	v := m.tenant_space_lease_owner
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSpaceLeaseOwner returns the old "tenant_space_lease_owner" field's value of the Tenant entity.
+// If the Tenant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TenantMutation) OldTenantSpaceLeaseOwner(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSpaceLeaseOwner is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSpaceLeaseOwner requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSpaceLeaseOwner: %w", err)
+	}
+	return oldValue.TenantSpaceLeaseOwner, nil
+}
+
+// ClearTenantSpaceLeaseOwner clears the value of the "tenant_space_lease_owner" field.
+func (m *TenantMutation) ClearTenantSpaceLeaseOwner() {
+	m.tenant_space_lease_owner = nil
+	m.clearedFields[tenant.FieldTenantSpaceLeaseOwner] = struct{}{}
+}
+
+// TenantSpaceLeaseOwnerCleared returns if the "tenant_space_lease_owner" field was cleared in this mutation.
+func (m *TenantMutation) TenantSpaceLeaseOwnerCleared() bool {
+	_, ok := m.clearedFields[tenant.FieldTenantSpaceLeaseOwner]
+	return ok
+}
+
+// ResetTenantSpaceLeaseOwner resets all changes to the "tenant_space_lease_owner" field.
+func (m *TenantMutation) ResetTenantSpaceLeaseOwner() {
+	m.tenant_space_lease_owner = nil
+	delete(m.clearedFields, tenant.FieldTenantSpaceLeaseOwner)
+}
+
+// SetTenantSpaceLeaseUntil sets the "tenant_space_lease_until" field.
+func (m *TenantMutation) SetTenantSpaceLeaseUntil(t time.Time) {
+	m.tenant_space_lease_until = &t
+}
+
+// TenantSpaceLeaseUntil returns the value of the "tenant_space_lease_until" field in the mutation.
+func (m *TenantMutation) TenantSpaceLeaseUntil() (r time.Time, exists bool) {
+	v := m.tenant_space_lease_until
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSpaceLeaseUntil returns the old "tenant_space_lease_until" field's value of the Tenant entity.
+// If the Tenant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TenantMutation) OldTenantSpaceLeaseUntil(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSpaceLeaseUntil is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSpaceLeaseUntil requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSpaceLeaseUntil: %w", err)
+	}
+	return oldValue.TenantSpaceLeaseUntil, nil
+}
+
+// ClearTenantSpaceLeaseUntil clears the value of the "tenant_space_lease_until" field.
+func (m *TenantMutation) ClearTenantSpaceLeaseUntil() {
+	m.tenant_space_lease_until = nil
+	m.clearedFields[tenant.FieldTenantSpaceLeaseUntil] = struct{}{}
+}
+
+// TenantSpaceLeaseUntilCleared returns if the "tenant_space_lease_until" field was cleared in this mutation.
+func (m *TenantMutation) TenantSpaceLeaseUntilCleared() bool {
+	_, ok := m.clearedFields[tenant.FieldTenantSpaceLeaseUntil]
+	return ok
+}
+
+// ResetTenantSpaceLeaseUntil resets all changes to the "tenant_space_lease_until" field.
+func (m *TenantMutation) ResetTenantSpaceLeaseUntil() {
+	m.tenant_space_lease_until = nil
+	delete(m.clearedFields, tenant.FieldTenantSpaceLeaseUntil)
+}
+
+// SetTenantSpaceNextAttemptAt sets the "tenant_space_next_attempt_at" field.
+func (m *TenantMutation) SetTenantSpaceNextAttemptAt(t time.Time) {
+	m.tenant_space_next_attempt_at = &t
+}
+
+// TenantSpaceNextAttemptAt returns the value of the "tenant_space_next_attempt_at" field in the mutation.
+func (m *TenantMutation) TenantSpaceNextAttemptAt() (r time.Time, exists bool) {
+	v := m.tenant_space_next_attempt_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSpaceNextAttemptAt returns the old "tenant_space_next_attempt_at" field's value of the Tenant entity.
+// If the Tenant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TenantMutation) OldTenantSpaceNextAttemptAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSpaceNextAttemptAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSpaceNextAttemptAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSpaceNextAttemptAt: %w", err)
+	}
+	return oldValue.TenantSpaceNextAttemptAt, nil
+}
+
+// ClearTenantSpaceNextAttemptAt clears the value of the "tenant_space_next_attempt_at" field.
+func (m *TenantMutation) ClearTenantSpaceNextAttemptAt() {
+	m.tenant_space_next_attempt_at = nil
+	m.clearedFields[tenant.FieldTenantSpaceNextAttemptAt] = struct{}{}
+}
+
+// TenantSpaceNextAttemptAtCleared returns if the "tenant_space_next_attempt_at" field was cleared in this mutation.
+func (m *TenantMutation) TenantSpaceNextAttemptAtCleared() bool {
+	_, ok := m.clearedFields[tenant.FieldTenantSpaceNextAttemptAt]
+	return ok
+}
+
+// ResetTenantSpaceNextAttemptAt resets all changes to the "tenant_space_next_attempt_at" field.
+func (m *TenantMutation) ResetTenantSpaceNextAttemptAt() {
+	m.tenant_space_next_attempt_at = nil
+	delete(m.clearedFields, tenant.FieldTenantSpaceNextAttemptAt)
 }
 
 // SetName sets the "name" field.
@@ -71471,7 +71766,7 @@ func (m *TenantMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TenantMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 28)
 	if m.created_at != nil {
 		fields = append(fields, tenant.FieldCreatedAt)
 	}
@@ -71495,6 +71790,24 @@ func (m *TenantMutation) Fields() []string {
 	}
 	if m.resource_tenant_id != nil {
 		fields = append(fields, tenant.FieldResourceTenantID)
+	}
+	if m.tenant_space_state != nil {
+		fields = append(fields, tenant.FieldTenantSpaceState)
+	}
+	if m.tenant_space_operation_id != nil {
+		fields = append(fields, tenant.FieldTenantSpaceOperationID)
+	}
+	if m.tenant_space_lease_generation != nil {
+		fields = append(fields, tenant.FieldTenantSpaceLeaseGeneration)
+	}
+	if m.tenant_space_lease_owner != nil {
+		fields = append(fields, tenant.FieldTenantSpaceLeaseOwner)
+	}
+	if m.tenant_space_lease_until != nil {
+		fields = append(fields, tenant.FieldTenantSpaceLeaseUntil)
+	}
+	if m.tenant_space_next_attempt_at != nil {
+		fields = append(fields, tenant.FieldTenantSpaceNextAttemptAt)
 	}
 	if m.name != nil {
 		fields = append(fields, tenant.FieldName)
@@ -71562,6 +71875,18 @@ func (m *TenantMutation) Field(name string) (ent.Value, bool) {
 		return m.Remark()
 	case tenant.FieldResourceTenantID:
 		return m.ResourceTenantID()
+	case tenant.FieldTenantSpaceState:
+		return m.TenantSpaceState()
+	case tenant.FieldTenantSpaceOperationID:
+		return m.TenantSpaceOperationID()
+	case tenant.FieldTenantSpaceLeaseGeneration:
+		return m.TenantSpaceLeaseGeneration()
+	case tenant.FieldTenantSpaceLeaseOwner:
+		return m.TenantSpaceLeaseOwner()
+	case tenant.FieldTenantSpaceLeaseUntil:
+		return m.TenantSpaceLeaseUntil()
+	case tenant.FieldTenantSpaceNextAttemptAt:
+		return m.TenantSpaceNextAttemptAt()
 	case tenant.FieldName:
 		return m.Name()
 	case tenant.FieldCode:
@@ -71615,6 +71940,18 @@ func (m *TenantMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRemark(ctx)
 	case tenant.FieldResourceTenantID:
 		return m.OldResourceTenantID(ctx)
+	case tenant.FieldTenantSpaceState:
+		return m.OldTenantSpaceState(ctx)
+	case tenant.FieldTenantSpaceOperationID:
+		return m.OldTenantSpaceOperationID(ctx)
+	case tenant.FieldTenantSpaceLeaseGeneration:
+		return m.OldTenantSpaceLeaseGeneration(ctx)
+	case tenant.FieldTenantSpaceLeaseOwner:
+		return m.OldTenantSpaceLeaseOwner(ctx)
+	case tenant.FieldTenantSpaceLeaseUntil:
+		return m.OldTenantSpaceLeaseUntil(ctx)
+	case tenant.FieldTenantSpaceNextAttemptAt:
+		return m.OldTenantSpaceNextAttemptAt(ctx)
 	case tenant.FieldName:
 		return m.OldName(ctx)
 	case tenant.FieldCode:
@@ -71707,6 +72044,48 @@ func (m *TenantMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetResourceTenantID(v)
+		return nil
+	case tenant.FieldTenantSpaceState:
+		v, ok := value.(tenant.TenantSpaceState)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSpaceState(v)
+		return nil
+	case tenant.FieldTenantSpaceOperationID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSpaceOperationID(v)
+		return nil
+	case tenant.FieldTenantSpaceLeaseGeneration:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSpaceLeaseGeneration(v)
+		return nil
+	case tenant.FieldTenantSpaceLeaseOwner:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSpaceLeaseOwner(v)
+		return nil
+	case tenant.FieldTenantSpaceLeaseUntil:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSpaceLeaseUntil(v)
+		return nil
+	case tenant.FieldTenantSpaceNextAttemptAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSpaceNextAttemptAt(v)
 		return nil
 	case tenant.FieldName:
 		v, ok := value.(string)
@@ -71823,6 +72202,9 @@ func (m *TenantMutation) AddedFields() []string {
 	if m.adddeleted_by != nil {
 		fields = append(fields, tenant.FieldDeletedBy)
 	}
+	if m.addtenant_space_lease_generation != nil {
+		fields = append(fields, tenant.FieldTenantSpaceLeaseGeneration)
+	}
 	if m.addadmin_user_id != nil {
 		fields = append(fields, tenant.FieldAdminUserID)
 	}
@@ -71840,6 +72222,8 @@ func (m *TenantMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedUpdatedBy()
 	case tenant.FieldDeletedBy:
 		return m.AddedDeletedBy()
+	case tenant.FieldTenantSpaceLeaseGeneration:
+		return m.AddedTenantSpaceLeaseGeneration()
 	case tenant.FieldAdminUserID:
 		return m.AddedAdminUserID()
 	}
@@ -71871,6 +72255,13 @@ func (m *TenantMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddDeletedBy(v)
+		return nil
+	case tenant.FieldTenantSpaceLeaseGeneration:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTenantSpaceLeaseGeneration(v)
 		return nil
 	case tenant.FieldAdminUserID:
 		v, ok := value.(int32)
@@ -71907,6 +72298,18 @@ func (m *TenantMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(tenant.FieldRemark) {
 		fields = append(fields, tenant.FieldRemark)
+	}
+	if m.FieldCleared(tenant.FieldTenantSpaceOperationID) {
+		fields = append(fields, tenant.FieldTenantSpaceOperationID)
+	}
+	if m.FieldCleared(tenant.FieldTenantSpaceLeaseOwner) {
+		fields = append(fields, tenant.FieldTenantSpaceLeaseOwner)
+	}
+	if m.FieldCleared(tenant.FieldTenantSpaceLeaseUntil) {
+		fields = append(fields, tenant.FieldTenantSpaceLeaseUntil)
+	}
+	if m.FieldCleared(tenant.FieldTenantSpaceNextAttemptAt) {
+		fields = append(fields, tenant.FieldTenantSpaceNextAttemptAt)
 	}
 	if m.FieldCleared(tenant.FieldName) {
 		fields = append(fields, tenant.FieldName)
@@ -71985,6 +72388,18 @@ func (m *TenantMutation) ClearField(name string) error {
 	case tenant.FieldRemark:
 		m.ClearRemark()
 		return nil
+	case tenant.FieldTenantSpaceOperationID:
+		m.ClearTenantSpaceOperationID()
+		return nil
+	case tenant.FieldTenantSpaceLeaseOwner:
+		m.ClearTenantSpaceLeaseOwner()
+		return nil
+	case tenant.FieldTenantSpaceLeaseUntil:
+		m.ClearTenantSpaceLeaseUntil()
+		return nil
+	case tenant.FieldTenantSpaceNextAttemptAt:
+		m.ClearTenantSpaceNextAttemptAt()
+		return nil
 	case tenant.FieldName:
 		m.ClearName()
 		return nil
@@ -72058,6 +72473,24 @@ func (m *TenantMutation) ResetField(name string) error {
 		return nil
 	case tenant.FieldResourceTenantID:
 		m.ResetResourceTenantID()
+		return nil
+	case tenant.FieldTenantSpaceState:
+		m.ResetTenantSpaceState()
+		return nil
+	case tenant.FieldTenantSpaceOperationID:
+		m.ResetTenantSpaceOperationID()
+		return nil
+	case tenant.FieldTenantSpaceLeaseGeneration:
+		m.ResetTenantSpaceLeaseGeneration()
+		return nil
+	case tenant.FieldTenantSpaceLeaseOwner:
+		m.ResetTenantSpaceLeaseOwner()
+		return nil
+	case tenant.FieldTenantSpaceLeaseUntil:
+		m.ResetTenantSpaceLeaseUntil()
+		return nil
+	case tenant.FieldTenantSpaceNextAttemptAt:
+		m.ResetTenantSpaceNextAttemptAt()
 		return nil
 	case tenant.FieldName:
 		m.ResetName()

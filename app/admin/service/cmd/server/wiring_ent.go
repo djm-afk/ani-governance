@@ -553,7 +553,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	}
 
 	restMiddlewares := server.NewRestMiddleware(ctx, accessTokenChecker, accessKeyRepo, tenantAccessChecker, authz,
-		apiAuditLogRepo, loginAuditLogRepo, operationAuditLogRepo, permissionAuditLogRepo, dataAccessAuditLogRepo, policyEvaluationLogRepo)
+		apiAuditLogRepo, loginAuditLogRepo, operationAuditLogRepo, permissionAuditLogRepo, dataAccessAuditLogRepo, policyEvaluationLogRepo, instanceOwner)
 
 	restServer, err := server.NewRestServer(ctx, restMiddlewares, authz,
 		authenticationService, mfaService, loginPolicyService,
@@ -609,6 +609,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	extraServers := []transport.Server{quotaWorker}
 	if instanceOwner != nil {
 		extraServers = append(extraServers, service.NewSandboxDispatchWorker(quotaLedgerRepo, sandboxService))
+		extraServers = append(extraServers, service.NewTenantSpaceDispatchWorker(tenantRepo, instanceOwner))
 	}
 	if modeldevClient != nil {
 		publisher := service.NewModelDevDispatchWorker(ctx, modeldevAcceptanceRepo, modeldevClient)

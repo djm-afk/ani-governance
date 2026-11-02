@@ -238,6 +238,10 @@ func (x *ListVMsRequest) Redact() {
 	// Safe field: Page
 
 	// Safe field: PageSize
+
+	// Safe field: State
+
+	// Safe field: Keyword
 }
 
 // Ensure GetOperationRequest implements the Redactor interface at compile time.

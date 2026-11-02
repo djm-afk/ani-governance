@@ -212,13 +212,15 @@ func decodeInstanceQuery(r *http.Request, message proto.Message) error {
 	allowed := map[string]bool{}
 	switch message.(type) {
 	case *vmview.ListVMsRequest:
-		allowed["page"], allowed["pageSize"] = true, true
+		for _, k := range []string{"page", "pageSize", "state", "keyword"} {
+			allowed[k] = true
+		}
 	case *view.ListMountablePVCsRequest, *view.ListInstanceMountablePVCsRequest:
 		for _, k := range []string{"page", "pageSize", "name"} {
 			allowed[k] = true
 		}
 	case *view.ListInstancesRequest:
-		for _, k := range []string{"page", "pageSize", "instance_kind", "compute_type", "observedState", "name"} {
+		for _, k := range []string{"page", "pageSize", "instance_kind", "compute_type", "observedState", "name", "id"} {
 			allowed[k] = true
 		}
 	case *computeview.ListPresetsRequest, *computeview.AdminListPresetsRequest:
@@ -296,6 +298,27 @@ func decodeInstanceQuery(r *http.Request, message proto.Message) error {
 				max = 80
 			}
 			if utf8.RuneCountInString(value) > max {
+				return invalid
+			}
+			object[field] = value
+		case "id":
+			value = strings.TrimSpace(value)
+			if utf8.RuneCountInString(value) > 36 {
+				return invalid
+			}
+			object[field] = value
+		case "state":
+			if value != "" && value != "all" {
+				switch value {
+				case "pending", "provisioning", "starting", "stopping", "running", "stopped", "failed", "deleting", "deleted":
+				default:
+					return invalid
+				}
+			}
+			object[field] = value
+		case "keyword":
+			value = strings.TrimSpace(value)
+			if utf8.RuneCountInString(value) > 80 {
 				return invalid
 			}
 			object[field] = value

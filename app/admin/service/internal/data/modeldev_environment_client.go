@@ -114,7 +114,11 @@ func modelDevEnvironmentRPCError(err error, id string, get bool) error {
 	return out.Err()
 }
 func modelDevValidEnvironment(v *modeldevv1.TenantExecutionEnvironmentView, tenant string) bool {
-	if v == nil || modelDevUnknownFields(v.ProtoReflect()) || !modelDevCanonicalUUID(v.EnvironmentId) || !modelDevCanonicalUUID(v.ClusterId) || v.NamespaceName != "tenant-"+tenant || !modelDevValidTimestamp(v.UpdatedAt) {
+	if v == nil || modelDevUnknownFields(v.ProtoReflect()) || !modelDevCanonicalUUID(v.EnvironmentId) || !modelDevCanonicalUUID(v.ClusterId) || !modelDevCanonicalUUID(tenant) || !modelDevValidTimestamp(v.UpdatedAt) {
+		return false
+	}
+	namespaceTenant, ok := strings.CutPrefix(v.NamespaceName, "tenant-")
+	if !ok || namespaceTenant != tenant {
 		return false
 	}
 	if v.NamespaceUid != nil && (!modelDevCanonicalUUID(*v.NamespaceUid)) {

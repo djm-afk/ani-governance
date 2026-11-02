@@ -132,7 +132,8 @@ class GovernanceChartTests(unittest.TestCase):
     def assert_rbac(self, rendered, config):
         resources = {kind: text for (kind, _), text in rendered.items() if kind in RBAC_KINDS}
         self.assertEqual(set(resources), {"ClusterRole", "ClusterRoleBinding"} | ({"Role", "RoleBinding"} if config else set()))
-        self.assertEqual(resources["ClusterRole"].split("\nrules:\n", 1)[1], '  - apiGroups: ["scheduling.k8s.io"]\n    resources: ["priorityclasses"]\n    verbs: ["get"]\n  - apiGroups: ["scheduling.volcano.sh"]\n    resources: ["podgroups"]\n    verbs: ["get"]')
+        cluster_rules = re.sub(r"(?m)^  #.*\n", "", resources["ClusterRole"].split("\nrules:\n", 1)[1])
+        self.assertEqual(cluster_rules, '  - apiGroups: ["scheduling.k8s.io"]\n    resources: ["priorityclasses"]\n    verbs: ["get"]\n  - apiGroups: ["scheduling.volcano.sh"]\n    resources: ["podgroups"]\n    verbs: ["get"]\n  - apiGroups: ["apps"]\n    resources: ["deployments", "statefulsets", "daemonsets"]\n    verbs: ["list"]')
         if config:
             self.assertIn("\n  namespace: volcano-system\n", resources["Role"])
             self.assertEqual(resources["Role"].split("\nrules:\n", 1)[1], '  - apiGroups: [""]\n    resources: ["configmaps"]\n    resourceNames: ["ani-volcano-scheduler-configmap"]\n    verbs: ["get", "update"]')

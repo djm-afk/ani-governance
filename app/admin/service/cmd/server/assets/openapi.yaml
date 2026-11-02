@@ -8316,6 +8316,10 @@ paths:
                   schema:
                     type: integer
                     format: int32
+                - name: served_model_name
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -9005,6 +9009,10 @@ paths:
                   schema:
                     type: string
                 - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: id
                   in: query
                   schema:
                     type: string
@@ -11872,6 +11880,101 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/SandboxAcceptance'
+    /api/v1/sandbox/{data.sandbox_id}/code-runs:
+        post:
+            tags:
+                - SandboxService
+            operationId: SandboxService_RunSandboxCode
+            parameters:
+                - name: data.sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RunSandboxCodeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxCodeRun'
+    /api/v1/sandbox/{data.sandbox_id}/files:
+        post:
+            tags:
+                - SandboxService
+            operationId: SandboxService_WriteSandboxFile
+            parameters:
+                - name: data.sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/WriteSandboxFileRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxFileOperation'
+        delete:
+            tags:
+                - SandboxService
+            operationId: SandboxService_DeleteSandboxFile
+            parameters:
+                - name: data.sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteSandboxFileRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxFileOperation'
+    /api/v1/sandbox/{data.sandbox_id}/tokens:
+        post:
+            tags:
+                - SandboxService
+            operationId: SandboxService_CreateSandboxToken
+            parameters:
+                - name: data.sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateSandboxTokenRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxAccessToken'
     /api/v1/sandbox/{data.sandbox_id}:pause:
         post:
             tags:
@@ -11942,12 +12045,134 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Sandbox'
+    /api/v1/sandbox/{sandbox_id}/code-runs/{run_id}:
+        get:
+            tags:
+                - SandboxService
+            operationId: SandboxService_GetSandboxCodeRun
+            parameters:
+                - name: sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: run_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxCodeRun'
+    /api/v1/sandbox/{sandbox_id}/file-operations/{operation_id}:
+        get:
+            tags:
+                - SandboxService
+            operationId: SandboxService_GetSandboxFileOperation
+            parameters:
+                - name: sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: operation_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxFileOperation'
+    /api/v1/sandbox/{sandbox_id}/files:
+        get:
+            tags:
+                - SandboxService
+            operationId: SandboxService_ListSandboxFiles
+            parameters:
+                - name: sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: path
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxFileResult'
+    /api/v1/sandbox/{sandbox_id}/files/content:
+        get:
+            tags:
+                - SandboxService
+            operationId: SandboxService_ReadSandboxFile
+            parameters:
+                - name: sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: path
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SandboxFileResult'
+    /api/v1/sandbox/{sandbox_id}/tokens/{token_id}:
+        delete:
+            tags:
+                - SandboxService
+            operationId: SandboxService_RevokeSandboxToken
+            parameters:
+                - name: sandbox_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: token_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RevokeSandboxTokenResponse'
     /api/v1/storage/buckets:
         get:
             tags:
                 - StorageService
             summary: ListBuckets
-            description: Requires storage:bucket:list. Only buckets configured for the authenticated tenant are returned.
+            description: Requires storage:bucket:list. Returns configured and dynamically created buckets belonging to the authenticated tenant.
             operationId: StorageService_ListBuckets
             parameters:
                 - name: page
@@ -11981,6 +12206,27 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+        post:
+            tags:
+                - StorageService
+            summary: CreateBucket
+            description: Requires storage:bucket:create. Logical name is S3-compatible lowercase ASCII; physical name is derived by the server. Repeat create is idempotent.
+            operationId: StorageService_CreateBucket
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateBucketRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateBucketResponse'
+            security:
+                - BearerAuth: []
     /api/v1/storage/buckets/{bucket_id}/objects:
         get:
             tags:
@@ -12038,6 +12284,56 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/storage/buckets/{bucket_id}/stats:
+        get:
+            tags:
+                - StorageService
+            summary: GetBucketStats
+            description: Requires storage:bucket:list. On-demand object count and total size for one bucket; scanning is capped and truncated=true means the numbers are lower bounds.
+            operationId: StorageService_GetBucketStats
+            parameters:
+                - name: bucket_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetBucketStatsResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/storage/buckets/{data.bucket_id}/objects:delete:
+        post:
+            tags:
+                - StorageService
+            summary: DeleteObject
+            description: Requires storage:object:delete. Deletes exactly one object key; repeat delete returns GONE. Directory prefixes are not recursive.
+            operationId: StorageService_DeleteObject
+            parameters:
+                - name: data.bucket_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteObjectRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteObjectResponse'
+            security:
+                - BearerAuth: []
     /api/v1/storage/buckets/{data.bucket_id}/objects:download-url:
         post:
             tags:
@@ -12100,6 +12396,34 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/storage/buckets/{data.bucket_id}/objects:upload-url:
+        post:
+            tags:
+                - StorageService
+            summary: GetUploadURL
+            description: Requires storage:object:upload. Returns a short-lived presigned PUT URL bound to one key; the client sends the file directly to object storage with the returned headers.
+            operationId: StorageService_GetUploadURL
+            parameters:
+                - name: data.bucket_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/GetUploadURLRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetUploadURLResponse'
+            security:
+                - BearerAuth: []
     /api/v1/storage/classes:
         get:
             tags:
@@ -12324,6 +12648,15 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: state
+                  in: query
+                  description: 'Display-state group: pending/provisioning/starting/stopping/running/stopped/failed/deleting/deleted.'
+                  schema:
+                    type: string
+                - name: keyword
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -14421,6 +14754,15 @@ components:
                     type: string
                 name:
                     type: string
+                created_at:
+                    type: string
+                    format: date-time
+                region:
+                    type: string
+                storage_class:
+                    type: string
+                acl:
+                    type: string
         Callback:
             type: object
             properties:
@@ -14849,6 +15191,21 @@ components:
                 data:
                     $ref: '#/components/schemas/Api'
             description: 创建 - 请求
+        CreateBucketData:
+            type: object
+            properties:
+                name:
+                    type: string
+        CreateBucketRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateBucketData'
+        CreateBucketResponse:
+            type: object
+            properties:
+                bucket:
+                    $ref: '#/components/schemas/Bucket'
         CreateConfigRequest:
             type: object
             properties:
@@ -14958,6 +15315,14 @@ components:
                     type: integer
                     format: uint64
                 finetuning_template:
+                    type: string
+                training_image_id:
+                    type: string
+                    description: |-
+                        Catalogue training image selection. General training accepts the pair or
+                         neither (trusted material default); finetuning rejects both. The values are
+                         forwarded unchanged to the shared strict intent parser.
+                training_image_scope:
                     type: string
             description: |-
                 The one active public execution intent. Identity comes from authentication.
@@ -15380,11 +15745,33 @@ components:
                     type: string
                 instance_id:
                     type: string
+                image_id:
+                    type: string
+                image_scope:
+                    type: string
         CreateSandboxRequest:
             type: object
             properties:
                 data:
                     $ref: '#/components/schemas/CreateSandboxData'
+        CreateSandboxTokenData:
+            type: object
+            properties:
+                sandbox_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                expires_in:
+                    type: string
+                scopes:
+                    type: array
+                    items:
+                        type: string
+        CreateSandboxTokenRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateSandboxTokenData'
         CreateSecurityGroupData:
             type: object
             properties:
@@ -15945,11 +16332,36 @@ components:
                         type: integer
                         format: uint32
                     description: 收件箱记录ID列表，为空表示清空收件箱
+        DeleteObjectData:
+            type: object
+            properties:
+                bucket_id:
+                    type: string
+                key:
+                    type: string
+                expected_etag:
+                    type: string
+        DeleteObjectRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/DeleteObjectData'
+        DeleteObjectResponse:
+            type: object
+            properties:
+                state:
+                    type: string
+                    description: DELETED：本次删除了存在的对象；GONE：对象本来就不存在。
         DeletePublicAddressPoolResponse:
             type: object
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        DeleteSandboxFileRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/MutateSandboxFileData'
         DeleteSandboxRequest:
             type: object
             properties:
@@ -16965,6 +17377,13 @@ components:
                     type: string
                 image_scope:
                     type: string
+                training_image_digest:
+                    type: string
+                    description: |-
+                        通用训练所运行镜像的冻结摘要与 Resource 权威 registry 主机。
+                         微调保持材料固定的镜像身份，这两个字段为空。
+                training_image_registry_authority:
+                    type: string
                 compute_state:
                     type: string
                 delivery_state:
@@ -17225,6 +17644,18 @@ components:
                 imageBase64:
                     type: string
                     description: 验证码图片的Base64编码字符串，客户端可以解码并显示给用户
+        GetBucketStatsResponse:
+            type: object
+            properties:
+                object_count:
+                    type: string
+                total_size:
+                    type: string
+                truncated:
+                    type: boolean
+                    description: 达到扫描上限时为 true，数值是下限。
+                scanned:
+                    type: string
         GetDefaultVPCEgressResponse:
             type: object
             properties:
@@ -17428,16 +17859,16 @@ components:
         GetUploadURLData:
             type: object
             properties:
-                version:
+                bucket_id:
                     type: string
-                file_name:
+                key:
                     type: string
-                size_bytes:
+                content_type:
                     type: string
-                idempotency_key:
+                size:
                     type: string
-                checksum_sha256:
-                    type: string
+                overwrite:
+                    type: boolean
         GetUploadURLRequest:
             type: object
             properties:
@@ -20801,6 +21232,21 @@ components:
                     type: boolean
                 unavailable_reason:
                     type: string
+        MutateSandboxFileData:
+            type: object
+            properties:
+                sandbox_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                expected_version:
+                    type: string
+                path:
+                    type: string
+                content_base64:
+                    type: string
+                overwrite:
+                    type: boolean
         NamedAny:
             type: object
             properties:
@@ -23063,6 +23509,11 @@ components:
             type: object
             properties: {}
             description: 当前用户强制下线自己的指定会话 - 回应
+        RevokeSandboxTokenResponse:
+            type: object
+            properties:
+                revoked:
+                    type: boolean
         RevokeStatusResponse:
             required:
                 - status
@@ -23200,6 +23651,29 @@ components:
                     type: string
                 data:
                     $ref: '#/components/schemas/RotateInferenceKeyData'
+        RunSandboxCodeData:
+            type: object
+            properties:
+                sandbox_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                language:
+                    type: string
+                code:
+                    type: string
+                stdin:
+                    type: string
+                timeout_seconds:
+                    type: integer
+                    format: int32
+                expected_version:
+                    type: string
+        RunSandboxCodeRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/RunSandboxCodeData'
         RuntimeDiagnostics:
             type: object
             properties:
@@ -23373,6 +23847,22 @@ components:
                     type: boolean
                 replayed:
                     type: boolean
+        SandboxAccessToken:
+            type: object
+            properties:
+                token_id:
+                    type: string
+                token:
+                    type: string
+                expires_at:
+                    type: string
+                    format: date-time
+                scopes:
+                    type: array
+                    items:
+                        type: string
+                replayed:
+                    type: boolean
         SandboxActionData:
             type: object
             properties:
@@ -23383,6 +23873,75 @@ components:
                 expected_version:
                     type: string
                 instance_id:
+                    type: string
+        SandboxCodeRun:
+            type: object
+            properties:
+                run_id:
+                    type: string
+                sandbox_id:
+                    type: string
+                state:
+                    type: string
+                stdout:
+                    type: string
+                stderr:
+                    type: string
+                exit_code:
+                    type: integer
+                    format: int32
+                truncated:
+                    type: boolean
+                replayed:
+                    type: boolean
+                reason:
+                    type: string
+        SandboxFileEntry:
+            type: object
+            properties:
+                path:
+                    type: string
+                kind:
+                    type: string
+                size_bytes:
+                    type: string
+                updated_at_ns:
+                    type: string
+                updated_at:
+                    type: string
+        SandboxFileOperation:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                sandbox_id:
+                    type: string
+                state:
+                    type: string
+                reason:
+                    type: string
+                replayed:
+                    type: boolean
+                result:
+                    $ref: '#/components/schemas/SandboxFileResult'
+        SandboxFileResult:
+            type: object
+            properties:
+                path:
+                    type: string
+                kind:
+                    type: string
+                size_bytes:
+                    type: string
+                content_base64:
+                    type: string
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SandboxFileEntry'
+                total:
+                    type: string
+                next_cursor:
                     type: string
         SandboxOperation:
             type: object
@@ -23437,6 +23996,10 @@ components:
                     type: string
                 workspace:
                     $ref: '#/components/schemas/WorkspaceSpec'
+                image_id:
+                    type: string
+                image_scope:
+                    type: string
         SchedulerConfig:
             type: object
             properties:
@@ -26012,6 +26575,11 @@ components:
                     type: string
                 reclaim_policy:
                     type: string
+        WriteSandboxFileRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/MutateSandboxFileData'
         Xml:
             type: object
             properties:

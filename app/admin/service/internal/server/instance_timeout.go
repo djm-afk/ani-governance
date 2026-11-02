@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"go-wind-admin/app/admin/service/internal/data"
@@ -77,6 +78,10 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 				ctx, cancel = context.WithTimeout(ctx, 45*time.Second)
 			} else if gpuHTTPPath.MatchString(r.URL.Path) {
 				ctx, cancel = context.WithTimeout(ctx, 35*time.Second)
+			} else if r.URL.Path == "/api/v1/sandbox" || strings.HasPrefix(r.URL.Path, "/api/v1/sandbox/") {
+				// Sandbox may synchronously access a Pod; leave room for its 30s Resource RPC.
+				budget := max(ordinary, 35*time.Second)
+				ctx, cancel = context.WithTimeout(ctx, budget)
 			} else if modelImport && modelImportBudget > 0 {
 				// CreateModelVersion verifies the entire immutable archive before
 				// returning READY; keep its finite owner budget through HTTP.

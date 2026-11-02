@@ -1747,6 +1747,11 @@ mTLS gRPC 请求，不信任客户端提交的租户或 actor。Higress 只承�
 导入仍由 Model Service 创建一次性 Kubernetes Job 完成，文件写入当前 Model Service
 配置的 S3-compatible 存储。
 
+Gov → Inference 同步请求按服务间调用规范附带 `x-ani-origin-request-id`，
+用于将 Gov 的 HTTP request ID 关联到 Inference 日志；它不是身份凭据。
+异步派发使用创建响应中的 `operation_id` 关联 Gov 与 Inference 日志，
+该 ID 不替代每次 RPC 的 `x-ani-request-id` 或链路 trace ID。
+
 ### 2026-10-26 默认镜像目录与拒绝收尾
 
 模型版本创建、整包导入 version 和查询投影增加成对可选的
@@ -1918,7 +1923,7 @@ status=ready 返回 total=1/ready，operations 返回 total=1。含斜杠的公�
 存量套餐添加。上线时由运营显式开启，未开启返回 403。权限目录脚本
 `sql/data/20261023_storage_permissions.sql` 只建权限点与 API 关联，不授权、不启模块。
 
-未提供：上传/删除对象、建桶/删桶、用户 S3 AK/SK、桶公开访问、容量配额、重命名。
+本只读批次未提供上传/删除对象和建桶，后续写入合同见 STORAGE-11～13；删桶、用户 S3 AK/SK、桶公开访问、容量配额、重命名仍未提供。
 独立盘不计入 `storage.bytes` 配额。
 
 存量库补授权（2026-10-28）：新环境实测存储全部路由对租户管理员返回 403
@@ -1928,6 +1933,31 @@ STORAGE 套餐模块均已在位，缺的是角色授予——只有历史租户
 [`grant-storage-tenant-permissions.sql`](../scripts/ops/sql/grant-storage-tenant-permissions.sql)
 给模板与既有 `tenant:manager` 角色按各自租户补授 9 个 `storage:*` 码，随后重启
 Gov 重载策略。该脚本只补角色授予，不改权限、关联、套餐或平台角色。
+
+### STORAGE-11～STORAGE-13：对象存储写入（2026-10-29）
+
+| 编号 | 方法与路径 | 权限码 |
+| --- | --- | --- |
+| STORAGE-11 | `POST /api/v1/storage/buckets` | `storage:bucket:create` |
+| STORAGE-12 | `POST /api/v1/storage/buckets/{data.bucket_id}/objects:upload-url` | `storage:object:upload` |
+| STORAGE-13 | `POST /api/v1/storage/buckets/{data.bucket_id}/objects:delete` | `storage:object:delete` |
+| STORAGE-14 | `GET /api/v1/storage/buckets/{bucket_id}/stats` | `storage:bucket:list` |
+
+沿用 Bearer、STORAGE 模块、租户上下文、data 包装及严格查询参数校验。
+建桶 data.name 为 1–32 字符小写 ASCII/数字/连字符，首尾字母数字、禁止连续连字符；同名重放，返回桶对象本身。
+物理桶按服务端 cluster/tenant 指纹推导；预置桶归属优先，不接管其他归属桶；无用户删桶接口。
+上传 data 含 bucket_id/key/content_type/size/overwrite（默认 false），返回 url/headers/expires_at/key，no-store；浏览器按返回 headers 直传原始文件。
+size 为声明值（默认上限 2 GiB），不是实际字节硬配额；预签名 PUT 有效期默认 15 分钟且可重用。
+非覆盖票据绑定 If-None-Match:*，上传时对象已存在由 S3 拒绝；浏览器错误为 S3 状态/XML，不是 Gov JSON。
+删除 data 含 bucket_id/key/可选 expected_etag；校验桶存在，单 key 删除返回 DELETED/GONE；不递归，非永久删除版本历史。
+expected_etag 既做 HEAD 比较又下传 If-Match，竞态不匹配返回 OBJECT_IDENTITY_CHANGED。
+依赖后端条件写支持、浏览器可达 TLS 入口和 CORS；SDK 存在字段不代表现场支持，实测单独记录。
+
+桶列表/建桶响应补 `created_at`、`region`、`storage_class`、`acl`；对象数与总大小不放进列表（S3 无聚合 API），改为 STORAGE-14 按需统计，单桶扫描上限 5000 个对象，`truncated=true` 表示返回的是下限。统计路由复用 `storage:bucket:list`，API 关联由 `sql/data/20261030_storage_bucket_stats_permission.sql` 建立。
+
+权限目录为 `sql/data/20261029_storage_write_permissions.sql`；角色授予使用 `scripts/ops/sql/grant-storage-write-permissions.sql`（显式 tenant_ids，默认预览，apply=true 才写入），不修改模板/其他租户/套餐。
+对象名称模糊搜索、删桶、分片上传、重命名/移动、容量配额均不提供，既有 prefix 仍只作前缀定位。
+本段为实现合同，不代表部署通过；原始响应及现场验证另行交付。
 
 ## VM-MVP-20261023：虚拟机 BFF
 
@@ -1960,6 +1990,10 @@ Linux `DISK_IMAGE` 仅在 Resource 媒体目录 `initializationCapability=CLOUD_
 ## Sandbox 规格目录与权限接入（2026-10-27）
 
 **当前合同更新：** Sandbox 是独立资源，接口及安全边界见[前端 HTTP 合同](contracts/frontend-http-api.md)。以下为历史记录，父实例相关规则已被本次需求取代，历史验收不能证明独立创建已验证。
+
+Sandbox 创建可以传 `image_id` + `image_scope`，也可以传已登记的租户或平台镜像 `image_reference`；两者不可混用。Resource Image 校验登记及权限并冻结不可变引用。修改的实现和实际验收以 Resource 执行状态为准。
+
+二期新增文件、代码执行及 Sandbox Token 路由；请求、响应、作用范围和独立授权以[前端 HTTP 合同](contracts/frontend-http-api.md)及 Proto 为准。目录同步后仍须显式配置权限和套餐关系。
 
 管理入口为 Governance BFF；七条路由以 `api/protos/admin/service/v1/i_sandbox.proto` 为准，写请求保留 `data` 包装。各动作使用独立 `sandbox:create/list/read/operation:read/pause/resume/delete` 权限，均检查当前 INSTANCE 套餐、真实父实例租户归属，再经 mTLS 委托 Resource。新建与重放的父实例删除准入、查询/清理边界及 Pod/PVC/PV 引用响应见[前端 HTTP 合同](contracts/frontend-http-api.md)。映射维护于 `docs/contracts/permission-code-capability-map.tsv`。
 
@@ -2004,6 +2038,9 @@ Contract: [GPU monitoring](contracts/gpu-monitoring.md); authority: [accepted v1
 [推理调用 Key 和策略合同](contracts/inference-keys.md)。所有管理请求由 Governance
 认证并重建租户/actor，mTLS 转发 Inference；Higress 仅处理 `/v1/...`。
 API 目录、权限和套餐关系须按部署流程显式登记，不能仅凭代码生成推断已部署。
+
+AK 列表支持 `served_model_name`，在 Inference 按当前绑定策略的模型精确筛选后
+分页和计数；不传时保留原列表语义。报文和校验见上述合同。
 
 前端页面迁移与请求示例见[推理 AK 与策略前端对接](frontend-inference-ak-policy.md)。
 
