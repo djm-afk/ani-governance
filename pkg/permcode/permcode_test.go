@@ -259,11 +259,12 @@ func TestCountsAndKeys(t *testing.T) {
 	const sandboxPhaseTwoCapabilities = 9
 	const vmLogCapabilities = 1
 	const modelDevEnvironmentCapabilities = 2
-	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities; CapabilityCount() != want {
+	const manualVNicCapabilities = 9
+	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities; len(keys) != want {
+	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities; len(keys) != want {
 		t.Errorf("AllKeys() = %d, want %d", len(keys), want)
 	}
 	keySet := make(map[string]bool, len(keys))

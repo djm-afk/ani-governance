@@ -13,6 +13,7 @@ import (
 )
 
 func RegisterInstanceHTTPServer(server *http.Server, s *service.InstanceService) {
+	registerInstanceNetworkInterfaces(server, s)
 	RegisterInstanceDiagnosticsHTTP(server, s)
 	RegisterInstanceMetricsHTTP(server, s)
 	RegisterObservabilityTrendHTTP(server, s)

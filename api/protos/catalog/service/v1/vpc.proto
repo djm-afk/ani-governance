@@ -197,6 +197,9 @@ message Subnet {
  reserved "available_ip_count", "used_ip_count";
  optional string available_ip_range = 18 [json_name = "available_ip_range"];
  optional string used_ip_range = 19 [json_name = "used_ip_range"];
+ repeated string exclude_ips = 21 [json_name = "exclude_ips"];
+ bool enable_dhcp = 22 [json_name = "enable_dhcp"];
+ repeated string dns_servers = 23 [json_name = "dns_servers"];
 }
 message CreateSubnetRequest {
  string vpc_id = 1 [json_name = "vpc_id"];
@@ -205,6 +208,9 @@ message CreateSubnetRequest {
  string description = 4 [json_name = "description"];
  string idempotency_key = 5 [json_name = "idempotency_key"];
  optional string gateway = 6 [json_name = "gateway"];
+ repeated string exclude_ips = 7 [json_name = "exclude_ips"];
+ optional bool enable_dhcp = 8 [json_name = "enable_dhcp"];
+ repeated string dns_servers = 9 [json_name = "dns_servers"];
 }
 message CreateSubnetResponse { Subnet subnet = 1 [json_name = "subnet"]; }
 message GetSubnetRequest { string subnet_id = 1 [json_name = "subnet_id"]; }

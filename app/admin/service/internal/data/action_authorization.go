@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go-wind-admin/app/admin/service/internal/data/ent"
+	"go-wind-admin/app/admin/service/internal/data/ent/accesskey"
 	"go-wind-admin/app/admin/service/internal/data/ent/api"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
 	"go-wind-admin/app/admin/service/internal/data/ent/permissionapi"
@@ -39,10 +40,18 @@ func (r *ActionAuthorizationRepo) authorizeRoute(ctx context.Context, tenantID, 
 }
 
 func (r *ActionAuthorizationRepo) authorizeRouteGrant(ctx context.Context, tenantID, userID uint32, path, module, apiModule, method, code string) (result error) {
+	return r.authorizeRouteSubject(ctx, tenantID, userID, 0, path, module, apiModule, method, code)
+}
+
+// Machine identities use their current bound role; an API key ID is never a user ID.
+func (r *ActionAuthorizationRepo) authorizeKeyRoute(ctx context.Context, tenantID, keyID uint32, path, module, method string) error {
+	return r.authorizeRouteSubject(ctx, tenantID, 0, keyID, path, module, module, method, "")
+}
+func (r *ActionAuthorizationRepo) authorizeRouteSubject(ctx context.Context, tenantID, userID, keyID uint32, path, module, apiModule, method, code string) (result error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if tenantID == 0 || userID == 0 {
+	if tenantID == 0 || (userID == 0) == (keyID == 0) {
 		return ErrActionAuthorizationDenied
 	}
 	if r == nil || r.entClient == nil || r.entClient.Client() == nil {
@@ -78,20 +87,32 @@ func (r *ActionAuthorizationRepo) authorizeRouteGrant(ctx context.Context, tenan
 	if !allowed {
 		return ErrActionAuthorizationDenied
 	}
-	allowed, err = tx.User.Query().Where(user.IDEQ(userID), user.TenantIDEQ(tenantID), user.StatusEQ(user.StatusNormal), user.DeletedAtIsNil()).Exist(ctx)
-	if err != nil {
-		return ErrActionAuthorizationUnavailable
-	}
-	if !allowed {
-		return ErrActionAuthorizationDenied
-	}
 	var memberRoleIDs []uint32
-	err = tx.UserRole.Query().Where(userrole.TenantIDEQ(tenantID), userrole.UserIDEQ(userID), userrole.StatusEQ(userrole.StatusActive), userrole.DeletedAtIsNil(), userrole.Or(userrole.StartAtIsNil(), userrole.StartAtLTE(now)), userrole.Or(userrole.EndAtIsNil(), userrole.EndAtGT(now))).Select(userrole.FieldRoleID).Scan(ctx, &memberRoleIDs)
-	if err != nil {
-		return ErrActionAuthorizationUnavailable
-	}
-	if len(memberRoleIDs) == 0 {
-		return ErrActionAuthorizationDenied
+	if keyID != 0 {
+		key, keyErr := tx.AccessKey.Query().Where(accesskey.IDEQ(keyID), accesskey.TenantIDEQ(tenantID), accesskey.StatusEQ(accesskey.StatusOn), accesskey.DeletedAtIsNil(), accesskey.Or(accesskey.ExpiresAtIsNil(), accesskey.ExpiresAtGT(now))).Only(ctx)
+		if ent.IsNotFound(keyErr) {
+			return ErrActionAuthorizationDenied
+		}
+		if keyErr != nil {
+			return ErrActionAuthorizationUnavailable
+		}
+		memberRoleIDs = []uint32{key.RoleID}
+	} else {
+		allowed, err = tx.User.Query().Where(user.IDEQ(userID), user.TenantIDEQ(tenantID), user.StatusEQ(user.StatusNormal), user.DeletedAtIsNil()).Exist(ctx)
+		if err != nil {
+			return ErrActionAuthorizationUnavailable
+		}
+		if !allowed {
+			return ErrActionAuthorizationDenied
+		}
+		err = tx.UserRole.Query().Where(userrole.TenantIDEQ(tenantID), userrole.UserIDEQ(userID), userrole.StatusEQ(userrole.StatusActive), userrole.DeletedAtIsNil(), userrole.Or(userrole.StartAtIsNil(), userrole.StartAtLTE(now)), userrole.Or(userrole.EndAtIsNil(), userrole.EndAtGT(now))).Select(userrole.FieldRoleID).Scan(ctx, &memberRoleIDs)
+		if err != nil {
+			return ErrActionAuthorizationUnavailable
+		}
+		if len(memberRoleIDs) == 0 {
+			return ErrActionAuthorizationDenied
+		}
+
 	}
 	roles, err := tx.Role.Query().Where(role.IDIn(memberRoleIDs...), role.TenantIDEQ(tenantID), role.StatusEQ(role.StatusOn), role.TypeEQ(role.TypeTenant), role.CodeNEQ(""), role.DeletedAtIsNil(), role.Not(role.CodeHasPrefix(constants.TemplateRoleCodePrefix))).All(ctx)
 	if err != nil {

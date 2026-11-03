@@ -8,7 +8,8 @@ package adminpb
 
 import (
 	context "context"
-	v1 "go-wind-admin/api/gen/go/instance/service/v1"
+	v1 "go-wind-admin/api/gen/go/catalog/service/v1"
+	v11 "go-wind-admin/api/gen/go/instance/service/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -20,6 +21,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	InstanceService_GetInstanceNetworkInterfaces_FullMethodName     = "/admin.service.v1.InstanceService/GetInstanceNetworkInterfaces"
+	InstanceService_SetInstanceNetworkInterface_FullMethodName      = "/admin.service.v1.InstanceService/SetInstanceNetworkInterface"
 	InstanceService_ListMountablePVCs_FullMethodName                = "/admin.service.v1.InstanceService/ListMountablePVCs"
 	InstanceService_GetInstanceConfiguration_FullMethodName         = "/admin.service.v1.InstanceService/GetInstanceConfiguration"
 	InstanceService_QueryInstanceMetrics_FullMethodName             = "/admin.service.v1.InstanceService/QueryInstanceMetrics"
@@ -51,36 +54,38 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InstanceServiceClient interface {
-	ListMountablePVCs(ctx context.Context, in *v1.ListMountablePVCsRequest, opts ...grpc.CallOption) (*v1.ListMountablePVCsResponse, error)
-	GetInstanceConfiguration(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceConfiguration, error)
-	QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v1.QueryInstanceMetricsResponse, error)
-	GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceLatestMetricsResponse, error)
+	GetInstanceNetworkInterfaces(ctx context.Context, in *v1.GetInstanceNetworkInterfacesRequest, opts ...grpc.CallOption) (*v1.NetworkInterfaces, error)
+	SetInstanceNetworkInterface(ctx context.Context, in *v1.SetInstanceNetworkInterfaceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	ListMountablePVCs(ctx context.Context, in *v11.ListMountablePVCsRequest, opts ...grpc.CallOption) (*v11.ListMountablePVCsResponse, error)
+	GetInstanceConfiguration(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.InstanceConfiguration, error)
+	QueryInstanceMetrics(ctx context.Context, in *v11.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v11.QueryInstanceMetricsResponse, error)
+	GetInstanceLatestMetrics(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.GetInstanceLatestMetricsResponse, error)
 	// 首页资源趋势：HTTP 是专用 GET handler，查询参数在 handler 内严格校验。
-	QueryResourceTrend(ctx context.Context, in *v1.QueryResourceTrendRequest, opts ...grpc.CallOption) (*v1.QueryResourceTrendResponse, error)
-	GetInstanceSchedulingSettings(ctx context.Context, in *v1.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error)
-	UpdateInstanceSchedulingSettings(ctx context.Context, in *v1.UpdateInstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error)
-	GetSchedulerConfig(ctx context.Context, in *v1.SchedulerConfigRequest, opts ...grpc.CallOption) (*v1.SchedulerConfig, error)
-	UpdateSchedulerConfig(ctx context.Context, in *v1.UpdateSchedulerConfigRequest, opts ...grpc.CallOption) (*v1.SchedulerConfig, error)
-	GetInstanceRuntime(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceRuntime, error)
-	ListInstanceEvents(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceEvents, error)
+	QueryResourceTrend(ctx context.Context, in *v11.QueryResourceTrendRequest, opts ...grpc.CallOption) (*v11.QueryResourceTrendResponse, error)
+	GetInstanceSchedulingSettings(ctx context.Context, in *v11.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v11.InstanceSchedulingSettings, error)
+	UpdateInstanceSchedulingSettings(ctx context.Context, in *v11.UpdateInstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v11.InstanceSchedulingSettings, error)
+	GetSchedulerConfig(ctx context.Context, in *v11.SchedulerConfigRequest, opts ...grpc.CallOption) (*v11.SchedulerConfig, error)
+	UpdateSchedulerConfig(ctx context.Context, in *v11.UpdateSchedulerConfigRequest, opts ...grpc.CallOption) (*v11.SchedulerConfig, error)
+	GetInstanceRuntime(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.InstanceRuntime, error)
+	ListInstanceEvents(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.InstanceEvents, error)
 	// HTTP is a dedicated SSE handler. OpenAPI is supplied by the source
 	// postprocessor rather than representing this stream as a unary JSON reply.
-	StreamInstanceLogs(ctx context.Context, in *v1.InstanceLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.InstanceLogFrame], error)
+	StreamInstanceLogs(ctx context.Context, in *v11.InstanceLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.InstanceLogFrame], error)
 	// 创建使用统一的容器配置；可选配置省略时正常解析默认值。
 	// 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
-	CreateInstance(ctx context.Context, in *v1.CreateInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	SetInstanceSecurityGroups(ctx context.Context, in *v1.SetInstanceSecurityGroupsRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	ListInstances(ctx context.Context, in *v1.ListInstancesRequest, opts ...grpc.CallOption) (*v1.ListInstancesResponse, error)
-	GetInstance(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.Instance, error)
-	StartInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	StopInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	RestartInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	AttachInstancePVC(ctx context.Context, in *v1.AttachInstancePVCRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	DetachInstancePVC(ctx context.Context, in *v1.DetachInstancePVCRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	ListInstanceMountablePVCs(ctx context.Context, in *v1.ListInstanceMountablePVCsRequest, opts ...grpc.CallOption) (*v1.ListMountablePVCsResponse, error)
-	DeleteInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error)
-	GetInstanceOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...grpc.CallOption) (*v1.Operation, error)
-	ExecInstance(ctx context.Context, in *v1.ExecInstanceRequest, opts ...grpc.CallOption) (*v1.ExecInstanceResponse, error)
+	CreateInstance(ctx context.Context, in *v11.CreateInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	SetInstanceSecurityGroups(ctx context.Context, in *v11.SetInstanceSecurityGroupsRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	ListInstances(ctx context.Context, in *v11.ListInstancesRequest, opts ...grpc.CallOption) (*v11.ListInstancesResponse, error)
+	GetInstance(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.Instance, error)
+	StartInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	StopInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	RestartInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	AttachInstancePVC(ctx context.Context, in *v11.AttachInstancePVCRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	DetachInstancePVC(ctx context.Context, in *v11.DetachInstancePVCRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	ListInstanceMountablePVCs(ctx context.Context, in *v11.ListInstanceMountablePVCsRequest, opts ...grpc.CallOption) (*v11.ListMountablePVCsResponse, error)
+	DeleteInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error)
+	GetInstanceOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...grpc.CallOption) (*v11.Operation, error)
+	ExecInstance(ctx context.Context, in *v11.ExecInstanceRequest, opts ...grpc.CallOption) (*v11.ExecInstanceResponse, error)
 }
 
 type instanceServiceClient struct {
@@ -91,9 +96,29 @@ func NewInstanceServiceClient(cc grpc.ClientConnInterface) InstanceServiceClient
 	return &instanceServiceClient{cc}
 }
 
-func (c *instanceServiceClient) ListMountablePVCs(ctx context.Context, in *v1.ListMountablePVCsRequest, opts ...grpc.CallOption) (*v1.ListMountablePVCsResponse, error) {
+func (c *instanceServiceClient) GetInstanceNetworkInterfaces(ctx context.Context, in *v1.GetInstanceNetworkInterfacesRequest, opts ...grpc.CallOption) (*v1.NetworkInterfaces, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.ListMountablePVCsResponse)
+	out := new(v1.NetworkInterfaces)
+	err := c.cc.Invoke(ctx, InstanceService_GetInstanceNetworkInterfaces_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *instanceServiceClient) SetInstanceNetworkInterface(ctx context.Context, in *v1.SetInstanceNetworkInterfaceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v11.Acceptance)
+	err := c.cc.Invoke(ctx, InstanceService_SetInstanceNetworkInterface_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *instanceServiceClient) ListMountablePVCs(ctx context.Context, in *v11.ListMountablePVCsRequest, opts ...grpc.CallOption) (*v11.ListMountablePVCsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v11.ListMountablePVCsResponse)
 	err := c.cc.Invoke(ctx, InstanceService_ListMountablePVCs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -101,9 +126,9 @@ func (c *instanceServiceClient) ListMountablePVCs(ctx context.Context, in *v1.Li
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetInstanceConfiguration(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceConfiguration, error) {
+func (c *instanceServiceClient) GetInstanceConfiguration(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.InstanceConfiguration, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.InstanceConfiguration)
+	out := new(v11.InstanceConfiguration)
 	err := c.cc.Invoke(ctx, InstanceService_GetInstanceConfiguration_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,9 +136,9 @@ func (c *instanceServiceClient) GetInstanceConfiguration(ctx context.Context, in
 	return out, nil
 }
 
-func (c *instanceServiceClient) QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v1.QueryInstanceMetricsResponse, error) {
+func (c *instanceServiceClient) QueryInstanceMetrics(ctx context.Context, in *v11.QueryInstanceMetricsRequest, opts ...grpc.CallOption) (*v11.QueryInstanceMetricsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.QueryInstanceMetricsResponse)
+	out := new(v11.QueryInstanceMetricsResponse)
 	err := c.cc.Invoke(ctx, InstanceService_QueryInstanceMetrics_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -121,9 +146,9 @@ func (c *instanceServiceClient) QueryInstanceMetrics(ctx context.Context, in *v1
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceLatestMetricsResponse, error) {
+func (c *instanceServiceClient) GetInstanceLatestMetrics(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.GetInstanceLatestMetricsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.GetInstanceLatestMetricsResponse)
+	out := new(v11.GetInstanceLatestMetricsResponse)
 	err := c.cc.Invoke(ctx, InstanceService_GetInstanceLatestMetrics_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -131,9 +156,9 @@ func (c *instanceServiceClient) GetInstanceLatestMetrics(ctx context.Context, in
 	return out, nil
 }
 
-func (c *instanceServiceClient) QueryResourceTrend(ctx context.Context, in *v1.QueryResourceTrendRequest, opts ...grpc.CallOption) (*v1.QueryResourceTrendResponse, error) {
+func (c *instanceServiceClient) QueryResourceTrend(ctx context.Context, in *v11.QueryResourceTrendRequest, opts ...grpc.CallOption) (*v11.QueryResourceTrendResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.QueryResourceTrendResponse)
+	out := new(v11.QueryResourceTrendResponse)
 	err := c.cc.Invoke(ctx, InstanceService_QueryResourceTrend_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -141,9 +166,9 @@ func (c *instanceServiceClient) QueryResourceTrend(ctx context.Context, in *v1.Q
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetInstanceSchedulingSettings(ctx context.Context, in *v1.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error) {
+func (c *instanceServiceClient) GetInstanceSchedulingSettings(ctx context.Context, in *v11.InstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v11.InstanceSchedulingSettings, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.InstanceSchedulingSettings)
+	out := new(v11.InstanceSchedulingSettings)
 	err := c.cc.Invoke(ctx, InstanceService_GetInstanceSchedulingSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -151,9 +176,9 @@ func (c *instanceServiceClient) GetInstanceSchedulingSettings(ctx context.Contex
 	return out, nil
 }
 
-func (c *instanceServiceClient) UpdateInstanceSchedulingSettings(ctx context.Context, in *v1.UpdateInstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v1.InstanceSchedulingSettings, error) {
+func (c *instanceServiceClient) UpdateInstanceSchedulingSettings(ctx context.Context, in *v11.UpdateInstanceSchedulingSettingsRequest, opts ...grpc.CallOption) (*v11.InstanceSchedulingSettings, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.InstanceSchedulingSettings)
+	out := new(v11.InstanceSchedulingSettings)
 	err := c.cc.Invoke(ctx, InstanceService_UpdateInstanceSchedulingSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -161,9 +186,9 @@ func (c *instanceServiceClient) UpdateInstanceSchedulingSettings(ctx context.Con
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetSchedulerConfig(ctx context.Context, in *v1.SchedulerConfigRequest, opts ...grpc.CallOption) (*v1.SchedulerConfig, error) {
+func (c *instanceServiceClient) GetSchedulerConfig(ctx context.Context, in *v11.SchedulerConfigRequest, opts ...grpc.CallOption) (*v11.SchedulerConfig, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.SchedulerConfig)
+	out := new(v11.SchedulerConfig)
 	err := c.cc.Invoke(ctx, InstanceService_GetSchedulerConfig_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -171,9 +196,9 @@ func (c *instanceServiceClient) GetSchedulerConfig(ctx context.Context, in *v1.S
 	return out, nil
 }
 
-func (c *instanceServiceClient) UpdateSchedulerConfig(ctx context.Context, in *v1.UpdateSchedulerConfigRequest, opts ...grpc.CallOption) (*v1.SchedulerConfig, error) {
+func (c *instanceServiceClient) UpdateSchedulerConfig(ctx context.Context, in *v11.UpdateSchedulerConfigRequest, opts ...grpc.CallOption) (*v11.SchedulerConfig, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.SchedulerConfig)
+	out := new(v11.SchedulerConfig)
 	err := c.cc.Invoke(ctx, InstanceService_UpdateSchedulerConfig_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -181,9 +206,9 @@ func (c *instanceServiceClient) UpdateSchedulerConfig(ctx context.Context, in *v
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetInstanceRuntime(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceRuntime, error) {
+func (c *instanceServiceClient) GetInstanceRuntime(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.InstanceRuntime, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.InstanceRuntime)
+	out := new(v11.InstanceRuntime)
 	err := c.cc.Invoke(ctx, InstanceService_GetInstanceRuntime_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -191,9 +216,9 @@ func (c *instanceServiceClient) GetInstanceRuntime(ctx context.Context, in *v1.G
 	return out, nil
 }
 
-func (c *instanceServiceClient) ListInstanceEvents(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.InstanceEvents, error) {
+func (c *instanceServiceClient) ListInstanceEvents(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.InstanceEvents, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.InstanceEvents)
+	out := new(v11.InstanceEvents)
 	err := c.cc.Invoke(ctx, InstanceService_ListInstanceEvents_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -201,13 +226,13 @@ func (c *instanceServiceClient) ListInstanceEvents(ctx context.Context, in *v1.G
 	return out, nil
 }
 
-func (c *instanceServiceClient) StreamInstanceLogs(ctx context.Context, in *v1.InstanceLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.InstanceLogFrame], error) {
+func (c *instanceServiceClient) StreamInstanceLogs(ctx context.Context, in *v11.InstanceLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.InstanceLogFrame], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &InstanceService_ServiceDesc.Streams[0], InstanceService_StreamInstanceLogs_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[v1.InstanceLogsRequest, v1.InstanceLogFrame]{ClientStream: stream}
+	x := &grpc.GenericClientStream[v11.InstanceLogsRequest, v11.InstanceLogFrame]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -218,11 +243,11 @@ func (c *instanceServiceClient) StreamInstanceLogs(ctx context.Context, in *v1.I
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type InstanceService_StreamInstanceLogsClient = grpc.ServerStreamingClient[v1.InstanceLogFrame]
+type InstanceService_StreamInstanceLogsClient = grpc.ServerStreamingClient[v11.InstanceLogFrame]
 
-func (c *instanceServiceClient) CreateInstance(ctx context.Context, in *v1.CreateInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) CreateInstance(ctx context.Context, in *v11.CreateInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_CreateInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -230,9 +255,9 @@ func (c *instanceServiceClient) CreateInstance(ctx context.Context, in *v1.Creat
 	return out, nil
 }
 
-func (c *instanceServiceClient) SetInstanceSecurityGroups(ctx context.Context, in *v1.SetInstanceSecurityGroupsRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) SetInstanceSecurityGroups(ctx context.Context, in *v11.SetInstanceSecurityGroupsRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_SetInstanceSecurityGroups_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -240,9 +265,9 @@ func (c *instanceServiceClient) SetInstanceSecurityGroups(ctx context.Context, i
 	return out, nil
 }
 
-func (c *instanceServiceClient) ListInstances(ctx context.Context, in *v1.ListInstancesRequest, opts ...grpc.CallOption) (*v1.ListInstancesResponse, error) {
+func (c *instanceServiceClient) ListInstances(ctx context.Context, in *v11.ListInstancesRequest, opts ...grpc.CallOption) (*v11.ListInstancesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.ListInstancesResponse)
+	out := new(v11.ListInstancesResponse)
 	err := c.cc.Invoke(ctx, InstanceService_ListInstances_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -250,9 +275,9 @@ func (c *instanceServiceClient) ListInstances(ctx context.Context, in *v1.ListIn
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetInstance(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.Instance, error) {
+func (c *instanceServiceClient) GetInstance(ctx context.Context, in *v11.GetInstanceRequest, opts ...grpc.CallOption) (*v11.Instance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Instance)
+	out := new(v11.Instance)
 	err := c.cc.Invoke(ctx, InstanceService_GetInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -260,9 +285,9 @@ func (c *instanceServiceClient) GetInstance(ctx context.Context, in *v1.GetInsta
 	return out, nil
 }
 
-func (c *instanceServiceClient) StartInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) StartInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_StartInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -270,9 +295,9 @@ func (c *instanceServiceClient) StartInstance(ctx context.Context, in *v1.Change
 	return out, nil
 }
 
-func (c *instanceServiceClient) StopInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) StopInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_StopInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -280,9 +305,9 @@ func (c *instanceServiceClient) StopInstance(ctx context.Context, in *v1.ChangeI
 	return out, nil
 }
 
-func (c *instanceServiceClient) RestartInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) RestartInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_RestartInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -290,9 +315,9 @@ func (c *instanceServiceClient) RestartInstance(ctx context.Context, in *v1.Chan
 	return out, nil
 }
 
-func (c *instanceServiceClient) AttachInstancePVC(ctx context.Context, in *v1.AttachInstancePVCRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) AttachInstancePVC(ctx context.Context, in *v11.AttachInstancePVCRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_AttachInstancePVC_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -300,9 +325,9 @@ func (c *instanceServiceClient) AttachInstancePVC(ctx context.Context, in *v1.At
 	return out, nil
 }
 
-func (c *instanceServiceClient) DetachInstancePVC(ctx context.Context, in *v1.DetachInstancePVCRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) DetachInstancePVC(ctx context.Context, in *v11.DetachInstancePVCRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_DetachInstancePVC_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -310,9 +335,9 @@ func (c *instanceServiceClient) DetachInstancePVC(ctx context.Context, in *v1.De
 	return out, nil
 }
 
-func (c *instanceServiceClient) ListInstanceMountablePVCs(ctx context.Context, in *v1.ListInstanceMountablePVCsRequest, opts ...grpc.CallOption) (*v1.ListMountablePVCsResponse, error) {
+func (c *instanceServiceClient) ListInstanceMountablePVCs(ctx context.Context, in *v11.ListInstanceMountablePVCsRequest, opts ...grpc.CallOption) (*v11.ListMountablePVCsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.ListMountablePVCsResponse)
+	out := new(v11.ListMountablePVCsResponse)
 	err := c.cc.Invoke(ctx, InstanceService_ListInstanceMountablePVCs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -320,9 +345,9 @@ func (c *instanceServiceClient) ListInstanceMountablePVCs(ctx context.Context, i
 	return out, nil
 }
 
-func (c *instanceServiceClient) DeleteInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...grpc.CallOption) (*v1.Acceptance, error) {
+func (c *instanceServiceClient) DeleteInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...grpc.CallOption) (*v11.Acceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Acceptance)
+	out := new(v11.Acceptance)
 	err := c.cc.Invoke(ctx, InstanceService_DeleteInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -330,9 +355,9 @@ func (c *instanceServiceClient) DeleteInstance(ctx context.Context, in *v1.Chang
 	return out, nil
 }
 
-func (c *instanceServiceClient) GetInstanceOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...grpc.CallOption) (*v1.Operation, error) {
+func (c *instanceServiceClient) GetInstanceOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...grpc.CallOption) (*v11.Operation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Operation)
+	out := new(v11.Operation)
 	err := c.cc.Invoke(ctx, InstanceService_GetInstanceOperation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -340,9 +365,9 @@ func (c *instanceServiceClient) GetInstanceOperation(ctx context.Context, in *v1
 	return out, nil
 }
 
-func (c *instanceServiceClient) ExecInstance(ctx context.Context, in *v1.ExecInstanceRequest, opts ...grpc.CallOption) (*v1.ExecInstanceResponse, error) {
+func (c *instanceServiceClient) ExecInstance(ctx context.Context, in *v11.ExecInstanceRequest, opts ...grpc.CallOption) (*v11.ExecInstanceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.ExecInstanceResponse)
+	out := new(v11.ExecInstanceResponse)
 	err := c.cc.Invoke(ctx, InstanceService_ExecInstance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -354,36 +379,38 @@ func (c *instanceServiceClient) ExecInstance(ctx context.Context, in *v1.ExecIns
 // All implementations must embed UnimplementedInstanceServiceServer
 // for forward compatibility.
 type InstanceServiceServer interface {
-	ListMountablePVCs(context.Context, *v1.ListMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error)
-	GetInstanceConfiguration(context.Context, *v1.GetInstanceRequest) (*v1.InstanceConfiguration, error)
-	QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error)
-	GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error)
+	GetInstanceNetworkInterfaces(context.Context, *v1.GetInstanceNetworkInterfacesRequest) (*v1.NetworkInterfaces, error)
+	SetInstanceNetworkInterface(context.Context, *v1.SetInstanceNetworkInterfaceRequest) (*v11.Acceptance, error)
+	ListMountablePVCs(context.Context, *v11.ListMountablePVCsRequest) (*v11.ListMountablePVCsResponse, error)
+	GetInstanceConfiguration(context.Context, *v11.GetInstanceRequest) (*v11.InstanceConfiguration, error)
+	QueryInstanceMetrics(context.Context, *v11.QueryInstanceMetricsRequest) (*v11.QueryInstanceMetricsResponse, error)
+	GetInstanceLatestMetrics(context.Context, *v11.GetInstanceRequest) (*v11.GetInstanceLatestMetricsResponse, error)
 	// 首页资源趋势：HTTP 是专用 GET handler，查询参数在 handler 内严格校验。
-	QueryResourceTrend(context.Context, *v1.QueryResourceTrendRequest) (*v1.QueryResourceTrendResponse, error)
-	GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
-	UpdateInstanceSchedulingSettings(context.Context, *v1.UpdateInstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
-	GetSchedulerConfig(context.Context, *v1.SchedulerConfigRequest) (*v1.SchedulerConfig, error)
-	UpdateSchedulerConfig(context.Context, *v1.UpdateSchedulerConfigRequest) (*v1.SchedulerConfig, error)
-	GetInstanceRuntime(context.Context, *v1.GetInstanceRequest) (*v1.InstanceRuntime, error)
-	ListInstanceEvents(context.Context, *v1.GetInstanceRequest) (*v1.InstanceEvents, error)
+	QueryResourceTrend(context.Context, *v11.QueryResourceTrendRequest) (*v11.QueryResourceTrendResponse, error)
+	GetInstanceSchedulingSettings(context.Context, *v11.InstanceSchedulingSettingsRequest) (*v11.InstanceSchedulingSettings, error)
+	UpdateInstanceSchedulingSettings(context.Context, *v11.UpdateInstanceSchedulingSettingsRequest) (*v11.InstanceSchedulingSettings, error)
+	GetSchedulerConfig(context.Context, *v11.SchedulerConfigRequest) (*v11.SchedulerConfig, error)
+	UpdateSchedulerConfig(context.Context, *v11.UpdateSchedulerConfigRequest) (*v11.SchedulerConfig, error)
+	GetInstanceRuntime(context.Context, *v11.GetInstanceRequest) (*v11.InstanceRuntime, error)
+	ListInstanceEvents(context.Context, *v11.GetInstanceRequest) (*v11.InstanceEvents, error)
 	// HTTP is a dedicated SSE handler. OpenAPI is supplied by the source
 	// postprocessor rather than representing this stream as a unary JSON reply.
-	StreamInstanceLogs(*v1.InstanceLogsRequest, grpc.ServerStreamingServer[v1.InstanceLogFrame]) error
+	StreamInstanceLogs(*v11.InstanceLogsRequest, grpc.ServerStreamingServer[v11.InstanceLogFrame]) error
 	// 创建使用统一的容器配置；可选配置省略时正常解析默认值。
 	// 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
-	CreateInstance(context.Context, *v1.CreateInstanceRequest) (*v1.Acceptance, error)
-	SetInstanceSecurityGroups(context.Context, *v1.SetInstanceSecurityGroupsRequest) (*v1.Acceptance, error)
-	ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error)
-	GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.Instance, error)
-	StartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	StopInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	RestartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	AttachInstancePVC(context.Context, *v1.AttachInstancePVCRequest) (*v1.Acceptance, error)
-	DetachInstancePVC(context.Context, *v1.DetachInstancePVCRequest) (*v1.Acceptance, error)
-	ListInstanceMountablePVCs(context.Context, *v1.ListInstanceMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error)
-	DeleteInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	GetInstanceOperation(context.Context, *v1.GetOperationRequest) (*v1.Operation, error)
-	ExecInstance(context.Context, *v1.ExecInstanceRequest) (*v1.ExecInstanceResponse, error)
+	CreateInstance(context.Context, *v11.CreateInstanceRequest) (*v11.Acceptance, error)
+	SetInstanceSecurityGroups(context.Context, *v11.SetInstanceSecurityGroupsRequest) (*v11.Acceptance, error)
+	ListInstances(context.Context, *v11.ListInstancesRequest) (*v11.ListInstancesResponse, error)
+	GetInstance(context.Context, *v11.GetInstanceRequest) (*v11.Instance, error)
+	StartInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	StopInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	RestartInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	AttachInstancePVC(context.Context, *v11.AttachInstancePVCRequest) (*v11.Acceptance, error)
+	DetachInstancePVC(context.Context, *v11.DetachInstancePVCRequest) (*v11.Acceptance, error)
+	ListInstanceMountablePVCs(context.Context, *v11.ListInstanceMountablePVCsRequest) (*v11.ListMountablePVCsResponse, error)
+	DeleteInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	GetInstanceOperation(context.Context, *v11.GetOperationRequest) (*v11.Operation, error)
+	ExecInstance(context.Context, *v11.ExecInstanceRequest) (*v11.ExecInstanceResponse, error)
 	mustEmbedUnimplementedInstanceServiceServer()
 }
 
@@ -394,79 +421,85 @@ type InstanceServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedInstanceServiceServer struct{}
 
-func (UnimplementedInstanceServiceServer) ListMountablePVCs(context.Context, *v1.ListMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error) {
+func (UnimplementedInstanceServiceServer) GetInstanceNetworkInterfaces(context.Context, *v1.GetInstanceNetworkInterfacesRequest) (*v1.NetworkInterfaces, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInstanceNetworkInterfaces not implemented")
+}
+func (UnimplementedInstanceServiceServer) SetInstanceNetworkInterface(context.Context, *v1.SetInstanceNetworkInterfaceRequest) (*v11.Acceptance, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetInstanceNetworkInterface not implemented")
+}
+func (UnimplementedInstanceServiceServer) ListMountablePVCs(context.Context, *v11.ListMountablePVCsRequest) (*v11.ListMountablePVCsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMountablePVCs not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetInstanceConfiguration(context.Context, *v1.GetInstanceRequest) (*v1.InstanceConfiguration, error) {
+func (UnimplementedInstanceServiceServer) GetInstanceConfiguration(context.Context, *v11.GetInstanceRequest) (*v11.InstanceConfiguration, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceConfiguration not implemented")
 }
-func (UnimplementedInstanceServiceServer) QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error) {
+func (UnimplementedInstanceServiceServer) QueryInstanceMetrics(context.Context, *v11.QueryInstanceMetricsRequest) (*v11.QueryInstanceMetricsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method QueryInstanceMetrics not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error) {
+func (UnimplementedInstanceServiceServer) GetInstanceLatestMetrics(context.Context, *v11.GetInstanceRequest) (*v11.GetInstanceLatestMetricsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceLatestMetrics not implemented")
 }
-func (UnimplementedInstanceServiceServer) QueryResourceTrend(context.Context, *v1.QueryResourceTrendRequest) (*v1.QueryResourceTrendResponse, error) {
+func (UnimplementedInstanceServiceServer) QueryResourceTrend(context.Context, *v11.QueryResourceTrendRequest) (*v11.QueryResourceTrendResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method QueryResourceTrend not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error) {
+func (UnimplementedInstanceServiceServer) GetInstanceSchedulingSettings(context.Context, *v11.InstanceSchedulingSettingsRequest) (*v11.InstanceSchedulingSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceSchedulingSettings not implemented")
 }
-func (UnimplementedInstanceServiceServer) UpdateInstanceSchedulingSettings(context.Context, *v1.UpdateInstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error) {
+func (UnimplementedInstanceServiceServer) UpdateInstanceSchedulingSettings(context.Context, *v11.UpdateInstanceSchedulingSettingsRequest) (*v11.InstanceSchedulingSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateInstanceSchedulingSettings not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetSchedulerConfig(context.Context, *v1.SchedulerConfigRequest) (*v1.SchedulerConfig, error) {
+func (UnimplementedInstanceServiceServer) GetSchedulerConfig(context.Context, *v11.SchedulerConfigRequest) (*v11.SchedulerConfig, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSchedulerConfig not implemented")
 }
-func (UnimplementedInstanceServiceServer) UpdateSchedulerConfig(context.Context, *v1.UpdateSchedulerConfigRequest) (*v1.SchedulerConfig, error) {
+func (UnimplementedInstanceServiceServer) UpdateSchedulerConfig(context.Context, *v11.UpdateSchedulerConfigRequest) (*v11.SchedulerConfig, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSchedulerConfig not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetInstanceRuntime(context.Context, *v1.GetInstanceRequest) (*v1.InstanceRuntime, error) {
+func (UnimplementedInstanceServiceServer) GetInstanceRuntime(context.Context, *v11.GetInstanceRequest) (*v11.InstanceRuntime, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceRuntime not implemented")
 }
-func (UnimplementedInstanceServiceServer) ListInstanceEvents(context.Context, *v1.GetInstanceRequest) (*v1.InstanceEvents, error) {
+func (UnimplementedInstanceServiceServer) ListInstanceEvents(context.Context, *v11.GetInstanceRequest) (*v11.InstanceEvents, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInstanceEvents not implemented")
 }
-func (UnimplementedInstanceServiceServer) StreamInstanceLogs(*v1.InstanceLogsRequest, grpc.ServerStreamingServer[v1.InstanceLogFrame]) error {
+func (UnimplementedInstanceServiceServer) StreamInstanceLogs(*v11.InstanceLogsRequest, grpc.ServerStreamingServer[v11.InstanceLogFrame]) error {
 	return status.Error(codes.Unimplemented, "method StreamInstanceLogs not implemented")
 }
-func (UnimplementedInstanceServiceServer) CreateInstance(context.Context, *v1.CreateInstanceRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) CreateInstance(context.Context, *v11.CreateInstanceRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateInstance not implemented")
 }
-func (UnimplementedInstanceServiceServer) SetInstanceSecurityGroups(context.Context, *v1.SetInstanceSecurityGroupsRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) SetInstanceSecurityGroups(context.Context, *v11.SetInstanceSecurityGroupsRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetInstanceSecurityGroups not implemented")
 }
-func (UnimplementedInstanceServiceServer) ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error) {
+func (UnimplementedInstanceServiceServer) ListInstances(context.Context, *v11.ListInstancesRequest) (*v11.ListInstancesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInstances not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.Instance, error) {
+func (UnimplementedInstanceServiceServer) GetInstance(context.Context, *v11.GetInstanceRequest) (*v11.Instance, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstance not implemented")
 }
-func (UnimplementedInstanceServiceServer) StartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) StartInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method StartInstance not implemented")
 }
-func (UnimplementedInstanceServiceServer) StopInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) StopInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopInstance not implemented")
 }
-func (UnimplementedInstanceServiceServer) RestartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) RestartInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestartInstance not implemented")
 }
-func (UnimplementedInstanceServiceServer) AttachInstancePVC(context.Context, *v1.AttachInstancePVCRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) AttachInstancePVC(context.Context, *v11.AttachInstancePVCRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method AttachInstancePVC not implemented")
 }
-func (UnimplementedInstanceServiceServer) DetachInstancePVC(context.Context, *v1.DetachInstancePVCRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) DetachInstancePVC(context.Context, *v11.DetachInstancePVCRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method DetachInstancePVC not implemented")
 }
-func (UnimplementedInstanceServiceServer) ListInstanceMountablePVCs(context.Context, *v1.ListInstanceMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error) {
+func (UnimplementedInstanceServiceServer) ListInstanceMountablePVCs(context.Context, *v11.ListInstanceMountablePVCsRequest) (*v11.ListMountablePVCsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInstanceMountablePVCs not implemented")
 }
-func (UnimplementedInstanceServiceServer) DeleteInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error) {
+func (UnimplementedInstanceServiceServer) DeleteInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteInstance not implemented")
 }
-func (UnimplementedInstanceServiceServer) GetInstanceOperation(context.Context, *v1.GetOperationRequest) (*v1.Operation, error) {
+func (UnimplementedInstanceServiceServer) GetInstanceOperation(context.Context, *v11.GetOperationRequest) (*v11.Operation, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstanceOperation not implemented")
 }
-func (UnimplementedInstanceServiceServer) ExecInstance(context.Context, *v1.ExecInstanceRequest) (*v1.ExecInstanceResponse, error) {
+func (UnimplementedInstanceServiceServer) ExecInstance(context.Context, *v11.ExecInstanceRequest) (*v11.ExecInstanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecInstance not implemented")
 }
 func (UnimplementedInstanceServiceServer) mustEmbedUnimplementedInstanceServiceServer() {}
@@ -490,8 +523,44 @@ func RegisterInstanceServiceServer(s grpc.ServiceRegistrar, srv InstanceServiceS
 	s.RegisterService(&InstanceService_ServiceDesc, srv)
 }
 
+func _InstanceService_GetInstanceNetworkInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetInstanceNetworkInterfacesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InstanceServiceServer).GetInstanceNetworkInterfaces(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InstanceService_GetInstanceNetworkInterfaces_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InstanceServiceServer).GetInstanceNetworkInterfaces(ctx, req.(*v1.GetInstanceNetworkInterfacesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InstanceService_SetInstanceNetworkInterface_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.SetInstanceNetworkInterfaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InstanceServiceServer).SetInstanceNetworkInterface(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InstanceService_SetInstanceNetworkInterface_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InstanceServiceServer).SetInstanceNetworkInterface(ctx, req.(*v1.SetInstanceNetworkInterfaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _InstanceService_ListMountablePVCs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ListMountablePVCsRequest)
+	in := new(v11.ListMountablePVCsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -503,13 +572,13 @@ func _InstanceService_ListMountablePVCs_Handler(srv interface{}, ctx context.Con
 		FullMethod: InstanceService_ListMountablePVCs_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).ListMountablePVCs(ctx, req.(*v1.ListMountablePVCsRequest))
+		return srv.(InstanceServiceServer).ListMountablePVCs(ctx, req.(*v11.ListMountablePVCsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstanceConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetInstanceRequest)
+	in := new(v11.GetInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -521,13 +590,13 @@ func _InstanceService_GetInstanceConfiguration_Handler(srv interface{}, ctx cont
 		FullMethod: InstanceService_GetInstanceConfiguration_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetInstanceConfiguration(ctx, req.(*v1.GetInstanceRequest))
+		return srv.(InstanceServiceServer).GetInstanceConfiguration(ctx, req.(*v11.GetInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_QueryInstanceMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.QueryInstanceMetricsRequest)
+	in := new(v11.QueryInstanceMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -539,13 +608,13 @@ func _InstanceService_QueryInstanceMetrics_Handler(srv interface{}, ctx context.
 		FullMethod: InstanceService_QueryInstanceMetrics_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).QueryInstanceMetrics(ctx, req.(*v1.QueryInstanceMetricsRequest))
+		return srv.(InstanceServiceServer).QueryInstanceMetrics(ctx, req.(*v11.QueryInstanceMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstanceLatestMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetInstanceRequest)
+	in := new(v11.GetInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -557,13 +626,13 @@ func _InstanceService_GetInstanceLatestMetrics_Handler(srv interface{}, ctx cont
 		FullMethod: InstanceService_GetInstanceLatestMetrics_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetInstanceLatestMetrics(ctx, req.(*v1.GetInstanceRequest))
+		return srv.(InstanceServiceServer).GetInstanceLatestMetrics(ctx, req.(*v11.GetInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_QueryResourceTrend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.QueryResourceTrendRequest)
+	in := new(v11.QueryResourceTrendRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -575,13 +644,13 @@ func _InstanceService_QueryResourceTrend_Handler(srv interface{}, ctx context.Co
 		FullMethod: InstanceService_QueryResourceTrend_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).QueryResourceTrend(ctx, req.(*v1.QueryResourceTrendRequest))
+		return srv.(InstanceServiceServer).QueryResourceTrend(ctx, req.(*v11.QueryResourceTrendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstanceSchedulingSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.InstanceSchedulingSettingsRequest)
+	in := new(v11.InstanceSchedulingSettingsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -593,13 +662,13 @@ func _InstanceService_GetInstanceSchedulingSettings_Handler(srv interface{}, ctx
 		FullMethod: InstanceService_GetInstanceSchedulingSettings_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetInstanceSchedulingSettings(ctx, req.(*v1.InstanceSchedulingSettingsRequest))
+		return srv.(InstanceServiceServer).GetInstanceSchedulingSettings(ctx, req.(*v11.InstanceSchedulingSettingsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_UpdateInstanceSchedulingSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.UpdateInstanceSchedulingSettingsRequest)
+	in := new(v11.UpdateInstanceSchedulingSettingsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -611,13 +680,13 @@ func _InstanceService_UpdateInstanceSchedulingSettings_Handler(srv interface{}, 
 		FullMethod: InstanceService_UpdateInstanceSchedulingSettings_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).UpdateInstanceSchedulingSettings(ctx, req.(*v1.UpdateInstanceSchedulingSettingsRequest))
+		return srv.(InstanceServiceServer).UpdateInstanceSchedulingSettings(ctx, req.(*v11.UpdateInstanceSchedulingSettingsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetSchedulerConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.SchedulerConfigRequest)
+	in := new(v11.SchedulerConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -629,13 +698,13 @@ func _InstanceService_GetSchedulerConfig_Handler(srv interface{}, ctx context.Co
 		FullMethod: InstanceService_GetSchedulerConfig_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetSchedulerConfig(ctx, req.(*v1.SchedulerConfigRequest))
+		return srv.(InstanceServiceServer).GetSchedulerConfig(ctx, req.(*v11.SchedulerConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_UpdateSchedulerConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.UpdateSchedulerConfigRequest)
+	in := new(v11.UpdateSchedulerConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -647,13 +716,13 @@ func _InstanceService_UpdateSchedulerConfig_Handler(srv interface{}, ctx context
 		FullMethod: InstanceService_UpdateSchedulerConfig_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).UpdateSchedulerConfig(ctx, req.(*v1.UpdateSchedulerConfigRequest))
+		return srv.(InstanceServiceServer).UpdateSchedulerConfig(ctx, req.(*v11.UpdateSchedulerConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstanceRuntime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetInstanceRequest)
+	in := new(v11.GetInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -665,13 +734,13 @@ func _InstanceService_GetInstanceRuntime_Handler(srv interface{}, ctx context.Co
 		FullMethod: InstanceService_GetInstanceRuntime_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetInstanceRuntime(ctx, req.(*v1.GetInstanceRequest))
+		return srv.(InstanceServiceServer).GetInstanceRuntime(ctx, req.(*v11.GetInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_ListInstanceEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetInstanceRequest)
+	in := new(v11.GetInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -683,24 +752,24 @@ func _InstanceService_ListInstanceEvents_Handler(srv interface{}, ctx context.Co
 		FullMethod: InstanceService_ListInstanceEvents_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).ListInstanceEvents(ctx, req.(*v1.GetInstanceRequest))
+		return srv.(InstanceServiceServer).ListInstanceEvents(ctx, req.(*v11.GetInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_StreamInstanceLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(v1.InstanceLogsRequest)
+	m := new(v11.InstanceLogsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(InstanceServiceServer).StreamInstanceLogs(m, &grpc.GenericServerStream[v1.InstanceLogsRequest, v1.InstanceLogFrame]{ServerStream: stream})
+	return srv.(InstanceServiceServer).StreamInstanceLogs(m, &grpc.GenericServerStream[v11.InstanceLogsRequest, v11.InstanceLogFrame]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type InstanceService_StreamInstanceLogsServer = grpc.ServerStreamingServer[v1.InstanceLogFrame]
+type InstanceService_StreamInstanceLogsServer = grpc.ServerStreamingServer[v11.InstanceLogFrame]
 
 func _InstanceService_CreateInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.CreateInstanceRequest)
+	in := new(v11.CreateInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -712,13 +781,13 @@ func _InstanceService_CreateInstance_Handler(srv interface{}, ctx context.Contex
 		FullMethod: InstanceService_CreateInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).CreateInstance(ctx, req.(*v1.CreateInstanceRequest))
+		return srv.(InstanceServiceServer).CreateInstance(ctx, req.(*v11.CreateInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_SetInstanceSecurityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.SetInstanceSecurityGroupsRequest)
+	in := new(v11.SetInstanceSecurityGroupsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -730,13 +799,13 @@ func _InstanceService_SetInstanceSecurityGroups_Handler(srv interface{}, ctx con
 		FullMethod: InstanceService_SetInstanceSecurityGroups_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).SetInstanceSecurityGroups(ctx, req.(*v1.SetInstanceSecurityGroupsRequest))
+		return srv.(InstanceServiceServer).SetInstanceSecurityGroups(ctx, req.(*v11.SetInstanceSecurityGroupsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_ListInstances_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ListInstancesRequest)
+	in := new(v11.ListInstancesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -748,13 +817,13 @@ func _InstanceService_ListInstances_Handler(srv interface{}, ctx context.Context
 		FullMethod: InstanceService_ListInstances_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).ListInstances(ctx, req.(*v1.ListInstancesRequest))
+		return srv.(InstanceServiceServer).ListInstances(ctx, req.(*v11.ListInstancesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetInstanceRequest)
+	in := new(v11.GetInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -766,13 +835,13 @@ func _InstanceService_GetInstance_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: InstanceService_GetInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetInstance(ctx, req.(*v1.GetInstanceRequest))
+		return srv.(InstanceServiceServer).GetInstance(ctx, req.(*v11.GetInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_StartInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ChangeInstanceRequest)
+	in := new(v11.ChangeInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -784,13 +853,13 @@ func _InstanceService_StartInstance_Handler(srv interface{}, ctx context.Context
 		FullMethod: InstanceService_StartInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).StartInstance(ctx, req.(*v1.ChangeInstanceRequest))
+		return srv.(InstanceServiceServer).StartInstance(ctx, req.(*v11.ChangeInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_StopInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ChangeInstanceRequest)
+	in := new(v11.ChangeInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -802,13 +871,13 @@ func _InstanceService_StopInstance_Handler(srv interface{}, ctx context.Context,
 		FullMethod: InstanceService_StopInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).StopInstance(ctx, req.(*v1.ChangeInstanceRequest))
+		return srv.(InstanceServiceServer).StopInstance(ctx, req.(*v11.ChangeInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_RestartInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ChangeInstanceRequest)
+	in := new(v11.ChangeInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -820,13 +889,13 @@ func _InstanceService_RestartInstance_Handler(srv interface{}, ctx context.Conte
 		FullMethod: InstanceService_RestartInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).RestartInstance(ctx, req.(*v1.ChangeInstanceRequest))
+		return srv.(InstanceServiceServer).RestartInstance(ctx, req.(*v11.ChangeInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_AttachInstancePVC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AttachInstancePVCRequest)
+	in := new(v11.AttachInstancePVCRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -838,13 +907,13 @@ func _InstanceService_AttachInstancePVC_Handler(srv interface{}, ctx context.Con
 		FullMethod: InstanceService_AttachInstancePVC_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).AttachInstancePVC(ctx, req.(*v1.AttachInstancePVCRequest))
+		return srv.(InstanceServiceServer).AttachInstancePVC(ctx, req.(*v11.AttachInstancePVCRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_DetachInstancePVC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.DetachInstancePVCRequest)
+	in := new(v11.DetachInstancePVCRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -856,13 +925,13 @@ func _InstanceService_DetachInstancePVC_Handler(srv interface{}, ctx context.Con
 		FullMethod: InstanceService_DetachInstancePVC_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).DetachInstancePVC(ctx, req.(*v1.DetachInstancePVCRequest))
+		return srv.(InstanceServiceServer).DetachInstancePVC(ctx, req.(*v11.DetachInstancePVCRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_ListInstanceMountablePVCs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ListInstanceMountablePVCsRequest)
+	in := new(v11.ListInstanceMountablePVCsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -874,13 +943,13 @@ func _InstanceService_ListInstanceMountablePVCs_Handler(srv interface{}, ctx con
 		FullMethod: InstanceService_ListInstanceMountablePVCs_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).ListInstanceMountablePVCs(ctx, req.(*v1.ListInstanceMountablePVCsRequest))
+		return srv.(InstanceServiceServer).ListInstanceMountablePVCs(ctx, req.(*v11.ListInstanceMountablePVCsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_DeleteInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ChangeInstanceRequest)
+	in := new(v11.ChangeInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -892,13 +961,13 @@ func _InstanceService_DeleteInstance_Handler(srv interface{}, ctx context.Contex
 		FullMethod: InstanceService_DeleteInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).DeleteInstance(ctx, req.(*v1.ChangeInstanceRequest))
+		return srv.(InstanceServiceServer).DeleteInstance(ctx, req.(*v11.ChangeInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_GetInstanceOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetOperationRequest)
+	in := new(v11.GetOperationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -910,13 +979,13 @@ func _InstanceService_GetInstanceOperation_Handler(srv interface{}, ctx context.
 		FullMethod: InstanceService_GetInstanceOperation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).GetInstanceOperation(ctx, req.(*v1.GetOperationRequest))
+		return srv.(InstanceServiceServer).GetInstanceOperation(ctx, req.(*v11.GetOperationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _InstanceService_ExecInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ExecInstanceRequest)
+	in := new(v11.ExecInstanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -928,7 +997,7 @@ func _InstanceService_ExecInstance_Handler(srv interface{}, ctx context.Context,
 		FullMethod: InstanceService_ExecInstance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InstanceServiceServer).ExecInstance(ctx, req.(*v1.ExecInstanceRequest))
+		return srv.(InstanceServiceServer).ExecInstance(ctx, req.(*v11.ExecInstanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -940,6 +1009,14 @@ var InstanceService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.InstanceService",
 	HandlerType: (*InstanceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetInstanceNetworkInterfaces",
+			Handler:    _InstanceService_GetInstanceNetworkInterfaces_Handler,
+		},
+		{
+			MethodName: "SetInstanceNetworkInterface",
+			Handler:    _InstanceService_SetInstanceNetworkInterface_Handler,
+		},
 		{
 			MethodName: "ListMountablePVCs",
 			Handler:    _InstanceService_ListMountablePVCs_Handler,

@@ -26,12 +26,14 @@ const OperationNetworkServiceCreateLoadBalancer = "/admin.service.v1.NetworkServ
 const OperationNetworkServiceCreateSecurityGroup = "/admin.service.v1.NetworkService/CreateSecurityGroup"
 const OperationNetworkServiceCreateSecurityGroupRule = "/admin.service.v1.NetworkService/CreateSecurityGroupRule"
 const OperationNetworkServiceCreateSubnet = "/admin.service.v1.NetworkService/CreateSubnet"
+const OperationNetworkServiceCreateVNic = "/admin.service.v1.NetworkService/CreateVNic"
 const OperationNetworkServiceCreateVPC = "/admin.service.v1.NetworkService/CreateVPC"
 const OperationNetworkServiceDeleteEIP = "/admin.service.v1.NetworkService/DeleteEIP"
 const OperationNetworkServiceDeleteLoadBalancer = "/admin.service.v1.NetworkService/DeleteLoadBalancer"
 const OperationNetworkServiceDeleteSecurityGroup = "/admin.service.v1.NetworkService/DeleteSecurityGroup"
 const OperationNetworkServiceDeleteSecurityGroupRule = "/admin.service.v1.NetworkService/DeleteSecurityGroupRule"
 const OperationNetworkServiceDeleteSubnet = "/admin.service.v1.NetworkService/DeleteSubnet"
+const OperationNetworkServiceDeleteVNic = "/admin.service.v1.NetworkService/DeleteVNic"
 const OperationNetworkServiceDeleteVPC = "/admin.service.v1.NetworkService/DeleteVPC"
 const OperationNetworkServiceDeleteVPCSnatBinding = "/admin.service.v1.NetworkService/DeleteVPCSnatBinding"
 const OperationNetworkServiceGetEIP = "/admin.service.v1.NetworkService/GetEIP"
@@ -42,6 +44,7 @@ const OperationNetworkServiceGetOperation = "/admin.service.v1.NetworkService/Ge
 const OperationNetworkServiceGetSecurityGroup = "/admin.service.v1.NetworkService/GetSecurityGroup"
 const OperationNetworkServiceGetSecurityGroupOperation = "/admin.service.v1.NetworkService/GetSecurityGroupOperation"
 const OperationNetworkServiceGetSubnet = "/admin.service.v1.NetworkService/GetSubnet"
+const OperationNetworkServiceGetVNic = "/admin.service.v1.NetworkService/GetVNic"
 const OperationNetworkServiceGetVPC = "/admin.service.v1.NetworkService/GetVPC"
 const OperationNetworkServiceGetVPCSnat = "/admin.service.v1.NetworkService/GetVPCSnat"
 const OperationNetworkServiceGetVPCSnatBinding = "/admin.service.v1.NetworkService/GetVPCSnatBinding"
@@ -51,6 +54,8 @@ const OperationNetworkServiceListSecurityGroupBindings = "/admin.service.v1.Netw
 const OperationNetworkServiceListSecurityGroupRules = "/admin.service.v1.NetworkService/ListSecurityGroupRules"
 const OperationNetworkServiceListSecurityGroups = "/admin.service.v1.NetworkService/ListSecurityGroups"
 const OperationNetworkServiceListSubnets = "/admin.service.v1.NetworkService/ListSubnets"
+const OperationNetworkServiceListVNicBindingTargets = "/admin.service.v1.NetworkService/ListVNicBindingTargets"
+const OperationNetworkServiceListVNics = "/admin.service.v1.NetworkService/ListVNics"
 const OperationNetworkServiceListVPCCIDRPresets = "/admin.service.v1.NetworkService/ListVPCCIDRPresets"
 const OperationNetworkServiceListVPCs = "/admin.service.v1.NetworkService/ListVPCs"
 const OperationNetworkServiceSetEIPSecurityGroups = "/admin.service.v1.NetworkService/SetEIPSecurityGroups"
@@ -66,12 +71,14 @@ type NetworkServiceHTTPServer interface {
 	CreateSecurityGroup(context.Context, *v1.CreateSecurityGroupRequest) (*v1.SecurityGroupResponse, error)
 	CreateSecurityGroupRule(context.Context, *v1.CreateSecurityGroupRuleRequest) (*v1.SecurityGroupRuleResponse, error)
 	CreateSubnet(context.Context, *v1.CreateSubnetRequest) (*v1.CreateSubnetResponse, error)
+	CreateVNic(context.Context, *v1.CreateVNicRequest) (*v1.VNicResponse, error)
 	CreateVPC(context.Context, *v1.CreateVPCRequest) (*v1.CreateVPCResponse, error)
 	DeleteEIP(context.Context, *v1.DeleteEIPRequest) (*v1.DeleteEIPResponse, error)
 	DeleteLoadBalancer(context.Context, *v1.DeleteLoadBalancerRequest) (*v1.DeleteLoadBalancerResponse, error)
 	DeleteSecurityGroup(context.Context, *v1.DeleteSecurityGroupRequest) (*v1.SecurityGroupResponse, error)
 	DeleteSecurityGroupRule(context.Context, *v1.DeleteSecurityGroupRuleRequest) (*v1.SecurityGroupRuleResponse, error)
 	DeleteSubnet(context.Context, *v1.DeleteSubnetRequest) (*v1.DeleteSubnetResponse, error)
+	DeleteVNic(context.Context, *v1.DeleteVNicRequest) (*v1.VNicResponse, error)
 	DeleteVPC(context.Context, *v1.DeleteVPCRequest) (*v1.DeleteVPCResponse, error)
 	DeleteVPCSnatBinding(context.Context, *v1.DeleteVPCSnatBindingRequest) (*v1.DeleteVPCSnatBindingResponse, error)
 	GetEIP(context.Context, *v1.GetEIPRequest) (*v1.GetEIPResponse, error)
@@ -82,6 +89,7 @@ type NetworkServiceHTTPServer interface {
 	GetSecurityGroup(context.Context, *v1.GetSecurityGroupRequest) (*v1.SecurityGroupResponse, error)
 	GetSecurityGroupOperation(context.Context, *v1.GetSecurityGroupOperationRequest) (*v1.GetOperationResponse, error)
 	GetSubnet(context.Context, *v1.GetSubnetRequest) (*v1.GetSubnetResponse, error)
+	GetVNic(context.Context, *v1.GetVNicRequest) (*v1.VNicResponse, error)
 	GetVPC(context.Context, *v1.GetVPCRequest) (*v1.GetVPCResponse, error)
 	GetVPCSnat(context.Context, *v1.GetVPCSnatRequest) (*v1.GetVPCSnatResponse, error)
 	GetVPCSnatBinding(context.Context, *v1.GetVPCSnatBindingRequest) (*v1.GetVPCSnatBindingResponse, error)
@@ -91,6 +99,8 @@ type NetworkServiceHTTPServer interface {
 	ListSecurityGroupRules(context.Context, *v1.ListSecurityGroupRulesRequest) (*v1.ListSecurityGroupRulesResponse, error)
 	ListSecurityGroups(context.Context, *v1.ListSecurityGroupsRequest) (*v1.ListSecurityGroupsResponse, error)
 	ListSubnets(context.Context, *v1.ListSubnetsRequest) (*v1.ListSubnetsResponse, error)
+	ListVNicBindingTargets(context.Context, *v1.ListVNicBindingTargetsRequest) (*v1.ListVNicBindingTargetsResponse, error)
+	ListVNics(context.Context, *v1.ListVNicsRequest) (*v1.ListVNicsResponse, error)
 	ListVPCCIDRPresets(context.Context, *v1.ListVPCCIDRPresetsRequest) (*v1.ListVPCCIDRPresetsResponse, error)
 	ListVPCs(context.Context, *v1.ListVPCsRequest) (*v1.ListVPCsResponse, error)
 	SetEIPSecurityGroups(context.Context, *v1.SetEIPSecurityGroupsRequest) (*v1.SetEIPSecurityGroupsResponse, error)
@@ -102,6 +112,11 @@ type NetworkServiceHTTPServer interface {
 
 func RegisterNetworkServiceHTTPServer(s *http.Server, srv NetworkServiceHTTPServer) {
 	r := s.Route("/")
+	r.POST("/api/v1/networks/vnics", _NetworkService_CreateVNic0_HTTP_Handler(srv))
+	r.GET("/api/v1/networks/vnics/{vnic_id}", _NetworkService_GetVNic0_HTTP_Handler(srv))
+	r.GET("/api/v1/networks/vnics", _NetworkService_ListVNics0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/networks/vnics/{vnic_id}", _NetworkService_DeleteVNic0_HTTP_Handler(srv))
+	r.GET("/api/v1/networks/vnics/{vnic_id}/binding-targets", _NetworkService_ListVNicBindingTargets0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/eips/{eip_id}/security-groups", _NetworkService_GetEIPSecurityGroups0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/security-groups/operations/{operation_id}", _NetworkService_GetSecurityGroupOperation0_HTTP_Handler(srv))
 	r.POST("/api/v1/networks/security-groups", _NetworkService_CreateSecurityGroup0_HTTP_Handler(srv))
@@ -140,6 +155,113 @@ func RegisterNetworkServiceHTTPServer(s *http.Server, srv NetworkServiceHTTPServ
 	r.PATCH("/api/v1/networks/load-balancers/{load_balancer_id}", _NetworkService_UpdateLoadBalancer0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/networks/load-balancers/{load_balancer_id}", _NetworkService_DeleteLoadBalancer0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/load-balancers/operations/{operation_id}", _NetworkService_GetLoadBalancerOperation0_HTTP_Handler(srv))
+}
+
+func _NetworkService_CreateVNic0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.CreateVNicRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceCreateVNic)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateVNic(ctx, req.(*v1.CreateVNicRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.VNicResponse)
+		return ctx.Result(200, reply.Vnic)
+	}
+}
+
+func _NetworkService_GetVNic0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetVNicRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceGetVNic)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetVNic(ctx, req.(*v1.GetVNicRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.VNicResponse)
+		return ctx.Result(200, reply.Vnic)
+	}
+}
+
+func _NetworkService_ListVNics0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListVNicsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceListVNics)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListVNics(ctx, req.(*v1.ListVNicsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListVNicsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _NetworkService_DeleteVNic0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.DeleteVNicRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceDeleteVNic)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteVNic(ctx, req.(*v1.DeleteVNicRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.VNicResponse)
+		return ctx.Result(200, reply.Vnic)
+	}
+}
+
+func _NetworkService_ListVNicBindingTargets0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListVNicBindingTargetsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceListVNicBindingTargets)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListVNicBindingTargets(ctx, req.(*v1.ListVNicBindingTargetsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListVNicBindingTargetsResponse)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _NetworkService_GetEIPSecurityGroups0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
@@ -988,12 +1110,14 @@ type NetworkServiceHTTPClient interface {
 	CreateSecurityGroup(ctx context.Context, req *v1.CreateSecurityGroupRequest, opts ...http.CallOption) (rsp *v1.SecurityGroupResponse, err error)
 	CreateSecurityGroupRule(ctx context.Context, req *v1.CreateSecurityGroupRuleRequest, opts ...http.CallOption) (rsp *v1.SecurityGroupRuleResponse, err error)
 	CreateSubnet(ctx context.Context, req *v1.CreateSubnetRequest, opts ...http.CallOption) (rsp *v1.CreateSubnetResponse, err error)
+	CreateVNic(ctx context.Context, req *v1.CreateVNicRequest, opts ...http.CallOption) (rsp *v1.VNicResponse, err error)
 	CreateVPC(ctx context.Context, req *v1.CreateVPCRequest, opts ...http.CallOption) (rsp *v1.CreateVPCResponse, err error)
 	DeleteEIP(ctx context.Context, req *v1.DeleteEIPRequest, opts ...http.CallOption) (rsp *v1.DeleteEIPResponse, err error)
 	DeleteLoadBalancer(ctx context.Context, req *v1.DeleteLoadBalancerRequest, opts ...http.CallOption) (rsp *v1.DeleteLoadBalancerResponse, err error)
 	DeleteSecurityGroup(ctx context.Context, req *v1.DeleteSecurityGroupRequest, opts ...http.CallOption) (rsp *v1.SecurityGroupResponse, err error)
 	DeleteSecurityGroupRule(ctx context.Context, req *v1.DeleteSecurityGroupRuleRequest, opts ...http.CallOption) (rsp *v1.SecurityGroupRuleResponse, err error)
 	DeleteSubnet(ctx context.Context, req *v1.DeleteSubnetRequest, opts ...http.CallOption) (rsp *v1.DeleteSubnetResponse, err error)
+	DeleteVNic(ctx context.Context, req *v1.DeleteVNicRequest, opts ...http.CallOption) (rsp *v1.VNicResponse, err error)
 	DeleteVPC(ctx context.Context, req *v1.DeleteVPCRequest, opts ...http.CallOption) (rsp *v1.DeleteVPCResponse, err error)
 	DeleteVPCSnatBinding(ctx context.Context, req *v1.DeleteVPCSnatBindingRequest, opts ...http.CallOption) (rsp *v1.DeleteVPCSnatBindingResponse, err error)
 	GetEIP(ctx context.Context, req *v1.GetEIPRequest, opts ...http.CallOption) (rsp *v1.GetEIPResponse, err error)
@@ -1004,6 +1128,7 @@ type NetworkServiceHTTPClient interface {
 	GetSecurityGroup(ctx context.Context, req *v1.GetSecurityGroupRequest, opts ...http.CallOption) (rsp *v1.SecurityGroupResponse, err error)
 	GetSecurityGroupOperation(ctx context.Context, req *v1.GetSecurityGroupOperationRequest, opts ...http.CallOption) (rsp *v1.GetOperationResponse, err error)
 	GetSubnet(ctx context.Context, req *v1.GetSubnetRequest, opts ...http.CallOption) (rsp *v1.GetSubnetResponse, err error)
+	GetVNic(ctx context.Context, req *v1.GetVNicRequest, opts ...http.CallOption) (rsp *v1.VNicResponse, err error)
 	GetVPC(ctx context.Context, req *v1.GetVPCRequest, opts ...http.CallOption) (rsp *v1.GetVPCResponse, err error)
 	GetVPCSnat(ctx context.Context, req *v1.GetVPCSnatRequest, opts ...http.CallOption) (rsp *v1.GetVPCSnatResponse, err error)
 	GetVPCSnatBinding(ctx context.Context, req *v1.GetVPCSnatBindingRequest, opts ...http.CallOption) (rsp *v1.GetVPCSnatBindingResponse, err error)
@@ -1013,6 +1138,8 @@ type NetworkServiceHTTPClient interface {
 	ListSecurityGroupRules(ctx context.Context, req *v1.ListSecurityGroupRulesRequest, opts ...http.CallOption) (rsp *v1.ListSecurityGroupRulesResponse, err error)
 	ListSecurityGroups(ctx context.Context, req *v1.ListSecurityGroupsRequest, opts ...http.CallOption) (rsp *v1.ListSecurityGroupsResponse, err error)
 	ListSubnets(ctx context.Context, req *v1.ListSubnetsRequest, opts ...http.CallOption) (rsp *v1.ListSubnetsResponse, err error)
+	ListVNicBindingTargets(ctx context.Context, req *v1.ListVNicBindingTargetsRequest, opts ...http.CallOption) (rsp *v1.ListVNicBindingTargetsResponse, err error)
+	ListVNics(ctx context.Context, req *v1.ListVNicsRequest, opts ...http.CallOption) (rsp *v1.ListVNicsResponse, err error)
 	ListVPCCIDRPresets(ctx context.Context, req *v1.ListVPCCIDRPresetsRequest, opts ...http.CallOption) (rsp *v1.ListVPCCIDRPresetsResponse, err error)
 	ListVPCs(ctx context.Context, req *v1.ListVPCsRequest, opts ...http.CallOption) (rsp *v1.ListVPCsResponse, err error)
 	SetEIPSecurityGroups(ctx context.Context, req *v1.SetEIPSecurityGroupsRequest, opts ...http.CallOption) (rsp *v1.SetEIPSecurityGroupsResponse, err error)
@@ -1108,6 +1235,19 @@ func (c *NetworkServiceHTTPClientImpl) CreateSubnet(ctx context.Context, in *v1.
 	return &out, nil
 }
 
+func (c *NetworkServiceHTTPClientImpl) CreateVNic(ctx context.Context, in *v1.CreateVNicRequest, opts ...http.CallOption) (*v1.VNicResponse, error) {
+	var out v1.VNicResponse
+	pattern := "/api/v1/networks/vnics"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationNetworkServiceCreateVNic))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out.Vnic, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *NetworkServiceHTTPClientImpl) CreateVPC(ctx context.Context, in *v1.CreateVPCRequest, opts ...http.CallOption) (*v1.CreateVPCResponse, error) {
 	var out v1.CreateVPCResponse
 	pattern := "/api/v1/networks/vpcs"
@@ -1180,6 +1320,19 @@ func (c *NetworkServiceHTTPClientImpl) DeleteSubnet(ctx context.Context, in *v1.
 	opts = append(opts, http.Operation(OperationNetworkServiceDeleteSubnet))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out.Subnet, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *NetworkServiceHTTPClientImpl) DeleteVNic(ctx context.Context, in *v1.DeleteVNicRequest, opts ...http.CallOption) (*v1.VNicResponse, error) {
+	var out v1.VNicResponse
+	pattern := "/api/v1/networks/vnics/{vnic_id}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationNetworkServiceDeleteVNic))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out.Vnic, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1316,6 +1469,19 @@ func (c *NetworkServiceHTTPClientImpl) GetSubnet(ctx context.Context, in *v1.Get
 	return &out, nil
 }
 
+func (c *NetworkServiceHTTPClientImpl) GetVNic(ctx context.Context, in *v1.GetVNicRequest, opts ...http.CallOption) (*v1.VNicResponse, error) {
+	var out v1.VNicResponse
+	pattern := "/api/v1/networks/vnics/{vnic_id}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationNetworkServiceGetVNic))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Vnic, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *NetworkServiceHTTPClientImpl) GetVPC(ctx context.Context, in *v1.GetVPCRequest, opts ...http.CallOption) (*v1.GetVPCResponse, error) {
 	var out v1.GetVPCResponse
 	pattern := "/api/v1/networks/vpcs/{vpc_id}"
@@ -1425,6 +1591,32 @@ func (c *NetworkServiceHTTPClientImpl) ListSubnets(ctx context.Context, in *v1.L
 	pattern := "/api/v1/networks/subnets"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationNetworkServiceListSubnets))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *NetworkServiceHTTPClientImpl) ListVNicBindingTargets(ctx context.Context, in *v1.ListVNicBindingTargetsRequest, opts ...http.CallOption) (*v1.ListVNicBindingTargetsResponse, error) {
+	var out v1.ListVNicBindingTargetsResponse
+	pattern := "/api/v1/networks/vnics/{vnic_id}/binding-targets"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationNetworkServiceListVNicBindingTargets))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *NetworkServiceHTTPClientImpl) ListVNics(ctx context.Context, in *v1.ListVNicsRequest, opts ...http.CallOption) (*v1.ListVNicsResponse, error) {
+	var out v1.ListVNicsResponse
+	pattern := "/api/v1/networks/vnics"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationNetworkServiceListVNics))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

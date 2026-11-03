@@ -555,6 +555,8 @@ def finalize(text):
         ("/api/v1/instances/{data.instance_id}/exec", "202", "post"),
         ("/api/v1/instances/{data.instance_id}/security-groups", "202", "put"),
         ("/api/v1/virtual-machines/{data.vm_id}/security-groups", "202", "put"),
+        ("/api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}", "202", "put"),
+        ("/api/v1/instances/{instance_id}/network-interfaces/{slot}", "202", "put"),
     ):
         if "    " + route + ":\n" in text:
             text = remove_synthetic_200(text, route, status, method)

@@ -228,13 +228,14 @@ func (c *NetworkClient) BindVPCSnat(ctx context.Context, tenant, actor, vpcID, e
 	})
 }
 
-func (c *NetworkClient) CreateSubnet(ctx context.Context, tenant, actor, vpcID, name, cidr, description, idempotencyKey string, gateway *string) (*networkv1.CreateSubnetResponse, error) {
+func (c *NetworkClient) CreateSubnet(ctx context.Context, tenant, actor, vpcID, name, cidr, description, idempotencyKey string, gateway *string, excludeIPs []string, enableDHCP *bool, dnsServers []string) (*networkv1.CreateSubnetResponse, error) {
 	tc, err := c.trusted(tenant, actor)
 	if err != nil {
 		return nil, err
 	}
 	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.CreateSubnetResponse, error) {
 		return c.client.CreateSubnet(ctx, &networkv1.CreateSubnetRequest{TenantId: tc.tenant, VpcId: vpcID, Name: name, Cidr: cidr, Description: description, IdempotencyKey: idempotencyKey, Gateway: gateway,
+			ExcludeIps: append([]string{}, excludeIPs...), EnableDhcp: enableDHCP, DnsServers: append([]string{}, dnsServers...),
 			Attribution: &networkv1.Attribution{Actor: tc.actor, DirectCaller: "ani-governance", CorrelationId: tc.requestID}})
 	})
 }

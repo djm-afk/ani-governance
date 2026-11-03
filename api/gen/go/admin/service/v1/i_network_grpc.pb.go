@@ -20,6 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	NetworkService_CreateVNic_FullMethodName                = "/admin.service.v1.NetworkService/CreateVNic"
+	NetworkService_GetVNic_FullMethodName                   = "/admin.service.v1.NetworkService/GetVNic"
+	NetworkService_ListVNics_FullMethodName                 = "/admin.service.v1.NetworkService/ListVNics"
+	NetworkService_DeleteVNic_FullMethodName                = "/admin.service.v1.NetworkService/DeleteVNic"
+	NetworkService_ListVNicBindingTargets_FullMethodName    = "/admin.service.v1.NetworkService/ListVNicBindingTargets"
 	NetworkService_GetEIPSecurityGroups_FullMethodName      = "/admin.service.v1.NetworkService/GetEIPSecurityGroups"
 	NetworkService_GetSecurityGroupOperation_FullMethodName = "/admin.service.v1.NetworkService/GetSecurityGroupOperation"
 	NetworkService_CreateSecurityGroup_FullMethodName       = "/admin.service.v1.NetworkService/CreateSecurityGroup"
@@ -64,6 +69,11 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NetworkServiceClient interface {
+	CreateVNic(ctx context.Context, in *v1.CreateVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error)
+	GetVNic(ctx context.Context, in *v1.GetVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error)
+	ListVNics(ctx context.Context, in *v1.ListVNicsRequest, opts ...grpc.CallOption) (*v1.ListVNicsResponse, error)
+	DeleteVNic(ctx context.Context, in *v1.DeleteVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error)
+	ListVNicBindingTargets(ctx context.Context, in *v1.ListVNicBindingTargetsRequest, opts ...grpc.CallOption) (*v1.ListVNicBindingTargetsResponse, error)
 	GetEIPSecurityGroups(ctx context.Context, in *v1.GetEIPSecurityGroupsRequest, opts ...grpc.CallOption) (*v1.SetEIPSecurityGroupsResponse, error)
 	GetSecurityGroupOperation(ctx context.Context, in *v1.GetSecurityGroupOperationRequest, opts ...grpc.CallOption) (*v1.GetOperationResponse, error)
 	CreateSecurityGroup(ctx context.Context, in *v1.CreateSecurityGroupRequest, opts ...grpc.CallOption) (*v1.SecurityGroupResponse, error)
@@ -110,6 +120,56 @@ type networkServiceClient struct {
 
 func NewNetworkServiceClient(cc grpc.ClientConnInterface) NetworkServiceClient {
 	return &networkServiceClient{cc}
+}
+
+func (c *networkServiceClient) CreateVNic(ctx context.Context, in *v1.CreateVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.VNicResponse)
+	err := c.cc.Invoke(ctx, NetworkService_CreateVNic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *networkServiceClient) GetVNic(ctx context.Context, in *v1.GetVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.VNicResponse)
+	err := c.cc.Invoke(ctx, NetworkService_GetVNic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *networkServiceClient) ListVNics(ctx context.Context, in *v1.ListVNicsRequest, opts ...grpc.CallOption) (*v1.ListVNicsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListVNicsResponse)
+	err := c.cc.Invoke(ctx, NetworkService_ListVNics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *networkServiceClient) DeleteVNic(ctx context.Context, in *v1.DeleteVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.VNicResponse)
+	err := c.cc.Invoke(ctx, NetworkService_DeleteVNic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *networkServiceClient) ListVNicBindingTargets(ctx context.Context, in *v1.ListVNicBindingTargetsRequest, opts ...grpc.CallOption) (*v1.ListVNicBindingTargetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListVNicBindingTargetsResponse)
+	err := c.cc.Invoke(ctx, NetworkService_ListVNicBindingTargets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *networkServiceClient) GetEIPSecurityGroups(ctx context.Context, in *v1.GetEIPSecurityGroupsRequest, opts ...grpc.CallOption) (*v1.SetEIPSecurityGroupsResponse, error) {
@@ -496,6 +556,11 @@ func (c *networkServiceClient) GetLoadBalancerOperation(ctx context.Context, in 
 // All implementations must embed UnimplementedNetworkServiceServer
 // for forward compatibility.
 type NetworkServiceServer interface {
+	CreateVNic(context.Context, *v1.CreateVNicRequest) (*v1.VNicResponse, error)
+	GetVNic(context.Context, *v1.GetVNicRequest) (*v1.VNicResponse, error)
+	ListVNics(context.Context, *v1.ListVNicsRequest) (*v1.ListVNicsResponse, error)
+	DeleteVNic(context.Context, *v1.DeleteVNicRequest) (*v1.VNicResponse, error)
+	ListVNicBindingTargets(context.Context, *v1.ListVNicBindingTargetsRequest) (*v1.ListVNicBindingTargetsResponse, error)
 	GetEIPSecurityGroups(context.Context, *v1.GetEIPSecurityGroupsRequest) (*v1.SetEIPSecurityGroupsResponse, error)
 	GetSecurityGroupOperation(context.Context, *v1.GetSecurityGroupOperationRequest) (*v1.GetOperationResponse, error)
 	CreateSecurityGroup(context.Context, *v1.CreateSecurityGroupRequest) (*v1.SecurityGroupResponse, error)
@@ -544,6 +609,21 @@ type NetworkServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNetworkServiceServer struct{}
 
+func (UnimplementedNetworkServiceServer) CreateVNic(context.Context, *v1.CreateVNicRequest) (*v1.VNicResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateVNic not implemented")
+}
+func (UnimplementedNetworkServiceServer) GetVNic(context.Context, *v1.GetVNicRequest) (*v1.VNicResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVNic not implemented")
+}
+func (UnimplementedNetworkServiceServer) ListVNics(context.Context, *v1.ListVNicsRequest) (*v1.ListVNicsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVNics not implemented")
+}
+func (UnimplementedNetworkServiceServer) DeleteVNic(context.Context, *v1.DeleteVNicRequest) (*v1.VNicResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteVNic not implemented")
+}
+func (UnimplementedNetworkServiceServer) ListVNicBindingTargets(context.Context, *v1.ListVNicBindingTargetsRequest) (*v1.ListVNicBindingTargetsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVNicBindingTargets not implemented")
+}
 func (UnimplementedNetworkServiceServer) GetEIPSecurityGroups(context.Context, *v1.GetEIPSecurityGroupsRequest) (*v1.SetEIPSecurityGroupsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetEIPSecurityGroups not implemented")
 }
@@ -677,6 +757,96 @@ func RegisterNetworkServiceServer(s grpc.ServiceRegistrar, srv NetworkServiceSer
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&NetworkService_ServiceDesc, srv)
+}
+
+func _NetworkService_CreateVNic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateVNicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).CreateVNic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_CreateVNic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).CreateVNic(ctx, req.(*v1.CreateVNicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NetworkService_GetVNic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetVNicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).GetVNic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_GetVNic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).GetVNic(ctx, req.(*v1.GetVNicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NetworkService_ListVNics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListVNicsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).ListVNics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_ListVNics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).ListVNics(ctx, req.(*v1.ListVNicsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NetworkService_DeleteVNic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DeleteVNicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).DeleteVNic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_DeleteVNic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).DeleteVNic(ctx, req.(*v1.DeleteVNicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NetworkService_ListVNicBindingTargets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListVNicBindingTargetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).ListVNicBindingTargets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_ListVNicBindingTargets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).ListVNicBindingTargets(ctx, req.(*v1.ListVNicBindingTargetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NetworkService_GetEIPSecurityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1370,6 +1540,26 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.NetworkService",
 	HandlerType: (*NetworkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateVNic",
+			Handler:    _NetworkService_CreateVNic_Handler,
+		},
+		{
+			MethodName: "GetVNic",
+			Handler:    _NetworkService_GetVNic_Handler,
+		},
+		{
+			MethodName: "ListVNics",
+			Handler:    _NetworkService_ListVNics_Handler,
+		},
+		{
+			MethodName: "DeleteVNic",
+			Handler:    _NetworkService_DeleteVNic_Handler,
+		},
+		{
+			MethodName: "ListVNicBindingTargets",
+			Handler:    _NetworkService_ListVNicBindingTargets_Handler,
+		},
 		{
 			MethodName: "GetEIPSecurityGroups",
 			Handler:    _NetworkService_GetEIPSecurityGroups_Handler,

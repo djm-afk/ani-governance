@@ -27,6 +27,12 @@ func TestSingleWriteHTTPResponsesAndGeneratedClients(t *testing.T) {
 		response                            proto.Message
 		call                                func(*khttp.Client) (proto.Message, error)
 	}{
+		{"CreateVNic", "POST", "/api/v1/networks/vnics", "vnic", "VNic", &catalog.VNicResponse{Vnic: &catalog.VNic{Id: "vnic_x", Version: 7}}, func(c *khttp.Client) (proto.Message, error) {
+			return admin.NewNetworkServiceHTTPClient(c).CreateVNic(ctx, &catalog.CreateVNicRequest{})
+		}},
+		{"DeleteVNic", "DELETE", "/api/v1/networks/vnics/vnic_x", "vnic", "VNic", &catalog.VNicResponse{Vnic: &catalog.VNic{Id: "vnic_x", State: "deleting"}}, func(c *khttp.Client) (proto.Message, error) {
+			return admin.NewNetworkServiceHTTPClient(c).DeleteVNic(ctx, &catalog.DeleteVNicRequest{VnicId: "vnic_x"})
+		}},
 		{"CreateVPC", "POST", "/api/v1/networks/vpcs", "vpc", "VPC", &catalog.CreateVPCResponse{Vpc: &catalog.VPC{Id: "vpc_x", Version: 7}}, func(c *khttp.Client) (proto.Message, error) {
 			return admin.NewNetworkServiceHTTPClient(c).CreateVPC(ctx, &catalog.CreateVPCRequest{})
 		}},
@@ -99,6 +105,7 @@ func TestSingleWriteHTTPResponsesAndGeneratedClients(t *testing.T) {
 	paths := doc["paths"].(map[string]any)
 	for _, tc := range tests {
 		p := tc.path
+		p = strings.ReplaceAll(p, "vnic_x", "{vnic_id}")
 		p = strings.ReplaceAll(p, "vpc_x", "{vpc_id}")
 		p = strings.ReplaceAll(p, "eip_x", "{eip_id}")
 		p = strings.ReplaceAll(p, "img_x", "{image_id}")

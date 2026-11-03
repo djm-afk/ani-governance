@@ -30,6 +30,11 @@ type NetworkOperationPolicy struct {
 // NetworkOperations is the complete tenant Network surface. Catalog membership
 // never grants a role: current tenant, NETWORK and Casbin gates still apply.
 var NetworkOperations = map[string]NetworkOperationPolicy{
+	"/admin.service.v1.NetworkService/CreateVNic":                {"POST", "/api/v1/networks/vnics", "network:vnic:create", false},
+	"/admin.service.v1.NetworkService/GetVNic":                   {"GET", "/api/v1/networks/vnics/{vnic_id}", "network:vnic:get", true},
+	"/admin.service.v1.NetworkService/ListVNics":                 {"GET", "/api/v1/networks/vnics", "network:vnic:list", true},
+	"/admin.service.v1.NetworkService/DeleteVNic":                {"DELETE", "/api/v1/networks/vnics/{vnic_id}", "network:vnic:delete", false},
+	"/admin.service.v1.NetworkService/ListVNicBindingTargets":    {"GET", "/api/v1/networks/vnics/{vnic_id}/binding-targets", "network:vnic:binding-targets", true},
 	"/admin.service.v1.NetworkService/GetEIPSecurityGroups":      {"GET", "/api/v1/networks/eips/{eip_id}/security-groups", "network:eip:security-groups:get", true},
 	"/admin.service.v1.NetworkService/GetSecurityGroupOperation": {"GET", "/api/v1/networks/security-groups/operations/{operation_id}", "network:security-group:operation:get", true},
 	"/admin.service.v1.NetworkService/CreateSecurityGroup":       {"POST", "/api/v1/networks/security-groups", "network:security-group:create", false},
@@ -71,22 +76,49 @@ var NetworkOperations = map[string]NetworkOperationPolicy{
 	"/admin.service.v1.NetworkService/GetLoadBalancerOperation": {"GET", "/api/v1/networks/load-balancers/operations/{operation_id}", "network:load-balancer:operation:get", true},
 }
 
-func IsNetworkOperation(operation string) bool { _, ok := NetworkOperations[operation]; return ok }
+var OwnerNetworkInterfaceOperations = map[string]NetworkOperationPolicy{
+	"/admin.service.v1.VMService/GetVMNetworkInterfaces":             {"GET", "/api/v1/virtual-machines/{vm_id}/network-interfaces", "vm:network-interfaces:get", true},
+	"/admin.service.v1.VMService/SetVMNetworkInterface":              {"PUT", "/api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}", "vm:network-interfaces:set", false},
+	"/admin.service.v1.InstanceService/GetInstanceNetworkInterfaces": {"GET", "/api/v1/instances/{instance_id}/network-interfaces", "instance:network-interfaces:get", true},
+	"/admin.service.v1.InstanceService/SetInstanceNetworkInterface":  {"PUT", "/api/v1/instances/{instance_id}/network-interfaces/{slot}", "instance:network-interfaces:set", false},
+}
+
+func networkPolicy(operation string) (NetworkOperationPolicy, bool) {
+	if p, ok := NetworkOperations[operation]; ok {
+		return p, true
+	}
+	p, ok := OwnerNetworkInterfaceOperations[operation]
+	return p, ok
+}
+func IsNetworkOperation(operation string) bool { _, ok := networkPolicy(operation); return ok }
 
 func NetworkPermission(method, path string) (string, bool) {
-	for _, policy := range NetworkOperations {
-		if policy.Method == method && policy.Path == path {
-			return policy.Permission, true
+	for _, policies := range []map[string]NetworkOperationPolicy{NetworkOperations, OwnerNetworkInterfaceOperations} {
+		for _, policy := range policies {
+			if policy.Method == method && policy.Path == path {
+				return policy.Permission, true
+			}
 		}
 	}
 	return "", false
 }
-
 func IsNetworkPath(path string) bool {
-	return path == "/api/v1/networks" || strings.HasPrefix(path, "/api/v1/networks/") || path == "/api/v1/admin/networks" || strings.HasPrefix(path, "/api/v1/admin/networks/")
+	if path == "/api/v1/networks" || strings.HasPrefix(path, "/api/v1/networks/") || path == "/api/v1/admin/networks" || strings.HasPrefix(path, "/api/v1/admin/networks/") {
+		return true
+	}
+	for _, p := range OwnerNetworkInterfaceOperations {
+		if _, ok := networkRouteValues(p.Path, path); ok {
+			return true
+		}
+	}
+	return false
 }
 
 var networkIDPatterns = map[string]*regexp.Regexp{
+	"vm_id":              regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+	"instance_id":        regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+	"slot":               regexp.MustCompile(`^primary$`),
+	"vnic_id":            regexp.MustCompile(`^vnic_[0-9a-f]{32}$`),
 	"security_group_id":  regexp.MustCompile(`^sg_[0-9a-f]{32}$`),
 	"security_group_ids": regexp.MustCompile(`^sg_[0-9a-f]{32}$`),
 	"rule_id":            regexp.MustCompile(`^(sgr_[0-9a-f]{32}|sgr_default_ingress_drop)$`),
@@ -103,7 +135,27 @@ type networkRequestDigestKey struct{}
 type networkRequestDigest struct{ Operation, Method, Path, Query, Digest string }
 
 func networkRequestMessage(operation string) proto.Message {
+	switch operation {
+	case "/admin.service.v1.VMService/GetVMNetworkInterfaces":
+		return &view.GetVMNetworkInterfacesRequest{}
+	case "/admin.service.v1.VMService/SetVMNetworkInterface":
+		return &view.SetVMNetworkInterfaceRequest{}
+	case "/admin.service.v1.InstanceService/GetInstanceNetworkInterfaces":
+		return &view.GetInstanceNetworkInterfacesRequest{}
+	case "/admin.service.v1.InstanceService/SetInstanceNetworkInterface":
+		return &view.SetInstanceNetworkInterfaceRequest{}
+	}
 	switch strings.TrimPrefix(operation, "/admin.service.v1.NetworkService/") {
+	case "CreateVNic":
+		return &view.CreateVNicRequest{}
+	case "GetVNic":
+		return &view.GetVNicRequest{}
+	case "ListVNics":
+		return &view.ListVNicsRequest{}
+	case "DeleteVNic":
+		return &view.DeleteVNicRequest{}
+	case "ListVNicBindingTargets":
+		return &view.ListVNicBindingTargetsRequest{}
 	case "GetEIPSecurityGroups":
 		return &view.GetEIPSecurityGroupsRequest{}
 	case "GetSecurityGroupOperation":
@@ -188,23 +240,25 @@ func networkHTTPRoute(r *http.Request) (string, proto.Message, string, string) {
 	if op, msg, field, id := platformNetworkHTTPRoute(r); op != "" {
 		return op, msg, field, id
 	}
-	for operation, policy := range NetworkOperations {
-		if policy.Method != r.Method {
-			continue
-		}
-		values, ok := networkRouteValues(policy.Path, r.URL.Path)
-		if !ok {
-			continue
-		}
-		field, id := "", ""
-		for _, part := range strings.Split(policy.Path, "/") {
-			if strings.HasPrefix(part, "{") {
-				field = strings.Trim(part, "{}")
-				id = values[field]
-				break
+	for _, policies := range []map[string]NetworkOperationPolicy{NetworkOperations, OwnerNetworkInterfaceOperations} {
+		for operation, policy := range policies {
+			if policy.Method != r.Method {
+				continue
 			}
+			values, ok := networkRouteValues(policy.Path, r.URL.Path)
+			if !ok {
+				continue
+			}
+			field, id := "", ""
+			for _, part := range strings.Split(policy.Path, "/") {
+				if strings.HasPrefix(part, "{") {
+					field = strings.Trim(part, "{}")
+					id = values[field]
+					break
+				}
+			}
+			return operation, networkRequestMessage(operation), field, id
 		}
-		return operation, networkRequestMessage(operation), field, id
 	}
 	return "", nil, "", ""
 }
@@ -242,6 +296,14 @@ func networkQueryFields(operation string) map[string]bool {
 	}
 	fields := map[string]bool{}
 	switch strings.TrimPrefix(operation, "/admin.service.v1.NetworkService/") {
+	case "ListVNics":
+		for _, field := range []string{"page", "pageSize", "name", "subnet_id", "state", "binding_state", "bindable_to_kind", "bindable_to_id"} {
+			fields[field] = true
+		}
+	case "ListVNicBindingTargets":
+		for _, field := range []string{"page", "pageSize", "name", "consumer_kind"} {
+			fields[field] = true
+		}
 	case "ListVPCs", "ListSecurityGroups":
 		for _, field := range []string{"name", "state", "page", "pageSize"} {
 			fields[field] = true
@@ -290,7 +352,18 @@ func validateNetworkQuery(operation string, query url.Values) bool {
 				return false
 			}
 		}
-		if field == "target_type" && value != "" && value != "container" && value != "vm" && value != "eip" {
+		if field == "target_type" && value != "" && value != "container" && value != "vm" && value != "eip" && value != "vnic" {
+			return false
+		}
+		if field == "consumer_kind" || field == "bindable_to_kind" {
+			if value != "vm" && value != "container" {
+				return false
+			}
+		}
+		if field == "bindable_to_id" && !canonicalNetworkConsumerID(value) {
+			return false
+		}
+		if field == "binding_state" && value != "" && value != "free" && value != "reserved" && value != "bound" {
 			return false
 		}
 		if field == "direction" && value != "" && value != "ingress" && value != "egress" {
@@ -423,7 +496,7 @@ func NetworkHTTPFilter(next http.Handler) http.Handler {
 				return
 			}
 			fields := m.Descriptor().Fields()
-			if policy, ok := NetworkOperations[operation]; ok {
+			if policy, ok := networkPolicy(operation); ok {
 				values, matches := networkRouteValues(policy.Path, r.URL.Path)
 				if !matches {
 					fail()
@@ -471,4 +544,8 @@ func ValidateNetworkRequest(r *http.Request, operation string) error {
 // Query must be url.Values.Encode(); the GetVPC empty-query vector is unchanged.
 func NetworkSignature(secret, method, path, query, accessKey, timestamp string, body []byte) string {
 	return ImageSignature(secret, method, path, query, accessKey, timestamp, body)
+}
+
+func canonicalNetworkConsumerID(value string) bool {
+	return regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`).MatchString(value)
 }

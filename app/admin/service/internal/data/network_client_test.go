@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -239,7 +240,7 @@ func TestNetworkClientAllNewMethodsRebuildMetadata(t *testing.T) {
 			return err
 		}},
 		{"CreateSubnet", func(a string) error {
-			_, err := c.CreateSubnet(ctx, tenant, a, "vpc", "subnet", "10.0.1.0/24", "description", "subnet-key", &gateway)
+			_, err := c.CreateSubnet(ctx, tenant, a, "vpc", "subnet", "10.0.1.0/24", "description", "subnet-key", &gateway, nil, nil, nil)
 			return err
 		}},
 		{"GetSubnet", func(a string) error { _, err := c.GetSubnet(ctx, tenant, a, "subnet"); return err }},
@@ -292,5 +293,24 @@ func TestNetworkClientAllNewMethodsRebuildMetadata(t *testing.T) {
 	}
 	if createLB.TargetTenantId != "forged" || updateLB.TargetTenantId != "forged" || listLB.TargetTenantId != "forged" {
 		t.Fatal("client mutated caller request")
+	}
+}
+
+func TestNetworkClientSubnetAdvancedOptionsAndPresence(t *testing.T) {
+	for _, enabled := range []*bool{nil, proto.Bool(false), proto.Bool(true)} {
+		p := &networkTenantRPCProbe{t: t, requests: make(map[string]proto.Message)}
+		c := &NetworkClient{client: p, timeout: time.Second}
+		exclude, dns := []string{"10.0.1.10", "10.0.1.20..10.0.1.30"}, []string{"10.0.1.2"}
+		if _, err := c.CreateSubnet(context.Background(), "11111111-1111-4111-8111-111111111111", "governance:access-key:42", "vpc", "subnet", "10.0.1.0/24", "desc", "same-key", nil, exclude, enabled, dns); err != nil {
+			t.Fatal(err)
+		}
+		in := p.requests["CreateSubnet"].(*networkv1.CreateSubnetRequest)
+		if in.Gateway != nil || !reflect.DeepEqual(in.EnableDhcp, enabled) || !reflect.DeepEqual(in.ExcludeIps, exclude) || !reflect.DeepEqual(in.DnsServers, dns) || in.IdempotencyKey != "same-key" {
+			t.Fatal("subnet intent changed before trusted RPC", in)
+		}
+		in.ExcludeIps[0], in.DnsServers[0] = "changed", "changed"
+		if exclude[0] == "changed" || dns[0] == "changed" {
+			t.Fatal("subnet RPC aliases caller arrays")
+		}
 	}
 }

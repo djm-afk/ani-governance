@@ -1,10 +1,14 @@
 syntax = "proto3";
 package admin.service.v1;
 import "google/api/annotations.proto";
+import "catalog/service/v1/vnic.proto";
 import "gnostic/openapi/v3/annotations.proto";
 import "instance/service/v1/instance.proto";
 
 service InstanceService {
+ rpc GetInstanceNetworkInterfaces(catalog.service.v1.GetInstanceNetworkInterfacesRequest) returns(catalog.service.v1.NetworkInterfaces) { option(google.api.http)={get:"/api/v1/instances/{instance_id}/network-interfaces"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}]}; }
+ rpc SetInstanceNetworkInterface(catalog.service.v1.SetInstanceNetworkInterfaceRequest) returns(instance.service.v1.Acceptance) { option(google.api.http)={put:"/api/v1/instances/{instance_id}/network-interfaces/{slot}" body:"*"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}] responses:{response_or_reference:[{name:"202" value:{response:{description:"Configuration accepted; saving does not restart the instance" content:{additional_properties:[{name:"application/json" value:{schema:{reference:{_ref:"#/components/schemas/Acceptance"}}}}]}}}}]}}; }
+
  rpc ListMountablePVCs(instance.service.v1.ListMountablePVCsRequest) returns(instance.service.v1.ListMountablePVCsResponse) { option(google.api.http)={get:"/api/v1/instances/mountable-pvcs"}; }
  rpc GetInstanceConfiguration(instance.service.v1.GetInstanceRequest) returns(instance.service.v1.InstanceConfiguration) { option(google.api.http)={get:"/api/v1/instances/{instance_id}/configuration"}; }
  rpc QueryInstanceMetrics(instance.service.v1.QueryInstanceMetricsRequest) returns(instance.service.v1.QueryInstanceMetricsResponse) { option(google.api.http)={post:"/api/v1/instances/{instance_id}/metrics/query" body:"*"}; }

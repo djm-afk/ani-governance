@@ -9434,6 +9434,63 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/ListMountablePVCsResponse'
+    /api/v1/instances/{instance_id}/network-interfaces:
+        get:
+            tags:
+                - InstanceService
+            operationId: InstanceService_GetInstanceNetworkInterfaces
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NetworkInterfaces'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/instances/{instance_id}/network-interfaces/{slot}:
+        put:
+            tags:
+                - InstanceService
+            operationId: InstanceService_SetInstanceNetworkInterface
+            parameters:
+                - name: instance_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: slot
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetInstanceNetworkInterfaceRequest'
+                required: true
+            responses:
+                "202":
+                    description: Configuration accepted; saving does not restart the instance
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Acceptance'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
     /api/v1/instances/{instance_id}/runtime:
         get:
             tags:
@@ -11514,6 +11571,166 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/networks/vnics:
+        get:
+            tags:
+                - NetworkService
+            operationId: NetworkService_ListVNics
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: subnet_id
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: binding_state
+                  in: query
+                  schema:
+                    type: string
+                - name: bindable_to_kind
+                  in: query
+                  schema:
+                    type: string
+                - name: bindable_to_id
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVNicsResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+        post:
+            tags:
+                - NetworkService
+            operationId: NetworkService_CreateVNic
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateVNicRequest'
+                required: true
+            responses:
+                "200":
+                    description: Accepted or persisted VNIC snapshot; inspect state and operation for completion
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VNic'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/networks/vnics/{vnic_id}:
+        get:
+            tags:
+                - NetworkService
+            operationId: NetworkService_GetVNic
+            parameters:
+                - name: vnic_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Accepted or persisted VNIC snapshot; inspect state and operation for completion
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VNic'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+        delete:
+            tags:
+                - NetworkService
+            operationId: NetworkService_DeleteVNic
+            parameters:
+                - name: vnic_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Accepted or persisted VNIC snapshot; inspect state and operation for completion
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VNic'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/networks/vnics/{vnic_id}/binding-targets:
+        get:
+            tags:
+                - NetworkService
+            operationId: NetworkService_ListVNicBindingTargets
+            parameters:
+                - name: vnic_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: consumer_kind
+                  in: query
+                  schema:
+                    type: string
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListVNicBindingTargetsResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
     /api/v1/networks/vpc-cidr-presets:
         get:
             tags:
@@ -13361,6 +13578,63 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/VMLogFrame'
+    /api/v1/virtual-machines/{vm_id}/network-interfaces:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMNetworkInterfaces
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NetworkInterfaces'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
+    /api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}:
+        put:
+            tags:
+                - VMService
+            operationId: VMService_SetVMNetworkInterface
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: slot
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetVMNetworkInterfaceRequest'
+                required: true
+            responses:
+                "202":
+                    description: Configuration accepted; saving does not restart the instance
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMOperation'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
     /api/v1/virtual-machines/{vm_id}/operations/{operation_id}:
         get:
             tags:
@@ -15865,6 +16139,16 @@ components:
                     type: string
                 gateway:
                     type: string
+                exclude_ips:
+                    type: array
+                    items:
+                        type: string
+                enable_dhcp:
+                    type: boolean
+                dns_servers:
+                    type: array
+                    items:
+                        type: string
         CreateSubnetResponse:
             type: object
             properties:
@@ -15950,6 +16234,26 @@ components:
             properties:
                 data:
                     $ref: '#/components/schemas/CreateVMData'
+        CreateVNicData:
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                subnet_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                requested_ip:
+                    type: string
+                requested_mac:
+                    type: string
+        CreateVNicRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CreateVNicData'
         CreateVPCRequest:
             type: object
             properties:
@@ -20274,6 +20578,24 @@ components:
                         $ref: '#/components/schemas/VirtualMachine'
                 total:
                     type: string
+        ListVNicBindingTargetsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VNicBindingTarget'
+                total:
+                    type: string
+        ListVNicsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VNic'
+                total:
+                    type: string
         ListVPCCIDRPresetsResponse:
             type: object
             properties:
@@ -21447,6 +21769,72 @@ components:
                         - $ref: '#/components/schemas/StringArray'
                     description: Mapped value
             description: Automatically-generated message used to represent maps of StringArray as ordered (name,value) pairs.
+        NetworkInterface:
+            type: object
+            properties:
+                slot:
+                    type: string
+                desired:
+                    $ref: '#/components/schemas/NetworkInterfaceChoice'
+                applied:
+                    $ref: '#/components/schemas/NetworkInterfaceChoice'
+                requested_revision:
+                    type: string
+                applied_revision:
+                    type: string
+                pending_restart:
+                    type: boolean
+                effective_now:
+                    type: boolean
+                current_vnic_name:
+                    type: string
+                current_mac_address:
+                    type: string
+                current_ips:
+                    type: array
+                    items:
+                        type: string
+                observed_at:
+                    type: string
+                    format: date-time
+                observation_reason:
+                    type: string
+                configuration_state:
+                    type: string
+                operation_id:
+                    type: string
+                operation_reason:
+                    type: string
+        NetworkInterfaceChoice:
+            type: object
+            properties:
+                mode:
+                    type: string
+                vnic_id:
+                    type: string
+                vnic_name:
+                    type: string
+                provider_uid:
+                    type: string
+                mac_address:
+                    type: string
+                ips:
+                    type: array
+                    items:
+                        type: string
+        NetworkInterfaces:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/NetworkInterface'
+                version:
+                    type: string
+                supported:
+                    type: boolean
+                unsupported_reason:
+                    type: string
         NetworkSelection:
             type: object
             properties:
@@ -24537,6 +24925,15 @@ components:
                     $ref: '#/components/schemas/SecurityGroupBinding'
                 operation:
                     $ref: '#/components/schemas/NetworkOperation'
+        SetInstanceNetworkInterfaceRequest:
+            type: object
+            properties:
+                instance_id:
+                    type: string
+                slot:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetNetworkInterfaceData'
         SetInstanceSecurityGroupsData:
             type: object
             properties:
@@ -24597,6 +24994,17 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        SetNetworkInterfaceData:
+            type: object
+            properties:
+                mode:
+                    type: string
+                vnic_id:
+                    type: string
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
         SetPresetEnabledData:
             type: object
             properties:
@@ -24630,6 +25038,15 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        SetVMNetworkInterfaceRequest:
+            type: object
+            properties:
+                vm_id:
+                    type: string
+                slot:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetNetworkInterfaceData'
         SetVPCSnatEnabledRequest:
             type: object
             properties:
@@ -24792,6 +25209,16 @@ components:
                     type: string
                 used_ip_range:
                     type: string
+                exclude_ips:
+                    type: array
+                    items:
+                        type: string
+                enable_dhcp:
+                    type: boolean
+                dns_servers:
+                    type: array
+                    items:
+                        type: string
             description: Tenant-facing subnet fields; ownership is resolved from authenticated context.
         SyncMenusRequest:
             type: object
@@ -26238,6 +26665,115 @@ components:
                     type: string
                 createdAt:
                     type: string
+        VNic:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                description:
+                    type: string
+                vpc_id:
+                    type: string
+                subnet_id:
+                    type: string
+                state:
+                    type: string
+                version:
+                    type: string
+                mac_address:
+                    type: string
+                primary_ip:
+                    type: string
+                ips:
+                    type: array
+                    items:
+                        type: string
+                bindings:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VNicBinding'
+                security_group_ids:
+                    type: array
+                    items:
+                        type: string
+                observed_at:
+                    type: string
+                    format: date-time
+                observation_stale:
+                    type: boolean
+                reason:
+                    type: string
+                last_operation_id:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                binding_state:
+                    type: string
+                vpc_name:
+                    type: string
+                subnet_name:
+                    type: string
+                security_group_names:
+                    type: array
+                    items:
+                        type: string
+                requested_ip:
+                    type: string
+                requested_mac:
+                    type: string
+        VNicBinding:
+            type: object
+            properties:
+                binding_id:
+                    type: string
+                consumer_kind:
+                    type: string
+                consumer_id:
+                    type: string
+                slot:
+                    type: string
+                requested_revision:
+                    type: string
+                applied_revision:
+                    type: string
+                current:
+                    type: boolean
+                target:
+                    type: boolean
+                consumer_name:
+                    type: string
+                compute_type:
+                    type: string
+        VNicBindingTarget:
+            type: object
+            properties:
+                consumer_kind:
+                    type: string
+                consumer_id:
+                    type: string
+                name:
+                    type: string
+                version:
+                    type: string
+                state:
+                    type: string
+                security_group_ids:
+                    type: array
+                    items:
+                        type: string
+                compute_type:
+                    type: string
+        VNicResponse:
+            type: object
+            properties:
+                vnic:
+                    $ref: '#/components/schemas/VNic'
         VPC:
             type: object
             properties:

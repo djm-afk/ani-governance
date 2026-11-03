@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/go-kratos/kratos/v2/errors"
 	networkv1 "github.com/zhangzhe-ctrl/ani-resource-service/api/network/v1"
 	authv1 "go-wind-admin/api/gen/go/authentication/service/v1"
@@ -11,8 +12,10 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"reflect"
 	"testing"
 )
 
@@ -22,6 +25,9 @@ type vpcProbe struct {
 	wrong                           bool
 	err                             error
 	subnetGateway                   *string
+	subnetExcludeIPs                []string
+	subnetEnableDHCP                *bool
+	subnetDNSServers                []string
 	lbCreate                        *networkv1.CreateLoadBalancerRequest
 	lbUpdate                        *networkv1.UpdateLoadBalancerRequest
 	lbList                          *networkv1.ListLoadBalancersRequest
@@ -276,9 +282,38 @@ func (p *vpcProbe) scope(tenant, actor string) string {
 func testSubnet(tenant, id, vpcID string) *networkv1.Subnet {
 	return &networkv1.Subnet{Id: id, TenantId: tenant, VpcId: vpcID, Name: "subnet", Cidr: "10.0.1.0/24", Gateway: "10.0.1.1", State: networkv1.ResourceState_RESOURCE_STATE_AVAILABLE}
 }
-func (p *vpcProbe) CreateSubnet(_ context.Context, tenant, actor, vpcID, _, _, _, _ string, gateway *string) (*networkv1.CreateSubnetResponse, error) {
+func (p *vpcProbe) CreateSubnet(_ context.Context, tenant, actor, vpcID, _, _, _, _ string, gateway *string, excludeIPs []string, enableDHCP *bool, dnsServers []string) (*networkv1.CreateSubnetResponse, error) {
 	p.subnetGateway = gateway
-	return &networkv1.CreateSubnetResponse{Subnet: testSubnet(p.scope(tenant, actor), testSubnetID, vpcID)}, p.err
+	p.subnetExcludeIPs, p.subnetEnableDHCP, p.subnetDNSServers = excludeIPs, enableDHCP, dnsServers
+	subnet := testSubnet(p.scope(tenant, actor), testSubnetID, vpcID)
+	subnet.ExcludeIps, subnet.EnableDhcp, subnet.DnsServers = excludeIPs, enableDHCP != nil && *enableDHCP, dnsServers
+	return &networkv1.CreateSubnetResponse{Subnet: subnet}, p.err
+}
+
+func TestSubnetCreationPreservesAdvancedOptions(t *testing.T) {
+	for _, enabled := range []*bool{nil, proto.Bool(false), proto.Bool(true)} {
+		p := &vpcProbe{}
+		s := NewNetworkService(p, &tenantProbe{})
+		ctx := auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: 7, TenantID: 5})
+		exclude := []string{"10.0.1.10", "10.0.1.20..10.0.1.30"}
+		dns := []string{"10.0.1.2"}
+		body := map[string]any{"vpc_id": testVPCID, "name": "subnet", "cidr": "10.0.1.0/24", "idempotency_key": "33333333-3333-4333-8333-333333333333", "gateway": "10.0.1.254", "exclude_ips": exclude, "dns_servers": dns}
+		if enabled != nil {
+			body["enable_dhcp"] = *enabled
+		}
+		raw, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var request catalogv1.CreateSubnetRequest
+		if err = protojson.Unmarshal(raw, &request); err != nil {
+			t.Fatal(err)
+		}
+		out, err := s.CreateSubnet(ctx, &request)
+		if err != nil || !reflect.DeepEqual(p.subnetEnableDHCP, enabled) || p.subnetGateway == nil || *p.subnetGateway != "10.0.1.254" || !reflect.DeepEqual(p.subnetExcludeIPs, exclude) || !reflect.DeepEqual(p.subnetDNSServers, dns) || !reflect.DeepEqual(out.Subnet.ExcludeIps, exclude) || !reflect.DeepEqual(out.Subnet.DnsServers, dns) || out.Subnet.EnableDhcp != (enabled != nil && *enabled) {
+			t.Fatal("subnet option presence, gateway or arrays were lost", out, err)
+		}
+	}
 }
 func (p *vpcProbe) GetSubnet(_ context.Context, tenant, actor, id string) (*networkv1.GetSubnetResponse, error) {
 	return &networkv1.GetSubnetResponse{Subnet: testSubnet(p.scope(tenant, actor), id, testVPCID)}, p.err
@@ -492,7 +527,7 @@ func TestNetworkDomainErrorReasons(t *testing.T) {
 		code   codes.Code
 		reason string
 		http   int
-	}{{codes.AlreadyExists, "IDEMPOTENCY_CONFLICT", 409}, {codes.FailedPrecondition, "VERSION_CONFLICT", 412}, {codes.FailedPrecondition, "RESOURCE_IN_USE", 412}, {codes.NotFound, "RESOURCE_NOT_FOUND", 404}, {codes.Unavailable, "BASE_CONNECTIVITY_NOT_READY", 503}} {
+	}{{codes.AlreadyExists, "IDEMPOTENCY_CONFLICT", 409}, {codes.AlreadyExists, "ADDRESS_CONFLICT", 409}, {codes.FailedPrecondition, "VERSION_CONFLICT", 412}, {codes.FailedPrecondition, "RESOURCE_IN_USE", 412}, {codes.NotFound, "RESOURCE_NOT_FOUND", 404}, {codes.Unavailable, "BASE_CONNECTIVITY_NOT_READY", 503}} {
 		st, err := status.New(tc.code, "private dependency detail").WithDetails(&errdetails.ErrorInfo{Domain: "network.ani.io", Reason: tc.reason})
 		if err != nil {
 			t.Fatal(err)

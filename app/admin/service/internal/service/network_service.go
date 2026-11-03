@@ -43,7 +43,7 @@ type NetworkTenantClient interface {
 	DeleteEIP(context.Context, string, string, string) (*networkv1.DeleteEIPResponse, error)
 	GetVPCSnat(context.Context, string, string, string) (*networkv1.GetVPCSnatResponse, error)
 	BindVPCSnat(context.Context, string, string, string, string, string) (*networkv1.BindVPCSnatResponse, error)
-	CreateSubnet(context.Context, string, string, string, string, string, string, string, *string) (*networkv1.CreateSubnetResponse, error)
+	CreateSubnet(context.Context, string, string, string, string, string, string, string, *string, []string, *bool, []string) (*networkv1.CreateSubnetResponse, error)
 	GetSubnet(context.Context, string, string, string) (*networkv1.GetSubnetResponse, error)
 	ListSubnets(context.Context, string, string, string, string, string, int32, string) (*networkv1.ListSubnetsResponse, error)
 	DeleteSubnet(context.Context, string, string, string) (*networkv1.DeleteSubnetResponse, error)
@@ -59,12 +59,17 @@ type NetworkTenantClient interface {
 }
 type NetworkService struct {
 	adminv1.UnimplementedNetworkServiceServer
-	client  NetworkTenantClient
-	tenants ResourceTenantResolver
+	client            NetworkTenantClient
+	tenants           ResourceTenantResolver
+	vnicAuthorization InstanceActionAuthorizer
 }
 
-func NewNetworkService(client NetworkTenantClient, tenants ResourceTenantResolver) *NetworkService {
-	return &NetworkService{client: client, tenants: tenants}
+func NewNetworkService(client NetworkTenantClient, tenants ResourceTenantResolver, authorization ...InstanceActionAuthorizer) *NetworkService {
+	s := &NetworkService{client: client, tenants: tenants}
+	if len(authorization) > 0 {
+		s.vnicAuthorization = authorization[0]
+	}
+	return s
 }
 
 var vpcIDPattern = regexp.MustCompile(`^vpc_[0-9a-f]{32}$`)
@@ -450,7 +455,8 @@ func wireSubnet(v *networkv1.Subnet) *catalogv1.Subnet {
 	return &catalogv1.Subnet{Id: v.Id, VpcId: v.VpcId, Name: v.Name, Description: v.Description, Cidr: v.Cidr, Gateway: v.Gateway,
 		State: strings.ToLower(strings.TrimPrefix(v.State.String(), "RESOURCE_STATE_")), Reason: v.Reason, ReasonMessage: v.ReasonMessage,
 		CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, Version: v.Version, ObservedAt: v.ObservedAt,
-		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, AvailableIpRange: v.AvailableIpRange, UsedIpRange: v.UsedIpRange}
+		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, AvailableIpRange: v.AvailableIpRange, UsedIpRange: v.UsedIpRange,
+		ExcludeIps: append([]string{}, v.ExcludeIps...), EnableDhcp: v.EnableDhcp, DnsServers: append([]string{}, v.DnsServers...)}
 }
 func validSubnetReply(v *networkv1.Subnet, tenant, id, vpcID string) bool {
 	return v != nil && v.TenantId == tenant && subnetIDPattern.MatchString(v.Id) && (id == "" || v.Id == id) &&
@@ -472,7 +478,7 @@ func (s *NetworkService) CreateSubnet(ctx context.Context, req *catalogv1.Create
 	if err != nil {
 		return nil, err
 	}
-	reply, err := s.client.CreateSubnet(ctx, tenant, actor, req.GetVpcId(), req.GetName(), req.GetCidr(), req.GetDescription(), req.GetIdempotencyKey(), req.Gateway)
+	reply, err := s.client.CreateSubnet(ctx, tenant, actor, req.GetVpcId(), req.GetName(), req.GetCidr(), req.GetDescription(), req.GetIdempotencyKey(), req.Gateway, req.ExcludeIps, req.EnableDhcp, req.DnsServers)
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}

@@ -24,6 +24,11 @@ func TestNetworkAllTenantOperationsSignAndReplayBody(t *testing.T) {
 	// Independent HTTP fixtures cover every public operation, including methods
 	// and request shapes that the former empty-GET signer could not admit.
 	fixtures := []struct{ operation, method, path, query, body string }{
+		{"CreateVNic", "POST", "/api/v1/networks/vnics", "", `{"data":{"name":"nic","subnet_id":"subnet_0123456789abcdef0123456789abcdef","idempotency_key":"create-vnic-test"}}`},
+		{"GetVNic", "GET", "/api/v1/networks/vnics/vnic_0123456789abcdef0123456789abcdef", "", ""},
+		{"DeleteVNic", "DELETE", "/api/v1/networks/vnics/vnic_0123456789abcdef0123456789abcdef", "", ""},
+		{"ListVNics", "GET", "/api/v1/networks/vnics", "binding_state=free&name=nic&page=3&pageSize=2", ""},
+		{"ListVNicBindingTargets", "GET", "/api/v1/networks/vnics/vnic_0123456789abcdef0123456789abcdef/binding-targets", "consumer_kind=vm&page=1&pageSize=20", ""},
 		{"CreateVPC", "POST", "/api/v1/networks/vpcs", "", `{"name":"vpc","cidr":"10.0.0.0/16","idempotency_key":"create-vpc"}`},
 		{"GetVPC", "GET", vectorPath, "", ""},
 		{"ListVPCs", "GET", "/api/v1/networks/vpcs", "name=demo&page=3&pageSize=2&state=available", ""},

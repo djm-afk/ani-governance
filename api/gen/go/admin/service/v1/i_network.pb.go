@@ -27,8 +27,81 @@ var File_admin_service_v1_i_network_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_network_proto_rawDesc = "" +
 	"\n" +
-	" admin/service/v1/i_network.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1ccatalog/service/v1/vpc.proto\x1a'catalog/service/v1/security_group.proto\x1a$gnostic/openapi/v3/annotations.proto2\x8c\x88\x02\n" +
-	"\x0eNetworkService\x12\xb1\x04\n" +
+	" admin/service/v1/i_network.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1ccatalog/service/v1/vpc.proto\x1a'catalog/service/v1/security_group.proto\x1a\x1dcatalog/service/v1/vnic.proto\x1a$gnostic/openapi/v3/annotations.proto2\xb0\x94\x02\n" +
+	"\x0eNetworkService\x12\xe9\x02\n" +
+	"\n" +
+	"CreateVNic\x12%.catalog.service.v1.CreateVNicRequest\x1a .catalog.service.v1.VNicResponse\"\x91\x02\xbaG\xe6\x01B\x96\x01\x12\x93\x01\n" +
+	"\x03200\x12\x8b\x01\n" +
+	"\x88\x01\n" +
+	"OAccepted or persisted VNIC snapshot; inspect state and operation for completion\x1a5\n" +
+	"3\n" +
+	"\x10application/json\x12\x1f\n" +
+	"\x1d\x12\x1b\n" +
+	"\x19#/components/schemas/VNicZ\x10\n" +
+	"\x0e\n" +
+	"\n" +
+	"BearerAuth\x12\x00Z9\n" +
+	"\x11\n" +
+	"\rAccessKeyAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x02!:\x01*b\x04vnic\"\x16/api/v1/networks/vnics\x12\xea\x02\n" +
+	"\aGetVNic\x12\".catalog.service.v1.GetVNicRequest\x1a .catalog.service.v1.VNicResponse\"\x98\x02\xbaG\xe6\x01B\x96\x01\x12\x93\x01\n" +
+	"\x03200\x12\x8b\x01\n" +
+	"\x88\x01\n" +
+	"OAccepted or persisted VNIC snapshot; inspect state and operation for completion\x1a5\n" +
+	"3\n" +
+	"\x10application/json\x12\x1f\n" +
+	"\x1d\x12\x1b\n" +
+	"\x19#/components/schemas/VNicZ\x10\n" +
+	"\x0e\n" +
+	"\n" +
+	"BearerAuth\x12\x00Z9\n" +
+	"\x11\n" +
+	"\rAccessKeyAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x02(b\x04vnic\x12 /api/v1/networks/vnics/{vnic_id}\x12\xc8\x01\n" +
+	"\tListVNics\x12$.catalog.service.v1.ListVNicsRequest\x1a%.catalog.service.v1.ListVNicsResponse\"n\xbaGMZ\x10\n" +
+	"\x0e\n" +
+	"\n" +
+	"BearerAuth\x12\x00Z9\n" +
+	"\x11\n" +
+	"\rAccessKeyAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/networks/vnics\x12\xf0\x02\n" +
+	"\n" +
+	"DeleteVNic\x12%.catalog.service.v1.DeleteVNicRequest\x1a .catalog.service.v1.VNicResponse\"\x98\x02\xbaG\xe6\x01B\x96\x01\x12\x93\x01\n" +
+	"\x03200\x12\x8b\x01\n" +
+	"\x88\x01\n" +
+	"OAccepted or persisted VNIC snapshot; inspect state and operation for completion\x1a5\n" +
+	"3\n" +
+	"\x10application/json\x12\x1f\n" +
+	"\x1d\x12\x1b\n" +
+	"\x19#/components/schemas/VNicZ\x10\n" +
+	"\x0e\n" +
+	"\n" +
+	"BearerAuth\x12\x00Z9\n" +
+	"\x11\n" +
+	"\rAccessKeyAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x02(b\x04vnic* /api/v1/networks/vnics/{vnic_id}\x12\x8a\x02\n" +
+	"\x16ListVNicBindingTargets\x121.catalog.service.v1.ListVNicBindingTargetsRequest\x1a2.catalog.service.v1.ListVNicBindingTargetsResponse\"\x88\x01\xbaGMZ\x10\n" +
+	"\x0e\n" +
+	"\n" +
+	"BearerAuth\x12\x00Z9\n" +
+	"\x11\n" +
+	"\rAccessKeyAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureAuth\x12\x00\n" +
+	"\x11\n" +
+	"\rSignatureTime\x12\x00\x82\xd3\xe4\x93\x022\x120/api/v1/networks/vnics/{vnic_id}/binding-targets\x12\xb1\x04\n" +
 	"\x14GetEIPSecurityGroups\x12/.catalog.service.v1.GetEIPSecurityGroupsRequest\x1a0.catalog.service.v1.SetEIPSecurityGroupsResponse\"\xb5\x03\xbaG\xfb\x02\x120GetEIPSecurityGroups in the authenticated tenant\x1a\xf9\x01Requires current user or API Key permission and NETWORK subscription. Tenant and actor are reconstructed from the authenticated context. Mutations preserve persisted resource and operation snapshots; acceptance does not prove data-plane enforcement.Z\x10\n" +
 	"\x0e\n" +
 	"\n" +
@@ -1038,155 +1111,173 @@ const file_admin_service_v1_i_network_proto_rawDesc = "" +
 	"\x14com.admin.service.v1B\rINetworkProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var file_admin_service_v1_i_network_proto_goTypes = []any{
-	(*v1.GetEIPSecurityGroupsRequest)(nil),       // 0: catalog.service.v1.GetEIPSecurityGroupsRequest
-	(*v1.GetSecurityGroupOperationRequest)(nil),  // 1: catalog.service.v1.GetSecurityGroupOperationRequest
-	(*v1.CreateSecurityGroupRequest)(nil),        // 2: catalog.service.v1.CreateSecurityGroupRequest
-	(*v1.GetSecurityGroupRequest)(nil),           // 3: catalog.service.v1.GetSecurityGroupRequest
-	(*v1.ListSecurityGroupsRequest)(nil),         // 4: catalog.service.v1.ListSecurityGroupsRequest
-	(*v1.UpdateSecurityGroupRequest)(nil),        // 5: catalog.service.v1.UpdateSecurityGroupRequest
-	(*v1.DeleteSecurityGroupRequest)(nil),        // 6: catalog.service.v1.DeleteSecurityGroupRequest
-	(*v1.ListSecurityGroupRulesRequest)(nil),     // 7: catalog.service.v1.ListSecurityGroupRulesRequest
-	(*v1.CreateSecurityGroupRuleRequest)(nil),    // 8: catalog.service.v1.CreateSecurityGroupRuleRequest
-	(*v1.UpdateSecurityGroupRuleRequest)(nil),    // 9: catalog.service.v1.UpdateSecurityGroupRuleRequest
-	(*v1.DeleteSecurityGroupRuleRequest)(nil),    // 10: catalog.service.v1.DeleteSecurityGroupRuleRequest
-	(*v1.ListSecurityGroupBindingsRequest)(nil),  // 11: catalog.service.v1.ListSecurityGroupBindingsRequest
-	(*v1.SetEIPSecurityGroupsRequest)(nil),       // 12: catalog.service.v1.SetEIPSecurityGroupsRequest
-	(*v1.ListVPCCIDRPresetsRequest)(nil),         // 13: catalog.service.v1.ListVPCCIDRPresetsRequest
-	(*v1.GetVPCRequest)(nil),                     // 14: catalog.service.v1.GetVPCRequest
-	(*v1.ListVPCsRequest)(nil),                   // 15: catalog.service.v1.ListVPCsRequest
-	(*v1.CreateVPCRequest)(nil),                  // 16: catalog.service.v1.CreateVPCRequest
-	(*v1.DeleteVPCRequest)(nil),                  // 17: catalog.service.v1.DeleteVPCRequest
-	(*v1.GetOperationRequest)(nil),               // 18: catalog.service.v1.GetOperationRequest
-	(*v1.GetEIPRequest)(nil),                     // 19: catalog.service.v1.GetEIPRequest
-	(*v1.ListEIPsRequest)(nil),                   // 20: catalog.service.v1.ListEIPsRequest
-	(*v1.CreateEIPRequest)(nil),                  // 21: catalog.service.v1.CreateEIPRequest
-	(*v1.DeleteEIPRequest)(nil),                  // 22: catalog.service.v1.DeleteEIPRequest
-	(*v1.GetVPCSnatRequest)(nil),                 // 23: catalog.service.v1.GetVPCSnatRequest
-	(*v1.BindVPCSnatRequest)(nil),                // 24: catalog.service.v1.BindVPCSnatRequest
-	(*v1.CreateSubnetRequest)(nil),               // 25: catalog.service.v1.CreateSubnetRequest
-	(*v1.GetSubnetRequest)(nil),                  // 26: catalog.service.v1.GetSubnetRequest
-	(*v1.ListSubnetsRequest)(nil),                // 27: catalog.service.v1.ListSubnetsRequest
-	(*v1.DeleteSubnetRequest)(nil),               // 28: catalog.service.v1.DeleteSubnetRequest
-	(*v1.GetVPCSnatBindingRequest)(nil),          // 29: catalog.service.v1.GetVPCSnatBindingRequest
-	(*v1.SetVPCSnatEnabledRequest)(nil),          // 30: catalog.service.v1.SetVPCSnatEnabledRequest
-	(*v1.DeleteVPCSnatBindingRequest)(nil),       // 31: catalog.service.v1.DeleteVPCSnatBindingRequest
-	(*v1.CreateLoadBalancerRequest)(nil),         // 32: catalog.service.v1.CreateLoadBalancerRequest
-	(*v1.GetLoadBalancerRequest)(nil),            // 33: catalog.service.v1.GetLoadBalancerRequest
-	(*v1.ListLoadBalancersRequest)(nil),          // 34: catalog.service.v1.ListLoadBalancersRequest
-	(*v1.UpdateLoadBalancerRequest)(nil),         // 35: catalog.service.v1.UpdateLoadBalancerRequest
-	(*v1.DeleteLoadBalancerRequest)(nil),         // 36: catalog.service.v1.DeleteLoadBalancerRequest
-	(*v1.GetLoadBalancerOperationRequest)(nil),   // 37: catalog.service.v1.GetLoadBalancerOperationRequest
-	(*v1.SetEIPSecurityGroupsResponse)(nil),      // 38: catalog.service.v1.SetEIPSecurityGroupsResponse
-	(*v1.GetOperationResponse)(nil),              // 39: catalog.service.v1.GetOperationResponse
-	(*v1.SecurityGroupResponse)(nil),             // 40: catalog.service.v1.SecurityGroupResponse
-	(*v1.ListSecurityGroupsResponse)(nil),        // 41: catalog.service.v1.ListSecurityGroupsResponse
-	(*v1.ListSecurityGroupRulesResponse)(nil),    // 42: catalog.service.v1.ListSecurityGroupRulesResponse
-	(*v1.SecurityGroupRuleResponse)(nil),         // 43: catalog.service.v1.SecurityGroupRuleResponse
-	(*v1.ListSecurityGroupBindingsResponse)(nil), // 44: catalog.service.v1.ListSecurityGroupBindingsResponse
-	(*v1.ListVPCCIDRPresetsResponse)(nil),        // 45: catalog.service.v1.ListVPCCIDRPresetsResponse
-	(*v1.GetVPCResponse)(nil),                    // 46: catalog.service.v1.GetVPCResponse
-	(*v1.ListVPCsResponse)(nil),                  // 47: catalog.service.v1.ListVPCsResponse
-	(*v1.CreateVPCResponse)(nil),                 // 48: catalog.service.v1.CreateVPCResponse
-	(*v1.DeleteVPCResponse)(nil),                 // 49: catalog.service.v1.DeleteVPCResponse
-	(*v1.GetEIPResponse)(nil),                    // 50: catalog.service.v1.GetEIPResponse
-	(*v1.ListEIPsResponse)(nil),                  // 51: catalog.service.v1.ListEIPsResponse
-	(*v1.CreateEIPResponse)(nil),                 // 52: catalog.service.v1.CreateEIPResponse
-	(*v1.DeleteEIPResponse)(nil),                 // 53: catalog.service.v1.DeleteEIPResponse
-	(*v1.GetVPCSnatResponse)(nil),                // 54: catalog.service.v1.GetVPCSnatResponse
-	(*v1.BindVPCSnatResponse)(nil),               // 55: catalog.service.v1.BindVPCSnatResponse
-	(*v1.CreateSubnetResponse)(nil),              // 56: catalog.service.v1.CreateSubnetResponse
-	(*v1.GetSubnetResponse)(nil),                 // 57: catalog.service.v1.GetSubnetResponse
-	(*v1.ListSubnetsResponse)(nil),               // 58: catalog.service.v1.ListSubnetsResponse
-	(*v1.DeleteSubnetResponse)(nil),              // 59: catalog.service.v1.DeleteSubnetResponse
-	(*v1.GetVPCSnatBindingResponse)(nil),         // 60: catalog.service.v1.GetVPCSnatBindingResponse
-	(*v1.SetVPCSnatEnabledResponse)(nil),         // 61: catalog.service.v1.SetVPCSnatEnabledResponse
-	(*v1.DeleteVPCSnatBindingResponse)(nil),      // 62: catalog.service.v1.DeleteVPCSnatBindingResponse
-	(*v1.CreateLoadBalancerResponse)(nil),        // 63: catalog.service.v1.CreateLoadBalancerResponse
-	(*v1.GetLoadBalancerResponse)(nil),           // 64: catalog.service.v1.GetLoadBalancerResponse
-	(*v1.ListLoadBalancersResponse)(nil),         // 65: catalog.service.v1.ListLoadBalancersResponse
-	(*v1.UpdateLoadBalancerResponse)(nil),        // 66: catalog.service.v1.UpdateLoadBalancerResponse
-	(*v1.DeleteLoadBalancerResponse)(nil),        // 67: catalog.service.v1.DeleteLoadBalancerResponse
-	(*v1.GetLoadBalancerOperationResponse)(nil),  // 68: catalog.service.v1.GetLoadBalancerOperationResponse
+	(*v1.CreateVNicRequest)(nil),                 // 0: catalog.service.v1.CreateVNicRequest
+	(*v1.GetVNicRequest)(nil),                    // 1: catalog.service.v1.GetVNicRequest
+	(*v1.ListVNicsRequest)(nil),                  // 2: catalog.service.v1.ListVNicsRequest
+	(*v1.DeleteVNicRequest)(nil),                 // 3: catalog.service.v1.DeleteVNicRequest
+	(*v1.ListVNicBindingTargetsRequest)(nil),     // 4: catalog.service.v1.ListVNicBindingTargetsRequest
+	(*v1.GetEIPSecurityGroupsRequest)(nil),       // 5: catalog.service.v1.GetEIPSecurityGroupsRequest
+	(*v1.GetSecurityGroupOperationRequest)(nil),  // 6: catalog.service.v1.GetSecurityGroupOperationRequest
+	(*v1.CreateSecurityGroupRequest)(nil),        // 7: catalog.service.v1.CreateSecurityGroupRequest
+	(*v1.GetSecurityGroupRequest)(nil),           // 8: catalog.service.v1.GetSecurityGroupRequest
+	(*v1.ListSecurityGroupsRequest)(nil),         // 9: catalog.service.v1.ListSecurityGroupsRequest
+	(*v1.UpdateSecurityGroupRequest)(nil),        // 10: catalog.service.v1.UpdateSecurityGroupRequest
+	(*v1.DeleteSecurityGroupRequest)(nil),        // 11: catalog.service.v1.DeleteSecurityGroupRequest
+	(*v1.ListSecurityGroupRulesRequest)(nil),     // 12: catalog.service.v1.ListSecurityGroupRulesRequest
+	(*v1.CreateSecurityGroupRuleRequest)(nil),    // 13: catalog.service.v1.CreateSecurityGroupRuleRequest
+	(*v1.UpdateSecurityGroupRuleRequest)(nil),    // 14: catalog.service.v1.UpdateSecurityGroupRuleRequest
+	(*v1.DeleteSecurityGroupRuleRequest)(nil),    // 15: catalog.service.v1.DeleteSecurityGroupRuleRequest
+	(*v1.ListSecurityGroupBindingsRequest)(nil),  // 16: catalog.service.v1.ListSecurityGroupBindingsRequest
+	(*v1.SetEIPSecurityGroupsRequest)(nil),       // 17: catalog.service.v1.SetEIPSecurityGroupsRequest
+	(*v1.ListVPCCIDRPresetsRequest)(nil),         // 18: catalog.service.v1.ListVPCCIDRPresetsRequest
+	(*v1.GetVPCRequest)(nil),                     // 19: catalog.service.v1.GetVPCRequest
+	(*v1.ListVPCsRequest)(nil),                   // 20: catalog.service.v1.ListVPCsRequest
+	(*v1.CreateVPCRequest)(nil),                  // 21: catalog.service.v1.CreateVPCRequest
+	(*v1.DeleteVPCRequest)(nil),                  // 22: catalog.service.v1.DeleteVPCRequest
+	(*v1.GetOperationRequest)(nil),               // 23: catalog.service.v1.GetOperationRequest
+	(*v1.GetEIPRequest)(nil),                     // 24: catalog.service.v1.GetEIPRequest
+	(*v1.ListEIPsRequest)(nil),                   // 25: catalog.service.v1.ListEIPsRequest
+	(*v1.CreateEIPRequest)(nil),                  // 26: catalog.service.v1.CreateEIPRequest
+	(*v1.DeleteEIPRequest)(nil),                  // 27: catalog.service.v1.DeleteEIPRequest
+	(*v1.GetVPCSnatRequest)(nil),                 // 28: catalog.service.v1.GetVPCSnatRequest
+	(*v1.BindVPCSnatRequest)(nil),                // 29: catalog.service.v1.BindVPCSnatRequest
+	(*v1.CreateSubnetRequest)(nil),               // 30: catalog.service.v1.CreateSubnetRequest
+	(*v1.GetSubnetRequest)(nil),                  // 31: catalog.service.v1.GetSubnetRequest
+	(*v1.ListSubnetsRequest)(nil),                // 32: catalog.service.v1.ListSubnetsRequest
+	(*v1.DeleteSubnetRequest)(nil),               // 33: catalog.service.v1.DeleteSubnetRequest
+	(*v1.GetVPCSnatBindingRequest)(nil),          // 34: catalog.service.v1.GetVPCSnatBindingRequest
+	(*v1.SetVPCSnatEnabledRequest)(nil),          // 35: catalog.service.v1.SetVPCSnatEnabledRequest
+	(*v1.DeleteVPCSnatBindingRequest)(nil),       // 36: catalog.service.v1.DeleteVPCSnatBindingRequest
+	(*v1.CreateLoadBalancerRequest)(nil),         // 37: catalog.service.v1.CreateLoadBalancerRequest
+	(*v1.GetLoadBalancerRequest)(nil),            // 38: catalog.service.v1.GetLoadBalancerRequest
+	(*v1.ListLoadBalancersRequest)(nil),          // 39: catalog.service.v1.ListLoadBalancersRequest
+	(*v1.UpdateLoadBalancerRequest)(nil),         // 40: catalog.service.v1.UpdateLoadBalancerRequest
+	(*v1.DeleteLoadBalancerRequest)(nil),         // 41: catalog.service.v1.DeleteLoadBalancerRequest
+	(*v1.GetLoadBalancerOperationRequest)(nil),   // 42: catalog.service.v1.GetLoadBalancerOperationRequest
+	(*v1.VNicResponse)(nil),                      // 43: catalog.service.v1.VNicResponse
+	(*v1.ListVNicsResponse)(nil),                 // 44: catalog.service.v1.ListVNicsResponse
+	(*v1.ListVNicBindingTargetsResponse)(nil),    // 45: catalog.service.v1.ListVNicBindingTargetsResponse
+	(*v1.SetEIPSecurityGroupsResponse)(nil),      // 46: catalog.service.v1.SetEIPSecurityGroupsResponse
+	(*v1.GetOperationResponse)(nil),              // 47: catalog.service.v1.GetOperationResponse
+	(*v1.SecurityGroupResponse)(nil),             // 48: catalog.service.v1.SecurityGroupResponse
+	(*v1.ListSecurityGroupsResponse)(nil),        // 49: catalog.service.v1.ListSecurityGroupsResponse
+	(*v1.ListSecurityGroupRulesResponse)(nil),    // 50: catalog.service.v1.ListSecurityGroupRulesResponse
+	(*v1.SecurityGroupRuleResponse)(nil),         // 51: catalog.service.v1.SecurityGroupRuleResponse
+	(*v1.ListSecurityGroupBindingsResponse)(nil), // 52: catalog.service.v1.ListSecurityGroupBindingsResponse
+	(*v1.ListVPCCIDRPresetsResponse)(nil),        // 53: catalog.service.v1.ListVPCCIDRPresetsResponse
+	(*v1.GetVPCResponse)(nil),                    // 54: catalog.service.v1.GetVPCResponse
+	(*v1.ListVPCsResponse)(nil),                  // 55: catalog.service.v1.ListVPCsResponse
+	(*v1.CreateVPCResponse)(nil),                 // 56: catalog.service.v1.CreateVPCResponse
+	(*v1.DeleteVPCResponse)(nil),                 // 57: catalog.service.v1.DeleteVPCResponse
+	(*v1.GetEIPResponse)(nil),                    // 58: catalog.service.v1.GetEIPResponse
+	(*v1.ListEIPsResponse)(nil),                  // 59: catalog.service.v1.ListEIPsResponse
+	(*v1.CreateEIPResponse)(nil),                 // 60: catalog.service.v1.CreateEIPResponse
+	(*v1.DeleteEIPResponse)(nil),                 // 61: catalog.service.v1.DeleteEIPResponse
+	(*v1.GetVPCSnatResponse)(nil),                // 62: catalog.service.v1.GetVPCSnatResponse
+	(*v1.BindVPCSnatResponse)(nil),               // 63: catalog.service.v1.BindVPCSnatResponse
+	(*v1.CreateSubnetResponse)(nil),              // 64: catalog.service.v1.CreateSubnetResponse
+	(*v1.GetSubnetResponse)(nil),                 // 65: catalog.service.v1.GetSubnetResponse
+	(*v1.ListSubnetsResponse)(nil),               // 66: catalog.service.v1.ListSubnetsResponse
+	(*v1.DeleteSubnetResponse)(nil),              // 67: catalog.service.v1.DeleteSubnetResponse
+	(*v1.GetVPCSnatBindingResponse)(nil),         // 68: catalog.service.v1.GetVPCSnatBindingResponse
+	(*v1.SetVPCSnatEnabledResponse)(nil),         // 69: catalog.service.v1.SetVPCSnatEnabledResponse
+	(*v1.DeleteVPCSnatBindingResponse)(nil),      // 70: catalog.service.v1.DeleteVPCSnatBindingResponse
+	(*v1.CreateLoadBalancerResponse)(nil),        // 71: catalog.service.v1.CreateLoadBalancerResponse
+	(*v1.GetLoadBalancerResponse)(nil),           // 72: catalog.service.v1.GetLoadBalancerResponse
+	(*v1.ListLoadBalancersResponse)(nil),         // 73: catalog.service.v1.ListLoadBalancersResponse
+	(*v1.UpdateLoadBalancerResponse)(nil),        // 74: catalog.service.v1.UpdateLoadBalancerResponse
+	(*v1.DeleteLoadBalancerResponse)(nil),        // 75: catalog.service.v1.DeleteLoadBalancerResponse
+	(*v1.GetLoadBalancerOperationResponse)(nil),  // 76: catalog.service.v1.GetLoadBalancerOperationResponse
 }
 var file_admin_service_v1_i_network_proto_depIdxs = []int32{
-	0,  // 0: admin.service.v1.NetworkService.GetEIPSecurityGroups:input_type -> catalog.service.v1.GetEIPSecurityGroupsRequest
-	1,  // 1: admin.service.v1.NetworkService.GetSecurityGroupOperation:input_type -> catalog.service.v1.GetSecurityGroupOperationRequest
-	2,  // 2: admin.service.v1.NetworkService.CreateSecurityGroup:input_type -> catalog.service.v1.CreateSecurityGroupRequest
-	3,  // 3: admin.service.v1.NetworkService.GetSecurityGroup:input_type -> catalog.service.v1.GetSecurityGroupRequest
-	4,  // 4: admin.service.v1.NetworkService.ListSecurityGroups:input_type -> catalog.service.v1.ListSecurityGroupsRequest
-	5,  // 5: admin.service.v1.NetworkService.UpdateSecurityGroup:input_type -> catalog.service.v1.UpdateSecurityGroupRequest
-	6,  // 6: admin.service.v1.NetworkService.DeleteSecurityGroup:input_type -> catalog.service.v1.DeleteSecurityGroupRequest
-	7,  // 7: admin.service.v1.NetworkService.ListSecurityGroupRules:input_type -> catalog.service.v1.ListSecurityGroupRulesRequest
-	8,  // 8: admin.service.v1.NetworkService.CreateSecurityGroupRule:input_type -> catalog.service.v1.CreateSecurityGroupRuleRequest
-	9,  // 9: admin.service.v1.NetworkService.UpdateSecurityGroupRule:input_type -> catalog.service.v1.UpdateSecurityGroupRuleRequest
-	10, // 10: admin.service.v1.NetworkService.DeleteSecurityGroupRule:input_type -> catalog.service.v1.DeleteSecurityGroupRuleRequest
-	11, // 11: admin.service.v1.NetworkService.ListSecurityGroupBindings:input_type -> catalog.service.v1.ListSecurityGroupBindingsRequest
-	12, // 12: admin.service.v1.NetworkService.SetEIPSecurityGroups:input_type -> catalog.service.v1.SetEIPSecurityGroupsRequest
-	13, // 13: admin.service.v1.NetworkService.ListVPCCIDRPresets:input_type -> catalog.service.v1.ListVPCCIDRPresetsRequest
-	14, // 14: admin.service.v1.NetworkService.GetVPC:input_type -> catalog.service.v1.GetVPCRequest
-	15, // 15: admin.service.v1.NetworkService.ListVPCs:input_type -> catalog.service.v1.ListVPCsRequest
-	16, // 16: admin.service.v1.NetworkService.CreateVPC:input_type -> catalog.service.v1.CreateVPCRequest
-	17, // 17: admin.service.v1.NetworkService.DeleteVPC:input_type -> catalog.service.v1.DeleteVPCRequest
-	18, // 18: admin.service.v1.NetworkService.GetOperation:input_type -> catalog.service.v1.GetOperationRequest
-	19, // 19: admin.service.v1.NetworkService.GetEIP:input_type -> catalog.service.v1.GetEIPRequest
-	20, // 20: admin.service.v1.NetworkService.ListEIPs:input_type -> catalog.service.v1.ListEIPsRequest
-	21, // 21: admin.service.v1.NetworkService.CreateEIP:input_type -> catalog.service.v1.CreateEIPRequest
-	22, // 22: admin.service.v1.NetworkService.DeleteEIP:input_type -> catalog.service.v1.DeleteEIPRequest
-	23, // 23: admin.service.v1.NetworkService.GetVPCSnat:input_type -> catalog.service.v1.GetVPCSnatRequest
-	24, // 24: admin.service.v1.NetworkService.BindVPCSnat:input_type -> catalog.service.v1.BindVPCSnatRequest
-	25, // 25: admin.service.v1.NetworkService.CreateSubnet:input_type -> catalog.service.v1.CreateSubnetRequest
-	26, // 26: admin.service.v1.NetworkService.GetSubnet:input_type -> catalog.service.v1.GetSubnetRequest
-	27, // 27: admin.service.v1.NetworkService.ListSubnets:input_type -> catalog.service.v1.ListSubnetsRequest
-	28, // 28: admin.service.v1.NetworkService.DeleteSubnet:input_type -> catalog.service.v1.DeleteSubnetRequest
-	29, // 29: admin.service.v1.NetworkService.GetVPCSnatBinding:input_type -> catalog.service.v1.GetVPCSnatBindingRequest
-	30, // 30: admin.service.v1.NetworkService.SetVPCSnatEnabled:input_type -> catalog.service.v1.SetVPCSnatEnabledRequest
-	31, // 31: admin.service.v1.NetworkService.DeleteVPCSnatBinding:input_type -> catalog.service.v1.DeleteVPCSnatBindingRequest
-	32, // 32: admin.service.v1.NetworkService.CreateLoadBalancer:input_type -> catalog.service.v1.CreateLoadBalancerRequest
-	33, // 33: admin.service.v1.NetworkService.GetLoadBalancer:input_type -> catalog.service.v1.GetLoadBalancerRequest
-	34, // 34: admin.service.v1.NetworkService.ListLoadBalancers:input_type -> catalog.service.v1.ListLoadBalancersRequest
-	35, // 35: admin.service.v1.NetworkService.UpdateLoadBalancer:input_type -> catalog.service.v1.UpdateLoadBalancerRequest
-	36, // 36: admin.service.v1.NetworkService.DeleteLoadBalancer:input_type -> catalog.service.v1.DeleteLoadBalancerRequest
-	37, // 37: admin.service.v1.NetworkService.GetLoadBalancerOperation:input_type -> catalog.service.v1.GetLoadBalancerOperationRequest
-	38, // 38: admin.service.v1.NetworkService.GetEIPSecurityGroups:output_type -> catalog.service.v1.SetEIPSecurityGroupsResponse
-	39, // 39: admin.service.v1.NetworkService.GetSecurityGroupOperation:output_type -> catalog.service.v1.GetOperationResponse
-	40, // 40: admin.service.v1.NetworkService.CreateSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
-	40, // 41: admin.service.v1.NetworkService.GetSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
-	41, // 42: admin.service.v1.NetworkService.ListSecurityGroups:output_type -> catalog.service.v1.ListSecurityGroupsResponse
-	40, // 43: admin.service.v1.NetworkService.UpdateSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
-	40, // 44: admin.service.v1.NetworkService.DeleteSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
-	42, // 45: admin.service.v1.NetworkService.ListSecurityGroupRules:output_type -> catalog.service.v1.ListSecurityGroupRulesResponse
-	43, // 46: admin.service.v1.NetworkService.CreateSecurityGroupRule:output_type -> catalog.service.v1.SecurityGroupRuleResponse
-	43, // 47: admin.service.v1.NetworkService.UpdateSecurityGroupRule:output_type -> catalog.service.v1.SecurityGroupRuleResponse
-	43, // 48: admin.service.v1.NetworkService.DeleteSecurityGroupRule:output_type -> catalog.service.v1.SecurityGroupRuleResponse
-	44, // 49: admin.service.v1.NetworkService.ListSecurityGroupBindings:output_type -> catalog.service.v1.ListSecurityGroupBindingsResponse
-	38, // 50: admin.service.v1.NetworkService.SetEIPSecurityGroups:output_type -> catalog.service.v1.SetEIPSecurityGroupsResponse
-	45, // 51: admin.service.v1.NetworkService.ListVPCCIDRPresets:output_type -> catalog.service.v1.ListVPCCIDRPresetsResponse
-	46, // 52: admin.service.v1.NetworkService.GetVPC:output_type -> catalog.service.v1.GetVPCResponse
-	47, // 53: admin.service.v1.NetworkService.ListVPCs:output_type -> catalog.service.v1.ListVPCsResponse
-	48, // 54: admin.service.v1.NetworkService.CreateVPC:output_type -> catalog.service.v1.CreateVPCResponse
-	49, // 55: admin.service.v1.NetworkService.DeleteVPC:output_type -> catalog.service.v1.DeleteVPCResponse
-	39, // 56: admin.service.v1.NetworkService.GetOperation:output_type -> catalog.service.v1.GetOperationResponse
-	50, // 57: admin.service.v1.NetworkService.GetEIP:output_type -> catalog.service.v1.GetEIPResponse
-	51, // 58: admin.service.v1.NetworkService.ListEIPs:output_type -> catalog.service.v1.ListEIPsResponse
-	52, // 59: admin.service.v1.NetworkService.CreateEIP:output_type -> catalog.service.v1.CreateEIPResponse
-	53, // 60: admin.service.v1.NetworkService.DeleteEIP:output_type -> catalog.service.v1.DeleteEIPResponse
-	54, // 61: admin.service.v1.NetworkService.GetVPCSnat:output_type -> catalog.service.v1.GetVPCSnatResponse
-	55, // 62: admin.service.v1.NetworkService.BindVPCSnat:output_type -> catalog.service.v1.BindVPCSnatResponse
-	56, // 63: admin.service.v1.NetworkService.CreateSubnet:output_type -> catalog.service.v1.CreateSubnetResponse
-	57, // 64: admin.service.v1.NetworkService.GetSubnet:output_type -> catalog.service.v1.GetSubnetResponse
-	58, // 65: admin.service.v1.NetworkService.ListSubnets:output_type -> catalog.service.v1.ListSubnetsResponse
-	59, // 66: admin.service.v1.NetworkService.DeleteSubnet:output_type -> catalog.service.v1.DeleteSubnetResponse
-	60, // 67: admin.service.v1.NetworkService.GetVPCSnatBinding:output_type -> catalog.service.v1.GetVPCSnatBindingResponse
-	61, // 68: admin.service.v1.NetworkService.SetVPCSnatEnabled:output_type -> catalog.service.v1.SetVPCSnatEnabledResponse
-	62, // 69: admin.service.v1.NetworkService.DeleteVPCSnatBinding:output_type -> catalog.service.v1.DeleteVPCSnatBindingResponse
-	63, // 70: admin.service.v1.NetworkService.CreateLoadBalancer:output_type -> catalog.service.v1.CreateLoadBalancerResponse
-	64, // 71: admin.service.v1.NetworkService.GetLoadBalancer:output_type -> catalog.service.v1.GetLoadBalancerResponse
-	65, // 72: admin.service.v1.NetworkService.ListLoadBalancers:output_type -> catalog.service.v1.ListLoadBalancersResponse
-	66, // 73: admin.service.v1.NetworkService.UpdateLoadBalancer:output_type -> catalog.service.v1.UpdateLoadBalancerResponse
-	67, // 74: admin.service.v1.NetworkService.DeleteLoadBalancer:output_type -> catalog.service.v1.DeleteLoadBalancerResponse
-	68, // 75: admin.service.v1.NetworkService.GetLoadBalancerOperation:output_type -> catalog.service.v1.GetLoadBalancerOperationResponse
-	38, // [38:76] is the sub-list for method output_type
-	0,  // [0:38] is the sub-list for method input_type
+	0,  // 0: admin.service.v1.NetworkService.CreateVNic:input_type -> catalog.service.v1.CreateVNicRequest
+	1,  // 1: admin.service.v1.NetworkService.GetVNic:input_type -> catalog.service.v1.GetVNicRequest
+	2,  // 2: admin.service.v1.NetworkService.ListVNics:input_type -> catalog.service.v1.ListVNicsRequest
+	3,  // 3: admin.service.v1.NetworkService.DeleteVNic:input_type -> catalog.service.v1.DeleteVNicRequest
+	4,  // 4: admin.service.v1.NetworkService.ListVNicBindingTargets:input_type -> catalog.service.v1.ListVNicBindingTargetsRequest
+	5,  // 5: admin.service.v1.NetworkService.GetEIPSecurityGroups:input_type -> catalog.service.v1.GetEIPSecurityGroupsRequest
+	6,  // 6: admin.service.v1.NetworkService.GetSecurityGroupOperation:input_type -> catalog.service.v1.GetSecurityGroupOperationRequest
+	7,  // 7: admin.service.v1.NetworkService.CreateSecurityGroup:input_type -> catalog.service.v1.CreateSecurityGroupRequest
+	8,  // 8: admin.service.v1.NetworkService.GetSecurityGroup:input_type -> catalog.service.v1.GetSecurityGroupRequest
+	9,  // 9: admin.service.v1.NetworkService.ListSecurityGroups:input_type -> catalog.service.v1.ListSecurityGroupsRequest
+	10, // 10: admin.service.v1.NetworkService.UpdateSecurityGroup:input_type -> catalog.service.v1.UpdateSecurityGroupRequest
+	11, // 11: admin.service.v1.NetworkService.DeleteSecurityGroup:input_type -> catalog.service.v1.DeleteSecurityGroupRequest
+	12, // 12: admin.service.v1.NetworkService.ListSecurityGroupRules:input_type -> catalog.service.v1.ListSecurityGroupRulesRequest
+	13, // 13: admin.service.v1.NetworkService.CreateSecurityGroupRule:input_type -> catalog.service.v1.CreateSecurityGroupRuleRequest
+	14, // 14: admin.service.v1.NetworkService.UpdateSecurityGroupRule:input_type -> catalog.service.v1.UpdateSecurityGroupRuleRequest
+	15, // 15: admin.service.v1.NetworkService.DeleteSecurityGroupRule:input_type -> catalog.service.v1.DeleteSecurityGroupRuleRequest
+	16, // 16: admin.service.v1.NetworkService.ListSecurityGroupBindings:input_type -> catalog.service.v1.ListSecurityGroupBindingsRequest
+	17, // 17: admin.service.v1.NetworkService.SetEIPSecurityGroups:input_type -> catalog.service.v1.SetEIPSecurityGroupsRequest
+	18, // 18: admin.service.v1.NetworkService.ListVPCCIDRPresets:input_type -> catalog.service.v1.ListVPCCIDRPresetsRequest
+	19, // 19: admin.service.v1.NetworkService.GetVPC:input_type -> catalog.service.v1.GetVPCRequest
+	20, // 20: admin.service.v1.NetworkService.ListVPCs:input_type -> catalog.service.v1.ListVPCsRequest
+	21, // 21: admin.service.v1.NetworkService.CreateVPC:input_type -> catalog.service.v1.CreateVPCRequest
+	22, // 22: admin.service.v1.NetworkService.DeleteVPC:input_type -> catalog.service.v1.DeleteVPCRequest
+	23, // 23: admin.service.v1.NetworkService.GetOperation:input_type -> catalog.service.v1.GetOperationRequest
+	24, // 24: admin.service.v1.NetworkService.GetEIP:input_type -> catalog.service.v1.GetEIPRequest
+	25, // 25: admin.service.v1.NetworkService.ListEIPs:input_type -> catalog.service.v1.ListEIPsRequest
+	26, // 26: admin.service.v1.NetworkService.CreateEIP:input_type -> catalog.service.v1.CreateEIPRequest
+	27, // 27: admin.service.v1.NetworkService.DeleteEIP:input_type -> catalog.service.v1.DeleteEIPRequest
+	28, // 28: admin.service.v1.NetworkService.GetVPCSnat:input_type -> catalog.service.v1.GetVPCSnatRequest
+	29, // 29: admin.service.v1.NetworkService.BindVPCSnat:input_type -> catalog.service.v1.BindVPCSnatRequest
+	30, // 30: admin.service.v1.NetworkService.CreateSubnet:input_type -> catalog.service.v1.CreateSubnetRequest
+	31, // 31: admin.service.v1.NetworkService.GetSubnet:input_type -> catalog.service.v1.GetSubnetRequest
+	32, // 32: admin.service.v1.NetworkService.ListSubnets:input_type -> catalog.service.v1.ListSubnetsRequest
+	33, // 33: admin.service.v1.NetworkService.DeleteSubnet:input_type -> catalog.service.v1.DeleteSubnetRequest
+	34, // 34: admin.service.v1.NetworkService.GetVPCSnatBinding:input_type -> catalog.service.v1.GetVPCSnatBindingRequest
+	35, // 35: admin.service.v1.NetworkService.SetVPCSnatEnabled:input_type -> catalog.service.v1.SetVPCSnatEnabledRequest
+	36, // 36: admin.service.v1.NetworkService.DeleteVPCSnatBinding:input_type -> catalog.service.v1.DeleteVPCSnatBindingRequest
+	37, // 37: admin.service.v1.NetworkService.CreateLoadBalancer:input_type -> catalog.service.v1.CreateLoadBalancerRequest
+	38, // 38: admin.service.v1.NetworkService.GetLoadBalancer:input_type -> catalog.service.v1.GetLoadBalancerRequest
+	39, // 39: admin.service.v1.NetworkService.ListLoadBalancers:input_type -> catalog.service.v1.ListLoadBalancersRequest
+	40, // 40: admin.service.v1.NetworkService.UpdateLoadBalancer:input_type -> catalog.service.v1.UpdateLoadBalancerRequest
+	41, // 41: admin.service.v1.NetworkService.DeleteLoadBalancer:input_type -> catalog.service.v1.DeleteLoadBalancerRequest
+	42, // 42: admin.service.v1.NetworkService.GetLoadBalancerOperation:input_type -> catalog.service.v1.GetLoadBalancerOperationRequest
+	43, // 43: admin.service.v1.NetworkService.CreateVNic:output_type -> catalog.service.v1.VNicResponse
+	43, // 44: admin.service.v1.NetworkService.GetVNic:output_type -> catalog.service.v1.VNicResponse
+	44, // 45: admin.service.v1.NetworkService.ListVNics:output_type -> catalog.service.v1.ListVNicsResponse
+	43, // 46: admin.service.v1.NetworkService.DeleteVNic:output_type -> catalog.service.v1.VNicResponse
+	45, // 47: admin.service.v1.NetworkService.ListVNicBindingTargets:output_type -> catalog.service.v1.ListVNicBindingTargetsResponse
+	46, // 48: admin.service.v1.NetworkService.GetEIPSecurityGroups:output_type -> catalog.service.v1.SetEIPSecurityGroupsResponse
+	47, // 49: admin.service.v1.NetworkService.GetSecurityGroupOperation:output_type -> catalog.service.v1.GetOperationResponse
+	48, // 50: admin.service.v1.NetworkService.CreateSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
+	48, // 51: admin.service.v1.NetworkService.GetSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
+	49, // 52: admin.service.v1.NetworkService.ListSecurityGroups:output_type -> catalog.service.v1.ListSecurityGroupsResponse
+	48, // 53: admin.service.v1.NetworkService.UpdateSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
+	48, // 54: admin.service.v1.NetworkService.DeleteSecurityGroup:output_type -> catalog.service.v1.SecurityGroupResponse
+	50, // 55: admin.service.v1.NetworkService.ListSecurityGroupRules:output_type -> catalog.service.v1.ListSecurityGroupRulesResponse
+	51, // 56: admin.service.v1.NetworkService.CreateSecurityGroupRule:output_type -> catalog.service.v1.SecurityGroupRuleResponse
+	51, // 57: admin.service.v1.NetworkService.UpdateSecurityGroupRule:output_type -> catalog.service.v1.SecurityGroupRuleResponse
+	51, // 58: admin.service.v1.NetworkService.DeleteSecurityGroupRule:output_type -> catalog.service.v1.SecurityGroupRuleResponse
+	52, // 59: admin.service.v1.NetworkService.ListSecurityGroupBindings:output_type -> catalog.service.v1.ListSecurityGroupBindingsResponse
+	46, // 60: admin.service.v1.NetworkService.SetEIPSecurityGroups:output_type -> catalog.service.v1.SetEIPSecurityGroupsResponse
+	53, // 61: admin.service.v1.NetworkService.ListVPCCIDRPresets:output_type -> catalog.service.v1.ListVPCCIDRPresetsResponse
+	54, // 62: admin.service.v1.NetworkService.GetVPC:output_type -> catalog.service.v1.GetVPCResponse
+	55, // 63: admin.service.v1.NetworkService.ListVPCs:output_type -> catalog.service.v1.ListVPCsResponse
+	56, // 64: admin.service.v1.NetworkService.CreateVPC:output_type -> catalog.service.v1.CreateVPCResponse
+	57, // 65: admin.service.v1.NetworkService.DeleteVPC:output_type -> catalog.service.v1.DeleteVPCResponse
+	47, // 66: admin.service.v1.NetworkService.GetOperation:output_type -> catalog.service.v1.GetOperationResponse
+	58, // 67: admin.service.v1.NetworkService.GetEIP:output_type -> catalog.service.v1.GetEIPResponse
+	59, // 68: admin.service.v1.NetworkService.ListEIPs:output_type -> catalog.service.v1.ListEIPsResponse
+	60, // 69: admin.service.v1.NetworkService.CreateEIP:output_type -> catalog.service.v1.CreateEIPResponse
+	61, // 70: admin.service.v1.NetworkService.DeleteEIP:output_type -> catalog.service.v1.DeleteEIPResponse
+	62, // 71: admin.service.v1.NetworkService.GetVPCSnat:output_type -> catalog.service.v1.GetVPCSnatResponse
+	63, // 72: admin.service.v1.NetworkService.BindVPCSnat:output_type -> catalog.service.v1.BindVPCSnatResponse
+	64, // 73: admin.service.v1.NetworkService.CreateSubnet:output_type -> catalog.service.v1.CreateSubnetResponse
+	65, // 74: admin.service.v1.NetworkService.GetSubnet:output_type -> catalog.service.v1.GetSubnetResponse
+	66, // 75: admin.service.v1.NetworkService.ListSubnets:output_type -> catalog.service.v1.ListSubnetsResponse
+	67, // 76: admin.service.v1.NetworkService.DeleteSubnet:output_type -> catalog.service.v1.DeleteSubnetResponse
+	68, // 77: admin.service.v1.NetworkService.GetVPCSnatBinding:output_type -> catalog.service.v1.GetVPCSnatBindingResponse
+	69, // 78: admin.service.v1.NetworkService.SetVPCSnatEnabled:output_type -> catalog.service.v1.SetVPCSnatEnabledResponse
+	70, // 79: admin.service.v1.NetworkService.DeleteVPCSnatBinding:output_type -> catalog.service.v1.DeleteVPCSnatBindingResponse
+	71, // 80: admin.service.v1.NetworkService.CreateLoadBalancer:output_type -> catalog.service.v1.CreateLoadBalancerResponse
+	72, // 81: admin.service.v1.NetworkService.GetLoadBalancer:output_type -> catalog.service.v1.GetLoadBalancerResponse
+	73, // 82: admin.service.v1.NetworkService.ListLoadBalancers:output_type -> catalog.service.v1.ListLoadBalancersResponse
+	74, // 83: admin.service.v1.NetworkService.UpdateLoadBalancer:output_type -> catalog.service.v1.UpdateLoadBalancerResponse
+	75, // 84: admin.service.v1.NetworkService.DeleteLoadBalancer:output_type -> catalog.service.v1.DeleteLoadBalancerResponse
+	76, // 85: admin.service.v1.NetworkService.GetLoadBalancerOperation:output_type -> catalog.service.v1.GetLoadBalancerOperationResponse
+	43, // [43:86] is the sub-list for method output_type
+	0,  // [0:43] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

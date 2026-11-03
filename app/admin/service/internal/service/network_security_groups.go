@@ -316,7 +316,7 @@ func (s *NetworkService) DeleteSecurityGroupRule(ctx context.Context, req *view.
 	return securityGroupRuleMutation(reply, t, req.SecurityGroupId, req.RuleId)
 }
 func (s *NetworkService) ListSecurityGroupBindings(ctx context.Context, req *view.ListSecurityGroupBindingsRequest) (*view.ListSecurityGroupBindingsResponse, error) {
-	if req == nil || !securityGroupIDPattern.MatchString(req.SecurityGroupId) || (req.TargetType != "" && req.TargetType != "container" && req.TargetType != "vm" && req.TargetType != "eip") {
+	if req == nil || !securityGroupIDPattern.MatchString(req.SecurityGroupId) || (req.TargetType != "" && req.TargetType != "container" && req.TargetType != "vm" && req.TargetType != "eip" && req.TargetType != "vnic") {
 		return nil, invalidSecurityGroupRequest()
 	}
 	page, size, e := resolveVPCPage(req.Page, req.PageSize)

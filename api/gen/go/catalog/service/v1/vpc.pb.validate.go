@@ -4121,6 +4121,8 @@ func (m *Subnet) validate(all bool) error {
 
 	// no validation rules for LastOperationId
 
+	// no validation rules for EnableDhcp
+
 	if m.AvailableIpRange != nil {
 		// no validation rules for AvailableIpRange
 	}
@@ -4240,6 +4242,10 @@ func (m *CreateSubnetRequest) validate(all bool) error {
 
 	if m.Gateway != nil {
 		// no validation rules for Gateway
+	}
+
+	if m.EnableDhcp != nil {
+		// no validation rules for EnableDhcp
 	}
 
 	if len(errors) > 0 {

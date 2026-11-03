@@ -1,0 +1,98 @@
+syntax = "proto3";
+package catalog.service.v1;
+import "google/protobuf/timestamp.proto";
+
+message VNicBinding {
+ string binding_id=1 [json_name="binding_id"];
+ string consumer_kind=2 [json_name="consumer_kind"];
+ string consumer_id=3 [json_name="consumer_id"];
+ string slot=4;
+ int64 requested_revision=5 [json_name="requested_revision"];
+ int64 applied_revision=6 [json_name="applied_revision"];
+ bool current=7; bool target=8;
+ string consumer_name=9 [json_name="consumer_name"]; string compute_type=10 [json_name="compute_type"];
+}
+message VNic {
+ string id=1; string name=2; string description=3;
+ string vpc_id=4 [json_name="vpc_id"]; string subnet_id=5 [json_name="subnet_id"];
+ string state=6; int64 version=7;
+ string mac_address=8 [json_name="mac_address"]; string primary_ip=9 [json_name="primary_ip"];
+ repeated string ips=10; repeated VNicBinding bindings=11;
+ repeated string security_group_ids=12 [json_name="security_group_ids"];
+ google.protobuf.Timestamp observed_at=13 [json_name="observed_at"];
+ bool observation_stale=14 [json_name="observation_stale"];
+ string reason=15; string last_operation_id=16 [json_name="last_operation_id"];
+ google.protobuf.Timestamp created_at=17 [json_name="created_at"];
+ google.protobuf.Timestamp updated_at=18 [json_name="updated_at"];
+ string binding_state=19 [json_name="binding_state"];
+ string vpc_name=20 [json_name="vpc_name"]; string subnet_name=21 [json_name="subnet_name"];
+ repeated string security_group_names=22 [json_name="security_group_names"];
+ string requested_ip=24 [json_name="requested_ip"]; string requested_mac=25 [json_name="requested_mac"];
+}
+message CreateVNicData {
+ string name=1; string description=2;
+ string subnet_id=3 [json_name="subnet_id"];
+ string idempotency_key=4 [json_name="idempotency_key"];
+ string requested_ip=5 [json_name="requested_ip"]; string requested_mac=6 [json_name="requested_mac"];
+}
+message CreateVNicRequest { CreateVNicData data=1; }
+message GetVNicRequest { string vnic_id=1 [json_name="vnic_id"]; }
+message DeleteVNicRequest { string vnic_id=1 [json_name="vnic_id"]; }
+message VNicResponse { VNic vnic=1; }
+message ListVNicsRequest {
+ optional uint32 page=1; optional uint32 page_size=2 [json_name="pageSize"];
+ string name=3; string subnet_id=4 [json_name="subnet_id"];
+ string state=5; string binding_state=6 [json_name="binding_state"];
+ string bindable_to_kind=7 [json_name="bindable_to_kind"];
+ string bindable_to_id=8 [json_name="bindable_to_id"];
+}
+message ListVNicsResponse { repeated VNic items=1; int64 total=2; }
+message ListVNicBindingTargetsRequest {
+ string vnic_id=1 [json_name="vnic_id"];
+ string consumer_kind=2 [json_name="consumer_kind"];
+ string name=3; optional uint32 page=4; optional uint32 page_size=5 [json_name="pageSize"];
+}
+message VNicBindingTarget {
+ string consumer_kind=1 [json_name="consumer_kind"];
+ string consumer_id=2 [json_name="consumer_id"];
+ string name=3; int64 version=4; string state=5;
+ repeated string security_group_ids=6 [json_name="security_group_ids"];
+ string compute_type=7 [json_name="compute_type"];
+}
+message ListVNicBindingTargetsResponse { repeated VNicBindingTarget items=1; int64 total=2; }
+message NetworkInterfaceChoice {
+ string mode=1; string vnic_id=2 [json_name="vnic_id"];
+ string vnic_name=3 [json_name="vnic_name"]; string provider_uid=4 [json_name="provider_uid"];
+ string mac_address=5 [json_name="mac_address"]; repeated string ips=6;
+}
+message NetworkInterface {
+ string slot=1; NetworkInterfaceChoice desired=2; NetworkInterfaceChoice applied=3;
+ int64 requested_revision=4 [json_name="requested_revision"];
+ int64 applied_revision=5 [json_name="applied_revision"];
+ bool pending_restart=6 [json_name="pending_restart"]; bool effective_now=7 [json_name="effective_now"];
+ string current_vnic_name=8 [json_name="current_vnic_name"];
+ string current_mac_address=9 [json_name="current_mac_address"];
+ repeated string current_ips=10 [json_name="current_ips"];
+ google.protobuf.Timestamp observed_at=11 [json_name="observed_at"];
+ string observation_reason=12 [json_name="observation_reason"];
+ string configuration_state=13 [json_name="configuration_state"];
+ string operation_id=14 [json_name="operation_id"];
+ string operation_reason=15 [json_name="operation_reason"];
+}
+message NetworkInterfaces {
+ repeated NetworkInterface items=1; int64 version=2; bool supported=3;
+ string unsupported_reason=4 [json_name="unsupported_reason"];
+}
+message SetNetworkInterfaceData {
+ string mode=1; string vnic_id=2 [json_name="vnic_id"];
+ int64 expected_version=3 [json_name="expected_version"];
+ string idempotency_key=4 [json_name="idempotency_key"];
+}
+message GetVMNetworkInterfacesRequest { string vm_id=1 [json_name="vm_id"]; }
+message SetVMNetworkInterfaceRequest {
+ string vm_id=1 [json_name="vm_id"]; string slot=2; SetNetworkInterfaceData data=3;
+}
+message GetInstanceNetworkInterfacesRequest { string instance_id=1 [json_name="instance_id"]; }
+message SetInstanceNetworkInterfaceRequest {
+ string instance_id=1 [json_name="instance_id"]; string slot=2; SetNetworkInterfaceData data=3;
+}

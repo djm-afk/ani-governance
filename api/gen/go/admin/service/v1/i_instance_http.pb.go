@@ -10,7 +10,8 @@ import (
 	context "context"
 	http "github.com/go-kratos/kratos/v2/transport/http"
 	binding "github.com/go-kratos/kratos/v2/transport/http/binding"
-	v1 "go-wind-admin/api/gen/go/instance/service/v1"
+	v1 "go-wind-admin/api/gen/go/catalog/service/v1"
+	v11 "go-wind-admin/api/gen/go/instance/service/v1"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -28,6 +29,7 @@ const OperationInstanceServiceExecInstance = "/admin.service.v1.InstanceService/
 const OperationInstanceServiceGetInstance = "/admin.service.v1.InstanceService/GetInstance"
 const OperationInstanceServiceGetInstanceConfiguration = "/admin.service.v1.InstanceService/GetInstanceConfiguration"
 const OperationInstanceServiceGetInstanceLatestMetrics = "/admin.service.v1.InstanceService/GetInstanceLatestMetrics"
+const OperationInstanceServiceGetInstanceNetworkInterfaces = "/admin.service.v1.InstanceService/GetInstanceNetworkInterfaces"
 const OperationInstanceServiceGetInstanceOperation = "/admin.service.v1.InstanceService/GetInstanceOperation"
 const OperationInstanceServiceGetInstanceRuntime = "/admin.service.v1.InstanceService/GetInstanceRuntime"
 const OperationInstanceServiceGetInstanceSchedulingSettings = "/admin.service.v1.InstanceService/GetInstanceSchedulingSettings"
@@ -39,6 +41,7 @@ const OperationInstanceServiceListMountablePVCs = "/admin.service.v1.InstanceSer
 const OperationInstanceServiceQueryInstanceMetrics = "/admin.service.v1.InstanceService/QueryInstanceMetrics"
 const OperationInstanceServiceQueryResourceTrend = "/admin.service.v1.InstanceService/QueryResourceTrend"
 const OperationInstanceServiceRestartInstance = "/admin.service.v1.InstanceService/RestartInstance"
+const OperationInstanceServiceSetInstanceNetworkInterface = "/admin.service.v1.InstanceService/SetInstanceNetworkInterface"
 const OperationInstanceServiceSetInstanceSecurityGroups = "/admin.service.v1.InstanceService/SetInstanceSecurityGroups"
 const OperationInstanceServiceStartInstance = "/admin.service.v1.InstanceService/StartInstance"
 const OperationInstanceServiceStopInstance = "/admin.service.v1.InstanceService/StopInstance"
@@ -46,37 +49,41 @@ const OperationInstanceServiceUpdateInstanceSchedulingSettings = "/admin.service
 const OperationInstanceServiceUpdateSchedulerConfig = "/admin.service.v1.InstanceService/UpdateSchedulerConfig"
 
 type InstanceServiceHTTPServer interface {
-	AttachInstancePVC(context.Context, *v1.AttachInstancePVCRequest) (*v1.Acceptance, error)
+	AttachInstancePVC(context.Context, *v11.AttachInstancePVCRequest) (*v11.Acceptance, error)
 	// CreateInstance 创建使用统一的容器配置；可选配置省略时正常解析默认值。
 	// 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
-	CreateInstance(context.Context, *v1.CreateInstanceRequest) (*v1.Acceptance, error)
-	DeleteInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	DetachInstancePVC(context.Context, *v1.DetachInstancePVCRequest) (*v1.Acceptance, error)
-	ExecInstance(context.Context, *v1.ExecInstanceRequest) (*v1.ExecInstanceResponse, error)
-	GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.Instance, error)
-	GetInstanceConfiguration(context.Context, *v1.GetInstanceRequest) (*v1.InstanceConfiguration, error)
-	GetInstanceLatestMetrics(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceLatestMetricsResponse, error)
-	GetInstanceOperation(context.Context, *v1.GetOperationRequest) (*v1.Operation, error)
-	GetInstanceRuntime(context.Context, *v1.GetInstanceRequest) (*v1.InstanceRuntime, error)
-	GetInstanceSchedulingSettings(context.Context, *v1.InstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
-	GetSchedulerConfig(context.Context, *v1.SchedulerConfigRequest) (*v1.SchedulerConfig, error)
-	ListInstanceEvents(context.Context, *v1.GetInstanceRequest) (*v1.InstanceEvents, error)
-	ListInstanceMountablePVCs(context.Context, *v1.ListInstanceMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error)
-	ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error)
-	ListMountablePVCs(context.Context, *v1.ListMountablePVCsRequest) (*v1.ListMountablePVCsResponse, error)
-	QueryInstanceMetrics(context.Context, *v1.QueryInstanceMetricsRequest) (*v1.QueryInstanceMetricsResponse, error)
+	CreateInstance(context.Context, *v11.CreateInstanceRequest) (*v11.Acceptance, error)
+	DeleteInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	DetachInstancePVC(context.Context, *v11.DetachInstancePVCRequest) (*v11.Acceptance, error)
+	ExecInstance(context.Context, *v11.ExecInstanceRequest) (*v11.ExecInstanceResponse, error)
+	GetInstance(context.Context, *v11.GetInstanceRequest) (*v11.Instance, error)
+	GetInstanceConfiguration(context.Context, *v11.GetInstanceRequest) (*v11.InstanceConfiguration, error)
+	GetInstanceLatestMetrics(context.Context, *v11.GetInstanceRequest) (*v11.GetInstanceLatestMetricsResponse, error)
+	GetInstanceNetworkInterfaces(context.Context, *v1.GetInstanceNetworkInterfacesRequest) (*v1.NetworkInterfaces, error)
+	GetInstanceOperation(context.Context, *v11.GetOperationRequest) (*v11.Operation, error)
+	GetInstanceRuntime(context.Context, *v11.GetInstanceRequest) (*v11.InstanceRuntime, error)
+	GetInstanceSchedulingSettings(context.Context, *v11.InstanceSchedulingSettingsRequest) (*v11.InstanceSchedulingSettings, error)
+	GetSchedulerConfig(context.Context, *v11.SchedulerConfigRequest) (*v11.SchedulerConfig, error)
+	ListInstanceEvents(context.Context, *v11.GetInstanceRequest) (*v11.InstanceEvents, error)
+	ListInstanceMountablePVCs(context.Context, *v11.ListInstanceMountablePVCsRequest) (*v11.ListMountablePVCsResponse, error)
+	ListInstances(context.Context, *v11.ListInstancesRequest) (*v11.ListInstancesResponse, error)
+	ListMountablePVCs(context.Context, *v11.ListMountablePVCsRequest) (*v11.ListMountablePVCsResponse, error)
+	QueryInstanceMetrics(context.Context, *v11.QueryInstanceMetricsRequest) (*v11.QueryInstanceMetricsResponse, error)
 	// QueryResourceTrend 首页资源趋势：HTTP 是专用 GET handler，查询参数在 handler 内严格校验。
-	QueryResourceTrend(context.Context, *v1.QueryResourceTrendRequest) (*v1.QueryResourceTrendResponse, error)
-	RestartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	SetInstanceSecurityGroups(context.Context, *v1.SetInstanceSecurityGroupsRequest) (*v1.Acceptance, error)
-	StartInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	StopInstance(context.Context, *v1.ChangeInstanceRequest) (*v1.Acceptance, error)
-	UpdateInstanceSchedulingSettings(context.Context, *v1.UpdateInstanceSchedulingSettingsRequest) (*v1.InstanceSchedulingSettings, error)
-	UpdateSchedulerConfig(context.Context, *v1.UpdateSchedulerConfigRequest) (*v1.SchedulerConfig, error)
+	QueryResourceTrend(context.Context, *v11.QueryResourceTrendRequest) (*v11.QueryResourceTrendResponse, error)
+	RestartInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	SetInstanceNetworkInterface(context.Context, *v1.SetInstanceNetworkInterfaceRequest) (*v11.Acceptance, error)
+	SetInstanceSecurityGroups(context.Context, *v11.SetInstanceSecurityGroupsRequest) (*v11.Acceptance, error)
+	StartInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	StopInstance(context.Context, *v11.ChangeInstanceRequest) (*v11.Acceptance, error)
+	UpdateInstanceSchedulingSettings(context.Context, *v11.UpdateInstanceSchedulingSettingsRequest) (*v11.InstanceSchedulingSettings, error)
+	UpdateSchedulerConfig(context.Context, *v11.UpdateSchedulerConfigRequest) (*v11.SchedulerConfig, error)
 }
 
 func RegisterInstanceServiceHTTPServer(s *http.Server, srv InstanceServiceHTTPServer) {
 	r := s.Route("/")
+	r.GET("/api/v1/instances/{instance_id}/network-interfaces", _InstanceService_GetInstanceNetworkInterfaces0_HTTP_Handler(srv))
+	r.PUT("/api/v1/instances/{instance_id}/network-interfaces/{slot}", _InstanceService_SetInstanceNetworkInterface0_HTTP_Handler(srv))
 	r.GET("/api/v1/instances/mountable-pvcs", _InstanceService_ListMountablePVCs0_HTTP_Handler(srv))
 	r.GET("/api/v1/instances/{instance_id}/configuration", _InstanceService_GetInstanceConfiguration0_HTTP_Handler(srv))
 	r.POST("/api/v1/instances/{instance_id}/metrics/query", _InstanceService_QueryInstanceMetrics0_HTTP_Handler(srv))
@@ -103,28 +110,75 @@ func RegisterInstanceServiceHTTPServer(s *http.Server, srv InstanceServiceHTTPSe
 	r.POST("/api/v1/instances/{data.instance_id}/exec", _InstanceService_ExecInstance0_HTTP_Handler(srv))
 }
 
-func _InstanceService_ListMountablePVCs0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
+func _InstanceService_GetInstanceNetworkInterfaces0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ListMountablePVCsRequest
+		var in v1.GetInstanceNetworkInterfacesRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationInstanceServiceListMountablePVCs)
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInstanceServiceGetInstanceNetworkInterfaces)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListMountablePVCs(ctx, req.(*v1.ListMountablePVCsRequest))
+			return srv.GetInstanceNetworkInterfaces(ctx, req.(*v1.GetInstanceNetworkInterfacesRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.ListMountablePVCsResponse)
+		reply := out.(*v1.NetworkInterfaces)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _InstanceService_SetInstanceNetworkInterface0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.SetInstanceNetworkInterfaceRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInstanceServiceSetInstanceNetworkInterface)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetInstanceNetworkInterface(ctx, req.(*v1.SetInstanceNetworkInterfaceRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v11.Acceptance)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _InstanceService_ListMountablePVCs0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v11.ListMountablePVCsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInstanceServiceListMountablePVCs)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListMountablePVCs(ctx, req.(*v11.ListMountablePVCsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v11.ListMountablePVCsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetInstanceConfiguration0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.GetInstanceRequest
+		var in v11.GetInstanceRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -133,20 +187,20 @@ func _InstanceService_GetInstanceConfiguration0_HTTP_Handler(srv InstanceService
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetInstanceConfiguration)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInstanceConfiguration(ctx, req.(*v1.GetInstanceRequest))
+			return srv.GetInstanceConfiguration(ctx, req.(*v11.GetInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.InstanceConfiguration)
+		reply := out.(*v11.InstanceConfiguration)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_QueryInstanceMetrics0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.QueryInstanceMetricsRequest
+		var in v11.QueryInstanceMetricsRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -158,20 +212,20 @@ func _InstanceService_QueryInstanceMetrics0_HTTP_Handler(srv InstanceServiceHTTP
 		}
 		http.SetOperation(ctx, OperationInstanceServiceQueryInstanceMetrics)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.QueryInstanceMetrics(ctx, req.(*v1.QueryInstanceMetricsRequest))
+			return srv.QueryInstanceMetrics(ctx, req.(*v11.QueryInstanceMetricsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.QueryInstanceMetricsResponse)
+		reply := out.(*v11.QueryInstanceMetricsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetInstanceLatestMetrics0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.GetInstanceRequest
+		var in v11.GetInstanceRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -180,58 +234,58 @@ func _InstanceService_GetInstanceLatestMetrics0_HTTP_Handler(srv InstanceService
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetInstanceLatestMetrics)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInstanceLatestMetrics(ctx, req.(*v1.GetInstanceRequest))
+			return srv.GetInstanceLatestMetrics(ctx, req.(*v11.GetInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.GetInstanceLatestMetricsResponse)
+		reply := out.(*v11.GetInstanceLatestMetricsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_QueryResourceTrend0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.QueryResourceTrendRequest
+		var in v11.QueryResourceTrendRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationInstanceServiceQueryResourceTrend)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.QueryResourceTrend(ctx, req.(*v1.QueryResourceTrendRequest))
+			return srv.QueryResourceTrend(ctx, req.(*v11.QueryResourceTrendRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.QueryResourceTrendResponse)
+		reply := out.(*v11.QueryResourceTrendResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetInstanceSchedulingSettings0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.InstanceSchedulingSettingsRequest
+		var in v11.InstanceSchedulingSettingsRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetInstanceSchedulingSettings)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInstanceSchedulingSettings(ctx, req.(*v1.InstanceSchedulingSettingsRequest))
+			return srv.GetInstanceSchedulingSettings(ctx, req.(*v11.InstanceSchedulingSettingsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.InstanceSchedulingSettings)
+		reply := out.(*v11.InstanceSchedulingSettings)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_UpdateInstanceSchedulingSettings0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.UpdateInstanceSchedulingSettingsRequest
+		var in v11.UpdateInstanceSchedulingSettingsRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -240,39 +294,39 @@ func _InstanceService_UpdateInstanceSchedulingSettings0_HTTP_Handler(srv Instanc
 		}
 		http.SetOperation(ctx, OperationInstanceServiceUpdateInstanceSchedulingSettings)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.UpdateInstanceSchedulingSettings(ctx, req.(*v1.UpdateInstanceSchedulingSettingsRequest))
+			return srv.UpdateInstanceSchedulingSettings(ctx, req.(*v11.UpdateInstanceSchedulingSettingsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.InstanceSchedulingSettings)
+		reply := out.(*v11.InstanceSchedulingSettings)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetSchedulerConfig0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.SchedulerConfigRequest
+		var in v11.SchedulerConfigRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetSchedulerConfig)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetSchedulerConfig(ctx, req.(*v1.SchedulerConfigRequest))
+			return srv.GetSchedulerConfig(ctx, req.(*v11.SchedulerConfigRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.SchedulerConfig)
+		reply := out.(*v11.SchedulerConfig)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_UpdateSchedulerConfig0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.UpdateSchedulerConfigRequest
+		var in v11.UpdateSchedulerConfigRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -281,20 +335,20 @@ func _InstanceService_UpdateSchedulerConfig0_HTTP_Handler(srv InstanceServiceHTT
 		}
 		http.SetOperation(ctx, OperationInstanceServiceUpdateSchedulerConfig)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.UpdateSchedulerConfig(ctx, req.(*v1.UpdateSchedulerConfigRequest))
+			return srv.UpdateSchedulerConfig(ctx, req.(*v11.UpdateSchedulerConfigRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.SchedulerConfig)
+		reply := out.(*v11.SchedulerConfig)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetInstanceRuntime0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.GetInstanceRequest
+		var in v11.GetInstanceRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -303,20 +357,20 @@ func _InstanceService_GetInstanceRuntime0_HTTP_Handler(srv InstanceServiceHTTPSe
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetInstanceRuntime)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInstanceRuntime(ctx, req.(*v1.GetInstanceRequest))
+			return srv.GetInstanceRuntime(ctx, req.(*v11.GetInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.InstanceRuntime)
+		reply := out.(*v11.InstanceRuntime)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_ListInstanceEvents0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.GetInstanceRequest
+		var in v11.GetInstanceRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -325,20 +379,20 @@ func _InstanceService_ListInstanceEvents0_HTTP_Handler(srv InstanceServiceHTTPSe
 		}
 		http.SetOperation(ctx, OperationInstanceServiceListInstanceEvents)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListInstanceEvents(ctx, req.(*v1.GetInstanceRequest))
+			return srv.ListInstanceEvents(ctx, req.(*v11.GetInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.InstanceEvents)
+		reply := out.(*v11.InstanceEvents)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_CreateInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.CreateInstanceRequest
+		var in v11.CreateInstanceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -347,20 +401,20 @@ func _InstanceService_CreateInstance0_HTTP_Handler(srv InstanceServiceHTTPServer
 		}
 		http.SetOperation(ctx, OperationInstanceServiceCreateInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateInstance(ctx, req.(*v1.CreateInstanceRequest))
+			return srv.CreateInstance(ctx, req.(*v11.CreateInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_SetInstanceSecurityGroups0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.SetInstanceSecurityGroupsRequest
+		var in v11.SetInstanceSecurityGroupsRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -372,39 +426,39 @@ func _InstanceService_SetInstanceSecurityGroups0_HTTP_Handler(srv InstanceServic
 		}
 		http.SetOperation(ctx, OperationInstanceServiceSetInstanceSecurityGroups)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.SetInstanceSecurityGroups(ctx, req.(*v1.SetInstanceSecurityGroupsRequest))
+			return srv.SetInstanceSecurityGroups(ctx, req.(*v11.SetInstanceSecurityGroupsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_ListInstances0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ListInstancesRequest
+		var in v11.ListInstancesRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationInstanceServiceListInstances)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListInstances(ctx, req.(*v1.ListInstancesRequest))
+			return srv.ListInstances(ctx, req.(*v11.ListInstancesRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.ListInstancesResponse)
+		reply := out.(*v11.ListInstancesResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.GetInstanceRequest
+		var in v11.GetInstanceRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -413,20 +467,20 @@ func _InstanceService_GetInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) f
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInstance(ctx, req.(*v1.GetInstanceRequest))
+			return srv.GetInstance(ctx, req.(*v11.GetInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Instance)
+		reply := out.(*v11.Instance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_StartInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ChangeInstanceRequest
+		var in v11.ChangeInstanceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -438,20 +492,20 @@ func _InstanceService_StartInstance0_HTTP_Handler(srv InstanceServiceHTTPServer)
 		}
 		http.SetOperation(ctx, OperationInstanceServiceStartInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.StartInstance(ctx, req.(*v1.ChangeInstanceRequest))
+			return srv.StartInstance(ctx, req.(*v11.ChangeInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_StopInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ChangeInstanceRequest
+		var in v11.ChangeInstanceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -463,20 +517,20 @@ func _InstanceService_StopInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) 
 		}
 		http.SetOperation(ctx, OperationInstanceServiceStopInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.StopInstance(ctx, req.(*v1.ChangeInstanceRequest))
+			return srv.StopInstance(ctx, req.(*v11.ChangeInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_RestartInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ChangeInstanceRequest
+		var in v11.ChangeInstanceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -488,20 +542,20 @@ func _InstanceService_RestartInstance0_HTTP_Handler(srv InstanceServiceHTTPServe
 		}
 		http.SetOperation(ctx, OperationInstanceServiceRestartInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.RestartInstance(ctx, req.(*v1.ChangeInstanceRequest))
+			return srv.RestartInstance(ctx, req.(*v11.ChangeInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_AttachInstancePVC0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.AttachInstancePVCRequest
+		var in v11.AttachInstancePVCRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -513,20 +567,20 @@ func _InstanceService_AttachInstancePVC0_HTTP_Handler(srv InstanceServiceHTTPSer
 		}
 		http.SetOperation(ctx, OperationInstanceServiceAttachInstancePVC)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.AttachInstancePVC(ctx, req.(*v1.AttachInstancePVCRequest))
+			return srv.AttachInstancePVC(ctx, req.(*v11.AttachInstancePVCRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_DetachInstancePVC0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.DetachInstancePVCRequest
+		var in v11.DetachInstancePVCRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -538,20 +592,20 @@ func _InstanceService_DetachInstancePVC0_HTTP_Handler(srv InstanceServiceHTTPSer
 		}
 		http.SetOperation(ctx, OperationInstanceServiceDetachInstancePVC)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DetachInstancePVC(ctx, req.(*v1.DetachInstancePVCRequest))
+			return srv.DetachInstancePVC(ctx, req.(*v11.DetachInstancePVCRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_ListInstanceMountablePVCs0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ListInstanceMountablePVCsRequest
+		var in v11.ListInstanceMountablePVCsRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -560,20 +614,20 @@ func _InstanceService_ListInstanceMountablePVCs0_HTTP_Handler(srv InstanceServic
 		}
 		http.SetOperation(ctx, OperationInstanceServiceListInstanceMountablePVCs)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListInstanceMountablePVCs(ctx, req.(*v1.ListInstanceMountablePVCsRequest))
+			return srv.ListInstanceMountablePVCs(ctx, req.(*v11.ListInstanceMountablePVCsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.ListMountablePVCsResponse)
+		reply := out.(*v11.ListMountablePVCsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_DeleteInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ChangeInstanceRequest
+		var in v11.ChangeInstanceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -585,20 +639,20 @@ func _InstanceService_DeleteInstance0_HTTP_Handler(srv InstanceServiceHTTPServer
 		}
 		http.SetOperation(ctx, OperationInstanceServiceDeleteInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteInstance(ctx, req.(*v1.ChangeInstanceRequest))
+			return srv.DeleteInstance(ctx, req.(*v11.ChangeInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Acceptance)
+		reply := out.(*v11.Acceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_GetInstanceOperation0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.GetOperationRequest
+		var in v11.GetOperationRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -607,20 +661,20 @@ func _InstanceService_GetInstanceOperation0_HTTP_Handler(srv InstanceServiceHTTP
 		}
 		http.SetOperation(ctx, OperationInstanceServiceGetInstanceOperation)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInstanceOperation(ctx, req.(*v1.GetOperationRequest))
+			return srv.GetInstanceOperation(ctx, req.(*v11.GetOperationRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.Operation)
+		reply := out.(*v11.Operation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _InstanceService_ExecInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v1.ExecInstanceRequest
+		var in v11.ExecInstanceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -632,45 +686,47 @@ func _InstanceService_ExecInstance0_HTTP_Handler(srv InstanceServiceHTTPServer) 
 		}
 		http.SetOperation(ctx, OperationInstanceServiceExecInstance)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ExecInstance(ctx, req.(*v1.ExecInstanceRequest))
+			return srv.ExecInstance(ctx, req.(*v11.ExecInstanceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v1.ExecInstanceResponse)
+		reply := out.(*v11.ExecInstanceResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 type InstanceServiceHTTPClient interface {
-	AttachInstancePVC(ctx context.Context, req *v1.AttachInstancePVCRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
+	AttachInstancePVC(ctx context.Context, req *v11.AttachInstancePVCRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
 	// CreateInstance 创建使用统一的容器配置；可选配置省略时正常解析默认值。
 	// 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
-	CreateInstance(ctx context.Context, req *v1.CreateInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	DeleteInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	DetachInstancePVC(ctx context.Context, req *v1.DetachInstancePVCRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	ExecInstance(ctx context.Context, req *v1.ExecInstanceRequest, opts ...http.CallOption) (rsp *v1.ExecInstanceResponse, err error)
-	GetInstance(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.Instance, err error)
-	GetInstanceConfiguration(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.InstanceConfiguration, err error)
-	GetInstanceLatestMetrics(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.GetInstanceLatestMetricsResponse, err error)
-	GetInstanceOperation(ctx context.Context, req *v1.GetOperationRequest, opts ...http.CallOption) (rsp *v1.Operation, err error)
-	GetInstanceRuntime(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.InstanceRuntime, err error)
-	GetInstanceSchedulingSettings(ctx context.Context, req *v1.InstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v1.InstanceSchedulingSettings, err error)
-	GetSchedulerConfig(ctx context.Context, req *v1.SchedulerConfigRequest, opts ...http.CallOption) (rsp *v1.SchedulerConfig, err error)
-	ListInstanceEvents(ctx context.Context, req *v1.GetInstanceRequest, opts ...http.CallOption) (rsp *v1.InstanceEvents, err error)
-	ListInstanceMountablePVCs(ctx context.Context, req *v1.ListInstanceMountablePVCsRequest, opts ...http.CallOption) (rsp *v1.ListMountablePVCsResponse, err error)
-	ListInstances(ctx context.Context, req *v1.ListInstancesRequest, opts ...http.CallOption) (rsp *v1.ListInstancesResponse, err error)
-	ListMountablePVCs(ctx context.Context, req *v1.ListMountablePVCsRequest, opts ...http.CallOption) (rsp *v1.ListMountablePVCsResponse, err error)
-	QueryInstanceMetrics(ctx context.Context, req *v1.QueryInstanceMetricsRequest, opts ...http.CallOption) (rsp *v1.QueryInstanceMetricsResponse, err error)
+	CreateInstance(ctx context.Context, req *v11.CreateInstanceRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	DeleteInstance(ctx context.Context, req *v11.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	DetachInstancePVC(ctx context.Context, req *v11.DetachInstancePVCRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	ExecInstance(ctx context.Context, req *v11.ExecInstanceRequest, opts ...http.CallOption) (rsp *v11.ExecInstanceResponse, err error)
+	GetInstance(ctx context.Context, req *v11.GetInstanceRequest, opts ...http.CallOption) (rsp *v11.Instance, err error)
+	GetInstanceConfiguration(ctx context.Context, req *v11.GetInstanceRequest, opts ...http.CallOption) (rsp *v11.InstanceConfiguration, err error)
+	GetInstanceLatestMetrics(ctx context.Context, req *v11.GetInstanceRequest, opts ...http.CallOption) (rsp *v11.GetInstanceLatestMetricsResponse, err error)
+	GetInstanceNetworkInterfaces(ctx context.Context, req *v1.GetInstanceNetworkInterfacesRequest, opts ...http.CallOption) (rsp *v1.NetworkInterfaces, err error)
+	GetInstanceOperation(ctx context.Context, req *v11.GetOperationRequest, opts ...http.CallOption) (rsp *v11.Operation, err error)
+	GetInstanceRuntime(ctx context.Context, req *v11.GetInstanceRequest, opts ...http.CallOption) (rsp *v11.InstanceRuntime, err error)
+	GetInstanceSchedulingSettings(ctx context.Context, req *v11.InstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v11.InstanceSchedulingSettings, err error)
+	GetSchedulerConfig(ctx context.Context, req *v11.SchedulerConfigRequest, opts ...http.CallOption) (rsp *v11.SchedulerConfig, err error)
+	ListInstanceEvents(ctx context.Context, req *v11.GetInstanceRequest, opts ...http.CallOption) (rsp *v11.InstanceEvents, err error)
+	ListInstanceMountablePVCs(ctx context.Context, req *v11.ListInstanceMountablePVCsRequest, opts ...http.CallOption) (rsp *v11.ListMountablePVCsResponse, err error)
+	ListInstances(ctx context.Context, req *v11.ListInstancesRequest, opts ...http.CallOption) (rsp *v11.ListInstancesResponse, err error)
+	ListMountablePVCs(ctx context.Context, req *v11.ListMountablePVCsRequest, opts ...http.CallOption) (rsp *v11.ListMountablePVCsResponse, err error)
+	QueryInstanceMetrics(ctx context.Context, req *v11.QueryInstanceMetricsRequest, opts ...http.CallOption) (rsp *v11.QueryInstanceMetricsResponse, err error)
 	// QueryResourceTrend 首页资源趋势：HTTP 是专用 GET handler，查询参数在 handler 内严格校验。
-	QueryResourceTrend(ctx context.Context, req *v1.QueryResourceTrendRequest, opts ...http.CallOption) (rsp *v1.QueryResourceTrendResponse, err error)
-	RestartInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	SetInstanceSecurityGroups(ctx context.Context, req *v1.SetInstanceSecurityGroupsRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	StartInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	StopInstance(ctx context.Context, req *v1.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v1.Acceptance, err error)
-	UpdateInstanceSchedulingSettings(ctx context.Context, req *v1.UpdateInstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v1.InstanceSchedulingSettings, err error)
-	UpdateSchedulerConfig(ctx context.Context, req *v1.UpdateSchedulerConfigRequest, opts ...http.CallOption) (rsp *v1.SchedulerConfig, err error)
+	QueryResourceTrend(ctx context.Context, req *v11.QueryResourceTrendRequest, opts ...http.CallOption) (rsp *v11.QueryResourceTrendResponse, err error)
+	RestartInstance(ctx context.Context, req *v11.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	SetInstanceNetworkInterface(ctx context.Context, req *v1.SetInstanceNetworkInterfaceRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	SetInstanceSecurityGroups(ctx context.Context, req *v11.SetInstanceSecurityGroupsRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	StartInstance(ctx context.Context, req *v11.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	StopInstance(ctx context.Context, req *v11.ChangeInstanceRequest, opts ...http.CallOption) (rsp *v11.Acceptance, err error)
+	UpdateInstanceSchedulingSettings(ctx context.Context, req *v11.UpdateInstanceSchedulingSettingsRequest, opts ...http.CallOption) (rsp *v11.InstanceSchedulingSettings, err error)
+	UpdateSchedulerConfig(ctx context.Context, req *v11.UpdateSchedulerConfigRequest, opts ...http.CallOption) (rsp *v11.SchedulerConfig, err error)
 }
 
 type InstanceServiceHTTPClientImpl struct {
@@ -681,8 +737,8 @@ func NewInstanceServiceHTTPClient(client *http.Client) InstanceServiceHTTPClient
 	return &InstanceServiceHTTPClientImpl{client}
 }
 
-func (c *InstanceServiceHTTPClientImpl) AttachInstancePVC(ctx context.Context, in *v1.AttachInstancePVCRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) AttachInstancePVC(ctx context.Context, in *v11.AttachInstancePVCRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}:attach-pvc"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceAttachInstancePVC))
@@ -696,8 +752,8 @@ func (c *InstanceServiceHTTPClientImpl) AttachInstancePVC(ctx context.Context, i
 
 // CreateInstance 创建使用统一的容器配置；可选配置省略时正常解析默认值。
 // 新建维护闸门关闭返回 503 INSTANCE_CREATE_DISABLED，同键重放不受影响。
-func (c *InstanceServiceHTTPClientImpl) CreateInstance(ctx context.Context, in *v1.CreateInstanceRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) CreateInstance(ctx context.Context, in *v11.CreateInstanceRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceCreateInstance))
@@ -709,8 +765,8 @@ func (c *InstanceServiceHTTPClientImpl) CreateInstance(ctx context.Context, in *
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) DeleteInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) DeleteInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceDeleteInstance))
@@ -722,8 +778,8 @@ func (c *InstanceServiceHTTPClientImpl) DeleteInstance(ctx context.Context, in *
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) DetachInstancePVC(ctx context.Context, in *v1.DetachInstancePVCRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) DetachInstancePVC(ctx context.Context, in *v11.DetachInstancePVCRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}:detach-pvc"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceDetachInstancePVC))
@@ -735,8 +791,8 @@ func (c *InstanceServiceHTTPClientImpl) DetachInstancePVC(ctx context.Context, i
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) ExecInstance(ctx context.Context, in *v1.ExecInstanceRequest, opts ...http.CallOption) (*v1.ExecInstanceResponse, error) {
-	var out v1.ExecInstanceResponse
+func (c *InstanceServiceHTTPClientImpl) ExecInstance(ctx context.Context, in *v11.ExecInstanceRequest, opts ...http.CallOption) (*v11.ExecInstanceResponse, error) {
+	var out v11.ExecInstanceResponse
 	pattern := "/api/v1/instances/{data.instance_id}/exec"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceExecInstance))
@@ -748,8 +804,8 @@ func (c *InstanceServiceHTTPClientImpl) ExecInstance(ctx context.Context, in *v1
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetInstance(ctx context.Context, in *v1.GetInstanceRequest, opts ...http.CallOption) (*v1.Instance, error) {
-	var out v1.Instance
+func (c *InstanceServiceHTTPClientImpl) GetInstance(ctx context.Context, in *v11.GetInstanceRequest, opts ...http.CallOption) (*v11.Instance, error) {
+	var out v11.Instance
 	pattern := "/api/v1/instances/{instance_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetInstance))
@@ -761,8 +817,8 @@ func (c *InstanceServiceHTTPClientImpl) GetInstance(ctx context.Context, in *v1.
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetInstanceConfiguration(ctx context.Context, in *v1.GetInstanceRequest, opts ...http.CallOption) (*v1.InstanceConfiguration, error) {
-	var out v1.InstanceConfiguration
+func (c *InstanceServiceHTTPClientImpl) GetInstanceConfiguration(ctx context.Context, in *v11.GetInstanceRequest, opts ...http.CallOption) (*v11.InstanceConfiguration, error) {
+	var out v11.InstanceConfiguration
 	pattern := "/api/v1/instances/{instance_id}/configuration"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceConfiguration))
@@ -774,8 +830,8 @@ func (c *InstanceServiceHTTPClientImpl) GetInstanceConfiguration(ctx context.Con
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetInstanceLatestMetrics(ctx context.Context, in *v1.GetInstanceRequest, opts ...http.CallOption) (*v1.GetInstanceLatestMetricsResponse, error) {
-	var out v1.GetInstanceLatestMetricsResponse
+func (c *InstanceServiceHTTPClientImpl) GetInstanceLatestMetrics(ctx context.Context, in *v11.GetInstanceRequest, opts ...http.CallOption) (*v11.GetInstanceLatestMetricsResponse, error) {
+	var out v11.GetInstanceLatestMetricsResponse
 	pattern := "/api/v1/instances/{instance_id}/metrics/latest"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceLatestMetrics))
@@ -787,8 +843,21 @@ func (c *InstanceServiceHTTPClientImpl) GetInstanceLatestMetrics(ctx context.Con
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetInstanceOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...http.CallOption) (*v1.Operation, error) {
-	var out v1.Operation
+func (c *InstanceServiceHTTPClientImpl) GetInstanceNetworkInterfaces(ctx context.Context, in *v1.GetInstanceNetworkInterfacesRequest, opts ...http.CallOption) (*v1.NetworkInterfaces, error) {
+	var out v1.NetworkInterfaces
+	pattern := "/api/v1/instances/{instance_id}/network-interfaces"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceNetworkInterfaces))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *InstanceServiceHTTPClientImpl) GetInstanceOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...http.CallOption) (*v11.Operation, error) {
+	var out v11.Operation
 	pattern := "/api/v1/instance-operations/{operation_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceOperation))
@@ -800,8 +869,8 @@ func (c *InstanceServiceHTTPClientImpl) GetInstanceOperation(ctx context.Context
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetInstanceRuntime(ctx context.Context, in *v1.GetInstanceRequest, opts ...http.CallOption) (*v1.InstanceRuntime, error) {
-	var out v1.InstanceRuntime
+func (c *InstanceServiceHTTPClientImpl) GetInstanceRuntime(ctx context.Context, in *v11.GetInstanceRequest, opts ...http.CallOption) (*v11.InstanceRuntime, error) {
+	var out v11.InstanceRuntime
 	pattern := "/api/v1/instances/{instance_id}/runtime"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceRuntime))
@@ -813,8 +882,8 @@ func (c *InstanceServiceHTTPClientImpl) GetInstanceRuntime(ctx context.Context, 
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetInstanceSchedulingSettings(ctx context.Context, in *v1.InstanceSchedulingSettingsRequest, opts ...http.CallOption) (*v1.InstanceSchedulingSettings, error) {
-	var out v1.InstanceSchedulingSettings
+func (c *InstanceServiceHTTPClientImpl) GetInstanceSchedulingSettings(ctx context.Context, in *v11.InstanceSchedulingSettingsRequest, opts ...http.CallOption) (*v11.InstanceSchedulingSettings, error) {
+	var out v11.InstanceSchedulingSettings
 	pattern := "/api/v1/admin/instance-scheduling-settings"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetInstanceSchedulingSettings))
@@ -826,8 +895,8 @@ func (c *InstanceServiceHTTPClientImpl) GetInstanceSchedulingSettings(ctx contex
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) GetSchedulerConfig(ctx context.Context, in *v1.SchedulerConfigRequest, opts ...http.CallOption) (*v1.SchedulerConfig, error) {
-	var out v1.SchedulerConfig
+func (c *InstanceServiceHTTPClientImpl) GetSchedulerConfig(ctx context.Context, in *v11.SchedulerConfigRequest, opts ...http.CallOption) (*v11.SchedulerConfig, error) {
+	var out v11.SchedulerConfig
 	pattern := "/api/v1/admin/scheduler-config"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceGetSchedulerConfig))
@@ -839,8 +908,8 @@ func (c *InstanceServiceHTTPClientImpl) GetSchedulerConfig(ctx context.Context, 
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) ListInstanceEvents(ctx context.Context, in *v1.GetInstanceRequest, opts ...http.CallOption) (*v1.InstanceEvents, error) {
-	var out v1.InstanceEvents
+func (c *InstanceServiceHTTPClientImpl) ListInstanceEvents(ctx context.Context, in *v11.GetInstanceRequest, opts ...http.CallOption) (*v11.InstanceEvents, error) {
+	var out v11.InstanceEvents
 	pattern := "/api/v1/instances/{instance_id}/events"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceListInstanceEvents))
@@ -852,8 +921,8 @@ func (c *InstanceServiceHTTPClientImpl) ListInstanceEvents(ctx context.Context, 
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) ListInstanceMountablePVCs(ctx context.Context, in *v1.ListInstanceMountablePVCsRequest, opts ...http.CallOption) (*v1.ListMountablePVCsResponse, error) {
-	var out v1.ListMountablePVCsResponse
+func (c *InstanceServiceHTTPClientImpl) ListInstanceMountablePVCs(ctx context.Context, in *v11.ListInstanceMountablePVCsRequest, opts ...http.CallOption) (*v11.ListMountablePVCsResponse, error) {
+	var out v11.ListMountablePVCsResponse
 	pattern := "/api/v1/instances/{instance_id}/mountable-pvcs"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceListInstanceMountablePVCs))
@@ -865,8 +934,8 @@ func (c *InstanceServiceHTTPClientImpl) ListInstanceMountablePVCs(ctx context.Co
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) ListInstances(ctx context.Context, in *v1.ListInstancesRequest, opts ...http.CallOption) (*v1.ListInstancesResponse, error) {
-	var out v1.ListInstancesResponse
+func (c *InstanceServiceHTTPClientImpl) ListInstances(ctx context.Context, in *v11.ListInstancesRequest, opts ...http.CallOption) (*v11.ListInstancesResponse, error) {
+	var out v11.ListInstancesResponse
 	pattern := "/api/v1/instances"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceListInstances))
@@ -878,8 +947,8 @@ func (c *InstanceServiceHTTPClientImpl) ListInstances(ctx context.Context, in *v
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) ListMountablePVCs(ctx context.Context, in *v1.ListMountablePVCsRequest, opts ...http.CallOption) (*v1.ListMountablePVCsResponse, error) {
-	var out v1.ListMountablePVCsResponse
+func (c *InstanceServiceHTTPClientImpl) ListMountablePVCs(ctx context.Context, in *v11.ListMountablePVCsRequest, opts ...http.CallOption) (*v11.ListMountablePVCsResponse, error) {
+	var out v11.ListMountablePVCsResponse
 	pattern := "/api/v1/instances/mountable-pvcs"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceListMountablePVCs))
@@ -891,8 +960,8 @@ func (c *InstanceServiceHTTPClientImpl) ListMountablePVCs(ctx context.Context, i
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) QueryInstanceMetrics(ctx context.Context, in *v1.QueryInstanceMetricsRequest, opts ...http.CallOption) (*v1.QueryInstanceMetricsResponse, error) {
-	var out v1.QueryInstanceMetricsResponse
+func (c *InstanceServiceHTTPClientImpl) QueryInstanceMetrics(ctx context.Context, in *v11.QueryInstanceMetricsRequest, opts ...http.CallOption) (*v11.QueryInstanceMetricsResponse, error) {
+	var out v11.QueryInstanceMetricsResponse
 	pattern := "/api/v1/instances/{instance_id}/metrics/query"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceQueryInstanceMetrics))
@@ -905,8 +974,8 @@ func (c *InstanceServiceHTTPClientImpl) QueryInstanceMetrics(ctx context.Context
 }
 
 // QueryResourceTrend 首页资源趋势：HTTP 是专用 GET handler，查询参数在 handler 内严格校验。
-func (c *InstanceServiceHTTPClientImpl) QueryResourceTrend(ctx context.Context, in *v1.QueryResourceTrendRequest, opts ...http.CallOption) (*v1.QueryResourceTrendResponse, error) {
-	var out v1.QueryResourceTrendResponse
+func (c *InstanceServiceHTTPClientImpl) QueryResourceTrend(ctx context.Context, in *v11.QueryResourceTrendRequest, opts ...http.CallOption) (*v11.QueryResourceTrendResponse, error) {
+	var out v11.QueryResourceTrendResponse
 	pattern := "/api/v1/observability/resource-trend"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationInstanceServiceQueryResourceTrend))
@@ -918,8 +987,8 @@ func (c *InstanceServiceHTTPClientImpl) QueryResourceTrend(ctx context.Context, 
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) RestartInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) RestartInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}:restart"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceRestartInstance))
@@ -931,8 +1000,21 @@ func (c *InstanceServiceHTTPClientImpl) RestartInstance(ctx context.Context, in 
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) SetInstanceSecurityGroups(ctx context.Context, in *v1.SetInstanceSecurityGroupsRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) SetInstanceNetworkInterface(ctx context.Context, in *v1.SetInstanceNetworkInterfaceRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
+	pattern := "/api/v1/instances/{instance_id}/network-interfaces/{slot}"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationInstanceServiceSetInstanceNetworkInterface))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *InstanceServiceHTTPClientImpl) SetInstanceSecurityGroups(ctx context.Context, in *v11.SetInstanceSecurityGroupsRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}/security-groups"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceSetInstanceSecurityGroups))
@@ -944,8 +1026,8 @@ func (c *InstanceServiceHTTPClientImpl) SetInstanceSecurityGroups(ctx context.Co
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) StartInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) StartInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}:start"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceStartInstance))
@@ -957,8 +1039,8 @@ func (c *InstanceServiceHTTPClientImpl) StartInstance(ctx context.Context, in *v
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) StopInstance(ctx context.Context, in *v1.ChangeInstanceRequest, opts ...http.CallOption) (*v1.Acceptance, error) {
-	var out v1.Acceptance
+func (c *InstanceServiceHTTPClientImpl) StopInstance(ctx context.Context, in *v11.ChangeInstanceRequest, opts ...http.CallOption) (*v11.Acceptance, error) {
+	var out v11.Acceptance
 	pattern := "/api/v1/instances/{data.instance_id}:stop"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceStopInstance))
@@ -970,8 +1052,8 @@ func (c *InstanceServiceHTTPClientImpl) StopInstance(ctx context.Context, in *v1
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) UpdateInstanceSchedulingSettings(ctx context.Context, in *v1.UpdateInstanceSchedulingSettingsRequest, opts ...http.CallOption) (*v1.InstanceSchedulingSettings, error) {
-	var out v1.InstanceSchedulingSettings
+func (c *InstanceServiceHTTPClientImpl) UpdateInstanceSchedulingSettings(ctx context.Context, in *v11.UpdateInstanceSchedulingSettingsRequest, opts ...http.CallOption) (*v11.InstanceSchedulingSettings, error) {
+	var out v11.InstanceSchedulingSettings
 	pattern := "/api/v1/admin/instance-scheduling-settings"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceUpdateInstanceSchedulingSettings))
@@ -983,8 +1065,8 @@ func (c *InstanceServiceHTTPClientImpl) UpdateInstanceSchedulingSettings(ctx con
 	return &out, nil
 }
 
-func (c *InstanceServiceHTTPClientImpl) UpdateSchedulerConfig(ctx context.Context, in *v1.UpdateSchedulerConfigRequest, opts ...http.CallOption) (*v1.SchedulerConfig, error) {
-	var out v1.SchedulerConfig
+func (c *InstanceServiceHTTPClientImpl) UpdateSchedulerConfig(ctx context.Context, in *v11.UpdateSchedulerConfigRequest, opts ...http.CallOption) (*v11.SchedulerConfig, error) {
+	var out v11.SchedulerConfig
 	pattern := "/api/v1/admin/scheduler-config"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationInstanceServiceUpdateSchedulerConfig))

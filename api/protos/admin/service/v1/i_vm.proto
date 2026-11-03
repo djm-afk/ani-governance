@@ -1,9 +1,13 @@
 syntax = "proto3";
 package admin.service.v1;
 import "google/api/annotations.proto";
+import "catalog/service/v1/vnic.proto";
 import "gnostic/openapi/v3/annotations.proto";
 import "vm/service/v1/vm.proto";
 service VMService {
+ rpc GetVMNetworkInterfaces(catalog.service.v1.GetVMNetworkInterfacesRequest) returns(catalog.service.v1.NetworkInterfaces) { option(google.api.http)={get:"/api/v1/virtual-machines/{vm_id}/network-interfaces"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}]}; }
+ rpc SetVMNetworkInterface(catalog.service.v1.SetVMNetworkInterfaceRequest) returns(vm.service.v1.VMOperation) { option(google.api.http)={put:"/api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}" body:"*"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}] responses:{response_or_reference:[{name:"202" value:{response:{description:"Configuration accepted; saving does not restart the instance" content:{additional_properties:[{name:"application/json" value:{schema:{reference:{_ref:"#/components/schemas/VMOperation"}}}}]}}}}]}}; }
+
  rpc SetVMSecurityGroups(vm.service.v1.ChangeVMRequest) returns(vm.service.v1.VMOperation) { option (gnostic.openapi.v3.operation) = { responses: { response_or_reference: [{ name: "202" value: { response: { description: "Accepted" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/VMOperation" } } } }] } } } }] } }; option(google.api.http)={put:"/api/v1/virtual-machines/{data.vm_id}/security-groups" body:"*"}; }
  rpc CreateVM(vm.service.v1.CreateVMRequest) returns(vm.service.v1.VMAcceptance) { option (gnostic.openapi.v3.operation) = { responses: { response_or_reference: [{ name: "202" value: { response: { description: "Accepted" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/VMAcceptance" } } } }] } } } }] } }; option(google.api.http)={post:"/api/v1/virtual-machines" body:"*"}; }
  rpc ListVMs(vm.service.v1.ListVMsRequest) returns(vm.service.v1.ListVMsResponse) { option(google.api.http)={get:"/api/v1/virtual-machines"}; }

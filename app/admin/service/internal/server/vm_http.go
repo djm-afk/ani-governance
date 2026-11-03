@@ -21,6 +21,7 @@ func RegisterVMHTTPServer(server *http.Server, s *service.VMService) {
 	if server == nil || s == nil {
 		return
 	}
+	registerVMNetworkInterfaces(server, s)
 	type route struct {
 		action, operation string
 		request           func() proto.Message

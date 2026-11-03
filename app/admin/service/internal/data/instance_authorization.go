@@ -7,6 +7,9 @@ import (
 	entCrud "go-wind-admin/pkg/localdeps/go-crud/entgo"
 )
 
+const NetworkVNicReadPath = "/api/v1/networks/vnics/{vnic_id}"
+const InstanceNetworkInterfacesPath = "/api/v1/instances/{instance_id}/network-interfaces"
+const InstanceNetworkInterfacePath = "/api/v1/instances/{instance_id}/network-interfaces/{slot}"
 const InstanceSecurityGroupsPath = "/api/v1/instances/{data.instance_id}/security-groups"
 const InstanceCreatePath = "/api/v1/instances"
 const InstanceDeletePath = "/api/v1/instances/{data.instance_id}"
@@ -68,8 +71,15 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 	if !InstanceModuleRegistered() {
 		return ErrActionAuthorizationDenied
 	}
+	if r != nil && r.current != nil && path == NetworkVNicReadPath && method == "GET" {
+		return r.current.authorizeRoute(ctx, tenant, user, path, "NETWORK", method)
+	}
 	allowed := false
 	switch path {
+	case InstanceNetworkInterfacesPath:
+		allowed = method == "GET"
+	case InstanceNetworkInterfacePath:
+		allowed = method == "PUT"
 	case InstanceCreatePath:
 		allowed = method == "POST" || method == "GET"
 	case InstanceSecurityGroupsPath:

@@ -323,3 +323,11 @@ A drain timeout is an error, and uncertain original operations still require
 reconciliation. Stop/close and quota release retain their existing paths;
 close delivery continues while Create is paused. Switch back to `false` and
 restart after reviewed cleanup; this setting does not delete or refund data.
+
+## Manual VNIC and owner network interfaces
+
+Gov delegates CreateVNic/GetVNic/ListVNics/DeleteVNic/ListVNicBindingTargets to the existing `network.v1.NetworkService` mTLS connection with the resolved `target_tenant_id`, actor and fresh request ID. Network read/write grants and NETWORK apply on every call; candidate reads also check the target owner's read grant. Network timeout remains `ANI_NETWORK_TIMEOUT`; no public identity metadata is forwarded.
+
+VMService and InstanceService GetNetworkInterfaces/SetNetworkInterface use the existing 30-second owner unary client, current owner grants and trusted tenant mapping. Manual choice additionally requires VNIC read permission under NETWORK. Set uses the owner's canonical command codec and LookupCommandReplay before a new command; a Governance accepted-delete fence blocks new writes. Saving only records a desired selection; platform Restart remains a separate authorized command. A timeout never triggers a new identity or automatic fallback.
+
+Only the four new VM/Instance network-interface Get/Set operations additionally admit signed API Key requests. Their dedicated scope preserves `governance:access-key:<id>` and checks the key's current tenant, enabled/unexpired credential, bound tenant role, exact route grant and owner/NETWORK plan modules in the existing repeatable-read authorization transaction. Key IDs never query User membership. Existing owner lifecycle endpoints retain their established credential policy.
