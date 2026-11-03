@@ -294,6 +294,35 @@ func (m *VPC) validate(all bool) error {
 		}
 	}
 
+	if all {
+		switch v := interface{}(m.GetBaseConnectivity()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, VPCValidationError{
+					field:  "BaseConnectivity",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, VPCValidationError{
+					field:  "BaseConnectivity",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetBaseConnectivity()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return VPCValidationError{
+				field:  "BaseConnectivity",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return VPCMultiError(errors)
 	}
@@ -370,6 +399,145 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = VPCValidationError{}
+
+// Validate checks the field values on VPCBaseConnectivity with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *VPCBaseConnectivity) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on VPCBaseConnectivity with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// VPCBaseConnectivityMultiError, or nil if none found.
+func (m *VPCBaseConnectivity) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *VPCBaseConnectivity) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for State
+
+	// no validation rules for Reason
+
+	if all {
+		switch v := interface{}(m.GetObservedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, VPCBaseConnectivityValidationError{
+					field:  "ObservedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, VPCBaseConnectivityValidationError{
+					field:  "ObservedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetObservedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return VPCBaseConnectivityValidationError{
+				field:  "ObservedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for ObservationStale
+
+	// no validation rules for ReasonMessage
+
+	if len(errors) > 0 {
+		return VPCBaseConnectivityMultiError(errors)
+	}
+
+	return nil
+}
+
+// VPCBaseConnectivityMultiError is an error wrapping multiple validation
+// errors returned by VPCBaseConnectivity.ValidateAll() if the designated
+// constraints aren't met.
+type VPCBaseConnectivityMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m VPCBaseConnectivityMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m VPCBaseConnectivityMultiError) AllErrors() []error { return m }
+
+// VPCBaseConnectivityValidationError is the validation error returned by
+// VPCBaseConnectivity.Validate if the designated constraints aren't met.
+type VPCBaseConnectivityValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e VPCBaseConnectivityValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e VPCBaseConnectivityValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e VPCBaseConnectivityValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e VPCBaseConnectivityValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e VPCBaseConnectivityValidationError) ErrorName() string {
+	return "VPCBaseConnectivityValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e VPCBaseConnectivityValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sVPCBaseConnectivity.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = VPCBaseConnectivityValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = VPCBaseConnectivityValidationError{}
 
 // Validate checks the field values on VPCPublicEgress with the rules defined
 // in the proto definition for this message. If any rules are violated, the

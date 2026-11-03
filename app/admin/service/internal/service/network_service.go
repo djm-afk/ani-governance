@@ -141,6 +141,10 @@ func wireVPC(v *networkv1.VPC) *catalogv1.VPC {
 		State: strings.ToLower(strings.TrimPrefix(v.State.String(), "RESOURCE_STATE_")), Reason: v.Reason,
 		CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, Version: v.Version, ObservedAt: v.ObservedAt,
 		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, SubnetCount: v.SubnetCount}
+	if base := v.BaseConnectivity; base != nil {
+		out.BaseConnectivity = &catalogv1.VPCBaseConnectivity{State: base.State, Reason: base.Reason,
+			ObservedAt: base.ObservedAt, ObservationStale: base.ObservationStale, ReasonMessage: base.ReasonMessage}
+	}
 	if e := v.PublicEgress; e != nil {
 		out.PublicEgress = &catalogv1.VPCPublicEgress{BindingId: e.BindingId, EipId: e.EipId, EipAddress: e.EipAddress,
 			BindingState: e.BindingState, State: strings.ToLower(strings.TrimPrefix(e.State.String(), "RESOURCE_STATE_")),

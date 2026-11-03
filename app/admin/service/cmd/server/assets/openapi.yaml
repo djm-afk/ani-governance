@@ -3792,6 +3792,22 @@ paths:
                                 $ref: '#/components/schemas/ReleasePlatformEIPResponse'
             security:
                 - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pool-defaults:
+        get:
+            tags:
+                - PlatformNetworkService
+            summary: GetIntranetPoolDefaults
+            description: Requires platform user JWT and network:platform:intranet-pool:get. Returns trusted Provider defaults for creating a basic network; accepts no tenant or cluster override. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_GetIntranetPoolDefaults
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetIntranetPoolDefaultsResponse'
+            security:
+                - BearerAuth: []
     /api/v1/admin/networks/intranet-address-pools:
         get:
             tags:
@@ -3916,6 +3932,34 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/SetIntranetPoolAllocationEnabledResponse'
+            security:
+                - BearerAuth: []
+    /api/v1/admin/networks/intranet-address-pools/{pool_id}/auto-allocation:
+        put:
+            tags:
+                - PlatformNetworkService
+            summary: SetIntranetPoolAutoAllocationEnabled
+            description: Requires platform user JWT and network:platform:intranet-pool:auto-allocate. Enable atomically selects the default pool, enables allocation and new VPC base EIP/SNAT provisioning. Disable affects future VPCs only and requires the current default pool. Tenant identities and API keys are denied.
+            operationId: PlatformNetworkService_SetIntranetPoolAutoAllocationEnabled
+            parameters:
+                - name: pool_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetIntranetPoolAutoAllocationEnabledRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SetIntranetPoolAutoAllocationEnabledResponse'
             security:
                 - BearerAuth: []
     /api/v1/admin/networks/intranet-address-pools/{pool_id}/default:
@@ -17762,6 +17806,17 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        GetIntranetPoolDefaultsResponse:
+            type: object
+            properties:
+                default_vpc_name:
+                    type: string
+                default_vpc_uid:
+                    type: string
+                intranet_networks:
+                    type: array
+                    items:
+                        type: string
         GetLoadBalancerOperationResponse:
             type: object
             properties:
@@ -19317,6 +19372,9 @@ components:
                         type: string
                 scope:
                     type: string
+                new_vpcs_enabled:
+                    type: boolean
+                    description: True only for the current default source while new VPC allocation is on.
         IntranetPoolVerification:
             type: object
             properties:
@@ -24518,6 +24576,27 @@ components:
             properties:
                 resource:
                     $ref: '#/components/schemas/PlatformResource'
+        SetIntranetPoolAutoAllocationEnabledData:
+            type: object
+            properties:
+                enabled:
+                    type: boolean
+                expected_version:
+                    type: string
+                idempotency_key:
+                    type: string
+        SetIntranetPoolAutoAllocationEnabledRequest:
+            type: object
+            properties:
+                pool_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/SetIntranetPoolAutoAllocationEnabledData'
+        SetIntranetPoolAutoAllocationEnabledResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/PlatformResource'
         SetPresetEnabledData:
             type: object
             properties:
@@ -26193,7 +26272,26 @@ components:
                     type: string
                 public_egress:
                     $ref: '#/components/schemas/VPCPublicEgress'
+                base_connectivity:
+                    $ref: '#/components/schemas/VPCBaseConnectivity'
             description: Public product fields only; tenant identity and provider placement stay internal.
+        VPCBaseConnectivity:
+            type: object
+            properties:
+                state:
+                    type: string
+                reason:
+                    type: string
+                observed_at:
+                    type: string
+                    format: date-time
+                observation_stale:
+                    type: boolean
+                reason_message:
+                    type: string
+            description: |-
+                Read-only system connection summary. Ready describes fresh configuration
+                 evidence, not traffic health; internal EIP/SNAT identities stay private.
         VPCPublicEgress:
             type: object
             properties:

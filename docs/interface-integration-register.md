@@ -1678,6 +1678,8 @@ Resource 通过新迁移 0013 增加可空 text 列，保留历史迁移与原 c
 <a id="gov-platform-network-01"></a>
 ## GOV-PLATFORM-NETWORK-01：平台网络 BFF
 
+2026-11-03 增加基础网络的新 VPC 自动分配命令，单次受信委托原子选择默认池、开启分配与 `new_vpcs_enabled`，关闭和默认源切换不迁移已有 VPC。独立平台动作权限、请求/响应及部署目录步骤见[平台网络合同](contracts/platform-network.md)。Intranet 列表与详情追加开关状态，租户 VPC 响应追加不含系统资源标识的 `base_connectivity` 摘要。继续使用既有身份、幂等、版本与 Provider 准入；人工 verification 不再是基础连接自动分配前置。不新增租户控制入口、探测或历史补齐；源码验证与目标部署、真实 LB 流量分别确认。
+
 2026-10-30 移除 NodeFacts 网卡发现、独立设备登记/查询及旧登记退出共 5 个公共方法，其专属 DTO、平台客户端、权限映射和目录种子同步删除。平台接口现为 35 个；管理员手工提交网卡名，经 Resource 受理后交给 KCN 接管。正常交换机、二层网络、公网池与默认出口入口保持原合同；历史验证记录不代表这些已移除入口仍可调用。当前合同见[平台网络接入](contracts/platform-network.md)。源码清理、生成/测试和目标部署分别确认，本登记不预先声明通过。
 
 2026-10-27 追加平台默认 VPC 当前出口查询，复用 `network:platform:default-egress:get`；平台 EIP 清单纳入无租户的系统出口地址并保留所属生命周期释放约束。契约见[当前平台默认出口](contracts/platform-network.md#当前平台默认出口)。

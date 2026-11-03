@@ -20,6 +20,16 @@ message VPC {
  string last_operation_id = 12 [json_name = "last_operation_id"];
  int64 subnet_count = 13 [json_name = "subnet_count"];
  VPCPublicEgress public_egress = 14 [json_name = "public_egress"];
+ VPCBaseConnectivity base_connectivity = 15 [json_name = "base_connectivity"];
+}
+// Read-only system connection summary. Ready describes fresh configuration
+// evidence, not traffic health; internal EIP/SNAT identities stay private.
+message VPCBaseConnectivity {
+ string state = 1 [json_name = "state"];
+ string reason = 2 [json_name = "reason"];
+ google.protobuf.Timestamp observed_at = 3 [json_name = "observed_at"];
+ bool observation_stale = 4 [json_name = "observation_stale"];
+ string reason_message = 5 [json_name = "reason_message"];
 }
 // Persisted public EIP association from the same VPC read snapshot. Lifecycle
 // state and observed applied_enabled remain distinct from binding ownership.

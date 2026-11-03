@@ -229,6 +229,19 @@ func TestNetworkCreateEIPForwardsInitialSecurityGroupsAtomically(t *testing.T) {
 	}
 }
 
+func TestNetworkBaseConnectivitySummaryPreservesIndependentObservation(t *testing.T) {
+	if got := wireVPC(&networkv1.VPC{}); got.BaseConnectivity != nil {
+		t.Fatal("VPC without base connectivity acquired a summary")
+	}
+	for _, state := range []string{"missing", "pending", "ready", "degraded", "deleting", "deleted", "unknown"} {
+		in := &networkv1.VPC{BaseConnectivity: &networkv1.VPCBaseConnectivity{State: state, Reason: "BASE_PENDING", ReasonMessage: "Waiting for fresh observation", ObservationStale: true}}
+		got := wireVPC(in).BaseConnectivity
+		if got == nil || got.State != state || got.Reason != in.BaseConnectivity.Reason || got.ReasonMessage != in.BaseConnectivity.ReasonMessage || !got.ObservationStale || got.ObservedAt != nil {
+			t.Fatalf("base connectivity summary lost independent observation: %v", got)
+		}
+	}
+}
+
 func TestNetworkPublicEgressAssociationPreservesObservedState(t *testing.T) {
 	if got := wireVPC(&networkv1.VPC{}); got.PublicEgress != nil {
 		t.Fatal("unbound VPC acquired an association")
