@@ -2171,7 +2171,6 @@ catalog sync, explicitly apply
 `sql/data/20261101010000_modeldev_environment_permissions.sql` for Permission/API
 links and exact default tenant-manager/template grants; other read-only roles
 require explicit grants. Live A/B acceptance remains pending coordinated cutover.
-
 ## NET-12～NET-15 子网高级创建参数
 
 租户子网创建沿用现有 `POST /api/v1/networks/subnets` 的扁平请求体和 `gateway` 字段，追加 `exclude_ips: string[]`、可选 `enable_dhcp: bool`、`dns_servers: string[]`。未提供 DHCP 开关时向 Resource 保留缺省 presence，业务默认 false；显式 false 不丢失。三字段经可信租户/actor 客户端转发，Resource 负责校验、规范化及原键幂等；Subnet 创建、详情与列表响应回传这三项持久配置，不据此宣称 DHCP/DNS 已在运行端生效。此增量不增加 HTTP 路径、权限或套餐关系。
