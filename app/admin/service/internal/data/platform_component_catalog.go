@@ -139,7 +139,7 @@ type platformComponentRegistration struct {
 	MetricsServiceName string
 }
 
-// platformComponentRegistry 是 2026-10-28 在 kcn 新环境实测得到的平台组件清单。
+// platformComponentRegistry 是 kcn 环境的平台组件清单；已移除 ACC 退役的 node-agent。
 //
 // 与旧版 22 条完全不同（旧清单里的服务在新环境基本不存在）。刻意排除：
 //   - 沙箱/临时 Deployment（ani-governance-sandbox-*、ani-resource-sandbox-*）
@@ -163,7 +163,7 @@ var platformComponentRegistry = []platformComponentRegistration{
 	{Name: "ani-milvus-standalone", Kind: PlatformComponentKindDeployment, Namespace: "ani-platform", Group: PlatformComponentGroupDependency},
 	{Name: "ani-rustfs", Kind: PlatformComponentKindDeployment, Namespace: "ani-platform", Group: PlatformComponentGroupDependency},
 
-	// platform：控制面 / 前端 / 观测（13，含 4 个 DaemonSet）
+	// platform：控制面 / 前端 / 观测（12，含 3 个 DaemonSet）
 	{Name: "ani-governance", Kind: PlatformComponentKindDeployment, Namespace: "ani-system", Group: PlatformComponentGroupPlatform},
 	{Name: "ani-console", Kind: PlatformComponentKindDeployment, Namespace: "ani-system", Group: PlatformComponentGroupPlatform},
 	{Name: "ani-boss-console", Kind: PlatformComponentKindDeployment, Namespace: "ani-system", Group: PlatformComponentGroupPlatform},
@@ -173,7 +173,6 @@ var platformComponentRegistry = []platformComponentRegistration{
 	{Name: "prometheus-ani-metrics-prometheus", Kind: PlatformComponentKindStatefulSet, Namespace: "ani-observability", Group: PlatformComponentGroupPlatform},
 	{Name: "alertmanager-ani-metrics-alertmanager", Kind: PlatformComponentKindStatefulSet, Namespace: "ani-observability", Group: PlatformComponentGroupPlatform},
 	{Name: "ani-opensearch-master", Kind: PlatformComponentKindStatefulSet, Namespace: "ani-observability", Group: PlatformComponentGroupPlatform},
-	{Name: "ani-node-agent", Kind: PlatformComponentKindDaemonSet, Namespace: "ani-system", Group: PlatformComponentGroupPlatform},
 	{Name: "ani-fluent-bit", Kind: PlatformComponentKindDaemonSet, Namespace: "ani-observability", Group: PlatformComponentGroupPlatform},
 	{Name: "ani-gpu-nvml-v11", Kind: PlatformComponentKindDaemonSet, Namespace: "ani-observability", Group: PlatformComponentGroupPlatform},
 	{Name: "ani-metrics-prometheus-node-exporter", Kind: PlatformComponentKindDaemonSet, Namespace: "ani-observability", Group: PlatformComponentGroupPlatform},
