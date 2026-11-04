@@ -30,12 +30,11 @@ import (
 // platform guard and GPU target construction all use production constructors.
 type gpuTenantListACCProbe struct {
 	acc.AcceleratorAdminServiceClient
-	mu                                     sync.Mutex
-	cluster                                string
-	scopes                                 map[string][]*acc.GpuMetricScope
-	bindings                               []*acc.GpuBinding
-	clusterCalls, bindingCalls, scopeCalls int
-	cycle                                  bool
+	mu                         sync.Mutex
+	cluster                    string
+	bindings                   []*acc.GpuBinding
+	clusterCalls, bindingCalls int
+	cycle                      bool
 }
 
 func (p *gpuTenantListACCProbe) ListClusters(_ context.Context, req *acc.ListClustersRequest, _ ...grpc.CallOption) (*acc.ListClustersResponse, error) {
@@ -60,15 +59,6 @@ func (p *gpuTenantListACCProbe) AdminListBindings(_ context.Context, req *acc.Ad
 		return nil, status.Error(codes.InvalidArgument, "unexpected inventory filter")
 	}
 	return &acc.ListBindingsResponse{Items: p.bindings, Observation: &acc.Observation{Complete: true, SnapshotRef: "allocation-snapshot"}}, nil
-}
-func (p *gpuTenantListACCProbe) ListAdminGpuMetricScopes(_ context.Context, req *acc.AdminGpuMetricScopesRequest, _ ...grpc.CallOption) (*acc.GpuMetricScopesResponse, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.scopeCalls++
-	if req.Context == nil || req.Context.Actor == nil || req.Ref != nil {
-		return nil, status.Error(codes.PermissionDenied, "invalid platform scope")
-	}
-	return &acc.GpuMetricScopesResponse{Items: p.scopes[req.TenantId], SnapshotId: "usage-snapshot", IndexComplete: true}, nil
 }
 
 type gpuTenantListObsProbe struct {
@@ -128,14 +118,11 @@ func newGpuTenantListFixture(t *testing.T, count int) (*GpuTenantAdminService, *
 		require.NoError(t, err)
 		tenants = append(tenants, tenant)
 	}
-	peer := &gpuTenantListACCProbe{cluster: f.scope.ClusterId, scopes: map[string][]*acc.GpuMetricScope{}}
+	peer := &gpuTenantListACCProbe{cluster: f.device.ClusterId}
 	for _, tenant := range tenants {
-		scope := proto.Clone(f.scope).(*acc.GpuMetricScope)
-		scope.Ref = proto.Clone(f.ref).(*acc.GpuUsageRef)
-		scope.Ref.TenantId = tenant.ResourceTenantID
-		scope.PodName, scope.PodUid = uuid.NewString(), uuid.NewString()
-		peer.scopes[tenant.ResourceTenantID] = []*acc.GpuMetricScope{scope}
-		peer.bindings = append(peer.bindings, &acc.GpuBinding{BindingId: uuid.NewString(), VerifiedUsageRef: scope.Ref, Pod: &acc.PodRef{ClusterId: peer.cluster, Namespace: scope.Namespace, Name: scope.PodName, Uid: scope.PodUid, ContainerName: scope.ContainerName}, PhysicalDeviceId: scope.DeviceId, State: acc.AllocationState_ACTIVE, MemoryMib: 8192, Observation: &acc.Observation{Complete: true}})
+		ref := proto.Clone(f.ref).(*acc.GpuUsageRef)
+		ref.TenantId = tenant.ResourceTenantID
+		peer.bindings = append(peer.bindings, &acc.GpuBinding{BindingId: uuid.NewString(), VerifiedUsageRef: ref, Pod: &acc.PodRef{ClusterId: peer.cluster, Namespace: "tenant-workloads", Name: uuid.NewString(), Uid: uuid.NewString(), ContainerName: "workspace"}, PhysicalDeviceId: f.device.DeviceId, State: acc.AllocationState_ACTIVE, MemoryMib: 8192, Observation: &acc.Observation{Complete: true}})
 	}
 	monitor := &gpuTenantListObsProbe{delay: 20 * time.Millisecond}
 	f.svc.accelerator.client.Admin = peer
@@ -156,7 +143,6 @@ func TestGpuTenantListCurrentQuotaUsageAllocation(t *testing.T) {
 	require.Equal(t, 2, monitor.maximum, "only two tenant observations run concurrently")
 	require.Equal(t, 1, accPeer.clusterCalls)
 	require.Equal(t, 1, accPeer.bindingCalls, "allocation inventory is not queried per tenant")
-	require.Equal(t, 3, accPeer.scopeCalls)
 	for i, row := range out.Items {
 		require.Equal(t, tenants[i].ID, row.Quota.TenantId)
 		require.Equal(t, "AVAILABLE", row.Allocation.Status)
@@ -183,7 +169,6 @@ func TestGpuTenantListCurrentQuotaUsageAllocation(t *testing.T) {
 		}
 	}
 	require.True(t, found)
-	require.Equal(t, 0, f.acc.tenantCalls, "platform observations never invent a tenant transport context")
 	_, err = svc.ListGpuTenants(f.ctx, &view.ListGpuTenantsRequest{})
 	require.Error(t, err)
 	_, err = svc.ListGpuTenants(auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectAPIKey, ID: 7}), &view.ListGpuTenantsRequest{})
@@ -229,22 +214,12 @@ func TestGpuTenantListUnknownAllocationNeverBecomesZero(t *testing.T) {
 }
 
 func TestGpuTenantListBudgetAndDeadlineFailWholePage(t *testing.T) {
-	svc, _, peer, monitor, tenants, platform := newGpuTenantListFixture(t, 2)
-	for _, tenant := range tenants {
-		first := peer.scopes[tenant.ResourceTenantID][0]
-		for i := 1; i < 65; i++ {
-			scope := proto.Clone(first).(*acc.GpuMetricScope)
-			scope.PodName = uuid.NewString()
-			peer.scopes[tenant.ResourceTenantID] = append(peer.scopes[tenant.ResourceTenantID], scope)
-		}
-	}
+	svc, _, peer, monitor, _, platform := newGpuTenantListFixture(t, 2)
+	monitor.err = status.Error(codes.ResourceExhausted, "configured source budget exceeded")
 	out, err := svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
 	require.Nil(t, out)
-	require.EqualValues(t, 429, kerrors.Code(err), "two individually valid tenant scopes cannot bypass the page source budget")
-	require.LessOrEqual(t, monitor.calls, 1)
-	for _, tenant := range tenants {
-		peer.scopes[tenant.ResourceTenantID] = peer.scopes[tenant.ResourceTenantID][:1]
-	}
+	require.EqualValues(t, 429, kerrors.Code(err))
+	monitor.err = nil
 	monitor.delay = time.Second
 	short, cancel := context.WithTimeout(platform, 10*time.Millisecond)
 	defer cancel()

@@ -30,9 +30,8 @@ func NewGpuTenantAdminService(quotas *data.QuotaAdminRepo, monitoring *GpuMonito
 type gpuTenantListBudgetKey struct{}
 type gpuTenantListIdentityKey struct{}
 type gpuTenantListBudget struct {
-	mu      sync.Mutex
-	sources map[string]bool
-	curves  int
+	mu     sync.Mutex
+	curves int
 }
 
 func gpuTenantMonitoringIdentity(ctx context.Context, resolver ResourceTenantResolver, tenantID uint32) (string, error) {
@@ -47,7 +46,7 @@ func gpuTenantMonitoringIdentity(ctx context.Context, resolver ResourceTenantRes
 }
 
 // gpuTenantListReserve runs at the common execution boundary, after trusted
-// ACC resolution and before Obs. Other GPU routes retain their existing budget.
+// tenant authorization and before Obs. Obs bounds the actual returned sources.
 func gpuTenantListReserve(ctx context.Context, target *gpu.GpuTarget, curves int) error {
 	b, ok := ctx.Value(gpuTenantListBudgetKey{}).(*gpuTenantListBudget)
 	if !ok {
@@ -57,16 +56,6 @@ func gpuTenantListReserve(ctx context.Context, target *gpu.GpuTarget, curves int
 	defer b.mu.Unlock()
 	if target == nil || curves < 1 || b.curves+curves > 12 {
 		return gpuBudget()
-	}
-	for _, scope := range target.Scopes {
-		if scope == nil {
-			return acceleratorInvalidResponse()
-		}
-		key := strings.Join([]string{scope.ClusterId, scope.NodeId, scope.NodeUid, scope.Namespace, scope.PodName, scope.ContainerName, strings.TrimPrefix(strings.ToLower(scope.GpuUuid), "gpu-"), scope.VdeviceId}, "\x00")
-		b.sources[key] = true
-		if len(b.sources) > 128 {
-			return gpuBudget()
-		}
 	}
 	b.curves += curves
 	return nil
@@ -94,7 +83,7 @@ func (s *GpuTenantAdminService) ListGpuTenants(ctx context.Context, req *view.Li
 	}
 	batch, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	batch = context.WithValue(batch, gpuTenantListBudgetKey{}, &gpuTenantListBudget{sources: map[string]bool{}})
+	batch = context.WithValue(batch, gpuTenantListBudgetKey{}, &gpuTenantListBudget{})
 	quotaPage, err := s.quotas.ListTenantAccountSummaryPage(batch, data.TenantQuotaAccountSummaryFilter{Page: page, PageSize: size, TenantID: req.TenantId})
 	if err != nil {
 		return nil, err

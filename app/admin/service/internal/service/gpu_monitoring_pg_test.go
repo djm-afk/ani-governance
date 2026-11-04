@@ -46,20 +46,10 @@ import (
 type gpuMonitoringACCProbe struct {
 	acc.AcceleratorAdminServiceClient
 	acc.AcceleratorUsageServiceClient
-	tenantCalls, adminCalls, deviceCalls int
-	tenant                               func(*acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error)
-	admin                                func(*acc.AdminGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error)
-	devices                              func(*acc.ListDevicesRequest) (*acc.ListDevicesResponse, error)
+	deviceCalls int
+	devices     func(*acc.ListDevicesRequest) (*acc.ListDevicesResponse, error)
 }
 
-func (p *gpuMonitoringACCProbe) ListTenantGpuMetricScopes(_ context.Context, r *acc.TenantGpuMetricScopesRequest, _ ...grpc.CallOption) (*acc.GpuMetricScopesResponse, error) {
-	p.tenantCalls++
-	return p.tenant(r)
-}
-func (p *gpuMonitoringACCProbe) ListAdminGpuMetricScopes(_ context.Context, r *acc.AdminGpuMetricScopesRequest, _ ...grpc.CallOption) (*acc.GpuMetricScopesResponse, error) {
-	p.adminCalls++
-	return p.admin(r)
-}
 func (p *gpuMonitoringACCProbe) ListDevices(_ context.Context, r *acc.ListDevicesRequest, _ ...grpc.CallOption) (*acc.ListDevicesResponse, error) {
 	p.deviceCalls++
 	return p.devices(r)
@@ -81,7 +71,7 @@ func (p *gpuMonitoringObsProbe) result(platform bool, tenant, actor string, targ
 	if p.err != nil {
 		return nil, p.err
 	}
-	r := &obs.QueryGpuResponse{QueryTime: timestamppb.Now(), IndexComplete: target.IndexComplete, ScopeWatermark: "secret-watermark", IncludedResourceKinds: target.IncludedResourceKinds, UncoveredResourceKinds: target.UncoveredResourceKinds}
+	r := &obs.QueryGpuResponse{QueryTime: timestamppb.Now(), IndexComplete: false, IncludedResourceKinds: []string{"container"}}
 	for _, code := range codes {
 		series := &obs.GpuSeries{MetricCode: code, Unit: "bytes", BaseResolutionSeconds: 30, Quality: &obs.GpuQuality{Status: "PARTIAL"}, Points: []*obs.GpuPoint{{Timestamp: timestamppb.Now(), KnownValue: proto.Float64(512), Quality: &obs.GpuQuality{Status: "PARTIAL"}}}}
 		if p.physicalEvents {
@@ -132,7 +122,7 @@ type gpuMonitoringFixture struct {
 	obs        *gpuMonitoringObsProbe
 	owner      *gpuMonitoringOwnerProbe
 	ref        *acc.GpuUsageRef
-	scope      *acc.GpuMetricScope
+	device     *acc.PhysicalDevice
 }
 
 func newGpuMonitoringFixture(t *testing.T) *gpuMonitoringFixture {
@@ -182,32 +172,17 @@ func newGpuMonitoringFixture(t *testing.T) *gpuMonitoringFixture {
 	_, err = ledger.Occupy(ctx, &data.QuotaOccupyInput{TenantID: tenant.ID, ResourceTenantID: tenant.ResourceTenantID, ResourceID: resourceID, OperationID: createID, OwnerService: InstanceOwner, Action: InstanceCreateAction, ActorType: "user", ActorID: strconv.FormatUint(uint64(operator.ID), 10), IdempotencyKey: uuid.NewString(), RequestHash: "monitoring-original", CanonicalRequest: string(canonical), Items: []data.QuotaOccupyItem{{QuotaCode: GpuSharedQuotaCode, Units: 8192}}})
 	require.NoError(t, err)
 	ref := &acc.GpuUsageRef{TenantId: tenant.ResourceTenantID, OwnerService: InstanceOwner, ResourceId: resourceID, CreateOperationId: createID}
-	now := time.Now().UTC()
-	scope := &acc.GpuMetricScope{ScopeId: "secret-scope", Ref: ref, ResourceKind: "container_instance", ClusterId: plan.Request.ClusterId, Node: &acc.NodeRef{Name: "secret-node", Uid: uuid.NewString()}, Namespace: "secret-namespace", PodName: "secret-pod", PodUid: uuid.NewString(), ContainerName: "workspace", GpuUuid: "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", VdeviceId: "0", DeviceId: uuid.NewString(), BindingId: uuid.NewString(), ValidFrom: now.Add(-time.Hour).Format(time.RFC3339Nano), EvidenceAt: now.Format(time.RFC3339Nano), OwnershipState: "VERIFIED", CandidateComplete: true}
+	device := &acc.PhysicalDevice{DeviceId: uuid.NewString(), ClusterId: plan.Request.ClusterId, Node: &acc.NodeRef{Name: "secret-node", Uid: uuid.NewString()}, VendorDeviceId: "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", ModelKey: "test-model"}
 	accPeer := &gpuMonitoringACCProbe{}
-	accPeer.tenant = func(r *acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-		require.Equal(t, tenant.ResourceTenantID, r.Context.TenantId)
-		require.Equal(t, strconv.FormatUint(uint64(operator.ID), 10), r.Context.Actor.Id)
-		if r.Ref != nil {
-			require.True(t, proto.Equal(ref, r.Ref), "the original create identity comes from the real ledger")
-		}
-		return &acc.GpuMetricScopesResponse{Items: []*acc.GpuMetricScope{proto.Clone(scope).(*acc.GpuMetricScope)}, SnapshotId: "secret-snapshot", IndexComplete: true, IndexStartedAt: scope.ValidFrom}, nil
-	}
-	accPeer.admin = func(r *acc.AdminGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-		require.Equal(t, tenant.ResourceTenantID, r.TenantId)
-		require.Nil(t, r.Ref)
-		require.NotNil(t, r.Context.Actor)
-		return &acc.GpuMetricScopesResponse{Items: []*acc.GpuMetricScope{proto.Clone(scope).(*acc.GpuMetricScope)}, SnapshotId: "secret-snapshot", IndexComplete: true}, nil
-	}
 	obsPeer, owner := &gpuMonitoringObsProbe{}, &gpuMonitoringOwnerProbe{}
 	tenants := data.NewTenantRepo(bctx, c)
 	accelerator := NewAcceleratorService(&data.AcceleratorClient{Admin: accPeer, Usage: accPeer}, tenants, NewGpuBffLedgerBridge(ledger, nil), nil, nil, NewQuotaAdapterRegistry(), nil)
-	instanceSvc := NewInstanceService(nil, NewInstanceGpuBinding(owner, data.NewInstanceAuthorizationRepo(c), scope.ClusterId), tenants, nil, nil)
+	instanceSvc := NewInstanceService(nil, NewInstanceGpuBinding(owner, data.NewInstanceAuthorizationRepo(c), device.ClusterId), tenants, nil, nil)
 	svc := NewGpuMonitoringService(accelerator, obsPeer, instanceSvc, nil, data.NewGpuResourceReadAuthorizationRepo(c))
-	return &gpuMonitoringFixture{svc: svc, client: c.Client(), ctx: ctx, tenant: tenant, operator: operator, membership: membership, acc: accPeer, obs: obsPeer, owner: owner, ref: ref, scope: scope}
+	return &gpuMonitoringFixture{svc: svc, client: c.Client(), ctx: ctx, tenant: tenant, operator: operator, membership: membership, acc: accPeer, obs: obsPeer, owner: owner, ref: ref, device: device}
 }
 
-func TestGpuMonitoringTenantAndContainerUseTrustedScopes(t *testing.T) {
+func TestGpuMonitoringTenantAndContainerUseTrustedIdentity(t *testing.T) {
 	f := newGpuMonitoringFixture(t)
 	before, err := f.client.QuotaAccount.Query().Only(appViewer.NewSystemViewerContext(context.Background()))
 	require.NoError(t, err)
@@ -217,31 +192,31 @@ func TestGpuMonitoringTenantAndContainerUseTrustedScopes(t *testing.T) {
 	require.Equal(t, f.tenant.ResourceTenantID, f.owner.tenant)
 	require.Equal(t, "governance:user:"+strconv.FormatUint(uint64(f.operator.ID), 10), f.owner.actor)
 	require.Equal(t, "RESOURCE", f.obs.target.Kind)
-	require.Equal(t, "container", f.obs.target.Scopes[0].ResourceKind)
-	require.Equal(t, "container_instance", f.scope.ResourceKind, "provider identity is adapted without mutating its fact")
+	require.Equal(t, "container", f.obs.target.ResourceKind)
+	require.Empty(t, f.obs.target.Scopes, "business monitoring carries identity without physical scopes")
 	require.Equal(t, f.tenant.ResourceTenantID, f.obs.tenant)
 	require.False(t, f.obs.platform)
-	require.Equal(t, f.ref.CreateOperationId, f.obs.target.Scopes[0].UsageRef.CreateOperationId)
-	require.Equal(t, f.scope.Node.Uid, f.obs.target.Scopes[0].NodeUid)
-	require.True(t, f.obs.target.Scopes[0].CandidateComplete)
+	require.Equal(t, f.ref.CreateOperationId, f.obs.target.UsageRef.CreateOperationId)
+	require.Equal(t, f.ref.OwnerService, f.obs.target.UsageRef.OwnerService)
+	require.Equal(t, f.ref.ResourceId, f.obs.target.UsageRef.ResourceId)
+	require.Equal(t, f.ref.TenantId, f.obs.target.UsageRef.TenantId)
 	require.Equal(t, "container", r.ResourceKind)
 	require.Nil(t, r.Series[0].Points[0].Value, "unknown complete totals must remain absent")
 	require.Equal(t, 512.0, r.Series[0].Points[0].GetKnownValue())
 	raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(r)
 	require.NoError(t, err)
-	for _, secret := range []string{"secret-", f.scope.PodUid, f.scope.BindingId, f.scope.DeviceId, f.scope.Node.Uid, f.ref.CreateOperationId} {
+	for _, secret := range []string{"secret-", f.device.DeviceId, f.device.Node.Uid, f.ref.CreateOperationId} {
 		require.NotContains(t, string(raw), secret)
 	}
-	f.scope.ValidTo = time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339Nano)
 	f.owner.err = status.Error(codes.NotFound, "deleted owner resource")
 	_, err = f.svc.QueryMyGpu(f.ctx, &view.GpuTenantQueryRequest{Data: &view.GpuQueryData{Window: "30d"}})
 	require.NoError(t, err)
 	require.Equal(t, "TENANT", f.obs.target.Kind)
-	require.NotNil(t, f.obs.target.Scopes[0].ValidTo, "trusted retired scope survives tenant history aggregation")
+	require.Empty(t, f.obs.target.Scopes)
+	require.Nil(t, f.obs.target.UsageRef)
 	require.Equal(t, 1, f.owner.calls, "tenant history does not enumerate only currently readable owner objects")
 	require.InDelta(t, 30*24*time.Hour.Seconds(), f.obs.end.AsTime().Sub(f.obs.start.AsTime()).Seconds(), 1)
-	require.Equal(t, 2, f.acc.tenantCalls)
-	require.Zero(t, f.acc.adminCalls, "tenant reads never call the administrator scope method")
+	require.Zero(t, f.acc.deviceCalls, "business monitoring never enumerates physical devices")
 	after, err := f.client.QuotaAccount.Query().Only(appViewer.NewSystemViewerContext(context.Background()))
 	require.NoError(t, err)
 	require.Equal(t, before.OccupiedUnits, after.OccupiedUnits, "monitoring must not occupy or release quota")
@@ -251,7 +226,7 @@ func TestGpuMonitoringTenantAndContainerUseTrustedScopes(t *testing.T) {
 	require.True(t, f.obs.platform)
 	require.Empty(t, f.obs.tenant, "platform transport never invents a tenant context")
 	require.Equal(t, f.tenant.ResourceTenantID, f.obs.target.TenantId)
-	require.Equal(t, 1, f.acc.adminCalls)
+	require.Empty(t, f.obs.target.Scopes)
 }
 
 func TestGpuMonitoringInferenceAdapterPreservesOriginalAndReplicas(t *testing.T) {
@@ -282,34 +257,22 @@ func TestGpuMonitoringInferenceAdapterPreservesOriginalAndReplicas(t *testing.T)
 	require.NoError(t, err)
 	owner.service = &runtimev1.InferenceService{Id: resourceID, Replicas: 2, Generation: 1}
 	f.svc.inference = NewInferenceServiceWithOwner(nil, owner, data.NewTenantRepo(bctx, c))
-	f.acc.tenant = func(r *acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-		require.Equal(t, "ani-inference", r.Ref.OwnerService)
-		require.Equal(t, resourceID, r.Ref.ResourceId)
-		require.Equal(t, createID, r.Ref.CreateOperationId)
-		require.Equal(t, f.tenant.ResourceTenantID, r.Context.TenantId)
-		var scopes []*acc.GpuMetricScope
-		for _, pod := range []string{"replica-0", "replica-1"} {
-			scope := proto.Clone(f.scope).(*acc.GpuMetricScope)
-			scope.Ref, scope.ResourceKind, scope.PodName, scope.PodUid = proto.Clone(r.Ref).(*acc.GpuUsageRef), "inference", pod, uuid.NewString()
-			scopes = append(scopes, scope)
-		}
-		return &acc.GpuMetricScopesResponse{Items: scopes, SnapshotId: "inference-snapshot", IndexComplete: true}, nil
-	}
 	r, err := f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "inference", ResourceId: resourceID})
 	require.NoError(t, err)
 	require.Equal(t, "inference", r.ResourceKind)
 	require.Equal(t, resourceID, r.ResourceId)
-	require.Len(t, f.obs.target.Scopes, 2, "distinct replicas must reach Obs separately")
-	for _, scope := range f.obs.target.Scopes {
-		require.Equal(t, createID, scope.UsageRef.CreateOperationId)
-	}
+	require.Empty(t, f.obs.target.Scopes, "replicas are selected from labeled Prometheus records")
+	require.Equal(t, createID, f.obs.target.UsageRef.CreateOperationId)
+	require.Equal(t, resourceID, f.obs.target.UsageRef.ResourceId)
+	require.Equal(t, "ani-inference", f.obs.target.UsageRef.OwnerService)
+	require.Equal(t, f.tenant.ResourceTenantID, f.obs.target.UsageRef.TenantId)
 	require.Equal(t, 1, owner.gets)
 	require.Equal(t, f.tenant.ResourceTenantID, owner.getTenant)
 	require.Equal(t, "governance:user:"+actorID, owner.getActor)
 	require.Zero(t, f.owner.calls, "inference does not route through the container owner")
 }
 
-func TestGpuMonitoringResourceAuthorizationAndScopeIsolation(t *testing.T) {
+func TestGpuMonitoringResourceAuthorizationAndTenantIsolation(t *testing.T) {
 	f := newGpuMonitoringFixture(t)
 	for _, r := range []*view.GpuTenantLatestRequest{{TenantId: f.tenant.ID}} {
 		_, err := f.svc.GetMyGpuLatest(f.ctx, r)
@@ -317,7 +280,7 @@ func TestGpuMonitoringResourceAuthorizationAndScopeIsolation(t *testing.T) {
 	}
 	_, err := f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "modeldev", ResourceId: f.ref.ResourceId})
 	require.Equal(t, "GPU_RESOURCE_KIND_UNSUPPORTED", kerrors.FromError(err).Reason)
-	require.Zero(t, f.acc.tenantCalls)
+	require.Zero(t, f.obs.calls)
 	withoutPermissionReader := NewGpuMonitoringService(f.svc.accelerator, f.obs, f.svc.instances, nil)
 	_, err = withoutPermissionReader.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: f.ref.ResourceId})
 	require.Equal(t, "GPU_RESOURCE_READ_DENIED", kerrors.FromError(err).Reason)
@@ -326,22 +289,13 @@ func TestGpuMonitoringResourceAuthorizationAndScopeIsolation(t *testing.T) {
 	unknownTenant := auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: f.operator.ID, TenantID: ^uint32(0)})
 	_, err = f.svc.GetMyGpuLatest(unknownTenant, &view.GpuTenantLatestRequest{})
 	require.Equal(t, "TENANT_MAPPING_UNAVAILABLE", kerrors.FromError(err).Reason)
-	require.Zero(t, f.acc.tenantCalls)
+	require.Zero(t, f.obs.calls)
 	f.owner.err = status.Error(codes.NotFound, "owner resource hidden")
 	_, err = f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: f.ref.ResourceId})
 	require.Error(t, err)
-	require.Zero(t, f.acc.tenantCalls, "owner denial precedes ACC/Obs")
+	require.Zero(t, f.obs.calls, "owner denial precedes Obs")
 	f.owner.err = nil
-	for _, change := range []func(*acc.GpuMetricScope){func(s *acc.GpuMetricScope) { s.Ref.TenantId = uuid.NewString() }, func(s *acc.GpuMetricScope) { s.Ref.CreateOperationId = uuid.NewString() }, func(s *acc.GpuMetricScope) { s.Ref.OwnerService = "ani-inference" }} {
-		f.acc.tenant = func(*acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-			s := proto.Clone(f.scope).(*acc.GpuMetricScope)
-			change(s)
-			return &acc.GpuMetricScopesResponse{Items: []*acc.GpuMetricScope{s}, SnapshotId: "snapshot", IndexComplete: true}, nil
-		}
-		_, err = f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: f.ref.ResourceId})
-		require.Equal(t, "ACCELERATOR_INVALID_RESPONSE", kerrors.FromError(err).Reason)
-	}
-	require.Zero(t, f.obs.calls, "cross-tenant and different-create scope data never reaches Obs")
+	require.Zero(t, f.obs.calls, "unauthorized queries never reach Obs")
 	require.NoError(t, f.client.UserRole.UpdateOneID(f.membership.ID).SetStatus(userrole.StatusDisabled).Exec(appViewer.NewSystemViewerContext(context.Background())))
 	ownerCalls := f.owner.calls
 	for _, kind := range []string{"container", "inference"} {
@@ -351,70 +305,9 @@ func TestGpuMonitoringResourceAuthorizationAndScopeIsolation(t *testing.T) {
 	require.Equal(t, ownerCalls, f.owner.calls, "current role denial occurs before owner reads")
 }
 
-func TestGpuMonitoringScopePaginationAndQuality(t *testing.T) {
-	f := newGpuMonitoringFixture(t)
-	f.acc.tenant = func(r *acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-		s := proto.Clone(f.scope).(*acc.GpuMetricScope)
-		s.CandidateComplete = false
-		s.Reasons = []string{"SOURCE_HISTORY_INCOMPLETE"}
-		if r.Page.Token == "" {
-			return &acc.GpuMetricScopesResponse{Items: []*acc.GpuMetricScope{s}, NextToken: "next", SnapshotId: "stable", IndexComplete: true}, nil
-		}
-		require.Equal(t, "next", r.Page.Token)
-		require.Equal(t, "stable", r.SnapshotId)
-		return &acc.GpuMetricScopesResponse{SnapshotId: "stable", IndexComplete: true}, nil
-	}
-	r, err := f.svc.GetMyGpuLatest(f.ctx, &view.GpuTenantLatestRequest{})
-	require.NoError(t, err)
-	require.Equal(t, 2, f.acc.tenantCalls)
-	require.False(t, f.obs.target.IndexComplete)
-	require.Equal(t, "OWNERSHIP_UNKNOWN", f.obs.target.Scopes[0].OwnershipState)
-	require.Equal(t, []string{"SOURCE_HISTORY_INCOMPLETE"}, f.obs.target.Scopes[0].Reasons)
-	require.Equal(t, []string{"container"}, r.UncoveredResourceKinds)
-	for name, reply := range map[string]func(*acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error){
-		"changed-snapshot": func(r *acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-			if r.Page.Token == "" {
-				return &acc.GpuMetricScopesResponse{SnapshotId: "first", NextToken: "next"}, nil
-			}
-			return &acc.GpuMetricScopesResponse{SnapshotId: "changed"}, nil
-		},
-		"token-cycle": func(r *acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-			next := "a"
-			if r.Page.Token == "a" {
-				next = "b"
-			}
-			return &acc.GpuMetricScopesResponse{SnapshotId: "stable", NextToken: next}, nil
-		},
-		"empty-page-budget": func(*acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-			return &acc.GpuMetricScopesResponse{SnapshotId: "stable", NextToken: strconv.Itoa(f.acc.tenantCalls)}, nil
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			f.acc.tenant = reply
-			calls := f.obs.calls
-			_, err := f.svc.GetMyGpuLatest(f.ctx, &view.GpuTenantLatestRequest{})
-			require.Error(t, err)
-			require.Equal(t, calls, f.obs.calls)
-		})
-	}
-	f.acc.tenant = func(*acc.TenantGpuMetricScopesRequest) (*acc.GpuMetricScopesResponse, error) {
-		var scopes []*acc.GpuMetricScope
-		for i := 0; i < 129; i++ {
-			scope := proto.Clone(f.scope).(*acc.GpuMetricScope)
-			scope.PodName = "source-" + strconv.Itoa(i)
-			scopes = append(scopes, scope)
-		}
-		return &acc.GpuMetricScopesResponse{Items: scopes, SnapshotId: "stable", IndexComplete: true}, nil
-	}
-	calls := f.obs.calls
-	_, err = f.svc.GetMyGpuLatest(f.ctx, &view.GpuTenantLatestRequest{})
-	require.Equal(t, "GPU_QUERY_BUDGET_EXCEEDED", kerrors.FromError(err).Reason)
-	require.Equal(t, calls, f.obs.calls, "budget overflow must not silently truncate the target")
-}
-
 func TestGpuMonitoringPhysicalAdminAndEventMetadata(t *testing.T) {
 	f := newGpuMonitoringFixture(t)
-	device := &acc.PhysicalDevice{DeviceId: f.scope.DeviceId, ClusterId: f.scope.ClusterId, Node: f.scope.Node, VendorDeviceId: f.scope.GpuUuid, ModelKey: "test-model"}
+	device := f.device
 	f.acc.devices = func(r *acc.ListDevicesRequest) (*acc.ListDevicesResponse, error) {
 		require.NotNil(t, r.Context.Actor)
 		require.Equal(t, device.ClusterId, r.ClusterId)
@@ -427,7 +320,7 @@ func TestGpuMonitoringPhysicalAdminAndEventMetadata(t *testing.T) {
 	require.True(t, f.obs.platform)
 	require.Empty(t, f.obs.tenant)
 	require.Equal(t, device.Node.Uid, f.obs.target.Scopes[0].NodeUid)
-	require.True(t, f.obs.target.Scopes[0].CandidateComplete)
+	require.Equal(t, device.DeviceId, f.obs.target.Scopes[0].DeviceId)
 	require.Len(t, r.Series, 2, "one event metric can return multiple bounded Xid dimensions")
 	require.Equal(t, "31", r.Series[0].EventCode)
 	require.Equal(t, "79", r.Series[1].EventCode)

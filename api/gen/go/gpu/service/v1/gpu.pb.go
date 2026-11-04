@@ -692,14 +692,15 @@ func (x *GpuQuality) GetExpectedSources() uint32 {
 }
 
 type GpuPoint struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	End           *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end,proto3" json:"end,omitempty"`
-	Value         *float64               `protobuf:"fixed64,3,opt,name=value,proto3,oneof" json:"value,omitempty"`
-	Peak          *float64               `protobuf:"fixed64,4,opt,name=peak,proto3,oneof" json:"peak,omitempty"`
-	KnownValue    *float64               `protobuf:"fixed64,5,opt,name=known_value,json=knownValue,proto3,oneof" json:"known_value,omitempty"`
-	KnownPeak     *float64               `protobuf:"fixed64,6,opt,name=known_peak,json=knownPeak,proto3,oneof" json:"known_peak,omitempty"`
-	Quality       *GpuQuality            `protobuf:"bytes,7,opt,name=quality,proto3" json:"quality,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp  *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	End        *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end,proto3" json:"end,omitempty"`
+	Value      *float64               `protobuf:"fixed64,3,opt,name=value,proto3,oneof" json:"value,omitempty"`
+	Peak       *float64               `protobuf:"fixed64,4,opt,name=peak,proto3,oneof" json:"peak,omitempty"`
+	KnownValue *float64               `protobuf:"fixed64,5,opt,name=known_value,json=knownValue,proto3,oneof" json:"known_value,omitempty"`
+	KnownPeak  *float64               `protobuf:"fixed64,6,opt,name=known_peak,json=knownPeak,proto3,oneof" json:"known_peak,omitempty"`
+	Quality    *GpuQuality            `protobuf:"bytes,7,opt,name=quality,proto3" json:"quality,omitempty"`
+	// Actual Prometheus sample timestamp bounds, not query evaluation times.
 	SampleTimeMin *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=sample_time_min,json=sampleTimeMin,proto3" json:"sample_time_min,omitempty"`
 	SampleTimeMax *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=sample_time_max,json=sampleTimeMax,proto3" json:"sample_time_max,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -800,16 +801,20 @@ func (x *GpuPoint) GetSampleTimeMax() *timestamppb.Timestamp {
 }
 
 type GpuSeries struct {
-	state                  protoimpl.MessageState   `protogen:"open.v1"`
-	MetricCode             string                   `protobuf:"bytes,1,opt,name=metric_code,json=metricCode,proto3" json:"metric_code,omitempty"`
-	Unit                   string                   `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
-	Aggregation            string                   `protobuf:"bytes,3,opt,name=aggregation,proto3" json:"aggregation,omitempty"`
-	BaseResolutionSeconds  uint32                   `protobuf:"varint,4,opt,name=base_resolution_seconds,json=baseResolutionSeconds,proto3" json:"base_resolution_seconds,omitempty"`
-	Points                 []*GpuPoint              `protobuf:"bytes,5,rep,name=points,proto3" json:"points,omitempty"`
-	Mean                   *float64                 `protobuf:"fixed64,6,opt,name=mean,proto3,oneof" json:"mean,omitempty"`
-	Peak                   *float64                 `protobuf:"fixed64,7,opt,name=peak,proto3,oneof" json:"peak,omitempty"`
-	Quality                *GpuQuality              `protobuf:"bytes,8,opt,name=quality,proto3" json:"quality,omitempty"`
-	MetricAvailableFrom    *timestamppb.Timestamp   `protobuf:"bytes,9,opt,name=metric_available_from,json=metricAvailableFrom,proto3" json:"metric_available_from,omitempty"`
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	MetricCode            string                 `protobuf:"bytes,1,opt,name=metric_code,json=metricCode,proto3" json:"metric_code,omitempty"`
+	Unit                  string                 `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
+	Aggregation           string                 `protobuf:"bytes,3,opt,name=aggregation,proto3" json:"aggregation,omitempty"`
+	BaseResolutionSeconds uint32                 `protobuf:"varint,4,opt,name=base_resolution_seconds,json=baseResolutionSeconds,proto3" json:"base_resolution_seconds,omitempty"`
+	Points                []*GpuPoint            `protobuf:"bytes,5,rep,name=points,proto3" json:"points,omitempty"`
+	Mean                  *float64               `protobuf:"fixed64,6,opt,name=mean,proto3,oneof" json:"mean,omitempty"`
+	Peak                  *float64               `protobuf:"fixed64,7,opt,name=peak,proto3,oneof" json:"peak,omitempty"`
+	Quality               *GpuQuality            `protobuf:"bytes,8,opt,name=quality,proto3" json:"quality,omitempty"`
+	// First visible sample in this requested range; not a global history watermark.
+	MetricAvailableFrom *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=metric_available_from,json=metricAvailableFrom,proto3" json:"metric_available_from,omitempty"`
+	// Retained field number; no ownership-history watermark is emitted.
+	//
+	// Deprecated: Marked as deprecated in gpu/service/v1/gpu.proto.
 	OwnershipAvailableFrom *timestamppb.Timestamp   `protobuf:"bytes,10,opt,name=ownership_available_from,json=ownershipAvailableFrom,proto3" json:"ownership_available_from,omitempty"`
 	DataCutoff             *timestamppb.Timestamp   `protobuf:"bytes,11,opt,name=data_cutoff,json=dataCutoff,proto3" json:"data_cutoff,omitempty"`
 	Capability             string                   `protobuf:"bytes,12,opt,name=capability,proto3" json:"capability,omitempty"`
@@ -913,6 +918,7 @@ func (x *GpuSeries) GetMetricAvailableFrom() *timestamppb.Timestamp {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in gpu/service/v1/gpu.proto.
 func (x *GpuSeries) GetOwnershipAvailableFrom() *timestamppb.Timestamp {
 	if x != nil {
 		return x.OwnershipAvailableFrom
@@ -956,15 +962,18 @@ func (x *GpuSeries) GetExporterProcessStarts() []*timestamppb.Timestamp {
 }
 
 type GpuQueryResponse struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	QueryTime              *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=query_time,json=queryTime,proto3" json:"query_time,omitempty"`
-	Start                  *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
-	End                    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
-	EffectiveStepSeconds   uint32                 `protobuf:"varint,4,opt,name=effective_step_seconds,json=effectiveStepSeconds,proto3" json:"effective_step_seconds,omitempty"`
-	Series                 []*GpuSeries           `protobuf:"bytes,5,rep,name=series,proto3" json:"series,omitempty"`
-	IndexComplete          bool                   `protobuf:"varint,6,opt,name=index_complete,json=indexComplete,proto3" json:"index_complete,omitempty"`
-	IncludedResourceKinds  []string               `protobuf:"bytes,7,rep,name=included_resource_kinds,json=includedResourceKinds,proto3" json:"included_resource_kinds,omitempty"`
-	UncoveredResourceKinds []string               `protobuf:"bytes,8,rep,name=uncovered_resource_kinds,json=uncoveredResourceKinds,proto3" json:"uncovered_resource_kinds,omitempty"`
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	QueryTime            *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=query_time,json=queryTime,proto3" json:"query_time,omitempty"`
+	Start                *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	End                  *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
+	EffectiveStepSeconds uint32                 `protobuf:"varint,4,opt,name=effective_step_seconds,json=effectiveStepSeconds,proto3" json:"effective_step_seconds,omitempty"`
+	Series               []*GpuSeries           `protobuf:"bytes,5,rep,name=series,proto3" json:"series,omitempty"`
+	// Every requested metric has data and all returned time buckets are complete.
+	// Does not assert coverage of all tenant workloads.
+	IndexComplete         bool     `protobuf:"varint,6,opt,name=index_complete,json=indexComplete,proto3" json:"index_complete,omitempty"`
+	IncludedResourceKinds []string `protobuf:"bytes,7,rep,name=included_resource_kinds,json=includedResourceKinds,proto3" json:"included_resource_kinds,omitempty"`
+	// Always empty; current queries cannot enumerate unobserved workloads.
+	UncoveredResourceKinds []string `protobuf:"bytes,8,rep,name=uncovered_resource_kinds,json=uncoveredResourceKinds,proto3" json:"uncovered_resource_kinds,omitempty"`
 	// Public target; no Pod, node, GPU or binding identity on tenant responses.
 	ResourceKind  string  `protobuf:"bytes,10,opt,name=resource_kind,json=resourceKind,proto3" json:"resource_kind,omitempty"`
 	ResourceId    string  `protobuf:"bytes,11,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
@@ -1160,7 +1169,7 @@ const file_gpu_service_v1_gpu_proto_rawDesc = "" +
 	"\x06_valueB\a\n" +
 	"\x05_peakB\x0e\n" +
 	"\f_known_valueB\r\n" +
-	"\v_known_peak\"\xe8\x05\n" +
+	"\v_known_peak\"\xec\x05\n" +
 	"\tGpuSeries\x12\x1f\n" +
 	"\vmetric_code\x18\x01 \x01(\tR\n" +
 	"metricCode\x12\x12\n" +
@@ -1171,9 +1180,9 @@ const file_gpu_service_v1_gpu_proto_rawDesc = "" +
 	"\x04mean\x18\x06 \x01(\x01B\x05\xbaG\x02\b\x01H\x00R\x04mean\x88\x01\x01\x12\x1e\n" +
 	"\x04peak\x18\a \x01(\x01B\x05\xbaG\x02\b\x01H\x01R\x04peak\x88\x01\x01\x124\n" +
 	"\aquality\x18\b \x01(\v2\x1a.gpu.service.v1.GpuQualityR\aquality\x12N\n" +
-	"\x15metric_available_from\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\x13metricAvailableFrom\x12T\n" +
+	"\x15metric_available_from\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\x13metricAvailableFrom\x12X\n" +
 	"\x18ownership_available_from\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\x16ownershipAvailableFrom\x12;\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x02\x18\x01R\x16ownershipAvailableFrom\x12;\n" +
 	"\vdata_cutoff\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"dataCutoff\x12\x1e\n" +
 	"\n" +

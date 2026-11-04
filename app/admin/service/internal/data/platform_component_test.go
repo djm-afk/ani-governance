@@ -64,7 +64,7 @@ func daemonSet(namespace, name string, desired int32, ready int32, image string)
 	}
 }
 
-// TestCollectRegistryMatchesCluster 全清单对拍：26 条注册项都能在
+// TestCollectRegistryMatchesCluster 全清单对拍：25 条注册项都能在
 // fake 集群里找到并得到预期 status/replicas/version。
 func TestCollectRegistryMatchesCluster(t *testing.T) {
 	cluster := newPlatformComponentClusterForTest(k8sfake.NewSimpleClientset(
@@ -93,7 +93,6 @@ func TestCollectRegistryMatchesCluster(t *testing.T) {
 		statefulSet("ani-observability", "prometheus-ani-metrics-prometheus", 1, 1, "prom:3"),
 		statefulSet("ani-observability", "alertmanager-ani-metrics-alertmanager", 1, 1, "am:1"),
 		statefulSet("ani-observability", "ani-opensearch-master", 1, 1, "os:2"),
-		daemonSet("ani-system", "ani-node-agent", 3, 3, "agent@sha256:"+strings.Repeat("a0", 32)),
 		daemonSet("ani-observability", "ani-fluent-bit", 3, 3, "fluent/fluent-bit:5.1.2"),
 		daemonSet("ani-observability", "ani-gpu-nvml-v11", 3, 3, "nvidia@sha256:"+strings.Repeat("b8", 32)),
 		daemonSet("ani-observability", "ani-metrics-prometheus-node-exporter", 3, 3, "node-exporter:v1.11.1-distroless"),
@@ -113,6 +112,9 @@ func TestCollectRegistryMatchesCluster(t *testing.T) {
 	for _, component := range snapshot.Components {
 		byName[component.Name] = component
 	}
+	if _, found := byName["ani-node-agent"]; found {
+		t.Fatal("retired node-agent must not be required for platform health")
+	}
 	cases := []struct {
 		name    string
 		status  string
@@ -127,7 +129,6 @@ func TestCollectRegistryMatchesCluster(t *testing.T) {
 		{"ani-governance", PlatformComponentStatusRunning, 1, 1, "e5f60a8f3a99"}, // 另一个 digest 截断
 		{"ani-console", PlatformComponentStatusRunning, 1, 1, "202610271606"},
 		{"ani-fluent-bit", PlatformComponentStatusRunning, 3, 3, "5.1.2"}, // DaemonSet
-		{"ani-node-agent", PlatformComponentStatusRunning, 3, 3, "a0a0a0a0a0a0"},
 	}
 	for _, tc := range cases {
 		component, ok := byName[tc.name]

@@ -36,7 +36,7 @@ type ResourceUsageAdminService struct {
 	tenants    ResourceUsageTenantReader
 	monitoring *GpuMonitoringService
 	reader     ResourceUsageReader
-	// One short-lived result reuses the expensive trusted scope/metrics snapshot
+	// One short-lived result reuses the authorized tenant/metrics result
 	// across the overview and ranking requests with the same exact window.
 	mu    sync.Mutex
 	cache *resourceUsageSnapshot
@@ -219,32 +219,11 @@ func (s *ResourceUsageAdminService) query(ctx context.Context, start, end string
 		identities[t.ID] = t.ResourceTenantID
 		resourceIDs[t.ResourceTenantID] = true
 	}
-	batch = context.WithValue(batch, gpuTenantListIdentityKey{}, identities)
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, 4)
-	for i, t := range tenants {
-		i, t := i, t
-		select {
-		case sem <- struct{}{}:
-		case <-batch.Done():
-			return nil, resourceUsageDependency(batch.Err())
+	for i, tenant := range tenants {
+		scopes[i] = &obs.TenantScope{
+			TenantId: tenant.ID, ResourceTenantId: tenant.ResourceTenantID,
+			GpuTarget: &gpu.GpuTarget{Kind: "TENANT", TenantId: tenant.ResourceTenantID},
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			defer func() { <-sem }()
-			target, _, _, e := s.monitoring.tenantTarget(batch, t.ID, "", "", from, to, true)
-			scope := &obs.TenantScope{TenantId: t.ID, ResourceTenantId: t.ResourceTenantID, GpuTarget: target}
-			if e != nil {
-				scope.GpuTarget = &gpu.GpuTarget{Kind: "TENANT", TenantId: t.ResourceTenantID, IndexComplete: false}
-				scope.GpuUnavailableReason = "GPU_SCOPE_UNAVAILABLE"
-			}
-			scopes[i] = scope
-		}()
-	}
-	wg.Wait()
-	if batch.Err() != nil {
-		return nil, resourceUsageDependency(batch.Err())
 	}
 	result, err := s.reader.QueryUsage(batch, actor, &obs.QueryUsageRequest{Start: from, End: to, Tenants: scopes, ClusterIds: clusters, Metrics: []string{"gpu", "cpu", "memory"}})
 	if err != nil {

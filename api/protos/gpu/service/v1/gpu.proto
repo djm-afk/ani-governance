@@ -50,6 +50,7 @@ message GpuPoint {
   optional double known_value = 5 [json_name="knownValue", (gnostic.openapi.v3.property) = { nullable: true }];
   optional double known_peak = 6 [json_name="knownPeak", (gnostic.openapi.v3.property) = { nullable: true }];
   GpuQuality quality = 7;
+  // Actual Prometheus sample timestamp bounds, not query evaluation times.
   google.protobuf.Timestamp sample_time_min = 8 [json_name="sampleTimeMin"];
   google.protobuf.Timestamp sample_time_max = 9 [json_name="sampleTimeMax"];
 }
@@ -62,8 +63,10 @@ message GpuSeries {
   optional double mean = 6 [(gnostic.openapi.v3.property) = { nullable: true }];
   optional double peak = 7 [(gnostic.openapi.v3.property) = { nullable: true }];
   GpuQuality quality = 8;
+  // First visible sample in this requested range; not a global history watermark.
   google.protobuf.Timestamp metric_available_from = 9 [json_name="metricAvailableFrom"];
-  google.protobuf.Timestamp ownership_available_from = 10 [json_name="ownershipAvailableFrom"];
+  // Retained field number; no ownership-history watermark is emitted.
+  google.protobuf.Timestamp ownership_available_from = 10 [json_name="ownershipAvailableFrom", deprecated=true];
   google.protobuf.Timestamp data_cutoff = 11 [json_name="dataCutoff"];
   string capability = 12;
   string event_code = 13 [json_name="eventCode"];
@@ -76,8 +79,11 @@ message GpuQueryResponse {
   google.protobuf.Timestamp end = 3;
   uint32 effective_step_seconds = 4 [json_name="effectiveStepSeconds"];
   repeated GpuSeries series = 5;
+  // Every requested metric has data and all returned time buckets are complete.
+  // Does not assert coverage of all tenant workloads.
   bool index_complete = 6 [json_name="indexComplete"];
   repeated string included_resource_kinds = 7 [json_name="includedResourceKinds"];
+  // Always empty; current queries cannot enumerate unobserved workloads.
   repeated string uncovered_resource_kinds = 8 [json_name="uncoveredResourceKinds"];
   // Public target; no Pod, node, GPU or binding identity on tenant responses.
   string resource_kind = 10 [json_name="resourceKind"];

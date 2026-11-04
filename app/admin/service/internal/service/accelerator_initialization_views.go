@@ -138,14 +138,6 @@ func wireAcceleratorDiscoveredNodes(input *acc.DiscoveredNodes) (*view.Accelerat
 				return nil, acceleratorInvalidResponse()
 			}
 		}
-		for _, source := range node.Sources {
-			if source == nil {
-				return nil, acceleratorInvalidResponse()
-			}
-			if _, valid := acceleratorPublicReasons(source.Issues); !valid {
-				return nil, acceleratorInvalidResponse()
-			}
-		}
 	}
 	return output, nil
 }

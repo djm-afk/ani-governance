@@ -2026,9 +2026,9 @@ Sandbox 创建可以传 `image_id` + `image_scope`，也可以传已登记的租
 
 2026-10-29 增补 `gpu_quota`（GS 侧租户配额展示，编号沿用本条，不新开）：响应新增第五块 `gpu_quota{shared_memory_mib, physical_count}`，两项均含 `quota_code/unit/limit/occupied/available/over_limit/configured/enforcement`，**数值一律十进制字符串**（与 `/api/v1/me/quota-accounts` 同源同口径，避免 JS 2^53 精度上限），与同响应内四块卡片的 JSON number 类型不同。数据源复用 `QuotaAdminRepo.ListTenantAccounts(ctx, tenantID)`，只挑 `gpu.shared_memory_mib`（`CONCURRENT`，MiB）与 `gpu.physical.count`（`CONCURRENT`，gpu）两项，其余配额不进响应；两项是**二选一语义**（Whole 模式计整卡、Shared 模式计显存，同一实例只按一种计），不可相加。租户身份仍只取自 JWT，不接受租户入参（带查询串依旧 400）。`configured=false` 表示当前套餐未配置该配额（数值补 `"0"`），**不表示无限**；`enforcement` 仅 `ENFORCED` 表示真正拦截创建。鉴权沿用入口权限 `overview:resource-count:read`，不加数据源二次鉴权（配额数据属本租户自身套餐配置，无跨租户读取面）。降级沿用部分成功：配额读取失败、`missing` 装配或目录缺该 code 时只把两项补零并置 `configured=false` 记 WARN，整体仍 200。路由、权限码、`sys_apis` 与数据库均无变更，因此不需要 `sync-apis` 或新迁移。
 
-## GPU-MONITORING-01 GPU monitoring v1.1
+## GPU-MONITORING-01 GPU monitoring current allocation labels
 
-Contract: [GPU monitoring](contracts/gpu-monitoring.md); authority: [accepted v1.1 plan](plans/gpu-monitoring-backend-phase1-plan.md). Implements dedicated physical, tenant and authorized-resource reads, retained ACC attribution and readonly quota summaries. Container and inference detail types use original UsageRef; ModelDev execution is a reviewed extension contract. GPU transport/response and budget rules are separate from existing CPU/training reads. Implementation, Fedora checks and real-cluster acceptance are tracked separately in the task's single execution index; registration does not assert live completion. API/permission catalogue synchronization is explicit, with no user/role/policy changes.
+Contract: [GPU monitoring](contracts/gpu-monitoring.md). Physical, tenant and authorized-resource routes and readonly quota summaries remain. Business queries now send trusted identity directly to Obs and read labeled Prometheus records; ACC historical scope RPCs and pagination are removed. `index_complete` means requested curve time coverage, `ownership_available_from` is deprecated/unfilled, and `uncovered_resource_kinds` is empty. No monitoring history table, old/new switch or backfill is added. ACC/Obs/Gov changes require coordinated rollout; this registration does not assert testing or deployment. Container and inference detail types use original UsageRef; ModelDev execution is a reviewed extension contract. GPU transport/response and budget rules are separate from existing CPU/training reads. Implementation, Fedora checks and real-cluster acceptance are tracked separately in the task's single execution index; registration does not assert live completion. API/permission catalogue synchronization is explicit, with no user/role/policy changes.
 
 `GET /api/v1/admin/tenants/quota-account-summaries` additionally returns `summary` with configured-tenant counts and per-quota limit/occupied/available totals. Aggregation retains platform-only `tenant:quota-read`, existing filters and the current read-only snapshot; it is independent of pagination. Shared-plan limits count per tenant, unconfigured account occupation is retained, and every aggregate number is a decimal string. No route, database migration, new permission or quota mutation is added; complete field semantics are maintained in the contract linked above.
 
@@ -2054,13 +2054,13 @@ Proto 唯一合同为 `api/protos/usage/service/v1/usage.proto`。
 查询使用 RFC3339 整秒 start/end（最近30天）、metric=gpu/cpu/memory；排行另支持
 keyword 名称/ID子串、order=asc/desc、page/pageSize（独立默认1/20，上限100），未知、重复、空值和GET body拒绝。
 结果无 data 包装，total/rank/activeTenantCount 为十进制字符串；缺失完整均值、峰值、占比不补零。
-Gov 从同一次租户目录读取持久 UUID，ACC 读取受管集群及历史 GPU scopes；只向已登记
+Gov 从同一次租户目录读取持久 UUID，ACC 只读取受管集群；GPU target 直接使用可信租户身份，历史值来自带业务标签的 Prometheus record。只向已登记
 `/observability.usage.v1.ResourceUsageService/QueryUsage` 发送服务端可信范围，mTLS复用现有Obs连接，
 platform metadata不伪造tenant header，超时40秒、继承父取消、不自动重试。
 Obs先计算全租户时间对齐统计，Gov再排序/搜索/分页，全平台三卡与占比分母不随筛选分页变化；
 数据不完整时不提供精确rank/share；rank始终是全局均值降序名次，asc仅改变展示顺序。最多128租户、16集群，超预算失败不截断。
 范围以Gov仍持久的租户目录为准（含停用、过期、冻结及保留的软删标记行）；完全物理删除且无目录映射的历史不作完整覆盖承诺。
-客户端scope/观测快照按用户、窗口和租户范围短时复用15秒，不复用用户授权结果。
+观测查询结果按用户、窗口和租户范围短时复用15秒，不复用用户授权结果；没有 ACC scope 历史缓存。
 本条为新增实现合同；部署、权限登记和真实跨仓验收由本任务发布步骤分别确认。
 
 ## PLAT-COMP-20261028：平台组件健康快照（PLAT-COMP-01）

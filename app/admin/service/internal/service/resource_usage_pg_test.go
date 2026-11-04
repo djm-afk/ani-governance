@@ -82,7 +82,9 @@ func TestResourceUsageTrustedScopePagingAndShare(t *testing.T) {
 		require.NotZero(t, scope.TenantId)
 		require.True(t, metricUUID(scope.ResourceTenantId))
 		require.Equal(t, scope.ResourceTenantId, scope.GpuTarget.TenantId)
-		require.Equal(t, "VERIFIED", scope.GpuTarget.Scopes[0].OwnershipState)
+		require.Equal(t, "TENANT", scope.GpuTarget.Kind)
+		require.Empty(t, scope.GpuTarget.Scopes)
+		require.Nil(t, scope.GpuTarget.UsageRef)
 	}
 	overview, e := svc.GetResourceUsageOverview(ctx, &view.OverviewRequest{Start: start, End: end, Metric: "cpu"})
 	require.NoError(t, e)

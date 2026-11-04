@@ -319,7 +319,7 @@ func TestAcceleratorDelegationRejectsInvalidTenantAndOwnerRPC(t *testing.T) {
 	}
 	// The retired owner RPC is deliberately tested as an unregistered wire
 	// method. Its removed generated request must not be restored as a dependency.
-	if _, e := acceleratorMetadata("/accelerator.v1.AcceleratorUsageService/ObserveRelease", &acc.TenantGpuMetricScopesRequest{Context: &acc.TenantContext{RequestId: "id", TenantId: uuid.NewString(), Actor: &acc.Actor{Type: "user", Id: "1"}}}); e == nil {
+	if _, e := acceleratorMetadata("/accelerator.v1.AcceleratorUsageService/ObserveRelease", &acc.ListProfilesRequest{Context: &acc.TenantContext{RequestId: "id", TenantId: uuid.NewString(), Actor: &acc.Actor{Type: "user", Id: "1"}}}); e == nil {
 		t.Fatal("Governance proxy admitted retired ObserveRelease")
 	}
 	if _, e := acceleratorMetadata(acc.AcceleratorAdminService_ListClusters_FullMethodName, &acc.ListClustersRequest{Context: &acc.AdminRead{RequestId: "id", Actor: &acc.Actor{Type: "api_key", Id: "1"}}}); e == nil {
@@ -352,10 +352,12 @@ func TestAcceleratorDelegationRequiresRegisteredFullMethod(t *testing.T) {
 	if _, err := acceleratorMetadata(acc.AcceleratorAdminService_ListClusters_FullMethodName, request); err == nil {
 		t.Fatal("tenant request admitted as admin request")
 	}
-	if _, err := acceleratorMetadata(acc.AcceleratorUsageService_ListTenantGpuMetricScopes_FullMethodName, &acc.TenantGpuMetricScopesRequest{Context: request.Context}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := acceleratorMetadata(acc.AcceleratorAdminService_ListAdminGpuMetricScopes_FullMethodName, &acc.AdminGpuMetricScopesRequest{Context: admin.Context}); err != nil {
-		t.Fatal(err)
+	for _, method := range []string{
+		"/accelerator.v1.AcceleratorUsageService/ListTenantGpuMetricScopes",
+		"/accelerator.v1.AcceleratorAdminService/ListAdminGpuMetricScopes",
+	} {
+		if _, err := acceleratorMetadata(method, request); err == nil {
+			t.Fatalf("retired GPU scope method admitted: %s", method)
+		}
 	}
 }
