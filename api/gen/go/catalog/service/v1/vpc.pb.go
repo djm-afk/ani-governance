@@ -462,6 +462,9 @@ type VPC struct {
 	SubnetCount      int64                  `protobuf:"varint,13,opt,name=subnet_count,proto3" json:"subnet_count,omitempty"`
 	PublicEgress     *VPCPublicEgress       `protobuf:"bytes,14,opt,name=public_egress,proto3" json:"public_egress,omitempty"`
 	BaseConnectivity *VPCBaseConnectivity   `protobuf:"bytes,15,opt,name=base_connectivity,proto3" json:"base_connectivity,omitempty"`
+	OwnerScope       string                 `protobuf:"bytes,16,opt,name=owner_scope,proto3" json:"owner_scope,omitempty"`
+	CanManage        bool                   `protobuf:"varint,17,opt,name=can_manage,proto3" json:"can_manage,omitempty"`
+	CanUse           bool                   `protobuf:"varint,18,opt,name=can_use,proto3" json:"can_use,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -601,8 +604,29 @@ func (x *VPC) GetBaseConnectivity() *VPCBaseConnectivity {
 	return nil
 }
 
-// Read-only system connection summary. Ready describes fresh configuration
-// evidence, not traffic health; internal EIP/SNAT identities stay private.
+func (x *VPC) GetOwnerScope() string {
+	if x != nil {
+		return x.OwnerScope
+	}
+	return ""
+}
+
+func (x *VPC) GetCanManage() bool {
+	if x != nil {
+		return x.CanManage
+	}
+	return false
+}
+
+func (x *VPC) GetCanUse() bool {
+	if x != nil {
+		return x.CanUse
+	}
+	return false
+}
+
+// Read-only system connection summary from Resource's persisted native state.
+// Platform-owned VPCs omit this tenant connection summary.
 type VPCBaseConnectivity struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	State            string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
@@ -873,6 +897,8 @@ type ListVPCsRequest struct {
 	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
 	Page          *uint32                `protobuf:"varint,5,opt,name=page,proto3,oneof" json:"page,omitempty"`
 	PageSize      *uint32                `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
+	CanUse        *bool                  `protobuf:"varint,7,opt,name=can_use,proto3,oneof" json:"can_use,omitempty"`
+	CanManage     *bool                  `protobuf:"varint,8,opt,name=can_manage,proto3,oneof" json:"can_manage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -933,6 +959,20 @@ func (x *ListVPCsRequest) GetPageSize() uint32 {
 		return *x.PageSize
 	}
 	return 0
+}
+
+func (x *ListVPCsRequest) GetCanUse() bool {
+	if x != nil && x.CanUse != nil {
+		return *x.CanUse
+	}
+	return false
+}
+
+func (x *ListVPCsRequest) GetCanManage() bool {
+	if x != nil && x.CanManage != nil {
+		return *x.CanManage
+	}
+	return false
 }
 
 type ListVPCsResponse struct {
@@ -2437,6 +2477,9 @@ type Subnet struct {
 	ExcludeIps       []string               `protobuf:"bytes,21,rep,name=exclude_ips,proto3" json:"exclude_ips,omitempty"`
 	EnableDhcp       bool                   `protobuf:"varint,22,opt,name=enable_dhcp,proto3" json:"enable_dhcp,omitempty"`
 	DnsServers       []string               `protobuf:"bytes,23,rep,name=dns_servers,proto3" json:"dns_servers,omitempty"`
+	OwnerScope       string                 `protobuf:"bytes,24,opt,name=owner_scope,proto3" json:"owner_scope,omitempty"`
+	CanManage        bool                   `protobuf:"varint,25,opt,name=can_manage,proto3" json:"can_manage,omitempty"`
+	CanUse           bool                   `protobuf:"varint,26,opt,name=can_use,proto3" json:"can_use,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2609,6 +2652,27 @@ func (x *Subnet) GetDnsServers() []string {
 		return x.DnsServers
 	}
 	return nil
+}
+
+func (x *Subnet) GetOwnerScope() string {
+	if x != nil {
+		return x.OwnerScope
+	}
+	return ""
+}
+
+func (x *Subnet) GetCanManage() bool {
+	if x != nil {
+		return x.CanManage
+	}
+	return false
+}
+
+func (x *Subnet) GetCanUse() bool {
+	if x != nil {
+		return x.CanUse
+	}
+	return false
 }
 
 type CreateSubnetRequest struct {
@@ -2858,6 +2922,8 @@ type ListSubnetsRequest struct {
 	State         string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
 	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        string                 `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	CanUse        *bool                  `protobuf:"varint,6,opt,name=can_use,proto3,oneof" json:"can_use,omitempty"`
+	CanManage     *bool                  `protobuf:"varint,7,opt,name=can_manage,proto3,oneof" json:"can_manage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2925,6 +2991,20 @@ func (x *ListSubnetsRequest) GetCursor() string {
 		return x.Cursor
 	}
 	return ""
+}
+
+func (x *ListSubnetsRequest) GetCanUse() bool {
+	if x != nil && x.CanUse != nil {
+		return *x.CanUse
+	}
+	return false
+}
+
+func (x *ListSubnetsRequest) GetCanManage() bool {
+	if x != nil && x.CanManage != nil {
+		return *x.CanManage
+	}
+	return false
 }
 
 type ListSubnetsResponse struct {
@@ -5294,7 +5374,7 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\n" +
 	"\x1ccatalog/service/v1/vpc.proto\x12\x12catalog.service.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\"'\n" +
 	"\rGetVPCRequest\x12\x16\n" +
-	"\x06vpc_id\x18\x01 \x01(\tR\x06vpc_id\"\xff\x04\n" +
+	"\x06vpc_id\x18\x01 \x01(\tR\x06vpc_id\"\xdb\x05\n" +
 	"\x03VPC\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -5315,7 +5395,12 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\x11last_operation_id\x18\f \x01(\tR\x11last_operation_id\x12\"\n" +
 	"\fsubnet_count\x18\r \x01(\x03R\fsubnet_count\x12I\n" +
 	"\rpublic_egress\x18\x0e \x01(\v2#.catalog.service.v1.VPCPublicEgressR\rpublic_egress\x12U\n" +
-	"\x11base_connectivity\x18\x0f \x01(\v2'.catalog.service.v1.VPCBaseConnectivityR\x11base_connectivity\"\xd7\x01\n" +
+	"\x11base_connectivity\x18\x0f \x01(\v2'.catalog.service.v1.VPCBaseConnectivityR\x11base_connectivity\x12 \n" +
+	"\vowner_scope\x18\x10 \x01(\tR\vowner_scope\x12\x1e\n" +
+	"\n" +
+	"can_manage\x18\x11 \x01(\bR\n" +
+	"can_manage\x12\x18\n" +
+	"\acan_use\x18\x12 \x01(\bR\acan_use\"\xd7\x01\n" +
 	"\x13VPCBaseConnectivity\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12<\n" +
@@ -5341,15 +5426,22 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\x11last_operation_id\x18\r \x01(\tR\x11last_operation_idB\x12\n" +
 	"\x10_applied_enabled\";\n" +
 	"\x0eGetVPCResponse\x12)\n" +
-	"\x03vpc\x18\x01 \x01(\v2\x17.catalog.service.v1.VPCR\x03vpc\"\xa8\x01\n" +
+	"\x03vpc\x18\x01 \x01(\v2\x17.catalog.service.v1.VPCR\x03vpc\"\x87\x02\n" +
 	"\x0fListVPCsRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x17\n" +
 	"\x04page\x18\x05 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
-	"\tpage_size\x18\x06 \x01(\rH\x01R\bpageSize\x88\x01\x01B\a\n" +
+	"\tpage_size\x18\x06 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12\x1d\n" +
+	"\acan_use\x18\a \x01(\bH\x02R\acan_use\x88\x01\x01\x12#\n" +
+	"\n" +
+	"can_manage\x18\b \x01(\bH\x03R\n" +
+	"can_manage\x88\x01\x01B\a\n" +
 	"\x05_pageB\f\n" +
 	"\n" +
-	"_page_sizeJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05limitR\x06cursor\"j\n" +
+	"_page_sizeB\n" +
+	"\n" +
+	"\b_can_useB\r\n" +
+	"\v_can_manageJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05limitR\x06cursor\"j\n" +
 	"\x10ListVPCsResponse\x12-\n" +
 	"\x05items\x18\x01 \x03(\v2\x17.catalog.service.v1.VPCR\x05items\x12\x14\n" +
 	"\x05total\x18\x03 \x01(\x03R\x05totalJ\x04\b\x02\x10\x03R\vnext_cursor\"\x86\x01\n" +
@@ -5473,7 +5565,7 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\x06eip_id\x18\x02 \x01(\tR\x06eip_id\x12(\n" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0fidempotency_key\"F\n" +
 	"\x13BindVPCSnatResponse\x12/\n" +
-	"\x04snat\x18\x01 \x01(\v2\x1b.catalog.service.v1.VPCSnatR\x04snat\"\xb4\x06\n" +
+	"\x04snat\x18\x01 \x01(\v2\x1b.catalog.service.v1.VPCSnatR\x04snat\"\x90\a\n" +
 	"\x06Subnet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06vpc_id\x18\x02 \x01(\tR\x06vpc_id\x12\x12\n" +
@@ -5499,7 +5591,12 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\rused_ip_range\x18\x13 \x01(\tH\x01R\rused_ip_range\x88\x01\x01\x12 \n" +
 	"\vexclude_ips\x18\x15 \x03(\tR\vexclude_ips\x12 \n" +
 	"\venable_dhcp\x18\x16 \x01(\bR\venable_dhcp\x12 \n" +
-	"\vdns_servers\x18\x17 \x03(\tR\vdns_serversB\x15\n" +
+	"\vdns_servers\x18\x17 \x03(\tR\vdns_servers\x12 \n" +
+	"\vowner_scope\x18\x18 \x01(\tR\vowner_scope\x12\x1e\n" +
+	"\n" +
+	"can_manage\x18\x19 \x01(\bR\n" +
+	"can_manage\x12\x18\n" +
+	"\acan_use\x18\x1a \x01(\bR\acan_useB\x15\n" +
 	"\x13_available_ip_rangeB\x10\n" +
 	"\x0e_used_ip_rangeJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12R\x12available_ip_countR\rused_ip_count\"\xc7\x02\n" +
 	"\x13CreateSubnetRequest\x12\x16\n" +
@@ -5520,13 +5617,20 @@ const file_catalog_service_v1_vpc_proto_rawDesc = "" +
 	"\x10GetSubnetRequest\x12\x1c\n" +
 	"\tsubnet_id\x18\x01 \x01(\tR\tsubnet_id\"G\n" +
 	"\x11GetSubnetResponse\x122\n" +
-	"\x06subnet\x18\x01 \x01(\v2\x1a.catalog.service.v1.SubnetR\x06subnet\"\x84\x01\n" +
+	"\x06subnet\x18\x01 \x01(\v2\x1a.catalog.service.v1.SubnetR\x06subnet\"\xe3\x01\n" +
 	"\x12ListSubnetsRequest\x12\x16\n" +
 	"\x06vpc_id\x18\x01 \x01(\tR\x06vpc_id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
 	"\x05state\x18\x03 \x01(\tR\x05state\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"\x7f\n" +
+	"\x06cursor\x18\x05 \x01(\tR\x06cursor\x12\x1d\n" +
+	"\acan_use\x18\x06 \x01(\bH\x00R\acan_use\x88\x01\x01\x12#\n" +
+	"\n" +
+	"can_manage\x18\a \x01(\bH\x01R\n" +
+	"can_manage\x88\x01\x01B\n" +
+	"\n" +
+	"\b_can_useB\r\n" +
+	"\v_can_manage\"\x7f\n" +
 	"\x13ListSubnetsResponse\x120\n" +
 	"\x05items\x18\x01 \x03(\v2\x1a.catalog.service.v1.SubnetR\x05items\x12 \n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\vnext_cursor\x12\x14\n" +
@@ -5975,6 +6079,7 @@ func file_catalog_service_v1_vpc_proto_init() {
 	file_catalog_service_v1_vpc_proto_msgTypes[25].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[29].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[30].OneofWrappers = []any{}
+	file_catalog_service_v1_vpc_proto_msgTypes[34].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[46].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[47].OneofWrappers = []any{}
 	file_catalog_service_v1_vpc_proto_msgTypes[48].OneofWrappers = []any{}

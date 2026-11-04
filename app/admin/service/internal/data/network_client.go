@@ -119,7 +119,7 @@ func resourceState(state string) (networkv1.ResourceState, error) {
 	return 0, fmt.Errorf("invalid state filter")
 }
 
-func (c *NetworkClient) ListVPCs(ctx context.Context, tenant, actor string, name, state string, page, pageSize uint32) (*networkv1.ListVPCsResponse, error) {
+func (c *NetworkClient) ListVPCs(ctx context.Context, tenant, actor string, name, state string, page, pageSize uint32, canUse, canManage *bool) (*networkv1.ListVPCsResponse, error) {
 	tc, err := c.trusted(tenant, actor)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,17 @@ func (c *NetworkClient) ListVPCs(ctx context.Context, tenant, actor string, name
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.ListVPCsResponse, error) {
-		return c.client.ListVPCs(ctx, &networkv1.ListVPCsRequest{TenantId: tc.tenant, Name: name, State: resourceState, Page: &page, PageSize: &pageSize})
+		return c.client.ListVPCs(ctx, &networkv1.ListVPCsRequest{TenantId: tc.tenant, Name: name, State: resourceState, Page: &page, PageSize: &pageSize, CanUse: canUse, CanManage: canManage})
+	})
+}
+
+func (c *NetworkClient) ListNetworkInstances(ctx context.Context, tenant, actor, vpcID, subnetID string, page, pageSize uint32) (*networkv1.ListNetworkInstancesResponse, error) {
+	tc, err := c.trusted(tenant, actor)
+	if err != nil {
+		return nil, err
+	}
+	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.ListNetworkInstancesResponse, error) {
+		return c.client.ListNetworkInstances(ctx, &networkv1.ListNetworkInstancesRequest{TenantId: tc.tenant, VpcId: vpcID, SubnetId: subnetID, Page: &page, PageSize: &pageSize})
 	})
 }
 
@@ -239,7 +249,7 @@ func (c *NetworkClient) CreateSubnet(ctx context.Context, tenant, actor, vpcID, 
 			Attribution: &networkv1.Attribution{Actor: tc.actor, DirectCaller: "ani-governance", CorrelationId: tc.requestID}})
 	})
 }
-func (c *NetworkClient) ListSubnets(ctx context.Context, tenant, actor, vpcID, name, state string, limit int32, cursor string) (*networkv1.ListSubnetsResponse, error) {
+func (c *NetworkClient) ListSubnets(ctx context.Context, tenant, actor, vpcID, name, state string, limit int32, cursor string, canUse, canManage *bool) (*networkv1.ListSubnetsResponse, error) {
 	tc, err := c.trusted(tenant, actor)
 	if err != nil {
 		return nil, err
@@ -249,7 +259,7 @@ func (c *NetworkClient) ListSubnets(ctx context.Context, tenant, actor, vpcID, n
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	return outCall(c, ctx, tc, func(ctx context.Context) (*networkv1.ListSubnetsResponse, error) {
-		return c.client.ListSubnets(ctx, &networkv1.ListSubnetsRequest{TenantId: tc.tenant, VpcId: vpcID, Name: name, State: stateValue, Limit: limit, Cursor: cursor})
+		return c.client.ListSubnets(ctx, &networkv1.ListSubnetsRequest{TenantId: tc.tenant, VpcId: vpcID, Name: name, State: stateValue, Limit: limit, Cursor: cursor, CanUse: canUse, CanManage: canManage})
 	})
 }
 func (c *NetworkClient) GetSubnet(ctx context.Context, tenant, actor, id string) (*networkv1.GetSubnetResponse, error) {

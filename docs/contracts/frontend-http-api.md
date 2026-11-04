@@ -167,6 +167,27 @@ HTTP/1.1 400 Bad Request
 
 Gov 通过 [go.mod](https://github.com/zhangzhe-ctrl/ani-governance/blob/ba7db4c30b6ee8a2a8046a1adb1591bf6f01e2a4/go.mod) 固定正式 Resource 模块版本。各 owner 参考以上分层、查询和测试方式，业务筛选、可见性和授权条件由所属领域维护。参数解析和窗口计算保持清晰边界，后续有实际重复再提取公共代码。
 
+## 平台基础网络与当前网络关联实例
+
+VPC/Subnet 的 Get/List 返回当前租户私有网络和已登记的平台网络。公共对象不暴露租户或 Provider 身份，新增 `owner_scope`（`tenant` / `platform`）、`can_manage` 和 `can_use`。平台资源 `can_manage=false`；租户对平台 VPC/Subnet 的管理请求由 Resource 返回 `PermissionDenied`，Gov 映射为 HTTP 403。平台资源的 `can_use` 只表达新建资源的接入策略，不能用原生 Ready、已有 IP 或观察时间替代它。
+
+`GET /api/v1/networks/vpcs` 保持 `page/pageSize`；`GET /api/v1/networks/subnets` 保持 `limit/cursor`。二者增加可选 `can_use`、`can_manage` 查询参数：缺省不筛选，`true` 和 `false` 均为等值筛选，同时传入时使用 AND。仅接受单个规范 `true/false`；空值、数字、其他大小写、重复值和 camelCase 别名均返回 400。筛选、排序和总数由 Resource 在同一目录范围完成，Gov 不拼接分页、不重新判定资源能力。
+
+平台目录关闭发布后不再出现在 List；持有已登记产品 ID 的调用者仍可按原 `network:vpc:get` / `network:subnet:get` 权限 Get。已有实例详情据其保存的 ID 查询，不要求网络仍在 List。平台 VPC 不适用的 `base_connectivity` / `public_egress` 对象保持缺省，前端显示“平台托管”；平台 Subnet 的 `used_ip_range` 保持 optional absent，不能展示为全局占用为零。
+
+`GET /api/v1/networks/instances` 读取当前租户尚未 released 的 Attachment 摘要；它不列出还没有 Attachment 的已受理实例。要求 `network:instance:list` 及 NETWORK 套餐模块，支持现行用户 JWT / AK 鉴权。后续进入 VM/容器详情仍执行各自原有 Get 权限；本列表不额外查询或求交这些权限。
+
+| 请求字段 | 约定 |
+| --- | --- |
+| `vpc_id`、`subnet_id` | 至少一个必填；同时提供时确认父子关系并缩小到指定 Subnet；私有 ID 不可跨租户读取 |
+| `page`、`pageSize` | 独立默认 `1/20`，页码为正 uint32，页大小 `1..100`；沿用规范单值十进制校验 |
+
+响应为 `items/total`，`total` 是十进制字符串。每行包含 `consumer_type`、`consumer_id`、`consumer_name`、`consumer_state`、`subnet_id`、`subnet_name`、`slot`、`attachment_id`、`attachment_state`、`attachment_reason`、`observation_stale`、`observed_at` 和 `addresses`。地址项为 `{nic_name,address}`；消费者状态和 Attachment 状态各自显示。类型按 Resource 返回值使用 `container_instance` / `virtual_machine` / `sandbox` / `unknown`，未知消费者仍保留占用行。
+
+已知网络没有本租户占用时返回 `items=[]`、`total="0"`。无权限返回 403，前端显示“无权查看网络关联实例”，不能当作空表。Gov 在映射之前逐行校验 Resource 返回的内部 `tenant_id`，公开行不重复暴露它。
+
+新路由先执行 `admin sync-apis --dry-run` 和经批准的目录同步，再显式运行[精确权限登记 SQL](../../scripts/ops/sql/register-network-instance-permission.sql)。登记不自动授予已有角色、套餐或 API Key。正式消息与路由分别见[目录 Proto](../../api/protos/catalog/service/v1/network_instances.proto)和 [Network BFF Proto](../../api/protos/admin/service/v1/i_network.proto)。
+
 ## 模型版本筛选与操作历史（2026-10-21）
 
 - `GET /api/v1/models/{model_id}/versions?page=1&pageSize=20&status=ready`

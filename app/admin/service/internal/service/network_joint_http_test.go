@@ -114,11 +114,17 @@ func TestNetworkJointHTTP(t *testing.T) {
 		_, err = fixtureDB.ExecContext(ctx, string(seed))
 		require.NoError(t, err)
 	}
-	securityGroupSeed, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "scripts", "ops", "sql", "register-security-group-permissions.sql"))
-	require.NoError(t, err)
-	for i := 0; i < 2; i++ {
-		_, err = fixtureDB.ExecContext(ctx, string(securityGroupSeed))
-		require.NoError(t, err)
+	for _, name := range []string{
+		"register-security-group-permissions.sql",
+		"register-vnic-permissions.sql",
+		"register-network-instance-permission.sql",
+	} {
+		permissionSeed, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "scripts", "ops", "sql", name))
+		require.NoError(t, err, name)
+		for i := 0; i < 2; i++ {
+			_, err = fixtureDB.ExecContext(ctx, string(permissionSeed))
+			require.NoError(t, err, name)
+		}
 	}
 	count, err := client.RolePermission.Query().Count(sys)
 	require.NoError(t, err)

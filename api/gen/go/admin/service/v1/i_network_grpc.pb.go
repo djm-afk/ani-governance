@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	NetworkService_ListNetworkInstances_FullMethodName      = "/admin.service.v1.NetworkService/ListNetworkInstances"
 	NetworkService_CreateVNic_FullMethodName                = "/admin.service.v1.NetworkService/CreateVNic"
 	NetworkService_GetVNic_FullMethodName                   = "/admin.service.v1.NetworkService/GetVNic"
 	NetworkService_ListVNics_FullMethodName                 = "/admin.service.v1.NetworkService/ListVNics"
@@ -69,6 +70,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NetworkServiceClient interface {
+	ListNetworkInstances(ctx context.Context, in *v1.ListNetworkInstancesRequest, opts ...grpc.CallOption) (*v1.ListNetworkInstancesResponse, error)
 	CreateVNic(ctx context.Context, in *v1.CreateVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error)
 	GetVNic(ctx context.Context, in *v1.GetVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error)
 	ListVNics(ctx context.Context, in *v1.ListVNicsRequest, opts ...grpc.CallOption) (*v1.ListVNicsResponse, error)
@@ -120,6 +122,16 @@ type networkServiceClient struct {
 
 func NewNetworkServiceClient(cc grpc.ClientConnInterface) NetworkServiceClient {
 	return &networkServiceClient{cc}
+}
+
+func (c *networkServiceClient) ListNetworkInstances(ctx context.Context, in *v1.ListNetworkInstancesRequest, opts ...grpc.CallOption) (*v1.ListNetworkInstancesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListNetworkInstancesResponse)
+	err := c.cc.Invoke(ctx, NetworkService_ListNetworkInstances_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *networkServiceClient) CreateVNic(ctx context.Context, in *v1.CreateVNicRequest, opts ...grpc.CallOption) (*v1.VNicResponse, error) {
@@ -556,6 +568,7 @@ func (c *networkServiceClient) GetLoadBalancerOperation(ctx context.Context, in 
 // All implementations must embed UnimplementedNetworkServiceServer
 // for forward compatibility.
 type NetworkServiceServer interface {
+	ListNetworkInstances(context.Context, *v1.ListNetworkInstancesRequest) (*v1.ListNetworkInstancesResponse, error)
 	CreateVNic(context.Context, *v1.CreateVNicRequest) (*v1.VNicResponse, error)
 	GetVNic(context.Context, *v1.GetVNicRequest) (*v1.VNicResponse, error)
 	ListVNics(context.Context, *v1.ListVNicsRequest) (*v1.ListVNicsResponse, error)
@@ -609,6 +622,9 @@ type NetworkServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNetworkServiceServer struct{}
 
+func (UnimplementedNetworkServiceServer) ListNetworkInstances(context.Context, *v1.ListNetworkInstancesRequest) (*v1.ListNetworkInstancesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListNetworkInstances not implemented")
+}
 func (UnimplementedNetworkServiceServer) CreateVNic(context.Context, *v1.CreateVNicRequest) (*v1.VNicResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVNic not implemented")
 }
@@ -757,6 +773,24 @@ func RegisterNetworkServiceServer(s grpc.ServiceRegistrar, srv NetworkServiceSer
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&NetworkService_ServiceDesc, srv)
+}
+
+func _NetworkService_ListNetworkInstances_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListNetworkInstancesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).ListNetworkInstances(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_ListNetworkInstances_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).ListNetworkInstances(ctx, req.(*v1.ListNetworkInstancesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NetworkService_CreateVNic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1540,6 +1574,10 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.NetworkService",
 	HandlerType: (*NetworkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListNetworkInstances",
+			Handler:    _NetworkService_ListNetworkInstances_Handler,
+		},
 		{
 			MethodName: "CreateVNic",
 			Handler:    _NetworkService_CreateVNic_Handler,

@@ -12,6 +12,7 @@
 | `retire-legacy-file-access.sql` | 数据修复，旧安装文件/API/menu 清理；先按文件退役计划完成结构迁移并审查备份。 |
 | `repair-tenant-logout.sql` | 数据修复，旧安装登出权限缺失时使用；原子且可重跑，需确认现有权限/API 唯一。 |
 | `register-accelerator-permissions.sql` | 数据修复，API 目录 dry-run 与显式同步后登记权限；不授角色、不开套餐或租户额度。 |
+| `register-network-instance-permission.sql` | API 目录 dry-run 与显式同步后，将 `GET /api/v1/networks/instances` 精确关联到 `network:instance:list` / NETWORK；不授角色、套餐或 API Key，不改变现有身份范围。 |
 | `retire-inference-management.sql` | 部署不含推理管理路由的版本后，停用旧 API 与未被其它活动 API 使用的推理权限；保留 ID、授权关系和历史账目，执行前审查并备份匹配行。 |
 | `register-instance-restart-pvc-permissions.sql` | 本批四条 API、三项权限及 tenant-a 的精确角色/INSTANCE 关联；缺省只 dry-run，需显式核对租户、套餐和角色 ID，`apply=true` 才补缺失记录。先用同一 merged dev 的 `admin sync-apis --dry-run` 核对并备份；保留既有 ID、状态与其他关联，不改额度。 |
 | `register-model-permissions.sql` | 数据修复，Model BFF API 目录同步后登记精确权限；不授角色、不开套餐或租户额度。 |
