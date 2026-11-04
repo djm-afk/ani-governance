@@ -91,8 +91,10 @@ func TestVMActionIsolationAndCanonical(t *testing.T) {
 
 type vmResolvePeer struct {
 	VMOwnerClient
-	spec  *vm.CreateSpec
-	calls int
+	spec      *vm.CreateSpec
+	calls     int
+	created   *vm.AcceptCreateRequest
+	createErr error
 }
 
 func (p *vmResolvePeer) Resolve(_ context.Context, _, _ string, in *vm.CreateVMData) (*vm.ResolveCreateSpecResponse, error) {
@@ -104,6 +106,59 @@ func (p *vmResolvePeer) Resolve(_ context.Context, _, _ string, in *vm.CreateVMD
 		return nil, err
 	}
 	return &vm.ResolveCreateSpecResponse{VmContractVersion: 1, CreateSpec: requireSpec, SelectionDigest: requireSpec.Compute.SelectionDigest, VmCreateDigest: digest}, nil
+}
+func (p *vmResolvePeer) Create(_ context.Context, _, _ string, in *vm.AcceptCreateRequest) (*vm.Acceptance, error) {
+	p.created = proto.Clone(in).(*vm.AcceptCreateRequest)
+	if p.createErr != nil {
+		return nil, p.createErr
+	}
+	return &vm.Acceptance{Accepted: true, OperationId: in.Context.OperationId, ResourceId: in.Context.ResourceId}, nil
+}
+
+func TestVMBindingPreservesInitialNADIdentityThroughDispatch(t *testing.T) {
+	for _, nadUID := range []string{"", uuid.NewString()} {
+		spec := vmFixtureSpec(t)
+		spec.Network.NadUid = nadUID
+		peer := &vmResolvePeer{spec: spec}
+		binding := NewVMBinding(peer, nil, spec.ClusterId)
+		tenant, operationID, resourceID := uuid.NewString(), uuid.NewString(), uuid.NewString()
+		prepared, err := binding.PrepareManagedBusiness(context.Background(), &auth.Principal{ID: 7}, tenant, spec.Intent)
+		require.NoError(t, err)
+		raw, err := prepared.freeze(tenant, "user", "7", operationID, resourceID, nil)
+		require.NoError(t, err)
+		command, err := commandcontract.DecodeVMCanonical(raw)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, command.VMContractVersion)
+		var frozen map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(command.CreateSpec, &frozen))
+		var network map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(frozen["network"], &network))
+		require.Len(t, network, 5)
+		require.Contains(t, network, "nad_uid")
+		var savedUID string
+		require.NoError(t, json.Unmarshal(network["nad_uid"], &savedUID))
+		require.Equal(t, nadUID, savedUID)
+
+		peer.spec.Network.NadUid = "later-runtime-uid"
+		replayed, err := prepared.freeze(tenant, "user", "7", operationID, resourceID, nil)
+		require.NoError(t, err)
+		require.Equal(t, raw, replayed)
+		dispatch := &QuotaDispatchCommand{OperationID: operationID, ResourceID: resourceID, ResourceTenantID: tenant,
+			Actor: QuotaActor{Type: "user", ID: "7"}, Action: commandcontract.VMCreateAction, CanonicalRequest: raw}
+		_, err = binding.Dispatch(context.Background(), dispatch)
+		require.NoError(t, err)
+		require.Equal(t, nadUID, peer.created.CreateSpec.Network.NadUid)
+		actual, err := vm.CanonicalCreateSpec(peer.created.CreateSpec)
+		require.NoError(t, err)
+		require.Equal(t, []byte(command.CreateSpec), actual)
+
+		peer.createErr = status.Error(codes.FailedPrecondition, "NETWORK_NEW_ADMISSION_CLOSED")
+		_, err = binding.Dispatch(context.Background(), dispatch)
+		require.Equal(t, peer.createErr, err)
+		require.True(t, isPermanentContractError(err), "the existing worker must block retry and preserve the original ledger")
+		require.False(t, vmDeleteVersionRejected(err))
+		require.False(t, instanceDeleteVersionRejected(err))
+	}
 }
 func TestVMBindingFreezesSpecWithoutQuotaPlan(t *testing.T) {
 	spec := vmFixtureSpec(t)

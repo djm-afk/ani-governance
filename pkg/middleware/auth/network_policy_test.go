@@ -24,6 +24,7 @@ func TestNetworkAllTenantOperationsSignAndReplayBody(t *testing.T) {
 	// Independent HTTP fixtures cover every public operation, including methods
 	// and request shapes that the former empty-GET signer could not admit.
 	fixtures := []struct{ operation, method, path, query, body string }{
+		{"ListNetworkInstances", "GET", "/api/v1/networks/instances", "page=1&pageSize=20&subnet_id=" + policySubnetID, ""},
 		{"CreateVNic", "POST", "/api/v1/networks/vnics", "", `{"data":{"name":"nic","subnet_id":"subnet_0123456789abcdef0123456789abcdef","idempotency_key":"create-vnic-test"}}`},
 		{"GetVNic", "GET", "/api/v1/networks/vnics/vnic_0123456789abcdef0123456789abcdef", "", ""},
 		{"DeleteVNic", "DELETE", "/api/v1/networks/vnics/vnic_0123456789abcdef0123456789abcdef", "", ""},
@@ -31,13 +32,13 @@ func TestNetworkAllTenantOperationsSignAndReplayBody(t *testing.T) {
 		{"ListVNicBindingTargets", "GET", "/api/v1/networks/vnics/vnic_0123456789abcdef0123456789abcdef/binding-targets", "consumer_kind=vm&page=1&pageSize=20", ""},
 		{"CreateVPC", "POST", "/api/v1/networks/vpcs", "", `{"name":"vpc","cidr":"10.0.0.0/16","idempotency_key":"create-vpc"}`},
 		{"GetVPC", "GET", vectorPath, "", ""},
-		{"ListVPCs", "GET", "/api/v1/networks/vpcs", "name=demo&page=3&pageSize=2&state=available", ""},
+		{"ListVPCs", "GET", "/api/v1/networks/vpcs", "can_manage=false&can_use=true&name=demo&page=3&pageSize=2&state=available", ""},
 		{"ListVPCCIDRPresets", "GET", "/api/v1/networks/vpc-cidr-presets", "", ""},
 		{"DeleteVPC", "DELETE", vectorPath, "", ""},
 		{"GetOperation", "GET", "/api/v1/networks/operations/" + policyOperationID, "", ""},
 		{"CreateSubnet", "POST", "/api/v1/networks/subnets", "", `{"vpc_id":"vpc_0123456789abcdef0123456789abcdef","name":"subnet","cidr":"10.0.1.0/24","idempotency_key":"create-subnet"}`},
 		{"GetSubnet", "GET", "/api/v1/networks/subnets/" + policySubnetID, "", ""},
-		{"ListSubnets", "GET", "/api/v1/networks/subnets", "limit=1&vpc_id=vpc_0123456789abcdef0123456789abcdef", ""},
+		{"ListSubnets", "GET", "/api/v1/networks/subnets", "can_manage=false&can_use=true&limit=1&vpc_id=vpc_0123456789abcdef0123456789abcdef", ""},
 		{"DeleteSubnet", "DELETE", "/api/v1/networks/subnets/" + policySubnetID, "", ""},
 		{"CreateEIP", "POST", "/api/v1/networks/eips", "", `{"name":"eip","idempotency_key":"create-eip"}`},
 		{"GetEIP", "GET", "/api/v1/networks/eips/" + policyEIPID, "", ""},
@@ -234,5 +235,26 @@ func TestVPCPageHTTPParameters(t *testing.T) {
 		if err == nil && validateNetworkQuery(op, values) {
 			t.Fatalf("invalid query accepted: %s", query)
 		}
+	}
+}
+
+func TestNetworkCatalogCapabilityQueryParameters(t *testing.T) {
+	for _, operation := range []string{"ListVPCs", "ListSubnets"} {
+		op := "/admin.service.v1.NetworkService/" + operation
+		for _, query := range []string{"", "can_use=true", "can_use=false", "can_manage=true", "can_manage=false", "can_manage=false&can_use=true"} {
+			values, err := url.ParseQuery(query)
+			if err != nil || !validateNetworkQuery(op, values) {
+				t.Fatalf("valid %s capability filter rejected: %s", operation, query)
+			}
+		}
+		for _, query := range []string{"can_use=", "can_manage=1", "can_use=TRUE", "can_manage=False", "can_use=true&can_use=false", "canUse=true"} {
+			values, err := url.ParseQuery(query)
+			if err == nil && validateNetworkQuery(op, values) {
+				t.Fatalf("invalid %s capability filter accepted: %s", operation, query)
+			}
+		}
+	}
+	if validateNetworkQuery("/admin.service.v1.NetworkService/ListSecurityGroups", url.Values{"can_use": {"true"}}) {
+		t.Fatal("network capability filters widened the security-group query contract")
 	}
 }

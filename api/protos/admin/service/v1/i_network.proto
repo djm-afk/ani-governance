@@ -4,9 +4,18 @@ import "google/api/annotations.proto";
 import "catalog/service/v1/vpc.proto";
 import "catalog/service/v1/security_group.proto";
 import "catalog/service/v1/vnic.proto";
+import "catalog/service/v1/network_instances.proto";
 import "gnostic/openapi/v3/annotations.proto";
 
 service NetworkService {
+ rpc ListNetworkInstances(catalog.service.v1.ListNetworkInstancesRequest) returns(catalog.service.v1.ListNetworkInstancesResponse) {
+  option (google.api.http) = {get: "/api/v1/networks/instances"};
+  option (gnostic.openapi.v3.operation) = {
+   security: [{additional_properties: [{name: "BearerAuth" value: {}}]}, {additional_properties: [{name: "AccessKeyAuth" value: {}}, {name: "SignatureAuth" value: {}}, {name: "SignatureTime" value: {}}]}]
+   summary: "List current network-associated instances in the authenticated tenant"
+   description: "Requires network:instance:list and NETWORK subscription. Supply vpc_id, subnet_id or both. Returns not-yet-released attachments with independent consumer and attachment state, including unknown consumers. Uses page/pageSize (defaults 1/20, maximum pageSize 100) and items/total. Platform networks are readable even after directory publication or new admission is closed."
+  };
+ }
  rpc CreateVNic(catalog.service.v1.CreateVNicRequest) returns(catalog.service.v1.VNicResponse) { option(google.api.http)={post:"/api/v1/networks/vnics" body:"*" response_body:"vnic"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}] responses:{response_or_reference:[{name:"200" value:{response:{description:"Accepted or persisted VNIC snapshot; inspect state and operation for completion" content:{additional_properties:[{name:"application/json" value:{schema:{reference:{_ref:"#/components/schemas/VNic"}}}}]}}}}]}}; }
  rpc GetVNic(catalog.service.v1.GetVNicRequest) returns(catalog.service.v1.VNicResponse) { option(google.api.http)={get:"/api/v1/networks/vnics/{vnic_id}" response_body:"vnic"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}] responses:{response_or_reference:[{name:"200" value:{response:{description:"Accepted or persisted VNIC snapshot; inspect state and operation for completion" content:{additional_properties:[{name:"application/json" value:{schema:{reference:{_ref:"#/components/schemas/VNic"}}}}]}}}}]}}; }
  rpc ListVNics(catalog.service.v1.ListVNicsRequest) returns(catalog.service.v1.ListVNicsResponse) { option(google.api.http)={get:"/api/v1/networks/vnics"};  option(gnostic.openapi.v3.operation)={security:[{additional_properties:[{name:"BearerAuth" value:{}}]},{additional_properties:[{name:"AccessKeyAuth" value:{}},{name:"SignatureAuth" value:{}},{name:"SignatureTime" value:{}}]}]}; }
@@ -49,8 +58,8 @@ service NetworkService {
          { name: "SignatureTime" value: {} }
        ] }
      ]
-     summary: "Get a VPC in the authenticated tenant"
-     description: "Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:get permission. vpc_id must be vpc_ followed by 32 lowercase hex digits. Query parameters and body are rejected. Public identity headers are ignored. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. Cross-tenant and missing VPCs both return 404. No network lifecycle or data-plane operation is performed."
+     summary: "Get a visible tenant or registered platform VPC"
+     description: "Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:get permission. vpc_id must be vpc_ followed by 32 lowercase hex digits. Query parameters and body are rejected. Public identity headers are ignored. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. Registered platform IDs remain readable after directory publication or new admission is closed; other tenants' private and missing VPCs return 404. owner_scope is tenant or platform; can_manage and can_use describe resource capabilities. No network lifecycle or data-plane operation is performed."
      responses: { response_or_reference: [
        { name: "200" value: { response: { description: "OK" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/VPC" } } } }] } } } },
        { name: "400" value: { response: { description: "Invalid VPC ID or unsupported query" } } },
@@ -73,8 +82,8 @@ service NetworkService {
          { name: "SignatureTime" value: {} }
        ] }
      ]
-     summary: "List VPCs in the authenticated tenant"
-     description: "Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. System-managed Intranet resources are excluded downstream."
+     summary: "List tenant VPCs and published platform VPCs"
+     description: "Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. Tenant VPCs and published platform VPCs share one filtered, ordered page and count. Optional can_use/can_manage accept only true or false; omission leaves that capability unfiltered, and both conditions use AND. can_use describes new admission, independently of native Ready or observed addresses. System-managed Intranet resources are excluded downstream."
      responses: { response_or_reference: [
        { name: "400" value: { response: { description: "Invalid page, pageSize, state filter or unsupported legacy window" } } },
        { name: "401" value: { response: { description: "Missing, invalid, expired or revoked credentials" } } },
@@ -333,8 +342,8 @@ service NetworkService {
          { name: "SignatureTime" value: {} }
        ] }
      ]
-     summary: "GetSubnet in the authenticated tenant"
-     description: "Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:get permission. Tenant and actor come from authenticated context. Cross-tenant and missing resources both return 404. Mutation responses are persisted acceptance snapshots, not asynchronous completion."
+     summary: "Get a visible tenant or registered platform subnet"
+     description: "Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:get permission. Tenant and actor come from authenticated context. Registered platform IDs remain readable after directory publication or new admission is closed. owner_scope is tenant or platform; can_manage and can_use describe resource capabilities. Other tenants' private and missing resources return 404. Platform subnets omit used_ip_range."
      responses: { response_or_reference: [
        { name: "200" value: { response: { description: "OK" content: { additional_properties: [{ name: "application/json" value: { schema: { reference: { _ref: "#/components/schemas/Subnet" } } } }] } } } },
        { name: "400" value: { response: { description: "Invalid resource ID, filter or request" } } },
@@ -359,8 +368,8 @@ service NetworkService {
          { name: "SignatureTime" value: {} }
        ] }
      ]
-     summary: "ListSubnets in the authenticated tenant"
-     description: "Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:list permission. Tenant and actor come from authenticated context. Cross-tenant and missing resources both return 404. Mutation responses are persisted acceptance snapshots, not asynchronous completion. Cursor pagination preserves items, next_cursor and filtered total; limit is 1..100."
+     summary: "List tenant subnets and published platform subnets"
+     description: "Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:list permission. Tenant and actor come from authenticated context. Tenant subnets and platform subnets whose parent and child are published share one filtered, ordered cursor page and count. Optional can_use/can_manage accept only true or false; omission leaves that capability unfiltered, and both conditions use AND. Cursor pagination preserves items, next_cursor and filtered total; limit is 1..100. Platform subnets omit used_ip_range."
      responses: { response_or_reference: [
        { name: "400" value: { response: { description: "Invalid resource ID, filter or request" } } },
        { name: "401" value: { response: { description: "Missing, invalid, expired or revoked credentials" } } },

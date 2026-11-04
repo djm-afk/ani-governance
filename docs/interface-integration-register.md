@@ -24,6 +24,7 @@
 | VPC 详情查询的机器调用 | NET-01；复用 AK-* | 必要 vpc-read 接收已整合，双 actor 与真实 mTLS 查询 PASS | AKSK-VPC-20260922 已完成本批 |
 | Network 安全组与实例绑定 | NET-SG-01～NET-SG-15 | 正式 SDK 固定；Fedora 定向测试、构建与 HTTP/mTLS/PG/worker 闭环通过；真实流量验收待执行 | 新接口遵守 data 包装；既有 Network 接口格式保留 |
 | Network 租户面读写对接 | NET-01～NET-25；复用 AK-*、AUTH-* | 当前 25 方法支持 JWT/AK；NET-01～24 的历史三条主链验收和 NET-25 增量结果分批记录 | 当前合同见下方增量与 [AK/SK 合同](contracts/aksk-signature.md)；真实环境按批次验收 |
+| 平台基础网络与关联实例 | NET-BASE-01；复用 VPC/Subnet Get/List | `owner_scope/can_manage/can_use`、可选能力过滤及当前租户 Attachment 摘要；源码与实际验证分开交付 | 当前合同见[平台基础网络与当前网络关联实例](contracts/frontend-http-api.md#平台基础网络与当前网络关联实例)，不改变原分页或配额行为 |
 | Gov → Resource 调用规范收敛 | S2S-RES-01；复用 NET-01～NET-25 与既有 Image 11 RPC | Network/Image 调用端与 Resource 接收端已修改；隔离真实业务链路通过，生产验收未执行 | 传输与可信上下文即时修复，见下方结果；不调整 HTTP 风格 |
 | Gov → Resource Sandbox 生命周期 | SANDBOX-01～08 | 当前需求为独立 Sandbox：源码调整、跨仓兼容和验收结果见 Resource 唯一状态；旧父实例模型的历史证据不能代表新模型已验收 | Gov 需固定支持独立创建的 Resource 正式版本；升级前执行切换门禁，整体验收待完成 |
 | 通用配额、GPU 实例与 Inference 接入 | QUOTA-01～03；INF-01/02；QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 保留 ACC 目录与 Resource 实例执行/释放合同；Inference 管理由 Governance BFF 接入并通过受信 mTLS 客户端投递；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)；源码、部署与真实 GPU 验收分别记录 |

@@ -4,6 +4,7 @@ import "testing"
 
 func TestManualVNicAndOwnerNetworkPermissions(t *testing.T) {
 	for _, v := range []struct{ method, path, code, module string }{
+		{"GET", "/api/v1/networks/instances", "network:instance:list", "NETWORK"},
 		{"POST", "/api/v1/networks/vnics", "network:vnic:create", "NETWORK"},
 		{"GET", "/api/v1/networks/vnics", "network:vnic:list", "NETWORK"},
 		{"GET", "/api/v1/networks/vnics/{vnic_id}", "network:vnic:get", "NETWORK"},

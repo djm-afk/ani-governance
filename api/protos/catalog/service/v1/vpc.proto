@@ -21,9 +21,12 @@ message VPC {
  int64 subnet_count = 13 [json_name = "subnet_count"];
  VPCPublicEgress public_egress = 14 [json_name = "public_egress"];
  VPCBaseConnectivity base_connectivity = 15 [json_name = "base_connectivity"];
+ string owner_scope = 16 [json_name = "owner_scope"];
+ bool can_manage = 17 [json_name = "can_manage"];
+ bool can_use = 18 [json_name = "can_use"];
 }
-// Read-only system connection summary. Ready describes fresh configuration
-// evidence, not traffic health; internal EIP/SNAT identities stay private.
+// Read-only system connection summary from Resource's persisted native state.
+// Platform-owned VPCs omit this tenant connection summary.
 message VPCBaseConnectivity {
  string state = 1 [json_name = "state"];
  string reason = 2 [json_name = "reason"];
@@ -59,6 +62,8 @@ message ListVPCsRequest {
  reserved "limit", "cursor";
  optional uint32 page = 5 [json_name = "page"];
  optional uint32 page_size = 6 [json_name = "pageSize"];
+ optional bool can_use = 7 [json_name = "can_use"];
+ optional bool can_manage = 8 [json_name = "can_manage"];
 }
 message ListVPCsResponse {
  repeated VPC items = 1 [json_name = "items"];
@@ -200,6 +205,9 @@ message Subnet {
  repeated string exclude_ips = 21 [json_name = "exclude_ips"];
  bool enable_dhcp = 22 [json_name = "enable_dhcp"];
  repeated string dns_servers = 23 [json_name = "dns_servers"];
+ string owner_scope = 24 [json_name = "owner_scope"];
+ bool can_manage = 25 [json_name = "can_manage"];
+ bool can_use = 26 [json_name = "can_use"];
 }
 message CreateSubnetRequest {
  string vpc_id = 1 [json_name = "vpc_id"];
@@ -221,6 +229,8 @@ message ListSubnetsRequest {
  string state = 3 [json_name = "state"];
  int32 limit = 4 [json_name = "limit"];
  string cursor = 5 [json_name = "cursor"];
+ optional bool can_use = 6 [json_name = "can_use"];
+ optional bool can_manage = 7 [json_name = "can_manage"];
 }
 message ListSubnetsResponse {
  repeated Subnet items = 1 [json_name = "items"];
