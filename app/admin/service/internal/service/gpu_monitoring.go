@@ -70,8 +70,6 @@ func gpuDependency(err error) error {
 		return errors.GatewayTimeout("GPU_QUERY_TIMEOUT", "GPU query deadline exceeded")
 	case codes.NotFound:
 		return errors.NotFound("GPU_NOT_FOUND", "GPU target not found")
-	case codes.Aborted:
-		return errors.Conflict("GPU_SCOPE_CHANGED", "GPU scope changed; retry the query")
 	}
 	return errors.ServiceUnavailable("GPU_SOURCE_UNAVAILABLE", "GPU monitoring dependency unavailable")
 }
@@ -210,14 +208,14 @@ func (s *GpuMonitoringService) physicalTarget(ctx context.Context, cluster, mode
 	if e != nil {
 		return nil, "", e
 	}
-	t := &gpu.GpuTarget{Kind: "PHYSICAL", IndexComplete: true}
+	t := &gpu.GpuTarget{Kind: "PHYSICAL"}
 	models := map[string]bool{}
 	for _, d := range ds {
 		if id != "" && id != d.DeviceId {
 			continue
 		}
 		models[d.ModelKey] = true
-		t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: d.ClusterId, NodeId: d.Node.Name, NodeUid: d.Node.Uid, CandidateComplete: true, GpuUuid: d.VendorDeviceId, DeviceId: d.DeviceId, OwnershipState: "VERIFIED"})
+		t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: d.ClusterId, NodeId: d.Node.Name, NodeUid: d.Node.Uid, GpuUuid: d.VendorDeviceId, DeviceId: d.DeviceId})
 	}
 	if id != "" && len(t.Scopes) == 0 {
 		return nil, "", errors.NotFound("GPU_NOT_FOUND", "GPU target not found")
@@ -274,22 +272,12 @@ func (s *GpuMonitoringService) QueryPlatformGpu(ctx context.Context, r *view.Gpu
 	return s.physicalQuery(ctx, "", r.Data, false)
 }
 
-func gpuScopeTime(v string) (*timestamppb.Timestamp, error) {
-	if v == "" {
-		return nil, nil
-	}
-	t, e := time.Parse(time.RFC3339Nano, v)
-	if e != nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	return timestamppb.New(t), nil
-}
-func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32, kind, id string, start, end *timestamppb.Timestamp, platform bool) (*gpu.GpuTarget, string, string, error) {
+func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32, kind, id string, platform bool) (*gpu.GpuTarget, string, string, error) {
 	p, e := acceleratorPrincipal(ctx, platform)
 	if e != nil {
 		return nil, "", "", e
 	}
-	if s.accelerator == nil || s.accelerator.client == nil || s.accelerator.tenants == nil {
+	if s.accelerator == nil || s.accelerator.tenants == nil {
 		return nil, "", "", acceleratorUnavailable()
 	}
 	if !platform {
@@ -363,123 +351,19 @@ func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32
 			return nil, "", "", acceleratorInvalidResponse()
 		}
 	}
-	t := &gpu.GpuTarget{Kind: "TENANT", TenantId: tenant, ResourceKind: kind, ResourceId: id, IndexComplete: true}
+	t := &gpu.GpuTarget{Kind: "TENANT", TenantId: tenant}
 	if ref != nil {
 		t.Kind = "RESOURCE"
-	}
-	token, snapshot := "", ""
-	scopes := 0
-	pages := 0
-	tokens := map[string]bool{"": true}
-	sources := map[string]bool{}
-	kinds := map[string]bool{}
-	uncovered := map[string]bool{}
-	for {
-		pages++
-		if pages > 64 {
-			return nil, "", "", gpuBudget()
-		}
-		var reply *acc.GpuMetricScopesResponse
-		if platform {
-			c, err := s.accelerator.adminContext(ctx)
-			if err != nil {
-				return nil, "", "", err
-			}
-			reply, e = s.accelerator.client.Admin.ListAdminGpuMetricScopes(ctx, &acc.AdminGpuMetricScopesRequest{Context: c, TenantId: tenant, Ref: ref, Start: start.AsTime().Format(time.RFC3339Nano), End: end.AsTime().Format(time.RFC3339Nano), Page: &acc.Page{Size: 200, Token: token}, SnapshotId: snapshot})
-		} else {
-			c, _, err := s.accelerator.tenantContext(ctx)
-			if err != nil {
-				return nil, "", "", err
-			}
-			reply, e = s.accelerator.client.Usage.ListTenantGpuMetricScopes(ctx, &acc.TenantGpuMetricScopesRequest{Context: c, Ref: ref, Start: start.AsTime().Format(time.RFC3339Nano), End: end.AsTime().Format(time.RFC3339Nano), Page: &acc.Page{Size: 200, Token: token}, SnapshotId: snapshot})
-		}
-		if e != nil {
-			return nil, "", "", mapAcceleratorError(e)
-		}
-		if reply == nil || reply.SnapshotId == "" || snapshot != "" && snapshot != reply.SnapshotId {
-			return nil, "", "", acceleratorInvalidResponse()
-		}
-		snapshot = reply.SnapshotId
-		t.ScopeWatermark = snapshot
-		t.IndexComplete = t.IndexComplete && reply.IndexComplete
-		if t.HistoryAvailableFrom == nil {
-			t.HistoryAvailableFrom, e = gpuScopeTime(reply.IndexStartedAt)
-			if e != nil {
-				return nil, "", "", e
-			}
-		}
-		for _, x := range reply.Items {
-			scopes++
-			if scopes > 4096 {
-				return nil, "", "", gpuBudget()
-			}
-			if x == nil || x.Ref == nil || x.Ref.TenantId != tenant || ref != nil && (x.Ref.OwnerService != ref.OwnerService || x.Ref.ResourceId != id || x.Ref.CreateOperationId != ref.CreateOperationId) || x.Node == nil {
-				return nil, "", "", acceleratorInvalidResponse()
-			}
-			// ACC names the owner's container scope container_instance. The public
-			// adapter names this business resource container; original owner/ref
-			// identity and runtime selectors remain unchanged.
-			scopeKind := x.ResourceKind
-			if x.Ref.OwnerService == InstanceOwner && scopeKind == "container_instance" {
-				scopeKind = "container"
-			}
-			if ref != nil && scopeKind != kind {
-				return nil, "", "", acceleratorInvalidResponse()
-			}
-			from, err := gpuScopeTime(x.ValidFrom)
-			if err != nil {
-				return nil, "", "", err
-			}
-			to, err := gpuScopeTime(x.ValidTo)
-			if err != nil {
-				return nil, "", "", err
-			}
-			evidence, err := gpuScopeTime(x.EvidenceAt)
-			if err != nil {
-				return nil, "", "", err
-			}
-			state := x.OwnershipState
-			if !x.CandidateComplete {
-				t.IndexComplete = false
-				if state == "VERIFIED" {
-					state = "OWNERSHIP_UNKNOWN"
-				}
-				uncovered[scopeKind] = true
-			}
-			if state != "VERIFIED" {
-				t.IndexComplete = false
-			}
-			kinds[scopeKind] = true
-			source := strings.Join([]string{x.ClusterId, x.Node.Name, x.Node.Uid, x.Namespace, x.PodName, x.ContainerName, strings.ToLower(strings.TrimPrefix(strings.ToLower(x.GpuUuid), "gpu-")), x.VdeviceId}, "\x00")
-			sources[source] = true
-			if len(sources) > 128 {
-				return nil, "", "", gpuBudget()
-			}
-			t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: x.ClusterId, NodeId: x.Node.Name, NodeUid: x.Node.Uid, CandidateComplete: x.CandidateComplete, Reasons: x.Reasons, GpuUuid: x.GpuUuid, Namespace: x.Namespace, PodName: x.PodName, ContainerName: x.ContainerName, VdeviceId: x.VdeviceId, UsageRef: &gpu.UsageRef{TenantId: x.Ref.TenantId, OwnerService: x.Ref.OwnerService, ResourceId: x.Ref.ResourceId, CreateOperationId: x.Ref.CreateOperationId}, ValidFrom: from, ValidTo: to, EvidenceAt: evidence, OwnershipState: state, ResourceKind: scopeKind, DeviceId: x.DeviceId})
-		}
-		if reply.NextToken == "" {
-			break
-		}
-		if tokens[reply.NextToken] {
-			return nil, "", "", acceleratorInvalidResponse()
-		}
-		tokens[reply.NextToken] = true
-		token = reply.NextToken
-	}
-	for k := range kinds {
-		if k != "" {
-			t.IncludedResourceKinds = append(t.IncludedResourceKinds, k)
+		t.ResourceKind = kind
+		t.ResourceId = id
+		t.UsageRef = &gpu.UsageRef{
+			TenantId: ref.TenantId, OwnerService: ref.OwnerService,
+			ResourceId: ref.ResourceId, CreateOperationId: ref.CreateOperationId,
 		}
 	}
-	for k := range uncovered {
-		if k != "" {
-			t.UncoveredResourceKinds = append(t.UncoveredResourceKinds, k)
-		}
-	}
-	sort.Strings(t.IncludedResourceKinds)
-	sort.Strings(t.UncoveredResourceKinds)
 	return t, tenant, actor, nil
 }
+
 func (s *GpuMonitoringService) businessQuery(ctx context.Context, tenantID uint32, kind, id string, d *view.GpuQueryData, latest, platform bool) (*view.GpuQueryResponse, error) {
 	if d == nil || d.ClusterId != "" || d.ModelKey != "" {
 		return nil, gpuInvalid()
@@ -497,7 +381,7 @@ func (s *GpuMonitoringService) businessQuery(ctx context.Context, tenantID uint3
 		start = timestamppb.New(now.Add(-90 * time.Second))
 		end = timestamppb.New(now)
 	}
-	t, tenant, actor, e := s.tenantTarget(ctx, tenantID, kind, id, start, end, platform)
+	t, tenant, actor, e := s.tenantTarget(ctx, tenantID, kind, id, platform)
 	if e != nil {
 		return nil, e
 	}
@@ -580,9 +464,9 @@ func (s *GpuMonitoringService) execute(ctx context.Context, t *gpu.GpuTarget, pl
 	if r == nil || len(r.Series) < len(cs) || len(r.Series) > 12 || r.QueryTime == nil {
 		return nil, errors.ServiceUnavailable("GPU_INVALID_RESPONSE", "invalid GPU monitoring response")
 	}
-	// Only the public DTO is projected. Internal scope watermark and runtime
-	// identities never enter tenant JSON, including on partially known scopes.
-	out := &view.GpuQueryResponse{QueryTime: r.QueryTime, Start: r.Start, End: r.End, EffectiveStepSeconds: r.EffectiveStepSeconds, IndexComplete: r.IndexComplete, IncludedResourceKinds: r.IncludedResourceKinds, UncoveredResourceKinds: r.UncoveredResourceKinds}
+	// Only the public DTO is projected. Infrastructure identities never enter
+	// tenant JSON; completeness describes returned time-series coverage.
+	out := &view.GpuQueryResponse{QueryTime: r.QueryTime, Start: r.Start, End: r.End, EffectiveStepSeconds: r.EffectiveStepSeconds, IndexComplete: r.IndexComplete, IncludedResourceKinds: r.IncludedResourceKinds, UncoveredResourceKinds: []string{}}
 	for _, series := range r.Series {
 		if series == nil {
 			return nil, metricResponseInvalid()
@@ -595,6 +479,7 @@ func (s *GpuMonitoringService) execute(ctx context.Context, t *gpu.GpuTarget, pl
 		if err = protojson.Unmarshal(raw, item); err != nil {
 			return nil, metricResponseInvalid()
 		}
+		item.OwnershipAvailableFrom = nil
 		out.Series = append(out.Series, item)
 	}
 	raw, e := protojson.Marshal(out)

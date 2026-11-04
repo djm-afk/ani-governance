@@ -3844,100 +3844,21 @@ func (x *AcceleratorDiscoveredBaseline) GetSource() string {
 	return ""
 }
 
-type AcceleratorNodeSource struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
-	ObservedAt    string                 `protobuf:"bytes,2,opt,name=observed_at,proto3" json:"observed_at,omitempty"`
-	ReceivedAt    string                 `protobuf:"bytes,3,opt,name=received_at,proto3" json:"received_at,omitempty"`
-	Complete      bool                   `protobuf:"varint,4,opt,name=complete,proto3" json:"complete,omitempty"`
-	Issues        []string               `protobuf:"bytes,5,rep,name=issues,proto3" json:"issues,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AcceleratorNodeSource) Reset() {
-	*x = AcceleratorNodeSource{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[53]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AcceleratorNodeSource) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AcceleratorNodeSource) ProtoMessage() {}
-
-func (x *AcceleratorNodeSource) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[53]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AcceleratorNodeSource.ProtoReflect.Descriptor instead.
-func (*AcceleratorNodeSource) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{53}
-}
-
-func (x *AcceleratorNodeSource) GetSource() string {
-	if x != nil {
-		return x.Source
-	}
-	return ""
-}
-
-func (x *AcceleratorNodeSource) GetObservedAt() string {
-	if x != nil {
-		return x.ObservedAt
-	}
-	return ""
-}
-
-func (x *AcceleratorNodeSource) GetReceivedAt() string {
-	if x != nil {
-		return x.ReceivedAt
-	}
-	return ""
-}
-
-func (x *AcceleratorNodeSource) GetComplete() bool {
-	if x != nil {
-		return x.Complete
-	}
-	return false
-}
-
-func (x *AcceleratorNodeSource) GetIssues() []string {
-	if x != nil {
-		return x.Issues
-	}
-	return nil
-}
-
 type AcceleratorDiscoveredNode struct {
-	state               protoimpl.MessageState           `protogen:"open.v1"`
-	Node                *AcceleratorNode                 `protobuf:"bytes,1,opt,name=node,proto3" json:"node,omitempty"`
-	GroupId             string                           `protobuf:"bytes,2,opt,name=group_id,proto3" json:"group_id,omitempty"`
-	Gpus                []*AcceleratorDiscoveredGPU      `protobuf:"bytes,3,rep,name=gpus,proto3" json:"gpus,omitempty"`
-	Baselines           []*AcceleratorDiscoveredBaseline `protobuf:"bytes,4,rep,name=baselines,proto3" json:"baselines,omitempty"`
-	AgentOnline         bool                             `protobuf:"varint,5,opt,name=agent_online,proto3" json:"agent_online,omitempty"`
-	AgentLeaseExpiresAt string                           `protobuf:"bytes,6,opt,name=agent_lease_expires_at,proto3" json:"agent_lease_expires_at,omitempty"`
-	Sources             []*AcceleratorNodeSource         `protobuf:"bytes,7,rep,name=sources,proto3" json:"sources,omitempty"`
-	Selectable          bool                             `protobuf:"varint,8,opt,name=selectable,proto3" json:"selectable,omitempty"`
-	BlockingReasons     []string                         `protobuf:"bytes,9,rep,name=blocking_reasons,proto3" json:"blocking_reasons,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state           protoimpl.MessageState           `protogen:"open.v1"`
+	Node            *AcceleratorNode                 `protobuf:"bytes,1,opt,name=node,proto3" json:"node,omitempty"`
+	GroupId         string                           `protobuf:"bytes,2,opt,name=group_id,proto3" json:"group_id,omitempty"`
+	Gpus            []*AcceleratorDiscoveredGPU      `protobuf:"bytes,3,rep,name=gpus,proto3" json:"gpus,omitempty"`
+	Baselines       []*AcceleratorDiscoveredBaseline `protobuf:"bytes,4,rep,name=baselines,proto3" json:"baselines,omitempty"`
+	Selectable      bool                             `protobuf:"varint,8,opt,name=selectable,proto3" json:"selectable,omitempty"`
+	BlockingReasons []string                         `protobuf:"bytes,9,rep,name=blocking_reasons,proto3" json:"blocking_reasons,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AcceleratorDiscoveredNode) Reset() {
 	*x = AcceleratorDiscoveredNode{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[54]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3949,7 +3870,7 @@ func (x *AcceleratorDiscoveredNode) String() string {
 func (*AcceleratorDiscoveredNode) ProtoMessage() {}
 
 func (x *AcceleratorDiscoveredNode) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[54]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3962,7 +3883,7 @@ func (x *AcceleratorDiscoveredNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceleratorDiscoveredNode.ProtoReflect.Descriptor instead.
 func (*AcceleratorDiscoveredNode) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{54}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *AcceleratorDiscoveredNode) GetNode() *AcceleratorNode {
@@ -3993,27 +3914,6 @@ func (x *AcceleratorDiscoveredNode) GetBaselines() []*AcceleratorDiscoveredBasel
 	return nil
 }
 
-func (x *AcceleratorDiscoveredNode) GetAgentOnline() bool {
-	if x != nil {
-		return x.AgentOnline
-	}
-	return false
-}
-
-func (x *AcceleratorDiscoveredNode) GetAgentLeaseExpiresAt() string {
-	if x != nil {
-		return x.AgentLeaseExpiresAt
-	}
-	return ""
-}
-
-func (x *AcceleratorDiscoveredNode) GetSources() []*AcceleratorNodeSource {
-	if x != nil {
-		return x.Sources
-	}
-	return nil
-}
-
 func (x *AcceleratorDiscoveredNode) GetSelectable() bool {
 	if x != nil {
 		return x.Selectable
@@ -4039,7 +3939,7 @@ type AcceleratorDiscoveredNodes struct {
 
 func (x *AcceleratorDiscoveredNodes) Reset() {
 	*x = AcceleratorDiscoveredNodes{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[55]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4051,7 +3951,7 @@ func (x *AcceleratorDiscoveredNodes) String() string {
 func (*AcceleratorDiscoveredNodes) ProtoMessage() {}
 
 func (x *AcceleratorDiscoveredNodes) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[55]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4064,7 +3964,7 @@ func (x *AcceleratorDiscoveredNodes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceleratorDiscoveredNodes.ProtoReflect.Descriptor instead.
 func (*AcceleratorDiscoveredNodes) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{55}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *AcceleratorDiscoveredNodes) GetItems() []*AcceleratorDiscoveredNode {
@@ -4097,7 +3997,7 @@ type AcceleratorInitializationNewPool struct {
 
 func (x *AcceleratorInitializationNewPool) Reset() {
 	*x = AcceleratorInitializationNewPool{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[56]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4109,7 +4009,7 @@ func (x *AcceleratorInitializationNewPool) String() string {
 func (*AcceleratorInitializationNewPool) ProtoMessage() {}
 
 func (x *AcceleratorInitializationNewPool) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[56]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4122,7 +4022,7 @@ func (x *AcceleratorInitializationNewPool) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceleratorInitializationNewPool.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationNewPool) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{56}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *AcceleratorInitializationNewPool) GetDisplayName() string {
@@ -4146,7 +4046,7 @@ type AcceleratorInitializationPoolInput struct {
 
 func (x *AcceleratorInitializationPoolInput) Reset() {
 	*x = AcceleratorInitializationPoolInput{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[57]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4158,7 +4058,7 @@ func (x *AcceleratorInitializationPoolInput) String() string {
 func (*AcceleratorInitializationPoolInput) ProtoMessage() {}
 
 func (x *AcceleratorInitializationPoolInput) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[57]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4171,7 +4071,7 @@ func (x *AcceleratorInitializationPoolInput) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use AcceleratorInitializationPoolInput.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationPoolInput) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{57}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *AcceleratorInitializationPoolInput) GetClientKey() string {
@@ -4233,7 +4133,7 @@ type AcceleratorInitializationExistingGroup struct {
 
 func (x *AcceleratorInitializationExistingGroup) Reset() {
 	*x = AcceleratorInitializationExistingGroup{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[58]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4245,7 +4145,7 @@ func (x *AcceleratorInitializationExistingGroup) String() string {
 func (*AcceleratorInitializationExistingGroup) ProtoMessage() {}
 
 func (x *AcceleratorInitializationExistingGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[58]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4258,7 +4158,7 @@ func (x *AcceleratorInitializationExistingGroup) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use AcceleratorInitializationExistingGroup.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationExistingGroup) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{58}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *AcceleratorInitializationExistingGroup) GetGroupId() string {
@@ -4288,7 +4188,7 @@ type AcceleratorInitializationNewGroup struct {
 
 func (x *AcceleratorInitializationNewGroup) Reset() {
 	*x = AcceleratorInitializationNewGroup{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[59]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4300,7 +4200,7 @@ func (x *AcceleratorInitializationNewGroup) String() string {
 func (*AcceleratorInitializationNewGroup) ProtoMessage() {}
 
 func (x *AcceleratorInitializationNewGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[59]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4313,7 +4213,7 @@ func (x *AcceleratorInitializationNewGroup) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AcceleratorInitializationNewGroup.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationNewGroup) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{59}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *AcceleratorInitializationNewGroup) GetPoolKey() string {
@@ -4365,7 +4265,7 @@ type AcceleratorInitializationGroupInput struct {
 
 func (x *AcceleratorInitializationGroupInput) Reset() {
 	*x = AcceleratorInitializationGroupInput{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[60]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4377,7 +4277,7 @@ func (x *AcceleratorInitializationGroupInput) String() string {
 func (*AcceleratorInitializationGroupInput) ProtoMessage() {}
 
 func (x *AcceleratorInitializationGroupInput) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[60]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4390,7 +4290,7 @@ func (x *AcceleratorInitializationGroupInput) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use AcceleratorInitializationGroupInput.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationGroupInput) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{60}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *AcceleratorInitializationGroupInput) GetClientKey() string {
@@ -4456,7 +4356,7 @@ type AcceleratorInitializationProfileInput struct {
 
 func (x *AcceleratorInitializationProfileInput) Reset() {
 	*x = AcceleratorInitializationProfileInput{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[61]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4468,7 +4368,7 @@ func (x *AcceleratorInitializationProfileInput) String() string {
 func (*AcceleratorInitializationProfileInput) ProtoMessage() {}
 
 func (x *AcceleratorInitializationProfileInput) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[61]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4481,7 +4381,7 @@ func (x *AcceleratorInitializationProfileInput) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use AcceleratorInitializationProfileInput.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationProfileInput) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{61}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *AcceleratorInitializationProfileInput) GetClientKey() string {
@@ -4535,7 +4435,7 @@ type CreateAcceleratorInitializationRequest struct {
 
 func (x *CreateAcceleratorInitializationRequest) Reset() {
 	*x = CreateAcceleratorInitializationRequest{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[62]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4547,7 +4447,7 @@ func (x *CreateAcceleratorInitializationRequest) String() string {
 func (*CreateAcceleratorInitializationRequest) ProtoMessage() {}
 
 func (x *CreateAcceleratorInitializationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[62]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4560,7 +4460,7 @@ func (x *CreateAcceleratorInitializationRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use CreateAcceleratorInitializationRequest.ProtoReflect.Descriptor instead.
 func (*CreateAcceleratorInitializationRequest) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{62}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *CreateAcceleratorInitializationRequest) GetData() *CreateAcceleratorInitializationData {
@@ -4583,7 +4483,7 @@ type CreateAcceleratorInitializationData struct {
 
 func (x *CreateAcceleratorInitializationData) Reset() {
 	*x = CreateAcceleratorInitializationData{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[63]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4595,7 +4495,7 @@ func (x *CreateAcceleratorInitializationData) String() string {
 func (*CreateAcceleratorInitializationData) ProtoMessage() {}
 
 func (x *CreateAcceleratorInitializationData) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[63]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4608,7 +4508,7 @@ func (x *CreateAcceleratorInitializationData) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use CreateAcceleratorInitializationData.ProtoReflect.Descriptor instead.
 func (*CreateAcceleratorInitializationData) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{63}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *CreateAcceleratorInitializationData) GetIdempotencyKey() string {
@@ -4655,7 +4555,7 @@ type GetAcceleratorInitializationOperationRequest struct {
 
 func (x *GetAcceleratorInitializationOperationRequest) Reset() {
 	*x = GetAcceleratorInitializationOperationRequest{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[64]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4667,7 +4567,7 @@ func (x *GetAcceleratorInitializationOperationRequest) String() string {
 func (*GetAcceleratorInitializationOperationRequest) ProtoMessage() {}
 
 func (x *GetAcceleratorInitializationOperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[64]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4680,7 +4580,7 @@ func (x *GetAcceleratorInitializationOperationRequest) ProtoReflect() protorefle
 
 // Deprecated: Use GetAcceleratorInitializationOperationRequest.ProtoReflect.Descriptor instead.
 func (*GetAcceleratorInitializationOperationRequest) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{64}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *GetAcceleratorInitializationOperationRequest) GetOperationId() string {
@@ -4700,7 +4600,7 @@ type RetryAcceleratorInitializationOperationRequest struct {
 
 func (x *RetryAcceleratorInitializationOperationRequest) Reset() {
 	*x = RetryAcceleratorInitializationOperationRequest{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[65]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4712,7 +4612,7 @@ func (x *RetryAcceleratorInitializationOperationRequest) String() string {
 func (*RetryAcceleratorInitializationOperationRequest) ProtoMessage() {}
 
 func (x *RetryAcceleratorInitializationOperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[65]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4725,7 +4625,7 @@ func (x *RetryAcceleratorInitializationOperationRequest) ProtoReflect() protoref
 
 // Deprecated: Use RetryAcceleratorInitializationOperationRequest.ProtoReflect.Descriptor instead.
 func (*RetryAcceleratorInitializationOperationRequest) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{65}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *RetryAcceleratorInitializationOperationRequest) GetOperationId() string {
@@ -4752,7 +4652,7 @@ type RetryAcceleratorInitializationOperationData struct {
 
 func (x *RetryAcceleratorInitializationOperationData) Reset() {
 	*x = RetryAcceleratorInitializationOperationData{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[66]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4764,7 +4664,7 @@ func (x *RetryAcceleratorInitializationOperationData) String() string {
 func (*RetryAcceleratorInitializationOperationData) ProtoMessage() {}
 
 func (x *RetryAcceleratorInitializationOperationData) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[66]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4777,7 +4677,7 @@ func (x *RetryAcceleratorInitializationOperationData) ProtoReflect() protoreflec
 
 // Deprecated: Use RetryAcceleratorInitializationOperationData.ProtoReflect.Descriptor instead.
 func (*RetryAcceleratorInitializationOperationData) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{66}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *RetryAcceleratorInitializationOperationData) GetIdempotencyKey() string {
@@ -4804,7 +4704,7 @@ type AcceleratorInitializationPoolResult struct {
 
 func (x *AcceleratorInitializationPoolResult) Reset() {
 	*x = AcceleratorInitializationPoolResult{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[67]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4816,7 +4716,7 @@ func (x *AcceleratorInitializationPoolResult) String() string {
 func (*AcceleratorInitializationPoolResult) ProtoMessage() {}
 
 func (x *AcceleratorInitializationPoolResult) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[67]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4829,7 +4729,7 @@ func (x *AcceleratorInitializationPoolResult) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use AcceleratorInitializationPoolResult.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationPoolResult) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{67}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *AcceleratorInitializationPoolResult) GetClientKey() string {
@@ -4859,7 +4759,7 @@ type AcceleratorInitializationGroupResult struct {
 
 func (x *AcceleratorInitializationGroupResult) Reset() {
 	*x = AcceleratorInitializationGroupResult{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[68]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4871,7 +4771,7 @@ func (x *AcceleratorInitializationGroupResult) String() string {
 func (*AcceleratorInitializationGroupResult) ProtoMessage() {}
 
 func (x *AcceleratorInitializationGroupResult) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[68]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4884,7 +4784,7 @@ func (x *AcceleratorInitializationGroupResult) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use AcceleratorInitializationGroupResult.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationGroupResult) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{68}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *AcceleratorInitializationGroupResult) GetClientKey() string {
@@ -4934,7 +4834,7 @@ type AcceleratorInitializationProfileResult struct {
 
 func (x *AcceleratorInitializationProfileResult) Reset() {
 	*x = AcceleratorInitializationProfileResult{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[69]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4946,7 +4846,7 @@ func (x *AcceleratorInitializationProfileResult) String() string {
 func (*AcceleratorInitializationProfileResult) ProtoMessage() {}
 
 func (x *AcceleratorInitializationProfileResult) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[69]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4959,7 +4859,7 @@ func (x *AcceleratorInitializationProfileResult) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use AcceleratorInitializationProfileResult.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationProfileResult) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{69}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *AcceleratorInitializationProfileResult) GetClientKey() string {
@@ -5006,7 +4906,7 @@ type AcceleratorInitializationStep struct {
 
 func (x *AcceleratorInitializationStep) Reset() {
 	*x = AcceleratorInitializationStep{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[70]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5018,7 +4918,7 @@ func (x *AcceleratorInitializationStep) String() string {
 func (*AcceleratorInitializationStep) ProtoMessage() {}
 
 func (x *AcceleratorInitializationStep) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[70]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5031,7 +4931,7 @@ func (x *AcceleratorInitializationStep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceleratorInitializationStep.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationStep) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{70}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *AcceleratorInitializationStep) GetStepId() string {
@@ -5112,7 +5012,7 @@ type AcceleratorInitializationOperation struct {
 
 func (x *AcceleratorInitializationOperation) Reset() {
 	*x = AcceleratorInitializationOperation{}
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[71]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5124,7 +5024,7 @@ func (x *AcceleratorInitializationOperation) String() string {
 func (*AcceleratorInitializationOperation) ProtoMessage() {}
 
 func (x *AcceleratorInitializationOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[71]
+	mi := &file_catalog_service_v1_accelerator_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5137,7 +5037,7 @@ func (x *AcceleratorInitializationOperation) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use AcceleratorInitializationOperation.ProtoReflect.Descriptor instead.
 func (*AcceleratorInitializationOperation) Descriptor() ([]byte, []int) {
-	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{71}
+	return file_catalog_service_v1_accelerator_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *AcceleratorInitializationOperation) GetOperationId() string {
@@ -5608,25 +5508,16 @@ const file_catalog_service_v1_accelerator_proto_rawDesc = "" +
 	"\x1dAcceleratorDiscoveredBaseline\x12\"\n" +
 	"\fbaseline_ref\x18\x01 \x01(\tR\fbaseline_ref\x12\x12\n" +
 	"\x04mode\x18\x02 \x01(\tR\x04mode\x12\x16\n" +
-	"\x06source\x18\x03 \x01(\tR\x06source\"\xa7\x01\n" +
-	"\x15AcceleratorNodeSource\x12\x16\n" +
-	"\x06source\x18\x01 \x01(\tR\x06source\x12 \n" +
-	"\vobserved_at\x18\x02 \x01(\tR\vobserved_at\x12 \n" +
-	"\vreceived_at\x18\x03 \x01(\tR\vreceived_at\x12\x1a\n" +
-	"\bcomplete\x18\x04 \x01(\bR\bcomplete\x12\x16\n" +
-	"\x06issues\x18\x05 \x03(\tR\x06issues\"\xf0\x03\n" +
+	"\x06source\x18\x03 \x01(\tR\x06source\"\x90\x03\n" +
 	"\x19AcceleratorDiscoveredNode\x127\n" +
 	"\x04node\x18\x01 \x01(\v2#.catalog.service.v1.AcceleratorNodeR\x04node\x12\x1a\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\bgroup_id\x12@\n" +
 	"\x04gpus\x18\x03 \x03(\v2,.catalog.service.v1.AcceleratorDiscoveredGPUR\x04gpus\x12O\n" +
-	"\tbaselines\x18\x04 \x03(\v21.catalog.service.v1.AcceleratorDiscoveredBaselineR\tbaselines\x12\"\n" +
-	"\fagent_online\x18\x05 \x01(\bR\fagent_online\x126\n" +
-	"\x16agent_lease_expires_at\x18\x06 \x01(\tR\x16agent_lease_expires_at\x12C\n" +
-	"\asources\x18\a \x03(\v2).catalog.service.v1.AcceleratorNodeSourceR\asources\x12\x1e\n" +
+	"\tbaselines\x18\x04 \x03(\v21.catalog.service.v1.AcceleratorDiscoveredBaselineR\tbaselines\x12\x1e\n" +
 	"\n" +
 	"selectable\x18\b \x01(\bR\n" +
 	"selectable\x12*\n" +
-	"\x10blocking_reasons\x18\t \x03(\tR\x10blocking_reasons\"\xa7\x01\n" +
+	"\x10blocking_reasons\x18\t \x03(\tR\x10blocking_reasonsJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bR\fagent_onlineR\x16agent_lease_expires_atR\asources\"\xa7\x01\n" +
 	"\x1aAcceleratorDiscoveredNodes\x12C\n" +
 	"\x05items\x18\x01 \x03(\v2-.catalog.service.v1.AcceleratorDiscoveredNodeR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x04R\x05total\x12.\n" +
@@ -5752,7 +5643,7 @@ func file_catalog_service_v1_accelerator_proto_rawDescGZIP() []byte {
 	return file_catalog_service_v1_accelerator_proto_rawDescData
 }
 
-var file_catalog_service_v1_accelerator_proto_msgTypes = make([]protoimpl.MessageInfo, 72)
+var file_catalog_service_v1_accelerator_proto_msgTypes = make([]protoimpl.MessageInfo, 71)
 var file_catalog_service_v1_accelerator_proto_goTypes = []any{
 	(*AcceleratorPageRequest)(nil),                         // 0: catalog.service.v1.AcceleratorPageRequest
 	(*AcceleratorVersionRequest)(nil),                      // 1: catalog.service.v1.AcceleratorVersionRequest
@@ -5807,25 +5698,24 @@ var file_catalog_service_v1_accelerator_proto_goTypes = []any{
 	(*ListAcceleratorDiscoveredNodesRequest)(nil),          // 50: catalog.service.v1.ListAcceleratorDiscoveredNodesRequest
 	(*AcceleratorDiscoveredGPU)(nil),                       // 51: catalog.service.v1.AcceleratorDiscoveredGPU
 	(*AcceleratorDiscoveredBaseline)(nil),                  // 52: catalog.service.v1.AcceleratorDiscoveredBaseline
-	(*AcceleratorNodeSource)(nil),                          // 53: catalog.service.v1.AcceleratorNodeSource
-	(*AcceleratorDiscoveredNode)(nil),                      // 54: catalog.service.v1.AcceleratorDiscoveredNode
-	(*AcceleratorDiscoveredNodes)(nil),                     // 55: catalog.service.v1.AcceleratorDiscoveredNodes
-	(*AcceleratorInitializationNewPool)(nil),               // 56: catalog.service.v1.AcceleratorInitializationNewPool
-	(*AcceleratorInitializationPoolInput)(nil),             // 57: catalog.service.v1.AcceleratorInitializationPoolInput
-	(*AcceleratorInitializationExistingGroup)(nil),         // 58: catalog.service.v1.AcceleratorInitializationExistingGroup
-	(*AcceleratorInitializationNewGroup)(nil),              // 59: catalog.service.v1.AcceleratorInitializationNewGroup
-	(*AcceleratorInitializationGroupInput)(nil),            // 60: catalog.service.v1.AcceleratorInitializationGroupInput
-	(*AcceleratorInitializationProfileInput)(nil),          // 61: catalog.service.v1.AcceleratorInitializationProfileInput
-	(*CreateAcceleratorInitializationRequest)(nil),         // 62: catalog.service.v1.CreateAcceleratorInitializationRequest
-	(*CreateAcceleratorInitializationData)(nil),            // 63: catalog.service.v1.CreateAcceleratorInitializationData
-	(*GetAcceleratorInitializationOperationRequest)(nil),   // 64: catalog.service.v1.GetAcceleratorInitializationOperationRequest
-	(*RetryAcceleratorInitializationOperationRequest)(nil), // 65: catalog.service.v1.RetryAcceleratorInitializationOperationRequest
-	(*RetryAcceleratorInitializationOperationData)(nil),    // 66: catalog.service.v1.RetryAcceleratorInitializationOperationData
-	(*AcceleratorInitializationPoolResult)(nil),            // 67: catalog.service.v1.AcceleratorInitializationPoolResult
-	(*AcceleratorInitializationGroupResult)(nil),           // 68: catalog.service.v1.AcceleratorInitializationGroupResult
-	(*AcceleratorInitializationProfileResult)(nil),         // 69: catalog.service.v1.AcceleratorInitializationProfileResult
-	(*AcceleratorInitializationStep)(nil),                  // 70: catalog.service.v1.AcceleratorInitializationStep
-	(*AcceleratorInitializationOperation)(nil),             // 71: catalog.service.v1.AcceleratorInitializationOperation
+	(*AcceleratorDiscoveredNode)(nil),                      // 53: catalog.service.v1.AcceleratorDiscoveredNode
+	(*AcceleratorDiscoveredNodes)(nil),                     // 54: catalog.service.v1.AcceleratorDiscoveredNodes
+	(*AcceleratorInitializationNewPool)(nil),               // 55: catalog.service.v1.AcceleratorInitializationNewPool
+	(*AcceleratorInitializationPoolInput)(nil),             // 56: catalog.service.v1.AcceleratorInitializationPoolInput
+	(*AcceleratorInitializationExistingGroup)(nil),         // 57: catalog.service.v1.AcceleratorInitializationExistingGroup
+	(*AcceleratorInitializationNewGroup)(nil),              // 58: catalog.service.v1.AcceleratorInitializationNewGroup
+	(*AcceleratorInitializationGroupInput)(nil),            // 59: catalog.service.v1.AcceleratorInitializationGroupInput
+	(*AcceleratorInitializationProfileInput)(nil),          // 60: catalog.service.v1.AcceleratorInitializationProfileInput
+	(*CreateAcceleratorInitializationRequest)(nil),         // 61: catalog.service.v1.CreateAcceleratorInitializationRequest
+	(*CreateAcceleratorInitializationData)(nil),            // 62: catalog.service.v1.CreateAcceleratorInitializationData
+	(*GetAcceleratorInitializationOperationRequest)(nil),   // 63: catalog.service.v1.GetAcceleratorInitializationOperationRequest
+	(*RetryAcceleratorInitializationOperationRequest)(nil), // 64: catalog.service.v1.RetryAcceleratorInitializationOperationRequest
+	(*RetryAcceleratorInitializationOperationData)(nil),    // 65: catalog.service.v1.RetryAcceleratorInitializationOperationData
+	(*AcceleratorInitializationPoolResult)(nil),            // 66: catalog.service.v1.AcceleratorInitializationPoolResult
+	(*AcceleratorInitializationGroupResult)(nil),           // 67: catalog.service.v1.AcceleratorInitializationGroupResult
+	(*AcceleratorInitializationProfileResult)(nil),         // 68: catalog.service.v1.AcceleratorInitializationProfileResult
+	(*AcceleratorInitializationStep)(nil),                  // 69: catalog.service.v1.AcceleratorInitializationStep
+	(*AcceleratorInitializationOperation)(nil),             // 70: catalog.service.v1.AcceleratorInitializationOperation
 }
 var file_catalog_service_v1_accelerator_proto_depIdxs = []int32{
 	9,  // 0: catalog.service.v1.RegisterAcceleratorClusterRequest.data:type_name -> catalog.service.v1.RegisterAcceleratorClusterData
@@ -5863,30 +5753,29 @@ var file_catalog_service_v1_accelerator_proto_depIdxs = []int32{
 	45, // 32: catalog.service.v1.SetAcceleratorProfileStateRequest.data:type_name -> catalog.service.v1.SetAcceleratorProfileStateData
 	47, // 33: catalog.service.v1.DeleteAcceleratorProfileRequest.data:type_name -> catalog.service.v1.DeleteAcceleratorProfileData
 	48, // 34: catalog.service.v1.AcceleratorInitialization.checks:type_name -> catalog.service.v1.AcceleratorInitializationCheck
-	71, // 35: catalog.service.v1.AcceleratorInitialization.latest_operation:type_name -> catalog.service.v1.AcceleratorInitializationOperation
+	70, // 35: catalog.service.v1.AcceleratorInitialization.latest_operation:type_name -> catalog.service.v1.AcceleratorInitializationOperation
 	5,  // 36: catalog.service.v1.AcceleratorDiscoveredNode.node:type_name -> catalog.service.v1.AcceleratorNode
 	51, // 37: catalog.service.v1.AcceleratorDiscoveredNode.gpus:type_name -> catalog.service.v1.AcceleratorDiscoveredGPU
 	52, // 38: catalog.service.v1.AcceleratorDiscoveredNode.baselines:type_name -> catalog.service.v1.AcceleratorDiscoveredBaseline
-	53, // 39: catalog.service.v1.AcceleratorDiscoveredNode.sources:type_name -> catalog.service.v1.AcceleratorNodeSource
-	54, // 40: catalog.service.v1.AcceleratorDiscoveredNodes.items:type_name -> catalog.service.v1.AcceleratorDiscoveredNode
-	56, // 41: catalog.service.v1.AcceleratorInitializationPoolInput.new_pool:type_name -> catalog.service.v1.AcceleratorInitializationNewPool
-	5,  // 42: catalog.service.v1.AcceleratorInitializationNewGroup.nodes:type_name -> catalog.service.v1.AcceleratorNode
-	58, // 43: catalog.service.v1.AcceleratorInitializationGroupInput.existing_group:type_name -> catalog.service.v1.AcceleratorInitializationExistingGroup
-	59, // 44: catalog.service.v1.AcceleratorInitializationGroupInput.new_group:type_name -> catalog.service.v1.AcceleratorInitializationNewGroup
-	63, // 45: catalog.service.v1.CreateAcceleratorInitializationRequest.data:type_name -> catalog.service.v1.CreateAcceleratorInitializationData
-	57, // 46: catalog.service.v1.CreateAcceleratorInitializationData.pools:type_name -> catalog.service.v1.AcceleratorInitializationPoolInput
-	60, // 47: catalog.service.v1.CreateAcceleratorInitializationData.groups:type_name -> catalog.service.v1.AcceleratorInitializationGroupInput
-	61, // 48: catalog.service.v1.CreateAcceleratorInitializationData.profiles:type_name -> catalog.service.v1.AcceleratorInitializationProfileInput
-	66, // 49: catalog.service.v1.RetryAcceleratorInitializationOperationRequest.data:type_name -> catalog.service.v1.RetryAcceleratorInitializationOperationData
-	67, // 50: catalog.service.v1.AcceleratorInitializationOperation.pools:type_name -> catalog.service.v1.AcceleratorInitializationPoolResult
-	68, // 51: catalog.service.v1.AcceleratorInitializationOperation.groups:type_name -> catalog.service.v1.AcceleratorInitializationGroupResult
-	69, // 52: catalog.service.v1.AcceleratorInitializationOperation.profiles:type_name -> catalog.service.v1.AcceleratorInitializationProfileResult
-	70, // 53: catalog.service.v1.AcceleratorInitializationOperation.steps:type_name -> catalog.service.v1.AcceleratorInitializationStep
-	54, // [54:54] is the sub-list for method output_type
-	54, // [54:54] is the sub-list for method input_type
-	54, // [54:54] is the sub-list for extension type_name
-	54, // [54:54] is the sub-list for extension extendee
-	0,  // [0:54] is the sub-list for field type_name
+	53, // 39: catalog.service.v1.AcceleratorDiscoveredNodes.items:type_name -> catalog.service.v1.AcceleratorDiscoveredNode
+	55, // 40: catalog.service.v1.AcceleratorInitializationPoolInput.new_pool:type_name -> catalog.service.v1.AcceleratorInitializationNewPool
+	5,  // 41: catalog.service.v1.AcceleratorInitializationNewGroup.nodes:type_name -> catalog.service.v1.AcceleratorNode
+	57, // 42: catalog.service.v1.AcceleratorInitializationGroupInput.existing_group:type_name -> catalog.service.v1.AcceleratorInitializationExistingGroup
+	58, // 43: catalog.service.v1.AcceleratorInitializationGroupInput.new_group:type_name -> catalog.service.v1.AcceleratorInitializationNewGroup
+	62, // 44: catalog.service.v1.CreateAcceleratorInitializationRequest.data:type_name -> catalog.service.v1.CreateAcceleratorInitializationData
+	56, // 45: catalog.service.v1.CreateAcceleratorInitializationData.pools:type_name -> catalog.service.v1.AcceleratorInitializationPoolInput
+	59, // 46: catalog.service.v1.CreateAcceleratorInitializationData.groups:type_name -> catalog.service.v1.AcceleratorInitializationGroupInput
+	60, // 47: catalog.service.v1.CreateAcceleratorInitializationData.profiles:type_name -> catalog.service.v1.AcceleratorInitializationProfileInput
+	65, // 48: catalog.service.v1.RetryAcceleratorInitializationOperationRequest.data:type_name -> catalog.service.v1.RetryAcceleratorInitializationOperationData
+	66, // 49: catalog.service.v1.AcceleratorInitializationOperation.pools:type_name -> catalog.service.v1.AcceleratorInitializationPoolResult
+	67, // 50: catalog.service.v1.AcceleratorInitializationOperation.groups:type_name -> catalog.service.v1.AcceleratorInitializationGroupResult
+	68, // 51: catalog.service.v1.AcceleratorInitializationOperation.profiles:type_name -> catalog.service.v1.AcceleratorInitializationProfileResult
+	69, // 52: catalog.service.v1.AcceleratorInitializationOperation.steps:type_name -> catalog.service.v1.AcceleratorInitializationStep
+	53, // [53:53] is the sub-list for method output_type
+	53, // [53:53] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_catalog_service_v1_accelerator_proto_init() }
@@ -5896,11 +5785,11 @@ func file_catalog_service_v1_accelerator_proto_init() {
 	}
 	file_catalog_service_v1_accelerator_proto_msgTypes[50].OneofWrappers = []any{}
 	file_catalog_service_v1_accelerator_proto_msgTypes[51].OneofWrappers = []any{}
-	file_catalog_service_v1_accelerator_proto_msgTypes[57].OneofWrappers = []any{
+	file_catalog_service_v1_accelerator_proto_msgTypes[56].OneofWrappers = []any{
 		(*AcceleratorInitializationPoolInput_ExistingPoolId)(nil),
 		(*AcceleratorInitializationPoolInput_NewPool)(nil),
 	}
-	file_catalog_service_v1_accelerator_proto_msgTypes[60].OneofWrappers = []any{
+	file_catalog_service_v1_accelerator_proto_msgTypes[59].OneofWrappers = []any{
 		(*AcceleratorInitializationGroupInput_ExistingGroup)(nil),
 		(*AcceleratorInitializationGroupInput_NewGroup)(nil),
 	}
@@ -5910,7 +5799,7 @@ func file_catalog_service_v1_accelerator_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_catalog_service_v1_accelerator_proto_rawDesc), len(file_catalog_service_v1_accelerator_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   72,
+			NumMessages:   71,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

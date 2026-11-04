@@ -14216,14 +14216,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/AcceleratorDiscoveredBaseline'
-                agent_online:
-                    type: boolean
-                agent_lease_expires_at:
-                    type: string
-                sources:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/AcceleratorNodeSource'
                 selectable:
                     type: boolean
                 blocking_reasons:
@@ -14452,21 +14444,6 @@ components:
                     type: string
                 name:
                     type: string
-        AcceleratorNodeSource:
-            type: object
-            properties:
-                source:
-                    type: string
-                observed_at:
-                    type: string
-                received_at:
-                    type: string
-                complete:
-                    type: boolean
-                issues:
-                    type: array
-                    items:
-                        type: string
         AcceleratorObservation:
             type: object
             properties:
@@ -18355,6 +18332,7 @@ components:
                     $ref: '#/components/schemas/GpuQuality'
                 sampleTimeMin:
                     type: string
+                    description: Actual Prometheus sample timestamp bounds, not query evaluation times.
                     format: date-time
                 sampleTimeMax:
                     type: string
@@ -18458,6 +18436,9 @@ components:
                         $ref: '#/components/schemas/GpuSeries'
                 indexComplete:
                     type: boolean
+                    description: |-
+                        Every requested metric has data and all returned time buckets are complete.
+                         Does not assert coverage of all tenant workloads.
                 includedResourceKinds:
                     type: array
                     items:
@@ -18466,6 +18447,7 @@ components:
                     type: array
                     items:
                         type: string
+                    description: Always empty; current queries cannot enumerate unobserved workloads.
                 resourceKind:
                     type: string
                     description: Public target; no Pod, node, GPU or binding identity on tenant responses.
@@ -18522,9 +18504,11 @@ components:
                     $ref: '#/components/schemas/GpuQuality'
                 metricAvailableFrom:
                     type: string
+                    description: First visible sample in this requested range; not a global history watermark.
                     format: date-time
                 ownershipAvailableFrom:
                     type: string
+                    description: Retained field number; no ownership-history watermark is emitted.
                     format: date-time
                 dataCutoff:
                     type: string

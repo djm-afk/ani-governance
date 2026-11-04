@@ -294,21 +294,13 @@ message AcceleratorDiscoveredBaseline {
   string mode = 2;
   string source = 3;
 }
-message AcceleratorNodeSource {
-  string source = 1;
-  string observed_at = 2 [json_name="observed_at"];
-  string received_at = 3 [json_name="received_at"];
-  bool complete = 4;
-  repeated string issues = 5;
-}
 message AcceleratorDiscoveredNode {
   AcceleratorNode node = 1;
   string group_id = 2 [json_name="group_id"];
   repeated AcceleratorDiscoveredGPU gpus = 3;
   repeated AcceleratorDiscoveredBaseline baselines = 4;
-  bool agent_online = 5 [json_name="agent_online"];
-  string agent_lease_expires_at = 6 [json_name="agent_lease_expires_at"];
-  repeated AcceleratorNodeSource sources = 7;
+  reserved 5, 6, 7;
+  reserved "agent_online", "agent_lease_expires_at", "sources";
   bool selectable = 8;
   repeated string blocking_reasons = 9 [json_name="blocking_reasons"];
 }
