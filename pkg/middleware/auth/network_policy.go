@@ -30,6 +30,7 @@ type NetworkOperationPolicy struct {
 // NetworkOperations is the complete tenant Network surface. Catalog membership
 // never grants a role: current tenant, NETWORK and Casbin gates still apply.
 var NetworkOperations = map[string]NetworkOperationPolicy{
+	"/admin.service.v1.NetworkService/ListNetworkInstances":      {"GET", "/api/v1/networks/instances", "network:instance:list", true},
 	"/admin.service.v1.NetworkService/CreateVNic":                {"POST", "/api/v1/networks/vnics", "network:vnic:create", false},
 	"/admin.service.v1.NetworkService/GetVNic":                   {"GET", "/api/v1/networks/vnics/{vnic_id}", "network:vnic:get", true},
 	"/admin.service.v1.NetworkService/ListVNics":                 {"GET", "/api/v1/networks/vnics", "network:vnic:list", true},
@@ -146,6 +147,8 @@ func networkRequestMessage(operation string) proto.Message {
 		return &view.SetInstanceNetworkInterfaceRequest{}
 	}
 	switch strings.TrimPrefix(operation, "/admin.service.v1.NetworkService/") {
+	case "ListNetworkInstances":
+		return &view.ListNetworkInstancesRequest{}
 	case "CreateVNic":
 		return &view.CreateVNicRequest{}
 	case "GetVNic":
@@ -296,6 +299,10 @@ func networkQueryFields(operation string) map[string]bool {
 	}
 	fields := map[string]bool{}
 	switch strings.TrimPrefix(operation, "/admin.service.v1.NetworkService/") {
+	case "ListNetworkInstances":
+		for _, field := range []string{"vpc_id", "subnet_id", "page", "pageSize"} {
+			fields[field] = true
+		}
 	case "ListVNics":
 		for _, field := range []string{"page", "pageSize", "name", "subnet_id", "state", "binding_state", "bindable_to_kind", "bindable_to_id"} {
 			fields[field] = true
@@ -304,7 +311,11 @@ func networkQueryFields(operation string) map[string]bool {
 		for _, field := range []string{"page", "pageSize", "name", "consumer_kind"} {
 			fields[field] = true
 		}
-	case "ListVPCs", "ListSecurityGroups":
+	case "ListVPCs":
+		for _, field := range []string{"name", "state", "page", "pageSize", "can_use", "can_manage"} {
+			fields[field] = true
+		}
+	case "ListSecurityGroups":
 		for _, field := range []string{"name", "state", "page", "pageSize"} {
 			fields[field] = true
 		}
@@ -321,7 +332,7 @@ func networkQueryFields(operation string) map[string]bool {
 			fields[field] = true
 		}
 	case "ListSubnets":
-		for _, field := range []string{"vpc_id", "name", "state", "limit", "cursor"} {
+		for _, field := range []string{"vpc_id", "name", "state", "limit", "cursor", "can_use", "can_manage"} {
 			fields[field] = true
 		}
 	case "ListLoadBalancers":
@@ -339,6 +350,9 @@ func validateNetworkQuery(operation string, query url.Values) bool {
 			return false
 		}
 		value := values[0]
+		if (field == "can_use" || field == "can_manage") && value != "true" && value != "false" {
+			return false
+		}
 		pattern := networkIDPatterns[field]
 		if pattern == nil {
 			pattern = platformNetworkIDPatterns[field]

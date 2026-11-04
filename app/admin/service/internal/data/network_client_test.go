@@ -181,6 +181,46 @@ func (p *networkTenantRPCProbe) ListSubnets(ctx context.Context, in *networkv1.L
 	p.capture(ctx, in.TenantId, "ListSubnets", in)
 	return &networkv1.ListSubnetsResponse{}, nil
 }
+func (p *networkTenantRPCProbe) ListVPCs(ctx context.Context, in *networkv1.ListVPCsRequest, _ ...grpc.CallOption) (*networkv1.ListVPCsResponse, error) {
+	p.capture(ctx, in.TenantId, "ListVPCs", in)
+	return &networkv1.ListVPCsResponse{}, nil
+}
+func (p *networkTenantRPCProbe) ListNetworkInstances(ctx context.Context, in *networkv1.ListNetworkInstancesRequest, _ ...grpc.CallOption) (*networkv1.ListNetworkInstancesResponse, error) {
+	p.capture(ctx, in.TenantId, "ListNetworkInstances", in)
+	return &networkv1.ListNetworkInstancesResponse{}, nil
+}
+
+func TestNetworkClientCatalogAndAssociationsRetainTrustedScope(t *testing.T) {
+	p := &networkTenantRPCProbe{t: t, requests: make(map[string]proto.Message)}
+	c := &NetworkClient{client: p, timeout: time.Second}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "private", "x-ani-tenant-id", "forged", "x-ani-actor", "governance:user:999"))
+	tenant, actor := "11111111-1111-4111-8111-111111111111", "governance:access-key:42"
+	for _, canUse := range []*bool{nil, proto.Bool(false), proto.Bool(true)} {
+		for _, canManage := range []*bool{nil, proto.Bool(false), proto.Bool(true)} {
+			if _, err := c.ListVPCs(ctx, tenant, actor, "base", "", 3, 2, canUse, canManage); err != nil {
+				t.Fatal(err)
+			}
+			vpc := p.requests["ListVPCs"].(*networkv1.ListVPCsRequest)
+			if !reflect.DeepEqual(vpc.CanUse, canUse) || !reflect.DeepEqual(vpc.CanManage, canManage) || vpc.GetPage() != 3 || vpc.GetPageSize() != 2 || vpc.Name != "base" {
+				t.Fatal("VPC query was changed", vpc)
+			}
+			if _, err := c.ListSubnets(ctx, tenant, actor, "vpc", "base", "", 7, "cursor", canUse, canManage); err != nil {
+				t.Fatal(err)
+			}
+			subnet := p.requests["ListSubnets"].(*networkv1.ListSubnetsRequest)
+			if !reflect.DeepEqual(subnet.CanUse, canUse) || !reflect.DeepEqual(subnet.CanManage, canManage) || subnet.VpcId != "vpc" || subnet.Limit != 7 || subnet.Cursor != "cursor" {
+				t.Fatal("subnet cursor/query was changed", subnet)
+			}
+		}
+	}
+	if _, err := c.ListNetworkInstances(ctx, tenant, actor, "vpc", "subnet", 3, 2); err != nil {
+		t.Fatal(err)
+	}
+	in := p.requests["ListNetworkInstances"].(*networkv1.ListNetworkInstancesRequest)
+	if in.VpcId != "vpc" || in.SubnetId != "subnet" || in.GetPage() != 3 || in.GetPageSize() != 2 {
+		t.Fatal("association scope/page lost", in)
+	}
+}
 func (p *networkTenantRPCProbe) DeleteSubnet(ctx context.Context, in *networkv1.DeleteSubnetRequest, _ ...grpc.CallOption) (*networkv1.DeleteSubnetResponse, error) {
 	p.capture(ctx, in.TenantId, "DeleteSubnet", in)
 	return &networkv1.DeleteSubnetResponse{}, nil
@@ -245,7 +285,7 @@ func TestNetworkClientAllNewMethodsRebuildMetadata(t *testing.T) {
 		}},
 		{"GetSubnet", func(a string) error { _, err := c.GetSubnet(ctx, tenant, a, "subnet"); return err }},
 		{"ListSubnets", func(a string) error {
-			_, err := c.ListSubnets(ctx, tenant, a, "vpc", "name", "AVAILABLE", 7, "subnet-cursor")
+			_, err := c.ListSubnets(ctx, tenant, a, "vpc", "name", "AVAILABLE", 7, "subnet-cursor", nil, nil)
 			return err
 		}},
 		{"DeleteSubnet", func(a string) error { _, err := c.DeleteSubnet(ctx, tenant, a, "subnet"); return err }},

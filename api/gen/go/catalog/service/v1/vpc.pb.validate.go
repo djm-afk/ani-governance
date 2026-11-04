@@ -323,6 +323,12 @@ func (m *VPC) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for OwnerScope
+
+	// no validation rules for CanManage
+
+	// no validation rules for CanUse
+
 	if len(errors) > 0 {
 		return VPCMultiError(errors)
 	}
@@ -855,6 +861,14 @@ func (m *ListVPCsRequest) validate(all bool) error {
 
 	if m.PageSize != nil {
 		// no validation rules for PageSize
+	}
+
+	if m.CanUse != nil {
+		// no validation rules for CanUse
+	}
+
+	if m.CanManage != nil {
+		// no validation rules for CanManage
 	}
 
 	if len(errors) > 0 {
@@ -4123,6 +4137,12 @@ func (m *Subnet) validate(all bool) error {
 
 	// no validation rules for EnableDhcp
 
+	// no validation rules for OwnerScope
+
+	// no validation rules for CanManage
+
+	// no validation rules for CanUse
+
 	if m.AvailableIpRange != nil {
 		// no validation rules for AvailableIpRange
 	}
@@ -4723,6 +4743,14 @@ func (m *ListSubnetsRequest) validate(all bool) error {
 	// no validation rules for Limit
 
 	// no validation rules for Cursor
+
+	if m.CanUse != nil {
+		// no validation rules for CanUse
+	}
+
+	if m.CanManage != nil {
+		// no validation rules for CanManage
+	}
 
 	if len(errors) > 0 {
 		return ListSubnetsRequestMultiError(errors)

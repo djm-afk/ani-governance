@@ -10611,6 +10611,44 @@ paths:
                 - AccessKeyAuth: []
                   SignatureAuth: []
                   SignatureTime: []
+    /api/v1/networks/instances:
+        get:
+            tags:
+                - NetworkService
+            summary: List current network-associated instances in the authenticated tenant
+            description: Requires network:instance:list and NETWORK subscription. Supply vpc_id, subnet_id or both. Returns not-yet-released attachments with independent consumer and attachment state, including unknown consumers. Uses page/pageSize (defaults 1/20, maximum pageSize 100) and items/total. Platform networks are readable even after directory publication or new admission is closed.
+            operationId: NetworkService_ListNetworkInstances
+            parameters:
+                - name: vpc_id
+                  in: query
+                  schema:
+                    type: string
+                - name: subnet_id
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListNetworkInstancesResponse'
+            security:
+                - BearerAuth: []
+                - AccessKeyAuth: []
+                  SignatureAuth: []
+                  SignatureTime: []
     /api/v1/networks/load-balancers:
         get:
             tags:
@@ -11397,8 +11435,8 @@ paths:
         get:
             tags:
                 - NetworkService
-            summary: ListSubnets in the authenticated tenant
-            description: Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:list permission. Tenant and actor come from authenticated context. Cross-tenant and missing resources both return 404. Mutation responses are persisted acceptance snapshots, not asynchronous completion. Cursor pagination preserves items, next_cursor and filtered total; limit is 1..100.
+            summary: List tenant subnets and published platform subnets
+            description: Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:list permission. Tenant and actor come from authenticated context. Tenant subnets and platform subnets whose parent and child are published share one filtered, ordered cursor page and count. Optional can_use/can_manage accept only true or false; omission leaves that capability unfiltered, and both conditions use AND. Cursor pagination preserves items, next_cursor and filtered total; limit is 1..100. Platform subnets omit used_ip_range.
             operationId: NetworkService_ListSubnets
             parameters:
                 - name: vpc_id
@@ -11422,6 +11460,14 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: can_use
+                  in: query
+                  schema:
+                    type: boolean
+                - name: can_manage
+                  in: query
+                  schema:
+                    type: boolean
             responses:
                 "200":
                     description: OK
@@ -11494,8 +11540,8 @@ paths:
         get:
             tags:
                 - NetworkService
-            summary: GetSubnet in the authenticated tenant
-            description: Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:get permission. Tenant and actor come from authenticated context. Cross-tenant and missing resources both return 404. Mutation responses are persisted acceptance snapshots, not asynchronous completion.
+            summary: Get a visible tenant or registered platform subnet
+            description: Requires user JWT or ANI-HMAC-SHA256, NETWORK subscription and network:subnet:get permission. Tenant and actor come from authenticated context. Registered platform IDs remain readable after directory publication or new admission is closed. owner_scope is tenant or platform; can_manage and can_use describe resource capabilities. Other tenants' private and missing resources return 404. Platform subnets omit used_ip_range.
             operationId: NetworkService_GetSubnet
             parameters:
                 - name: subnet_id
@@ -11754,8 +11800,8 @@ paths:
         get:
             tags:
                 - NetworkService
-            summary: List VPCs in the authenticated tenant
-            description: 'Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator''s tenant and replayed downstream. System-managed Intranet resources are excluded downstream.'
+            summary: List tenant VPCs and published platform VPCs
+            description: 'Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:list permission. Page pagination: page defaults to 1, pageSize defaults to 20 (1..100); page is 1..4294967295. Either omitted field uses its own default. Returns items (always an array) and total (decimal string), with direct random-page access and no cross-request snapshot. Legacy limit/cursor and other window names, duplicate/noncanonical/overflow values are rejected with 400. The persisted tenant UUID is looked up from the trusted operator''s tenant and replayed downstream. Tenant VPCs and published platform VPCs share one filtered, ordered page and count. Optional can_use/can_manage accept only true or false; omission leaves that capability unfiltered, and both conditions use AND. can_use describes new admission, independently of native Ready or observed addresses. System-managed Intranet resources are excluded downstream.'
             operationId: NetworkService_ListVPCs
             parameters:
                 - name: name
@@ -11776,6 +11822,14 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: can_use
+                  in: query
+                  schema:
+                    type: boolean
+                - name: can_manage
+                  in: query
+                  schema:
+                    type: boolean
             responses:
                 "200":
                     description: OK
@@ -11836,8 +11890,8 @@ paths:
         get:
             tags:
                 - NetworkService
-            summary: Get a VPC in the authenticated tenant
-            description: Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:get permission. vpc_id must be vpc_ followed by 32 lowercase hex digits. Query parameters and body are rejected. Public identity headers are ignored. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. Cross-tenant and missing VPCs both return 404. No network lifecycle or data-plane operation is performed.
+            summary: Get a visible tenant or registered platform VPC
+            description: Requires user JWT or ANI HMAC-SHA256 signature, NETWORK subscription and network:vpc:get permission. vpc_id must be vpc_ followed by 32 lowercase hex digits. Query parameters and body are rejected. Public identity headers are ignored. The persisted tenant UUID is looked up from the trusted operator's tenant and replayed downstream. Registered platform IDs remain readable after directory publication or new admission is closed; other tenants' private and missing VPCs return 404. owner_scope is tenant or platform; can_manage and can_use describe resource capabilities. No network lifecycle or data-plane operation is performed.
             operationId: NetworkService_GetVPC
             parameters:
                 - name: vpc_id
@@ -20194,6 +20248,15 @@ components:
                         $ref: '#/components/schemas/MountablePVC'
                 total:
                     type: string
+        ListNetworkInstancesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/NetworkAssociatedInstance'
+                total:
+                    type: string
         ListNotificationChannelResponse:
             type: object
             properties:
@@ -21753,6 +21816,45 @@ components:
                         - $ref: '#/components/schemas/StringArray'
                     description: Mapped value
             description: Automatically-generated message used to represent maps of StringArray as ordered (name,value) pairs.
+        NetworkAssociatedInstance:
+            type: object
+            properties:
+                consumer_type:
+                    type: string
+                consumer_id:
+                    type: string
+                consumer_name:
+                    type: string
+                consumer_state:
+                    type: string
+                subnet_id:
+                    type: string
+                subnet_name:
+                    type: string
+                slot:
+                    type: string
+                attachment_id:
+                    type: string
+                attachment_state:
+                    type: string
+                attachment_reason:
+                    type: string
+                observation_stale:
+                    type: boolean
+                observed_at:
+                    type: string
+                    format: date-time
+                addresses:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/NetworkInstanceAddress'
+        NetworkInstanceAddress:
+            type: object
+            properties:
+                nic_name:
+                    type: string
+                address:
+                    type: string
         NetworkInterface:
             type: object
             properties:
@@ -25203,6 +25305,12 @@ components:
                     type: array
                     items:
                         type: string
+                owner_scope:
+                    type: string
+                can_manage:
+                    type: boolean
+                can_use:
+                    type: boolean
             description: Tenant-facing subnet fields; ownership is resolved from authenticated context.
         SyncMenusRequest:
             type: object
@@ -26794,6 +26902,12 @@ components:
                     $ref: '#/components/schemas/VPCPublicEgress'
                 base_connectivity:
                     $ref: '#/components/schemas/VPCBaseConnectivity'
+                owner_scope:
+                    type: string
+                can_manage:
+                    type: boolean
+                can_use:
+                    type: boolean
             description: Public product fields only; tenant identity and provider placement stay internal.
         VPCBaseConnectivity:
             type: object
@@ -26810,8 +26924,8 @@ components:
                 reason_message:
                     type: string
             description: |-
-                Read-only system connection summary. Ready describes fresh configuration
-                 evidence, not traffic health; internal EIP/SNAT identities stay private.
+                Read-only system connection summary from Resource's persisted native state.
+                 Platform-owned VPCs omit this tenant connection summary.
         VPCPublicEgress:
             type: object
             properties:

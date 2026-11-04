@@ -33,7 +33,8 @@ type VPCGetter interface {
 type NetworkTenantClient interface {
 	ListVPCCIDRPresets(context.Context, string, string) (*networkv1.ListVPCCIDRPresetsResponse, error)
 	VPCGetter
-	ListVPCs(context.Context, string, string, string, string, uint32, uint32) (*networkv1.ListVPCsResponse, error)
+	ListVPCs(context.Context, string, string, string, string, uint32, uint32, *bool, *bool) (*networkv1.ListVPCsResponse, error)
+	ListNetworkInstances(context.Context, string, string, string, string, uint32, uint32) (*networkv1.ListNetworkInstancesResponse, error)
 	CreateVPC(context.Context, string, string, string, string, string, string) (*networkv1.CreateVPCResponse, error)
 	DeleteVPC(context.Context, string, string, string) (*networkv1.DeleteVPCResponse, error)
 	GetOperation(context.Context, string, string, string) (*networkv1.GetOperationResponse, error)
@@ -45,7 +46,7 @@ type NetworkTenantClient interface {
 	BindVPCSnat(context.Context, string, string, string, string, string) (*networkv1.BindVPCSnatResponse, error)
 	CreateSubnet(context.Context, string, string, string, string, string, string, string, *string, []string, *bool, []string) (*networkv1.CreateSubnetResponse, error)
 	GetSubnet(context.Context, string, string, string) (*networkv1.GetSubnetResponse, error)
-	ListSubnets(context.Context, string, string, string, string, string, int32, string) (*networkv1.ListSubnetsResponse, error)
+	ListSubnets(context.Context, string, string, string, string, string, int32, string, *bool, *bool) (*networkv1.ListSubnetsResponse, error)
 	DeleteSubnet(context.Context, string, string, string) (*networkv1.DeleteSubnetResponse, error)
 	GetVPCSnatBinding(context.Context, string, string, string) (*networkv1.GetVPCSnatBindingResponse, error)
 	SetVPCSnatEnabled(context.Context, string, string, string, bool, int64, string) (*networkv1.SetVPCSnatEnabledResponse, error)
@@ -125,7 +126,7 @@ func (s *NetworkService) GetVPC(ctx context.Context, req *catalogv1.GetVPCReques
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
-	if reply == nil || reply.Vpc == nil || reply.Vpc.TenantId != tenant || reply.Vpc.Id != req.GetVpcId() || reply.Vpc.State < networkv1.ResourceState_RESOURCE_STATE_PROVISIONING || reply.Vpc.State > networkv1.ResourceState_RESOURCE_STATE_DELETED {
+	if reply == nil || reply.Vpc == nil || !validNetworkReadScope(reply.Vpc.OwnerScope, reply.Vpc.TenantId, tenant) || reply.Vpc.Id != req.GetVpcId() || reply.Vpc.State < networkv1.ResourceState_RESOURCE_STATE_PROVISIONING || reply.Vpc.State > networkv1.ResourceState_RESOURCE_STATE_DELETED {
 		return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network response")
 	}
 	v := reply.Vpc
@@ -145,7 +146,8 @@ func wireVPC(v *networkv1.VPC) *catalogv1.VPC {
 	out := &catalogv1.VPC{Id: v.Id, Name: v.Name, Description: v.Description, Cidr: v.Cidr,
 		State: strings.ToLower(strings.TrimPrefix(v.State.String(), "RESOURCE_STATE_")), Reason: v.Reason,
 		CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, Version: v.Version, ObservedAt: v.ObservedAt,
-		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, SubnetCount: v.SubnetCount}
+		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, SubnetCount: v.SubnetCount,
+		OwnerScope: wireNetworkOwnerScope(v.OwnerScope), CanManage: v.CanManage, CanUse: v.CanUse}
 	if base := v.BaseConnectivity; base != nil {
 		out.BaseConnectivity = &catalogv1.VPCBaseConnectivity{State: base.State, Reason: base.Reason,
 			ObservedAt: base.ObservedAt, ObservationStale: base.ObservationStale, ReasonMessage: base.ReasonMessage}
@@ -202,7 +204,7 @@ func (s *NetworkService) ListVPCs(ctx context.Context, req *catalogv1.ListVPCsRe
 	if err != nil {
 		return nil, err
 	}
-	reply, err := s.client.ListVPCs(ctx, tenant, actor, req.GetName(), strings.ToUpper(req.GetState()), page, pageSize)
+	reply, err := s.client.ListVPCs(ctx, tenant, actor, req.GetName(), strings.ToUpper(req.GetState()), page, pageSize, req.CanUse, req.CanManage)
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
@@ -214,7 +216,7 @@ func (s *NetworkService) ListVPCs(ctx context.Context, req *catalogv1.ListVPCsRe
 	}
 	out := &catalogv1.ListVPCsResponse{Total: reply.GetTotal(), Items: make([]*catalogv1.VPC, 0, len(reply.Items))}
 	for _, v := range reply.GetItems() {
-		if v == nil || v.TenantId != tenant {
+		if v == nil || !validNetworkReadScope(v.OwnerScope, v.TenantId, tenant) {
 			return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network response")
 		}
 		out.Items = append(out.Items, wireVPC(v))
@@ -235,7 +237,7 @@ func (s *NetworkService) CreateVPC(ctx context.Context, req *catalogv1.CreateVPC
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
-	if reply == nil || reply.Vpc == nil || reply.Vpc.TenantId != tenant {
+	if reply == nil || reply.Vpc == nil || reply.Vpc.TenantId != tenant || reply.Vpc.OwnerScope != networkv1.OwnerScope_OWNER_SCOPE_TENANT {
 		return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network response")
 	}
 	return &catalogv1.CreateVPCResponse{Vpc: wireVPC(reply.Vpc)}, nil
@@ -257,7 +259,7 @@ func (s *NetworkService) DeleteVPC(ctx context.Context, req *catalogv1.DeleteVPC
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
-	if reply == nil || reply.Vpc == nil || reply.Vpc.TenantId != tenant || reply.Vpc.Id != req.GetVpcId() {
+	if reply == nil || reply.Vpc == nil || reply.Vpc.TenantId != tenant || reply.Vpc.OwnerScope != networkv1.OwnerScope_OWNER_SCOPE_TENANT || reply.Vpc.Id != req.GetVpcId() {
 		return nil, errors.ServiceUnavailable("NETWORK_INVALID_RESPONSE", "invalid network response")
 	}
 	return &catalogv1.DeleteVPCResponse{Vpc: wireVPC(reply.Vpc)}, nil
@@ -430,6 +432,8 @@ func mapNetworkError(err error) error {
 		code, reason, message = 404, "VPC_NOT_FOUND", "network resource not found"
 	case codes.InvalidArgument:
 		code, reason, message = 400, "INVALID_VPC_ID", "invalid network request"
+	case codes.PermissionDenied:
+		code, reason, message = 403, "NETWORK_PERMISSION_DENIED", "network operation is not permitted"
 	case codes.AlreadyExists, codes.Aborted:
 		code, reason, message = 409, "NETWORK_CONFLICT", "network resource conflict"
 	case codes.FailedPrecondition:
@@ -456,10 +460,44 @@ func wireSubnet(v *networkv1.Subnet) *catalogv1.Subnet {
 		State: strings.ToLower(strings.TrimPrefix(v.State.String(), "RESOURCE_STATE_")), Reason: v.Reason, ReasonMessage: v.ReasonMessage,
 		CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, Version: v.Version, ObservedAt: v.ObservedAt,
 		ObservationStale: v.ObservationStale, LastOperationId: v.LastOperationId, AvailableIpRange: v.AvailableIpRange, UsedIpRange: v.UsedIpRange,
-		ExcludeIps: append([]string{}, v.ExcludeIps...), EnableDhcp: v.EnableDhcp, DnsServers: append([]string{}, v.DnsServers...)}
+		ExcludeIps: append([]string{}, v.ExcludeIps...), EnableDhcp: v.EnableDhcp, DnsServers: append([]string{}, v.DnsServers...),
+		OwnerScope: wireNetworkOwnerScope(v.OwnerScope), CanManage: v.CanManage, CanUse: v.CanUse}
 }
+
+// Only VPC/Subnet Get/List may read registered platform-owned network products.
+// Consumers and mutation replies remain scoped to the actual tenant.
+func validNetworkReadScope(scope networkv1.OwnerScope, replyTenant, tenant string) bool {
+	switch scope {
+	case networkv1.OwnerScope_OWNER_SCOPE_TENANT:
+		return replyTenant == tenant
+	case networkv1.OwnerScope_OWNER_SCOPE_PLATFORM:
+		return replyTenant == ""
+	default:
+		return false
+	}
+}
+
+func wireNetworkOwnerScope(scope networkv1.OwnerScope) string {
+	switch scope {
+	case networkv1.OwnerScope_OWNER_SCOPE_TENANT:
+		return "tenant"
+	case networkv1.OwnerScope_OWNER_SCOPE_PLATFORM:
+		return "platform"
+	default:
+		return ""
+	}
+}
+
+func validSubnetReadReply(v *networkv1.Subnet, tenant, id, vpcID string) bool {
+	return v != nil && validNetworkReadScope(v.OwnerScope, v.TenantId, tenant) && validSubnetIdentity(v, id, vpcID)
+}
+
 func validSubnetReply(v *networkv1.Subnet, tenant, id, vpcID string) bool {
-	return v != nil && v.TenantId == tenant && subnetIDPattern.MatchString(v.Id) && (id == "" || v.Id == id) &&
+	return v != nil && v.TenantId == tenant && v.OwnerScope == networkv1.OwnerScope_OWNER_SCOPE_TENANT && validSubnetIdentity(v, id, vpcID)
+}
+
+func validSubnetIdentity(v *networkv1.Subnet, id, vpcID string) bool {
+	return subnetIDPattern.MatchString(v.Id) && (id == "" || v.Id == id) &&
 		vpcIDPattern.MatchString(v.VpcId) && (vpcID == "" || v.VpcId == vpcID) && v.State >= networkv1.ResourceState_RESOURCE_STATE_PROVISIONING && v.State <= networkv1.ResourceState_RESOURCE_STATE_DELETED
 }
 func invalidNetworkReply() error {
@@ -499,7 +537,7 @@ func (s *NetworkService) ListSubnets(ctx context.Context, req *catalogv1.ListSub
 	if err != nil {
 		return nil, err
 	}
-	reply, err := s.client.ListSubnets(ctx, tenant, actor, req.GetVpcId(), req.GetName(), req.GetState(), req.GetLimit(), req.GetCursor())
+	reply, err := s.client.ListSubnets(ctx, tenant, actor, req.GetVpcId(), req.GetName(), req.GetState(), req.GetLimit(), req.GetCursor(), req.CanUse, req.CanManage)
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
@@ -508,7 +546,7 @@ func (s *NetworkService) ListSubnets(ctx context.Context, req *catalogv1.ListSub
 	}
 	out := &catalogv1.ListSubnetsResponse{NextCursor: reply.NextCursor, Total: reply.Total, Items: make([]*catalogv1.Subnet, 0, len(reply.Items))}
 	for _, v := range reply.Items {
-		if !validSubnetReply(v, tenant, "", req.GetVpcId()) {
+		if !validSubnetReadReply(v, tenant, "", req.GetVpcId()) {
 			return nil, invalidNetworkReply()
 		}
 		out.Items = append(out.Items, wireSubnet(v))
@@ -531,7 +569,7 @@ func (s *NetworkService) GetSubnet(ctx context.Context, req *catalogv1.GetSubnet
 	if err != nil {
 		return nil, mapNetworkError(err)
 	}
-	if reply == nil || !validSubnetReply(reply.Subnet, tenant, req.GetSubnetId(), "") {
+	if reply == nil || !validSubnetReadReply(reply.Subnet, tenant, req.GetSubnetId(), "") {
 		return nil, invalidNetworkReply()
 	}
 	return &catalogv1.GetSubnetResponse{Subnet: wireSubnet(reply.Subnet)}, nil
