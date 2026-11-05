@@ -29,13 +29,22 @@ import (
 // Query methods receive scope only after the BFF's current database grant.
 // Outgoing metadata is rebuilt, never appended to caller-supplied metadata.
 func (c *ModelDevClient) queryContext(ctx context.Context, scope ModelDevResolveScope, method string) (context.Context, context.CancelFunc, error) {
+	return c.queryContextBudget(ctx, scope, method, 0)
+}
+
+// queryContextBudget lets one caller replace the default short budget while
+// keeping the same identity, method and tenant-all delegation checks. A zero
+// budget means the configured per-call timeout.
+func (c *ModelDevClient) queryContextBudget(ctx context.Context, scope ModelDevResolveScope, method string, budget time.Duration) (context.Context, context.CancelFunc, error) {
 	if c == nil || c.connection == nil || c.timeout <= 0 {
 		return nil, nil, modelDevQueryUnavailable()
 	}
 	if !modelDevCanonicalUUID(scope.ResourceTenantID) || !validModelDevClientActor(scope.Actor) {
 		return nil, nil, modelDevQueryUnavailable()
 	}
-	budget := c.timeout
+	if budget <= 0 {
+		budget = c.timeout
+	}
 	if method == modeldevv1.ModelDevQueryService_CheckFinetuningReadiness_FullMethodName {
 		budget = c.resolutionTimeout
 	}

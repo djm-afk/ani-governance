@@ -5,6 +5,7 @@ package admin.service.v1;
 import "gnostic/openapi/v3/annotations.proto";
 import "google/api/annotations.proto";
 import "modeldev/service/v1/environment.proto";
+import "modeldev/service/v1/dataset.proto";
 import "modeldev/service/v1/execution.proto";
 
 // CPU-P01 entry in the existing Governance BFF.
@@ -352,5 +353,79 @@ service ModelDevService {
       post: "/api/v1/modeldev/executions"
       body: "*"
     };
+  }
+  // ---- dataset management ----
+  rpc CreateDataset(modeldev.service.v1.CreateDatasetRequest) returns (modeldev.service.v1.CreateDatasetResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/modeldev/datasets"
+      body: "*"
+    };
+  }
+  rpc GetDataset(modeldev.service.v1.GetDatasetRequest) returns (modeldev.service.v1.GetDatasetResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/modeldev/datasets/{dataset_id}"
+      response_body: "dataset"
+    };
+  }
+  rpc ListDatasets(modeldev.service.v1.ListDatasetsRequest) returns (modeldev.service.v1.ListDatasetsResponse) {
+    option (google.api.http) = {get: "/api/v1/modeldev/datasets"};
+  }
+  rpc UpdateDataset(modeldev.service.v1.UpdateDatasetRequest) returns (modeldev.service.v1.UpdateDatasetResponse) {
+    option (google.api.http) = {
+      patch: "/api/v1/modeldev/datasets/{dataset_id}"
+      body: "*"
+    };
+  }
+  rpc ArchiveDataset(modeldev.service.v1.ArchiveDatasetRequest) returns (modeldev.service.v1.ArchiveDatasetResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/modeldev/datasets/{dataset_id}:archive"
+      body: "*"
+    };
+  }
+  rpc RestoreDataset(modeldev.service.v1.RestoreDatasetRequest) returns (modeldev.service.v1.RestoreDatasetResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/modeldev/datasets/{dataset_id}:restore"
+      body: "*"
+    };
+  }
+  rpc InspectDatasetSource(modeldev.service.v1.InspectDatasetSourceRequest) returns (modeldev.service.v1.InspectDatasetSourceResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/modeldev/dataset-sources:inspect"
+      body: "*"
+    };
+  }
+  rpc ImportDatasetVersion(modeldev.service.v1.ImportDatasetVersionRequest) returns (modeldev.service.v1.ImportDatasetVersionResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/modeldev/datasets/{dataset_id}:import"
+      body: "*"
+    };
+    option (gnostic.openapi.v3.operation) = {description: "Accept one import. 202 with a stable receipt; does not mean the version is ready."};
+  }
+  rpc ListDatasetVersions(modeldev.service.v1.ListDatasetVersionsRequest) returns (modeldev.service.v1.ListDatasetVersionsResponse) {
+    option (google.api.http) = {get: "/api/v1/modeldev/datasets/{dataset_id}/versions"};
+  }
+  rpc GetInputVersionPreview(modeldev.service.v1.GetInputVersionPreviewRequest) returns (modeldev.service.v1.GetInputVersionPreviewResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/modeldev/input-versions/{input_version_id}/preview"
+      response_body: "preview"
+    };
+  }
+  rpc ListDatasetImportTasks(modeldev.service.v1.ListDatasetImportTasksRequest) returns (modeldev.service.v1.ListDatasetImportTasksResponse) {
+    option (google.api.http) = {get: "/api/v1/modeldev/datasets/{dataset_id}/import-tasks"};
+  }
+  rpc GetDatasetImportTask(modeldev.service.v1.GetDatasetImportTaskRequest) returns (modeldev.service.v1.GetDatasetImportTaskResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/modeldev/dataset-import-tasks/{import_task_id}"
+      response_body: "task"
+    };
+  }
+  rpc CancelDatasetImport(modeldev.service.v1.CancelDatasetImportRequest) returns (modeldev.service.v1.CancelDatasetImportResponse) {
+    option (google.api.http) = {post: "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel"};
+  }
+  rpc RetryDatasetImport(modeldev.service.v1.RetryDatasetImportRequest) returns (modeldev.service.v1.RetryDatasetImportResponse) {
+    option (google.api.http) = {post: "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry"};
+  }
+  rpc ListDatasetOperations(modeldev.service.v1.ListDatasetOperationsRequest) returns (modeldev.service.v1.ListDatasetOperationsResponse) {
+    option (google.api.http) = {get: "/api/v1/modeldev/datasets/{dataset_id}/operations"};
   }
 }

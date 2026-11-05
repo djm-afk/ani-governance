@@ -181,6 +181,14 @@ func (s *ModelDevService) CreateExecution(ctx context.Context, in ModelDevCreate
 	if !stderrors.Is(err, data.ErrModelDevAcceptanceNotFound) {
 		return nil, modelDevCreateFailure(err)
 	}
+	// A brand-new acceptance always names one InputVersion (intent.dataset_version_id).
+	// Protecting only the query routes would leave a known InputVersion ID usable
+	// directly here, so the same asset-read capability is required before the
+	// candidate is resolved. A replay above is deliberately exempt: it re-delivers
+	// an already persisted intent and must not need a grant it never had.
+	if err := s.authorization.AuthorizeDataset(preflight, principal.TenantID, principal.ID, data.ModelDevDatasetActionGet); err != nil {
+		return nil, modelDevCreateFailure(err)
+	}
 	if s.resolver == nil || s.compute == nil {
 		return nil, modelDevCreateUnavailable()
 	}

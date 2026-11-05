@@ -2209,3 +2209,73 @@ PUT `.../network-interfaces/primary` 的 data 为 mode、可选 vnic_id、expect
 新 owner 网卡接口同时接受 JWT/AK；AK 使用当前绑定租户角色执行新接口及手动选择所需 NETWORK 授权，主体 ID 不作为 User ID。PUT 只接收 data 对象的明确 snake_case 字段；expected_version 必须为规范的正十进制 int64 字符串。旧 owner 生命周期入口不因本批扩展 HMAC 表面。
 
 实例网卡读视图另返回 `configuration_state`（`configuring/ready/failed`）、`operation_id`、`operation_reason`，直接保留 owner 的持久配置操作投影。配置仍在处理中不能展示为保存完成或允许重启应用；当前地址与目标地址分别保留。Gov 不追加操作查询或轮询。
+
+## MODELDEV-14～MODELDEV-16：ModelDev Dataset 管理与在线导入（2026-11-04）
+
+Gov 提供 15 条 Dataset HTTP 路由，并把两条既有 InputVersion 读路由从 `permcode` exempt
+一次性切到 `modeldev:dataset:read`。全部沿用 MODEL 业务模块与既有 mTLS 委托，不新增
+ModelDev 专属 IAM 或第二条直连 REST。
+
+### MODELDEV-14 — Dataset 集合、版本、任务与历史
+
+| 项 | 内容 |
+| --- | --- |
+| HTTP | 见下表；请求/响应与错误码见 [前端交接 §6.1](frontend-training-handoff.md) |
+| 权限 | `modeldev:dataset:read/create/update/archive/import`（MODEL，tenant 范围） |
+| 委托 | 每条路由调用 Owner 的 `ModelDevDatasetService` 同名 RPC；`idempotency_key` 是消息字段，不是 header |
+| Owner 侧身份 | 15 个方法全部登记在 `verifiedQueryMethods`，接收端要求 mTLS + 精确 method + `tenant-all` |
+
+| HTTP | RPC | 权限 |
+| --- | --- | --- |
+| `POST /api/v1/modeldev/datasets` | CreateDataset | create |
+| `GET /api/v1/modeldev/datasets` | ListDatasets | read |
+| `GET /api/v1/modeldev/datasets/{dataset_id}` | GetDataset | read |
+| `PATCH /api/v1/modeldev/datasets/{dataset_id}` | UpdateDataset | update |
+| `POST /api/v1/modeldev/datasets/{dataset_id}:archive` | ArchiveDataset | archive |
+| `POST /api/v1/modeldev/datasets/{dataset_id}:restore` | RestoreDataset | archive |
+| `POST /api/v1/modeldev/dataset-sources:inspect` | InspectDatasetSource | import |
+| `POST /api/v1/modeldev/datasets/{dataset_id}:import` | ImportDatasetVersion | import |
+| `GET /api/v1/modeldev/datasets/{dataset_id}/versions` | ListDatasetVersions | read |
+| `GET /api/v1/modeldev/input-versions/{input_version_id}/preview` | GetInputVersionPreview | read |
+| `GET /api/v1/modeldev/datasets/{dataset_id}/import-tasks` | ListDatasetImportTasks | read |
+| `GET /api/v1/modeldev/dataset-import-tasks/{import_task_id}` | GetDatasetImportTask | read |
+| `POST /api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel` | CancelDatasetImport | import |
+| `POST /api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry` | RetryDatasetImport | import |
+| `GET /api/v1/modeldev/datasets/{dataset_id}/operations` | ListDatasetOperations | read |
+
+**实现要点**（均为本轮修正，不是设计变更）：
+
+1. Gov 路由以显式 `ModelDevDatasetAction` 授权，不按 path 分发：`POST/GET /datasets`
+   与 `GET/PATCH /datasets/{id}` 路径相同，path 分发会落到同一个能力。
+2. 同步导入返回 `202` + 稳定 receipt；`202` 不代表版本 READY。
+3. Owner 的 `ErrorDetail` 自由文本一律丢弃，只保留 gRPC code 与类型化 reason；
+   未登记 reason 降级为 `503 MODELDEV_DATASET_UNAVAILABLE`。
+4. 首次**新**训练受理在 `FindAccepted` 未命中后增加 `modeldev:dataset:read` +
+   tenant-all 检查，防止用已知 `input_version_id` 绕过查询路由的授权。原键重放不要求
+   该授权（它只重投已持久化的意图）。
+5. 维护窗口（`ANI_MODELDEV_CREATE_PAUSED`）现在同时覆盖 Dataset 创建/导入/重试与
+   环境 Ensure，返回 `503 MODELDEV_MAINTENANCE`；查询与取消/关闭保持可用。
+
+### MODELDEV-15 — InputVersion 读路由的一次性权限切换
+
+`GET /api/v1/modeldev/input-versions`、`GET /api/v1/modeldev/input-versions/{input_version_id}`
+原先在 `permcode` 中属于 exempt（不在权限码范围），只有具体 GET 路由与 tenant-all 检查。
+本期绑定 `modeldev:dataset:read`，**没有旧能力可迁移**，也没有保留旁路。
+
+这条切换是资产语义的：版本详情、预览与训练选择共用同一读取能力。tenant-all 是数据范围，
+`dataset:read` 是能力，二者不互相替代。
+
+### MODELDEV-16 — 上线步骤与已知边界
+
+1. 先 `admin sync-apis --dry-run`，确认 17 条 `(method, path)` 出现在目录里，再显式同步。
+2. 执行 `sql/data/20261104010000_modeldev_dataset_permissions.sql`：缺 catalog 行会显式
+   报错；同一路由已绑其它权限也会报错；脚本可重复执行。
+3. 默认只授予 `template:tenant:manager` 与 `tenant:manager`；其它角色需显式授权。
+
+**未验证**：本条登记只覆盖源码、生成物、权限种子与单机门禁（真实 PostgreSQL）。
+镜像构建、Governance 部署、真实租户环境下的 202 受理、真实 Hub 来源与 importer 执行
+均未验收，不能由本登记推出可用结论。
+
+**Gov pin**：当前 `go.mod` 仍是 `replace` 指向 `github.com/djm-afk/ani-modeldev-service`
+的固定提交，正式 pin 形态待确认（见 ModelDev 实施进度 §3.1b）。
+

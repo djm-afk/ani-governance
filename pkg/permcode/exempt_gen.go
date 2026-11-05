@@ -19,8 +19,6 @@ var exemptReasons = map[string]string{
 	"GET /api/v1/modeldev/executions/{execution_id}/pods":             "业务域接口（不在管理面/六域权限码范围）",
 	"GET /api/v1/modeldev/executions/{execution_id}/resource-metrics": "业务域接口（不在管理面/六域权限码范围）",
 	"GET /api/v1/modeldev/implementations":                            "业务域接口（不在管理面/六域权限码范围）",
-	"GET /api/v1/modeldev/input-versions":                             "业务域接口（不在管理面/六域权限码范围）",
-	"GET /api/v1/modeldev/input-versions/{input_version_id}":          "业务域接口（不在管理面/六域权限码范围）",
 	"POST /api/v1/auth/api-keys":                                      "既有认证/会话域接口（不在权限码范围）",
 	"POST /api/v1/auth/captcha/verify":                                "既有认证/会话域接口（不在权限码范围）",
 	"POST /api/v1/auth/csrf":                                          "独立认证/会话合同",
