@@ -22,10 +22,10 @@ func releaseSeed(t *testing.T) (*initialSeed, []API) {
 
 func TestInitialSeedReleaseCoverage(t *testing.T) {
 	seed, catalog := releaseSeed(t)
-	require.Len(t, seed.Routes, 482)
+	require.Len(t, seed.Routes, 483)
 	require.Len(t, seed.ExcludedRoutes, 6)
 	selected := seed.catalogForInit(catalog)
-	require.Len(t, selected, 482)
+	require.Len(t, selected, 483)
 	for _, api := range selected {
 		require.NotEqual(t, "VMImageService", api.Module, api.Path)
 	}
@@ -67,7 +67,7 @@ func TestInitialSeedRejectsIncompleteOrExpandedRelease(t *testing.T) {
 	require.ErrorContains(t, err, "API catalog is incomplete")
 	expanded := append(append([]API{}, catalog...), API{Method: "GET", Path: "/api/v1/extra", Operation: "Extra_Get", BusinessModule: "SYSTEM"})
 	_, err = loadInitialSeed(expanded)
-	require.ErrorContains(t, err, "expected exactly 488")
+	require.ErrorContains(t, err, "expected exactly 489")
 	changed := append([]API{}, catalog...)
 	changed[0].BusinessModule = "SYSTEM"
 	if changed[0].BusinessModule == catalog[0].BusinessModule {
@@ -150,10 +150,10 @@ func TestInitialSeedAdministratorAPICoverage(t *testing.T) {
 			shared++
 		}
 	}
-	require.Equal(t, map[string]int{"platform": 257, "tenant": 258}, coverage)
+	require.Equal(t, map[string]int{"platform": 257, "tenant": 259}, coverage)
 	require.Equal(t, 43, shared)
 	require.Equal(t, 10, independent)
-	require.Equal(t, 482, coverage["platform"]+coverage["tenant"]-shared+independent)
+	require.Equal(t, 483, coverage["platform"]+coverage["tenant"]-shared+independent)
 }
 
 func TestInitialSeedAdditionalRoleTemplateBoundaries(t *testing.T) {
