@@ -69,6 +69,53 @@ func TestPermissionGroupServiceSqlite_ListAssemblesTree(t *testing.T) {
 	}
 }
 
+func TestPermissionGroupServiceSqlite_PagedListPreservesChildRows(t *testing.T) {
+	ec := testutil.NewEntClientForTest(t)
+	bctx := newRepoContext()
+	svc := NewPermissionGroupService(bctx, data.NewPermissionGroupRepo(bctx, ec), nil)
+	ctx := testutil.NewSystemViewerCtx(context.Background())
+	svc.seedFixture()
+
+	complete, err := svc.List(ctx, &paginationV1.PagingRequest{NoPaging: trans.Ptr(true)})
+	require.NoError(t, err)
+	require.Len(t, complete.Items, 1)
+	root := complete.Items[0]
+	wantIDs := []uint32{root.GetId()}
+	for _, child := range root.Children {
+		wantIDs = append(wantIDs, child.GetId())
+	}
+	var gotIDs []uint32
+	for page := uint32(1); page <= 3; page++ {
+		result, err := svc.List(ctx, &paginationV1.PagingRequest{
+			Page: trans.Ptr(page), PageSize: trans.Ptr(uint32(2)), OrderBy: trans.Ptr("id desc"),
+		})
+		require.NoError(t, err)
+		require.Equal(t, uint64(len(wantIDs)), result.Total)
+		wantSize := 2
+		if page == 3 {
+			wantSize = 1
+		}
+		require.Len(t, result.Items, wantSize)
+		for _, item := range result.Items {
+			require.Empty(t, item.Children)
+			if page == 1 {
+				require.Equal(t, root.GetId(), item.GetParentId(), "children must survive a page without their parent")
+			}
+			gotIDs = append(gotIDs, item.GetId())
+		}
+	}
+	require.ElementsMatch(t, wantIDs, gotIDs, "pagination must return each stored group exactly once")
+	filtered, err := svc.List(ctx, &paginationV1.PagingRequest{
+		Page: trans.Ptr(uint32(1)), PageSize: trans.Ptr(uint32(20)),
+		FilteringType: &paginationV1.PagingRequest_Query{Query: `{"name__contains":"安全策略"}`},
+	})
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), filtered.Total)
+	require.Len(t, filtered.Items, 1, "a matching child must survive filtering out its parent")
+	require.Equal(t, "安全策略", filtered.Items[0].GetName())
+	require.Equal(t, root.GetId(), filtered.Items[0].GetParentId())
+}
+
 // TestPermissionGroupServiceSqlite_CreateAndGet 验证服务层创建分组：
 // 操作人 ID 盖入 created_by、ParentId 落库为指向父分组的外键、物化路径按父路径拼接；
 // 新子分组随后出现在服务层 List 的树形组装中；Get 按主键命中/未命中。

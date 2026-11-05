@@ -88,7 +88,7 @@ func RegisterVMImageHTTPServer(server *http.Server, s *service.VMImageService) {
 				if entry.action == "image-create" {
 					code = 202
 				}
-			case "PATCH", "DELETE":
+			case "DELETE":
 				code = 202
 			}
 			return ctx.Result(code, out)
@@ -159,6 +159,10 @@ var vmImageStatusCode = map[string]int{
 func vmImageHTTPError(err error) error {
 	if err == nil {
 		return nil
+	}
+	// Authentication takes precedence over a shared scope-denial reason.
+	if status.Code(err) == codes.Unauthenticated {
+		return kratoserrors.Unauthorized("UNAUTHORIZED", "VM image request failed")
 	}
 	// A plain gRPC status reaches this layer as a kratos error whose Reason is empty and
 	// whose Message carries the published contract code, so every carrier is inspected:
