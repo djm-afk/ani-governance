@@ -731,7 +731,7 @@ func (x *CreateVMImageUploadSessionRequest) GetData() *CreateVMImageUploadSessio
 	return nil
 }
 
-// Short-lived single-use ticket for the raw PUT. The token is redacted from every
+// Short-lived single-use ticket for the raw POST. The token is redacted from every
 // log, trace and error report and is never stored by any service.
 type VMImageUploadSession struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
