@@ -251,6 +251,13 @@ func TestCountsAndKeys(t *testing.T) {
 		"POST /api/v1/storage/buckets/{data.bucket_id}/objects:upload-url": {Code: "storage:object:upload", Source: storageWriteSource, BusinessModule: "STORAGE", ScopeKind: "tenant"},
 		"POST /api/v1/storage/buckets/{data.bucket_id}/objects:delete":     {Code: "storage:object:delete", Source: storageWriteSource, BusinessModule: "STORAGE", ScopeKind: "tenant"},
 	}
+	// Associated-instance reads reuse the detail codes of the network they
+	// describe, so each new (method, path) still needs its own capability row.
+	const networkAssociatedInstances = 2
+	networkAssociatedInstanceReads := map[string]expectation{
+		"GET /api/v1/networks/vpcs/{vpc_id}/associated-instances":     {Code: "network:vpc:get", Source: "sql/data/20261009_network_permissions.sql ; pkg/middleware/auth/network_policy.go", BusinessModule: "NETWORK", ScopeKind: "tenant"},
+		"GET /api/v1/networks/subnets/{subnet_id}/associated-instances": {Code: "network:subnet:get", Source: "sql/data/20261009_network_permissions.sql ; pkg/middleware/auth/network_policy.go", BusinessModule: "NETWORK", ScopeKind: "tenant"},
+	}
 	if want := 227; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
@@ -260,11 +267,14 @@ func TestCountsAndKeys(t *testing.T) {
 	const vmLogCapabilities = 1
 	const modelDevEnvironmentCapabilities = 2
 	const manualVNicCapabilities = 9
-	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities; CapabilityCount() != want {
+	// platformBaseNetworkEntry 补记 2060ba35（#93）合入 capability_gen 的
+	// GET /api/v1/networks/instances：该提交漏更本测试计数，属存量缺陷修复。
+	const platformBaseNetworkEntry = 1
+	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities; len(keys) != want {
+	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry; len(keys) != want {
 		t.Errorf("AllKeys() = %d, want %d", len(keys), want)
 	}
 	keySet := make(map[string]bool, len(keys))
@@ -330,6 +340,19 @@ func TestCountsAndKeys(t *testing.T) {
 		got, ok := capabilityOperations[key]
 		if !ok || got != want {
 			t.Errorf("instance restart/pvc capability %q = %+v (ok=%v), want %+v", key, got, ok, want)
+		}
+		if !keySet[key] {
+			t.Errorf("AllKeys() missing %q", key)
+		}
+	}
+	// 关联实例读接口逐键对拍：复用详情码不等于可以不登记路由。
+	for key, want := range networkAssociatedInstanceReads {
+		got, ok := capabilityOperations[key]
+		if !ok || got != want {
+			t.Errorf("network associated-instance capability %q = %+v (ok=%v), want %+v", key, got, ok, want)
+		}
+		if exp, err := Resolve("GET", key[len("GET "):]); err != nil || exp == nil || exp.Code != want.Code {
+			t.Errorf("Resolve(%q) = %+v, %v; want code %q", key, exp, err, want.Code)
 		}
 		if !keySet[key] {
 			t.Errorf("AllKeys() missing %q", key)
@@ -413,12 +436,12 @@ func TestSandboxCapabilities(t *testing.T) {
 		{"DELETE", "/api/v1/sandbox/{sandbox_id}/tokens/{token_id}", "token:revoke"},
 	} {
 		exp, err := Resolve(r.method, r.path)
-		if err != nil || exp.Code != "sandbox:"+r.action || exp.BusinessModule != "INSTANCE" || exp.ScopeKind != "tenant" {
+		if err != nil || exp.Code != "sandbox:"+r.action || exp.BusinessModule != "SANDBOX" || exp.ScopeKind != "tenant" {
 			t.Fatalf("Sandbox capability %s %s: %+v %v", r.method, r.path, exp, err)
 		}
 	}
 	module, code, ok := ComputeCatalogGrant("SANDBOX")
-	if !ok || module != "INSTANCE" || code != "sandbox:preset:read" {
+	if !ok || module != "SANDBOX" || code != "sandbox:preset:read" {
 		t.Fatalf("Sandbox catalog grant: %s %s %v", module, code, ok)
 	}
 }
