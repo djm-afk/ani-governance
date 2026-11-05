@@ -27,6 +27,7 @@ func registerModelDevHTTP(server *http.Server, modeldev *service.ModelDevService
 	registerModelDevReadinessHTTP(server, modeldev)
 	registerModelDevStopHTTP(server, modeldev)
 	registerModelDevQueryHTTP(server, modeldev)
+	registerModelDevDatasetHTTP(server, modeldev)
 	registerModelDevCatalogueHTTP(server, modeldev)
 	registerModelDevRegistrationHTTP(server, modeldev)
 	// The stream route is always registered so the authentication chain runs

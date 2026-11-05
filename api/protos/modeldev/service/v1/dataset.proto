@@ -1,0 +1,385 @@
+syntax = "proto3";
+
+package modeldev.service.v1;
+
+import "gnostic/openapi/v3/annotations.proto";
+import "modeldev/service/v1/execution.proto";
+
+// Public dataset views for the Governance BFF. Governance validates the current
+// grant and delegates the exact RPC; these messages carry data only, never a
+// trusted identity, tenant, scope or owner.
+
+message DatasetSourceSelectionView {
+  string provider = 1;
+  string repo_id = 2 [json_name = "repo_id"];
+  string requested_revision = 3 [json_name = "requested_revision"];
+  string file_path = 4 [json_name = "file_path"];
+  string lock_kind = 5 [json_name = "lock_kind"];
+  // Empty only when the lock is a full-file SHA.
+  string resolved_revision = 6 [json_name = "resolved_revision"];
+  int64 expected_size_bytes = 7 [json_name = "expected_size_bytes"];
+  // Empty when the provider did not prove a full-file digest.
+  string expected_file_sha256 = 8 [json_name = "expected_file_sha256"];
+}
+
+message DatasetSourceSnapshotView {
+  DatasetSourceSelectionView selection = 1;
+  string resolved_at = 2 [json_name = "resolved_at"];
+  string snapshot_sha256 = 3 [json_name = "snapshot_sha256"];
+}
+
+message DatasetImportProgressView {
+  // Same vocabulary as the task phase, so a cancel can be expressed.
+  string stage = 1;
+  // Zero means unknown; the page must not render a percentage.
+  string bytes_total = 2 [json_name = "bytes_total"];
+  string bytes_done = 3 [json_name = "bytes_done"];
+  string files_total = 4 [json_name = "files_total"];
+  string files_done = 5 [json_name = "files_done"];
+  string updated_at = 6 [json_name = "updated_at"];
+}
+
+message DatasetImportTaskView {
+  string import_task_id = 1 [json_name = "import_task_id"];
+  string dataset_id = 2 [json_name = "dataset_id"];
+  string reserved_input_version_id = 3 [json_name = "reserved_input_version_id"];
+  string version_number = 4 [json_name = "version_number"];
+  string state = 5;
+  string phase = 6;
+  DatasetSourceSnapshotView source = 7;
+  string accepted_at = 8 [json_name = "accepted_at"];
+  string attempt_count = 9 [json_name = "attempt_count"];
+  string recovery_generation = 10 [json_name = "recovery_generation"];
+  DatasetImportProgressView progress = 11;
+  // Async failure carrier: the reason plus its bounded stage, no free text.
+  TaskFailureView failure = 12;
+  // Set only after success, and equal to reserved_input_version_id.
+  string input_version_id = 13 [json_name = "input_version_id"];
+}
+
+message TaskFailureView {
+  string code = 1;
+  string safe_message = 2 [json_name = "safe_message"];
+  bool retryable = 3;
+  string stage = 4;
+  map<string, string> detail = 5;
+}
+
+message DatasetView {
+  string dataset_id = 1 [json_name = "dataset_id"];
+  string name = 2;
+  string description = 3;
+  string modality = 4;
+  string schema_kind = 5 [json_name = "schema_kind"];
+  string state = 6;
+  string revision = 7;
+  string created_by = 8 [json_name = "created_by"];
+  string created_at = 9 [json_name = "created_at"];
+  string updated_at = 10 [json_name = "updated_at"];
+  string ready_version_count = 11 [json_name = "ready_version_count"];
+  // The largest published version number, not the newest accepted task.
+  string latest_ready_version_number = 12 [json_name = "latest_ready_version_number"];
+  DatasetImportTaskView latest_import = 13 [json_name = "latest_import"];
+}
+
+message DatasetReceiptView {
+  string receipt_id = 1 [json_name = "receipt_id"];
+  string operation = 2;
+  // ACCEPTED, SUCCEEDED or ALREADY_TERMINAL.
+  string outcome = 3;
+  string dataset_id = 4 [json_name = "dataset_id"];
+  string import_task_id = 5 [json_name = "import_task_id"];
+  string reserved_input_version_id = 6 [json_name = "reserved_input_version_id"];
+  string version_number = 7 [json_name = "version_number"];
+  string accepted_at = 8 [json_name = "accepted_at"];
+  string revision = 9;
+}
+
+message DatasetVersionView {
+  string input_version_id = 1 [json_name = "input_version_id"];
+  string dataset_id = 2 [json_name = "dataset_id"];
+  string import_task_id = 3 [json_name = "import_task_id"];
+  string version_number = 4 [json_name = "version_number"];
+  string published_at = 5 [json_name = "published_at"];
+  bool preview_available = 6 [json_name = "preview_available"];
+  InputVersionView input_version = 7 [json_name = "input_version"];
+  DatasetSourceSnapshotView source = 8;
+}
+
+message DatasetPreviewRecordView {
+  string sample_index = 1 [json_name = "sample_index"];
+  string instruction = 2;
+  string input = 3;
+  string output = 4;
+  repeated string truncated_fields = 5 [json_name = "truncated_fields"];
+}
+
+message DatasetPreviewView {
+  string input_version_id = 1 [json_name = "input_version_id"];
+  string total_rows = 2 [json_name = "total_rows"];
+  repeated DatasetPreviewRecordView records = 3;
+  bool preview_truncated = 4 [json_name = "preview_truncated"];
+  string max_records = 5 [json_name = "max_records"];
+  string max_field_characters = 6 [json_name = "max_field_characters"];
+}
+
+message DatasetOperationView {
+  string operation_id = 1 [json_name = "operation_id"];
+  string event_type = 2 [json_name = "event_type"];
+  string actor = 3;
+  string occurred_at = 4 [json_name = "occurred_at"];
+  string result = 5;
+  string import_task_id = 6 [json_name = "import_task_id"];
+  string import_attempt_id = 7 [json_name = "import_attempt_id"];
+  string receipt_id = 8 [json_name = "receipt_id"];
+  string revision = 9;
+  string recovery_generation = 10 [json_name = "recovery_generation"];
+  string failure_code = 11 [json_name = "failure_code"];
+}
+
+message DatasetSourceFileView {
+  string path = 1;
+  string size_bytes = 2 [json_name = "size_bytes"];
+  bool directory = 3;
+}
+
+message DatasetSourceFilesPageView {
+  repeated DatasetSourceFileView items = 1;
+  string next_page_token = 2 [json_name = "next_page_token"];
+  bool has_more = 3 [json_name = "has_more"];
+}
+
+// ---- requests and responses ----
+
+message CreateDatasetRequest {
+  option (gnostic.openapi.v3.schema) = {required: ["data"]};
+  string idempotency_key = 1 [json_name = "idempotency_key"];
+  CreateDatasetData data = 2;
+}
+message CreateDatasetData {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+    required: ["name"]
+  };
+  string name = 1;
+  optional string description = 2;
+}
+message CreateDatasetResponse {
+  DatasetView dataset = 1;
+  DatasetReceiptView receipt = 2;
+}
+
+message GetDatasetRequest {
+  string dataset_id = 1 [json_name = "dataset_id"];
+}
+message GetDatasetResponse {
+  DatasetView dataset = 1;
+}
+
+// Dataset list filters are a closed set; an unknown filter or order is rejected
+// rather than silently ignored.
+message ListDatasetsRequest {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+  };
+  optional uint32 page = 1;
+  optional uint32 page_size = 2 [json_name = "pageSize"];
+  // ACTIVE / ARCHIVED / ALL; absent means ACTIVE.
+  optional string state = 3;
+  optional string name = 4;
+}
+message ListDatasetsResponse {
+  repeated DatasetView items = 1;
+  uint64 total = 2;
+}
+
+message UpdateDatasetRequest {
+  option (gnostic.openapi.v3.schema) = {required: ["data", "update_mask"]};
+  string dataset_id = 1 [json_name = "dataset_id"];
+  string idempotency_key = 2 [json_name = "idempotency_key"];
+  // Only name and description are editable.
+  string update_mask = 3 [json_name = "update_mask"];
+  UpdateDatasetData data = 4;
+}
+message UpdateDatasetData {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+    required: ["expected_revision"]
+  };
+  optional string name = 1;
+  optional string description = 2;
+  string expected_revision = 3 [json_name = "expected_revision"];
+}
+message UpdateDatasetResponse {
+  DatasetView dataset = 1;
+  DatasetReceiptView receipt = 2;
+}
+
+message ArchiveDatasetRequest {
+  option (gnostic.openapi.v3.schema) = {required: ["data"]};
+  string dataset_id = 1 [json_name = "dataset_id"];
+  string idempotency_key = 2 [json_name = "idempotency_key"];
+  DatasetRevisionData data = 3;
+}
+message ArchiveDatasetResponse {
+  DatasetView dataset = 1;
+  DatasetReceiptView receipt = 2;
+}
+
+message RestoreDatasetRequest {
+  option (gnostic.openapi.v3.schema) = {required: ["data"]};
+  string dataset_id = 1 [json_name = "dataset_id"];
+  string idempotency_key = 2 [json_name = "idempotency_key"];
+  DatasetRevisionData data = 3;
+}
+message RestoreDatasetResponse {
+  DatasetView dataset = 1;
+  DatasetReceiptView receipt = 2;
+}
+message DatasetRevisionData {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+    required: ["expected_revision"]
+  };
+  string expected_revision = 1 [json_name = "expected_revision"];
+}
+
+// Source inspection is read-only, so it carries no write idempotency key.
+message InspectDatasetSourceRequest {
+  InspectDatasetSourceData data = 1;
+}
+message InspectDatasetSourceData {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+    required: ["mode", "source"]
+  };
+  // LIST_FILES or INSPECT_FILE.
+  string mode = 1;
+  DatasetSourceRef source = 2;
+  optional string directory_path = 3 [json_name = "directory_path"];
+  optional string page_token = 4 [json_name = "page_token"];
+  optional string page_size = 5 [json_name = "page_size"];
+}
+message DatasetSourceRef {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+    required: ["provider", "repo_id", "revision"]
+  };
+  string provider = 1;
+  string repo_id = 2 [json_name = "repo_id"];
+  string revision = 3;
+  // Required for INSPECT_FILE only.
+  optional string file_path = 4 [json_name = "file_path"];
+}
+message InspectDatasetSourceResponse {
+  string resolved_revision = 1 [json_name = "resolved_revision"];
+  DatasetSourceFilesPageView files_page = 2 [json_name = "files_page"];
+  DatasetSourceSelectionView selection = 3;
+  string selection_fingerprint = 4 [json_name = "selection_fingerprint"];
+}
+
+message ImportDatasetVersionRequest {
+  option (gnostic.openapi.v3.schema) = {required: ["data"]};
+  string dataset_id = 1 [json_name = "dataset_id"];
+  string idempotency_key = 2 [json_name = "idempotency_key"];
+  ImportDatasetVersionData data = 3;
+}
+message ImportDatasetVersionData {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+    required: ["source", "selection_fingerprint"]
+  };
+  DatasetSourceSelectionView source = 1;
+  string selection_fingerprint = 2 [json_name = "selection_fingerprint"];
+}
+message ImportDatasetVersionResponse {
+  DatasetReceiptView receipt = 1;
+  DatasetImportTaskView task = 2;
+}
+
+message CancelDatasetImportRequest {
+  string import_task_id = 1 [json_name = "import_task_id"];
+  string idempotency_key = 2 [json_name = "idempotency_key"];
+}
+message CancelDatasetImportResponse {
+  DatasetReceiptView receipt = 1;
+}
+
+message RetryDatasetImportRequest {
+  string import_task_id = 1 [json_name = "import_task_id"];
+  string idempotency_key = 2 [json_name = "idempotency_key"];
+}
+message RetryDatasetImportResponse {
+  DatasetReceiptView receipt = 1;
+}
+
+// Scoped list requests name the collection in the path, so the request message
+// carries that same field; pagination is the shared page/pageSize pair and the
+// filters are a closed set that reject anything unknown.
+message ListDatasetVersionsRequest {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+  };
+  string dataset_id = 1 [json_name = "dataset_id"];
+  optional uint32 page = 2;
+  optional uint32 page_size = 3 [json_name = "pageSize"];
+}
+message ListDatasetVersionsResponse {
+  repeated DatasetVersionView items = 1;
+  uint64 total = 2;
+}
+
+message GetInputVersionPreviewRequest {
+  string input_version_id = 1 [json_name = "input_version_id"];
+}
+message GetInputVersionPreviewResponse {
+  DatasetPreviewView preview = 1;
+}
+
+message ListDatasetImportTasksRequest {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+  };
+  string dataset_id = 1 [json_name = "dataset_id"];
+  optional uint32 page = 2;
+  optional uint32 page_size = 3 [json_name = "pageSize"];
+  // QUEUED / RUNNING / FAILED / CANCELING / CANCELLED / SUCCEEDED.
+  optional string state = 4;
+}
+message ListDatasetImportTasksResponse {
+  repeated DatasetImportTaskView items = 1;
+  uint64 total = 2;
+}
+
+message GetDatasetImportTaskRequest {
+  string import_task_id = 1 [json_name = "import_task_id"];
+}
+message GetDatasetImportTaskResponse {
+  DatasetImportTaskView task = 1;
+}
+
+message ListDatasetOperationsRequest {
+  option (gnostic.openapi.v3.schema) = {
+    type: "object"
+    additional_properties: {boolean: false}
+  };
+  string dataset_id = 1 [json_name = "dataset_id"];
+  optional uint32 page = 2;
+  optional uint32 page_size = 3 [json_name = "pageSize"];
+  // DatasetOperationEventType name without the DATASET_OPERATION_EVENT_TYPE_ prefix.
+  optional string event_type = 4 [json_name = "event_type"];
+  optional string import_task_id = 5 [json_name = "import_task_id"];
+}
+message ListDatasetOperationsResponse {
+  repeated DatasetOperationView items = 1;
+  uint64 total = 2;
+}

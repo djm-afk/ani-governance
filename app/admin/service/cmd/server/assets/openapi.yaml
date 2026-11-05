@@ -9619,6 +9619,348 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AuthorizeArtifactDownloadResponse'
+    /api/v1/modeldev/dataset-import-tasks/{import_task_id}:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_GetDatasetImportTask
+            parameters:
+                - name: import_task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDatasetImportTaskResponse'
+    /api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel:
+        post:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_CancelDatasetImport
+            parameters:
+                - name: import_task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: idempotency_key
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CancelDatasetImportResponse'
+    /api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry:
+        post:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_RetryDatasetImport
+            parameters:
+                - name: import_task_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: idempotency_key
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RetryDatasetImportResponse'
+    /api/v1/modeldev/dataset-sources:inspect:
+        post:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_InspectDatasetSource
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/InspectDatasetSourceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InspectDatasetSourceResponse'
+    /api/v1/modeldev/datasets:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListDatasets
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: state
+                  in: query
+                  description: ACTIVE / ARCHIVED / ALL; absent means ACTIVE.
+                  schema:
+                    type: string
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListDatasetsResponse'
+        post:
+            tags:
+                - ModelDevService
+            description: '---- dataset management ----'
+            operationId: ModelDevService_CreateDataset
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateDatasetRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateDatasetResponse'
+    /api/v1/modeldev/datasets/{dataset_id}:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_GetDataset
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetDatasetResponse'
+        patch:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_UpdateDataset
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateDatasetRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateDatasetResponse'
+    /api/v1/modeldev/datasets/{dataset_id}/import-tasks:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListDatasetImportTasks
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: state
+                  in: query
+                  description: QUEUED / RUNNING / FAILED / CANCELING / CANCELLED / SUCCEEDED.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListDatasetImportTasksResponse'
+    /api/v1/modeldev/datasets/{dataset_id}/operations:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListDatasetOperations
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: event_type
+                  in: query
+                  description: DatasetOperationEventType name without the DATASET_OPERATION_EVENT_TYPE_ prefix.
+                  schema:
+                    type: string
+                - name: import_task_id
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListDatasetOperationsResponse'
+    /api/v1/modeldev/datasets/{dataset_id}/versions:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ListDatasetVersions
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListDatasetVersionsResponse'
+    /api/v1/modeldev/datasets/{dataset_id}:archive:
+        post:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_ArchiveDataset
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ArchiveDatasetRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ArchiveDatasetResponse'
+    /api/v1/modeldev/datasets/{dataset_id}:import:
+        post:
+            tags:
+                - ModelDevService
+            description: Accept one import. 202 with a stable receipt; does not mean the version is ready.
+            operationId: ModelDevService_ImportDatasetVersion
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ImportDatasetVersionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ImportDatasetVersionResponse'
+    /api/v1/modeldev/datasets/{dataset_id}:restore:
+        post:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_RestoreDataset
+            parameters:
+                - name: dataset_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RestoreDatasetRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RestoreDatasetResponse'
     /api/v1/modeldev/environment:
         get:
             tags:
@@ -10088,6 +10430,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/InputVersionView'
+    /api/v1/modeldev/input-versions/{input_version_id}/preview:
+        get:
+            tags:
+                - ModelDevService
+            operationId: ModelDevService_GetInputVersionPreview
+            parameters:
+                - name: input_version_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetInputVersionPreviewResponse'
     /api/v1/models:
         get:
             tags:
@@ -15341,6 +15701,24 @@ components:
                     description: 日志创建时间
                     format: date-time
             description: 接口审计日志
+        ArchiveDatasetRequest:
+            required:
+                - data
+            type: object
+            properties:
+                dataset_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/DatasetRevisionData'
+        ArchiveDatasetResponse:
+            type: object
+            properties:
+                dataset:
+                    $ref: '#/components/schemas/DatasetView'
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
         ArtifactView:
             type: object
             properties:
@@ -15528,6 +15906,11 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/NamedCallbackOrReference'
+        CancelDatasetImportResponse:
+            type: object
+            properties:
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
         CapabilityObservation:
             type: object
             properties:
@@ -15951,6 +16334,32 @@ components:
                 data:
                     $ref: '#/components/schemas/Config'
             description: 创建系统参数 - 请求
+        CreateDatasetData:
+            required:
+                - name
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+            additionalProperties: false
+        CreateDatasetRequest:
+            required:
+                - data
+            type: object
+            properties:
+                idempotency_key:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/CreateDatasetData'
+        CreateDatasetResponse:
+            type: object
+            properties:
+                dataset:
+                    $ref: '#/components/schemas/DatasetView'
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
         CreateDefaultVPCEgressData:
             type: object
             properties:
@@ -16992,6 +17401,258 @@ components:
                     description: 空闲连接数
                     format: uint32
             description: 数据库信息
+        DatasetImportProgressView:
+            type: object
+            properties:
+                stage:
+                    type: string
+                    description: Same vocabulary as the task phase, so a cancel can be expressed.
+                bytes_total:
+                    type: string
+                    description: Zero means unknown; the page must not render a percentage.
+                bytes_done:
+                    type: string
+                files_total:
+                    type: string
+                files_done:
+                    type: string
+                updated_at:
+                    type: string
+        DatasetImportTaskView:
+            type: object
+            properties:
+                import_task_id:
+                    type: string
+                dataset_id:
+                    type: string
+                reserved_input_version_id:
+                    type: string
+                version_number:
+                    type: string
+                state:
+                    type: string
+                phase:
+                    type: string
+                source:
+                    $ref: '#/components/schemas/DatasetSourceSnapshotView'
+                accepted_at:
+                    type: string
+                attempt_count:
+                    type: string
+                recovery_generation:
+                    type: string
+                progress:
+                    $ref: '#/components/schemas/DatasetImportProgressView'
+                failure:
+                    allOf:
+                        - $ref: '#/components/schemas/TaskFailureView'
+                    description: 'Async failure carrier: the reason plus its bounded stage, no free text.'
+                input_version_id:
+                    type: string
+                    description: Set only after success, and equal to reserved_input_version_id.
+        DatasetOperationView:
+            type: object
+            properties:
+                operation_id:
+                    type: string
+                event_type:
+                    type: string
+                actor:
+                    type: string
+                occurred_at:
+                    type: string
+                result:
+                    type: string
+                import_task_id:
+                    type: string
+                import_attempt_id:
+                    type: string
+                receipt_id:
+                    type: string
+                revision:
+                    type: string
+                recovery_generation:
+                    type: string
+                failure_code:
+                    type: string
+        DatasetPreviewRecordView:
+            type: object
+            properties:
+                sample_index:
+                    type: string
+                instruction:
+                    type: string
+                input:
+                    type: string
+                output:
+                    type: string
+                truncated_fields:
+                    type: array
+                    items:
+                        type: string
+        DatasetPreviewView:
+            type: object
+            properties:
+                input_version_id:
+                    type: string
+                total_rows:
+                    type: string
+                records:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DatasetPreviewRecordView'
+                preview_truncated:
+                    type: boolean
+                max_records:
+                    type: string
+                max_field_characters:
+                    type: string
+        DatasetReceiptView:
+            type: object
+            properties:
+                receipt_id:
+                    type: string
+                operation:
+                    type: string
+                outcome:
+                    type: string
+                    description: ACCEPTED, SUCCEEDED or ALREADY_TERMINAL.
+                dataset_id:
+                    type: string
+                import_task_id:
+                    type: string
+                reserved_input_version_id:
+                    type: string
+                version_number:
+                    type: string
+                accepted_at:
+                    type: string
+                revision:
+                    type: string
+        DatasetRevisionData:
+            required:
+                - expected_revision
+            type: object
+            properties:
+                expected_revision:
+                    type: string
+            additionalProperties: false
+        DatasetSourceFileView:
+            type: object
+            properties:
+                path:
+                    type: string
+                size_bytes:
+                    type: string
+                directory:
+                    type: boolean
+        DatasetSourceFilesPageView:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DatasetSourceFileView'
+                next_page_token:
+                    type: string
+                has_more:
+                    type: boolean
+        DatasetSourceRef:
+            required:
+                - provider
+                - repo_id
+                - revision
+            type: object
+            properties:
+                provider:
+                    type: string
+                repo_id:
+                    type: string
+                revision:
+                    type: string
+                file_path:
+                    type: string
+                    description: Required for INSPECT_FILE only.
+            additionalProperties: false
+        DatasetSourceSelectionView:
+            type: object
+            properties:
+                provider:
+                    type: string
+                repo_id:
+                    type: string
+                requested_revision:
+                    type: string
+                file_path:
+                    type: string
+                lock_kind:
+                    type: string
+                resolved_revision:
+                    type: string
+                    description: Empty only when the lock is a full-file SHA.
+                expected_size_bytes:
+                    type: string
+                expected_file_sha256:
+                    type: string
+                    description: Empty when the provider did not prove a full-file digest.
+        DatasetSourceSnapshotView:
+            type: object
+            properties:
+                selection:
+                    $ref: '#/components/schemas/DatasetSourceSelectionView'
+                resolved_at:
+                    type: string
+                snapshot_sha256:
+                    type: string
+        DatasetVersionView:
+            type: object
+            properties:
+                input_version_id:
+                    type: string
+                dataset_id:
+                    type: string
+                import_task_id:
+                    type: string
+                version_number:
+                    type: string
+                published_at:
+                    type: string
+                preview_available:
+                    type: boolean
+                input_version:
+                    $ref: '#/components/schemas/InputVersionView'
+                source:
+                    $ref: '#/components/schemas/DatasetSourceSnapshotView'
+        DatasetView:
+            type: object
+            properties:
+                dataset_id:
+                    type: string
+                name:
+                    type: string
+                description:
+                    type: string
+                modality:
+                    type: string
+                schema_kind:
+                    type: string
+                state:
+                    type: string
+                revision:
+                    type: string
+                created_by:
+                    type: string
+                created_at:
+                    type: string
+                updated_at:
+                    type: string
+                ready_version_count:
+                    type: string
+                latest_ready_version_number:
+                    type: string
+                    description: The largest published version number, not the newest accepted task.
+                latest_import:
+                    $ref: '#/components/schemas/DatasetImportTaskView'
         DefaultType:
             type: object
             properties:
@@ -18476,6 +19137,16 @@ components:
                     description: 达到扫描上限时为 true，数值是下限。
                 scanned:
                     type: string
+        GetDatasetImportTaskResponse:
+            type: object
+            properties:
+                task:
+                    $ref: '#/components/schemas/DatasetImportTaskView'
+        GetDatasetResponse:
+            type: object
+            properties:
+                dataset:
+                    $ref: '#/components/schemas/DatasetView'
         GetDefaultVPCEgressResponse:
             type: object
             properties:
@@ -18567,6 +19238,11 @@ components:
             properties:
                 task:
                     $ref: '#/components/schemas/ImportTask'
+        GetInputVersionPreviewResponse:
+            type: object
+            properties:
+                preview:
+                    $ref: '#/components/schemas/DatasetPreviewView'
         GetInputVersionResponse:
             type: object
             properties:
@@ -19305,6 +19981,35 @@ components:
                     $ref: '#/components/schemas/FinetuningRuntimeCapabilities'
                 runtime_capabilities_sha256:
                     type: string
+        ImportDatasetVersionData:
+            required:
+                - source
+                - selection_fingerprint
+            type: object
+            properties:
+                source:
+                    $ref: '#/components/schemas/DatasetSourceSelectionView'
+                selection_fingerprint:
+                    type: string
+            additionalProperties: false
+        ImportDatasetVersionRequest:
+            required:
+                - data
+            type: object
+            properties:
+                dataset_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/ImportDatasetVersionData'
+        ImportDatasetVersionResponse:
+            type: object
+            properties:
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
+                task:
+                    $ref: '#/components/schemas/DatasetImportTaskView'
         ImportModelBundleModelData:
             type: object
             properties:
@@ -19697,6 +20402,41 @@ components:
                     type: integer
                     format: uint32
                 created_at:
+                    type: string
+        InspectDatasetSourceData:
+            required:
+                - mode
+                - source
+            type: object
+            properties:
+                mode:
+                    type: string
+                    description: LIST_FILES or INSPECT_FILE.
+                source:
+                    $ref: '#/components/schemas/DatasetSourceRef'
+                directory_path:
+                    type: string
+                page_token:
+                    type: string
+                page_size:
+                    type: string
+            additionalProperties: false
+        InspectDatasetSourceRequest:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InspectDatasetSourceData'
+            description: Source inspection is read-only, so it carries no write idempotency key.
+        InspectDatasetSourceResponse:
+            type: object
+            properties:
+                resolved_revision:
+                    type: string
+                files_page:
+                    $ref: '#/components/schemas/DatasetSourceFilesPageView'
+                selection:
+                    $ref: '#/components/schemas/DatasetSourceSelectionView'
+                selection_fingerprint:
                     type: string
         Instance:
             type: object
@@ -20375,6 +21115,42 @@ components:
                 total:
                     type: string
             description: 查询数据访问审计日志列表 - 回应
+        ListDatasetImportTasksResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DatasetImportTaskView'
+                total:
+                    type: string
+        ListDatasetOperationsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DatasetOperationView'
+                total:
+                    type: string
+        ListDatasetVersionsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DatasetVersionView'
+                total:
+                    type: string
+        ListDatasetsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DatasetView'
+                total:
+                    type: string
         ListDictEntryByTypeCodeResponse:
             type: object
             properties:
@@ -24436,6 +25212,24 @@ components:
                     type: integer
                     format: int32
             description: 重启调度任务 - 回应
+        RestoreDatasetRequest:
+            required:
+                - data
+            type: object
+            properties:
+                dataset_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/DatasetRevisionData'
+        RestoreDatasetResponse:
+            type: object
+            properties:
+                dataset:
+                    $ref: '#/components/schemas/DatasetView'
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
         ResumeSandboxRequest:
             type: object
             properties:
@@ -24455,6 +25249,11 @@ components:
                     type: string
                 data:
                     $ref: '#/components/schemas/RetryAcceleratorInitializationOperationData'
+        RetryDatasetImportResponse:
+            type: object
+            properties:
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
         RetryImportTaskRequest:
             type: object
             properties:
@@ -25868,6 +26667,21 @@ components:
                     description: 删除时间
                     format: date-time
             description: 调度任务
+        TaskFailureView:
+            type: object
+            properties:
+                code:
+                    type: string
+                safe_message:
+                    type: string
+                retryable:
+                    type: boolean
+                stage:
+                    type: string
+                detail:
+                    type: object
+                    additionalProperties:
+                        type: string
         TaskOption:
             type: object
             properties:
@@ -26224,6 +27038,40 @@ components:
                     type: boolean
                     description: 如果设置为true的时候，资源不存在则会新增(插入)，并且在这种情况下`updateMask`字段将会被忽略。
             description: 更新系统参数 - 请求
+        UpdateDatasetData:
+            required:
+                - expected_revision
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                expected_revision:
+                    type: string
+            additionalProperties: false
+        UpdateDatasetRequest:
+            required:
+                - data
+                - update_mask
+            type: object
+            properties:
+                dataset_id:
+                    type: string
+                idempotency_key:
+                    type: string
+                update_mask:
+                    type: string
+                    description: Only name and description are editable.
+                data:
+                    $ref: '#/components/schemas/UpdateDatasetData'
+        UpdateDatasetResponse:
+            type: object
+            properties:
+                dataset:
+                    $ref: '#/components/schemas/DatasetView'
+                receipt:
+                    $ref: '#/components/schemas/DatasetReceiptView'
         UpdateDictEntryRequest:
             type: object
             properties:

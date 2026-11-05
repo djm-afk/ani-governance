@@ -58,6 +58,33 @@ const (
 	modelDevFinetuningReadinessAction
 	modelDevEnsureEnvironmentAction
 	modelDevGetEnvironmentAction
+
+	modelDevCreateDatasetAction
+	modelDevListDatasetsAction
+	modelDevGetDatasetAction
+	modelDevUpdateDatasetAction
+	modelDevArchiveDatasetAction
+	modelDevInspectDatasetSourceAction
+	modelDevImportDatasetAction
+	modelDevListDatasetVersionsAction
+	modelDevGetInputVersionPreviewAction
+	modelDevListDatasetImportTasksAction
+	modelDevGetDatasetImportTaskAction
+	modelDevCancelDatasetImportAction
+	modelDevRetryDatasetImportAction
+	modelDevListDatasetOperationsAction
+)
+
+// Dataset capabilities live under the MODELDEV business module: they are
+// ModelDev's own entries, not model-repository assets. The two InputVersion
+// reads move to dataset:read in one step; the deployed database had them bound
+// to modeldev:input:list/get, so the seed carries those grants over first.
+const (
+	ModelDevDatasetReadPermissionCode    = "modeldev:dataset:read"
+	ModelDevDatasetCreatePermissionCode  = "modeldev:dataset:create"
+	ModelDevDatasetUpdatePermissionCode  = "modeldev:dataset:update"
+	ModelDevDatasetArchivePermissionCode = "modeldev:dataset:archive"
+	ModelDevDatasetImportPermissionCode  = "modeldev:dataset:import"
 )
 
 const (
@@ -74,7 +101,87 @@ const (
 	ModelDevGetInputVersionPath     = "/api/v1/modeldev/input-versions/{input_version_id}"
 	ModelDevReadinessPath           = "/api/v1/modeldev/finetuning/readiness/check"
 	ModelDevListInputVersionsPath   = "/api/v1/modeldev/input-versions"
+
+	ModelDevCreateDatasetPath          = "/api/v1/modeldev/datasets"
+	ModelDevListDatasetsPath           = "/api/v1/modeldev/datasets"
+	ModelDevGetDatasetPath             = "/api/v1/modeldev/datasets/{dataset_id}"
+	ModelDevUpdateDatasetPath          = "/api/v1/modeldev/datasets/{dataset_id}"
+	ModelDevArchiveDatasetPath         = "/api/v1/modeldev/datasets/{dataset_id}:archive"
+	ModelDevRestoreDatasetPath         = "/api/v1/modeldev/datasets/{dataset_id}:restore"
+	ModelDevInspectDatasetSourcePath   = "/api/v1/modeldev/dataset-sources:inspect"
+	ModelDevImportDatasetVersionPath   = "/api/v1/modeldev/datasets/{dataset_id}:import"
+	ModelDevListDatasetVersionsPath    = "/api/v1/modeldev/datasets/{dataset_id}/versions"
+	ModelDevGetInputVersionPreviewPath = "/api/v1/modeldev/input-versions/{input_version_id}/preview"
+	ModelDevListDatasetImportTasksPath = "/api/v1/modeldev/datasets/{dataset_id}/import-tasks"
+	ModelDevGetDatasetImportTaskPath   = "/api/v1/modeldev/dataset-import-tasks/{import_task_id}"
+	ModelDevCancelDatasetImportPath    = "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel"
+	ModelDevRetryDatasetImportPath     = "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry"
+	ModelDevListDatasetOperationsPath  = "/api/v1/modeldev/datasets/{dataset_id}/operations"
 )
+
+// ModelDevDatasetAction names one Dataset route. The public dataset paths are
+// not unique on their own — POST and GET share /api/v1/modeldev/datasets, and so
+// do GET detail and PATCH — so the caller names the action it is serving instead
+// of the data layer guessing from a path.
+type ModelDevDatasetAction string
+
+const (
+	ModelDevDatasetActionCreate          ModelDevDatasetAction = "create"
+	ModelDevDatasetActionList            ModelDevDatasetAction = "list"
+	ModelDevDatasetActionGet             ModelDevDatasetAction = "get"
+	ModelDevDatasetActionUpdate          ModelDevDatasetAction = "update"
+	ModelDevDatasetActionArchive         ModelDevDatasetAction = "archive"
+	ModelDevDatasetActionInspectSource   ModelDevDatasetAction = "inspect_source"
+	ModelDevDatasetActionImport          ModelDevDatasetAction = "import"
+	ModelDevDatasetActionListVersions    ModelDevDatasetAction = "list_versions"
+	ModelDevDatasetActionGetPreview      ModelDevDatasetAction = "get_preview"
+	ModelDevDatasetActionListImportTasks ModelDevDatasetAction = "list_import_tasks"
+	ModelDevDatasetActionGetImportTask   ModelDevDatasetAction = "get_import_task"
+	ModelDevDatasetActionCancelImport    ModelDevDatasetAction = "cancel_import"
+	ModelDevDatasetActionRetryImport     ModelDevDatasetAction = "retry_import"
+	ModelDevDatasetActionListOperations  ModelDevDatasetAction = "list_operations"
+)
+
+// AuthorizeDataset checks the current grant for one Dataset route: the current
+// tenant/user/role/data-scope chain, the dataset capability that governs it and
+// the exact catalog API row. It is the only Dataset entry point, so every route
+// gets the same checks in the same order.
+func (r *ModelDevAuthorizationRepo) AuthorizeDataset(ctx context.Context, tenantID, userID uint32, action ModelDevDatasetAction) error {
+	var internal modelDevAuthorizationAction
+	switch action {
+	case ModelDevDatasetActionCreate:
+		internal = modelDevCreateDatasetAction
+	case ModelDevDatasetActionList:
+		internal = modelDevListDatasetsAction
+	case ModelDevDatasetActionGet:
+		internal = modelDevGetDatasetAction
+	case ModelDevDatasetActionUpdate:
+		internal = modelDevUpdateDatasetAction
+	case ModelDevDatasetActionArchive:
+		internal = modelDevArchiveDatasetAction
+	case ModelDevDatasetActionInspectSource:
+		internal = modelDevInspectDatasetSourceAction
+	case ModelDevDatasetActionImport:
+		internal = modelDevImportDatasetAction
+	case ModelDevDatasetActionListVersions:
+		internal = modelDevListDatasetVersionsAction
+	case ModelDevDatasetActionGetPreview:
+		internal = modelDevGetInputVersionPreviewAction
+	case ModelDevDatasetActionListImportTasks:
+		internal = modelDevListDatasetImportTasksAction
+	case ModelDevDatasetActionGetImportTask:
+		internal = modelDevGetDatasetImportTaskAction
+	case ModelDevDatasetActionCancelImport:
+		internal = modelDevCancelDatasetImportAction
+	case ModelDevDatasetActionRetryImport:
+		internal = modelDevRetryDatasetImportAction
+	case ModelDevDatasetActionListOperations:
+		internal = modelDevListDatasetOperationsAction
+	default:
+		return ErrModelDevAuthorizationDenied
+	}
+	return r.authorizeCurrent(ctx, tenantID, userID, internal)
+}
 
 // AuthorizeQuery checks the current independent GET grant and ALL data scope.
 // Only these fixed route templates can produce downstream query delegation.
@@ -294,7 +401,7 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 		permission.IDIn(permissionIDs...), permission.StatusEQ(permission.StatusOn), permission.DeletedAtIsNil(),
 	)
 	switch action {
-	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListExecutionPodsAction, modelDevListExecutionEventsAction, modelDevExecutionLogStreamAction, modelDevExecutionMetricsAction, modelDevListImplementationsAction, modelDevGetInputVersionAction, modelDevListInputVersionsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction, modelDevFinetuningArtifactsAction, modelDevFinetuningReadinessAction:
+	case modelDevCreateAction, modelDevGetExecutionAction, modelDevListArtifactsAction, modelDevDownloadArtifactAction, modelDevStopAction, modelDevListExecutionsAction, modelDevGetExecutionLogsAction, modelDevListExecutionPodsAction, modelDevListExecutionEventsAction, modelDevExecutionLogStreamAction, modelDevExecutionMetricsAction, modelDevListImplementationsAction, modelDevFinetuningExistingModelAction, modelDevFinetuningNewModelAction, modelDevFinetuningArtifactsAction, modelDevFinetuningReadinessAction:
 		// Create retains its permission-to-API check below.
 	case modelDevEnsureEnvironmentAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageEnvironmentPermissionCode))
@@ -304,6 +411,26 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageInputPermissionCode))
 	case modelDevManageExecutionAction, modelDevResumeRegistrationAction:
 		permissionQuery.Where(permission.CodeEQ(ModelDevManageExecutionPermissionCode))
+	// Asset reads, including the two InputVersion routes that used to be bound
+	// to modeldev:input:list/get. They share one capability, so a role granted
+	// dataset:read can read either and nothing else follows from it.
+	case modelDevGetInputVersionAction, modelDevListInputVersionsAction,
+		modelDevListDatasetsAction, modelDevGetDatasetAction, modelDevListDatasetVersionsAction,
+		modelDevGetInputVersionPreviewAction, modelDevListDatasetImportTasksAction,
+		modelDevGetDatasetImportTaskAction, modelDevListDatasetOperationsAction:
+		permissionQuery.Where(permission.CodeEQ(ModelDevDatasetReadPermissionCode))
+	case modelDevCreateDatasetAction:
+		permissionQuery.Where(permission.CodeEQ(ModelDevDatasetCreatePermissionCode))
+	case modelDevUpdateDatasetAction:
+		permissionQuery.Where(permission.CodeEQ(ModelDevDatasetUpdatePermissionCode))
+	case modelDevArchiveDatasetAction:
+		permissionQuery.Where(permission.CodeEQ(ModelDevDatasetArchivePermissionCode))
+	case modelDevInspectDatasetSourceAction, modelDevImportDatasetAction,
+		modelDevCancelDatasetImportAction, modelDevRetryDatasetImportAction:
+		// Source inspection is a read that only precedes an import, so it needs
+		// the import capability: a caller who may not import must not be able to
+		// enumerate a repository through it.
+		permissionQuery.Where(permission.CodeEQ(ModelDevDatasetImportPermissionCode))
 	default:
 		return ErrModelDevAuthorizationDenied
 	}
@@ -358,6 +485,34 @@ func (r *ModelDevAuthorizationRepo) authorizeCurrent(ctx context.Context, tenant
 			path, method = ModelDevGetInputVersionPath, "GET"
 		case modelDevListInputVersionsAction:
 			path, method = ModelDevListInputVersionsPath, "GET"
+		case modelDevCreateDatasetAction:
+			path, method = ModelDevCreateDatasetPath, "POST"
+		case modelDevListDatasetsAction:
+			path, method = ModelDevListDatasetsPath, "GET"
+		case modelDevGetDatasetAction:
+			path, method = ModelDevGetDatasetPath, "GET"
+		case modelDevUpdateDatasetAction:
+			path, method = ModelDevUpdateDatasetPath, "PATCH"
+		case modelDevArchiveDatasetAction:
+			path, method = ModelDevArchiveDatasetPath, "POST"
+		case modelDevInspectDatasetSourceAction:
+			path, method = ModelDevInspectDatasetSourcePath, "POST"
+		case modelDevImportDatasetAction:
+			path, method = ModelDevImportDatasetVersionPath, "POST"
+		case modelDevListDatasetVersionsAction:
+			path, method = ModelDevListDatasetVersionsPath, "GET"
+		case modelDevGetInputVersionPreviewAction:
+			path, method = ModelDevGetInputVersionPreviewPath, "GET"
+		case modelDevListDatasetImportTasksAction:
+			path, method = ModelDevListDatasetImportTasksPath, "GET"
+		case modelDevGetDatasetImportTaskAction:
+			path, method = ModelDevGetDatasetImportTaskPath, "GET"
+		case modelDevCancelDatasetImportAction:
+			path, method = ModelDevCancelDatasetImportPath, "POST"
+		case modelDevRetryDatasetImportAction:
+			path, method = ModelDevRetryDatasetImportPath, "POST"
+		case modelDevListDatasetOperationsAction:
+			path, method = ModelDevListDatasetOperationsPath, "GET"
 		case modelDevFinetuningArtifactsAction:
 			if err := authorizeModelDevAPI(ctx, tx, permissionIDs, "/api/v1/model-versions/{model_version_id}", "GET", api.BusinessModuleModel); err != nil {
 				return err

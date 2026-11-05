@@ -51,6 +51,15 @@ func (s *ModelDevService) EnsureTenantExecutionEnvironment(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+	// Ensure starts new environment work, so it shares the maintenance pause with
+	// training admission and Dataset import. The read path below does not.
+	if s.createMaintenance != nil {
+		finish, allowed := s.createMaintenance.begin()
+		if !allowed {
+			return nil, errors.ServiceUnavailable("MODELDEV_MAINTENANCE", "environment ensure is paused for maintenance")
+		}
+		defer finish()
+	}
 	out, err := s.resolver.EnsureTenantExecutionEnvironment(ctx, scope, &modeldevcontractv1.EnsureTenantExecutionEnvironmentRequest{OperationId: operationID})
 	if err != nil {
 		return nil, modelDevEnvironmentFailure(err)
