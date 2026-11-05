@@ -5,11 +5,12 @@ import (
 	"testing"
 )
 
-// TestPlatformComponentLogScopeRegistry 验证 26 条注册项都能构造出检索范围，
+// TestPlatformComponentLogScopeRegistry 验证全部注册项都能构造出检索范围，
 // 且范围只来自注册表：namespace、Kind 与 Pod 模式逐条对齐。
+// 25 = #62 初版 26 条减去 #90 移除的 accelerator node agent。
 func TestPlatformComponentLogScopeRegistry(t *testing.T) {
-	if len(platformComponentRegistry) != 26 {
-		t.Fatalf("registry size = %d, want 26", len(platformComponentRegistry))
+	if len(platformComponentRegistry) != 25 {
+		t.Fatalf("registry size = %d, want 25", len(platformComponentRegistry))
 	}
 	for _, entry := range platformComponentRegistry {
 		scope, ok := PlatformComponentLogScopeFor(entry.Name)
