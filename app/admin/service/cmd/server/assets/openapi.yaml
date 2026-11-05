@@ -14046,6 +14046,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/VMOperation'
+    /api/v1/virtual-machines/{vm_id}/runtime:
+        get:
+            tags:
+                - VMService
+            operationId: VMService_GetVMRuntime
+            parameters:
+                - name: vm_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VMRuntime'
     /api/v1/virtual-machines/{vm_id}/snapshots:
         get:
             tags:

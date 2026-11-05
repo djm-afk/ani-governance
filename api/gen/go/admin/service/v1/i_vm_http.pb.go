@@ -36,6 +36,7 @@ const OperationVMServiceGetVM = "/admin.service.v1.VMService/GetVM"
 const OperationVMServiceGetVMDNSDefaults = "/admin.service.v1.VMService/GetVMDNSDefaults"
 const OperationVMServiceGetVMNetworkInterfaces = "/admin.service.v1.VMService/GetVMNetworkInterfaces"
 const OperationVMServiceGetVMOperation = "/admin.service.v1.VMService/GetVMOperation"
+const OperationVMServiceGetVMRuntime = "/admin.service.v1.VMService/GetVMRuntime"
 const OperationVMServiceGetVMSnapshot = "/admin.service.v1.VMService/GetVMSnapshot"
 const OperationVMServiceListVMDisks = "/admin.service.v1.VMService/ListVMDisks"
 const OperationVMServiceListVMMedia = "/admin.service.v1.VMService/ListVMMedia"
@@ -67,6 +68,7 @@ type VMServiceHTTPServer interface {
 	GetVMDNSDefaults(context.Context, *v11.GetDNSDefaultsRequest) (*v11.DNSDefaults, error)
 	GetVMNetworkInterfaces(context.Context, *v1.GetVMNetworkInterfacesRequest) (*v1.NetworkInterfaces, error)
 	GetVMOperation(context.Context, *v11.GetOperationRequest) (*v11.VMOperation, error)
+	GetVMRuntime(context.Context, *v11.GetVMRequest) (*v11.VMRuntime, error)
 	GetVMSnapshot(context.Context, *v11.GetSnapshotRequest) (*v11.VMSnapshot, error)
 	ListVMDisks(context.Context, *v11.GetVMRequest) (*v11.ListDisksResponse, error)
 	ListVMMedia(context.Context, *v11.ListMediaRequest) (*v11.ListMediaResponse, error)
@@ -91,6 +93,7 @@ func RegisterVMServiceHTTPServer(s *http.Server, srv VMServiceHTTPServer) {
 	r.POST("/api/v1/virtual-machines", _VMService_CreateVM0_HTTP_Handler(srv))
 	r.GET("/api/v1/virtual-machines", _VMService_ListVMs0_HTTP_Handler(srv))
 	r.GET("/api/v1/virtual-machines/{vm_id}", _VMService_GetVM0_HTTP_Handler(srv))
+	r.GET("/api/v1/virtual-machines/{vm_id}/runtime", _VMService_GetVMRuntime0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/virtual-machines/{data.vm_id}", _VMService_DeleteVM0_HTTP_Handler(srv))
 	r.GET("/api/v1/virtual-machines/{vm_id}/operations/{operation_id}", _VMService_GetVMOperation0_HTTP_Handler(srv))
 	r.POST("/api/v1/virtual-machines/{data.vm_id}/start", _VMService_StartVM0_HTTP_Handler(srv))
@@ -247,6 +250,28 @@ func _VMService_GetVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Conte
 			return err
 		}
 		reply := out.(*v11.VirtualMachine)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _VMService_GetVMRuntime0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v11.GetVMRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationVMServiceGetVMRuntime)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetVMRuntime(ctx, req.(*v11.GetVMRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v11.VMRuntime)
 		return ctx.Result(200, reply)
 	}
 }
@@ -818,6 +843,7 @@ type VMServiceHTTPClient interface {
 	GetVMDNSDefaults(ctx context.Context, req *v11.GetDNSDefaultsRequest, opts ...http.CallOption) (rsp *v11.DNSDefaults, err error)
 	GetVMNetworkInterfaces(ctx context.Context, req *v1.GetVMNetworkInterfacesRequest, opts ...http.CallOption) (rsp *v1.NetworkInterfaces, err error)
 	GetVMOperation(ctx context.Context, req *v11.GetOperationRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
+	GetVMRuntime(ctx context.Context, req *v11.GetVMRequest, opts ...http.CallOption) (rsp *v11.VMRuntime, err error)
 	GetVMSnapshot(ctx context.Context, req *v11.GetSnapshotRequest, opts ...http.CallOption) (rsp *v11.VMSnapshot, err error)
 	ListVMDisks(ctx context.Context, req *v11.GetVMRequest, opts ...http.CallOption) (rsp *v11.ListDisksResponse, err error)
 	ListVMMedia(ctx context.Context, req *v11.ListMediaRequest, opts ...http.CallOption) (rsp *v11.ListMediaResponse, err error)
@@ -1029,6 +1055,19 @@ func (c *VMServiceHTTPClientImpl) GetVMOperation(ctx context.Context, in *v11.Ge
 	pattern := "/api/v1/virtual-machines/{vm_id}/operations/{operation_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceGetVMOperation))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *VMServiceHTTPClientImpl) GetVMRuntime(ctx context.Context, in *v11.GetVMRequest, opts ...http.CallOption) (*v11.VMRuntime, error) {
+	var out v11.VMRuntime
+	pattern := "/api/v1/virtual-machines/{vm_id}/runtime"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationVMServiceGetVMRuntime))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

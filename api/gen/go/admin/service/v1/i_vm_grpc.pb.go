@@ -27,6 +27,7 @@ const (
 	VMService_CreateVM_FullMethodName               = "/admin.service.v1.VMService/CreateVM"
 	VMService_ListVMs_FullMethodName                = "/admin.service.v1.VMService/ListVMs"
 	VMService_GetVM_FullMethodName                  = "/admin.service.v1.VMService/GetVM"
+	VMService_GetVMRuntime_FullMethodName           = "/admin.service.v1.VMService/GetVMRuntime"
 	VMService_DeleteVM_FullMethodName               = "/admin.service.v1.VMService/DeleteVM"
 	VMService_GetVMOperation_FullMethodName         = "/admin.service.v1.VMService/GetVMOperation"
 	VMService_StartVM_FullMethodName                = "/admin.service.v1.VMService/StartVM"
@@ -63,6 +64,7 @@ type VMServiceClient interface {
 	CreateVM(ctx context.Context, in *v11.CreateVMRequest, opts ...grpc.CallOption) (*v11.VMAcceptance, error)
 	ListVMs(ctx context.Context, in *v11.ListVMsRequest, opts ...grpc.CallOption) (*v11.ListVMsResponse, error)
 	GetVM(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.VirtualMachine, error)
+	GetVMRuntime(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.VMRuntime, error)
 	DeleteVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMAcceptance, error)
 	GetVMOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
 	StartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
@@ -151,6 +153,16 @@ func (c *vMServiceClient) GetVM(ctx context.Context, in *v11.GetVMRequest, opts 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v11.VirtualMachine)
 	err := c.cc.Invoke(ctx, VMService_GetVM_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vMServiceClient) GetVMRuntime(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.VMRuntime, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v11.VMRuntime)
+	err := c.cc.Invoke(ctx, VMService_GetVMRuntime_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -416,6 +428,7 @@ type VMServiceServer interface {
 	CreateVM(context.Context, *v11.CreateVMRequest) (*v11.VMAcceptance, error)
 	ListVMs(context.Context, *v11.ListVMsRequest) (*v11.ListVMsResponse, error)
 	GetVM(context.Context, *v11.GetVMRequest) (*v11.VirtualMachine, error)
+	GetVMRuntime(context.Context, *v11.GetVMRequest) (*v11.VMRuntime, error)
 	DeleteVM(context.Context, *v11.ChangeVMRequest) (*v11.VMAcceptance, error)
 	GetVMOperation(context.Context, *v11.GetOperationRequest) (*v11.VMOperation, error)
 	StartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
@@ -467,6 +480,9 @@ func (UnimplementedVMServiceServer) ListVMs(context.Context, *v11.ListVMsRequest
 }
 func (UnimplementedVMServiceServer) GetVM(context.Context, *v11.GetVMRequest) (*v11.VirtualMachine, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVM not implemented")
+}
+func (UnimplementedVMServiceServer) GetVMRuntime(context.Context, *v11.GetVMRequest) (*v11.VMRuntime, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVMRuntime not implemented")
 }
 func (UnimplementedVMServiceServer) DeleteVM(context.Context, *v11.ChangeVMRequest) (*v11.VMAcceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteVM not implemented")
@@ -665,6 +681,24 @@ func _VMService_GetVM_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(VMServiceServer).GetVM(ctx, req.(*v11.GetVMRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VMService_GetVMRuntime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v11.GetVMRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VMServiceServer).GetVMRuntime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VMService_GetVMRuntime_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VMServiceServer).GetVMRuntime(ctx, req.(*v11.GetVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1124,6 +1158,10 @@ var VMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVM",
 			Handler:    _VMService_GetVM_Handler,
+		},
+		{
+			MethodName: "GetVMRuntime",
+			Handler:    _VMService_GetVMRuntime_Handler,
 		},
 		{
 			MethodName: "DeleteVM",

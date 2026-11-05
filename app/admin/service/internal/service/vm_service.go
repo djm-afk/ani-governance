@@ -262,6 +262,25 @@ func (s *VMService) GetVM(ctx context.Context, r *view.GetVMRequest) (*view.Virt
 	}
 	return out, err
 }
+
+// GetVMRuntime serves the dedicated read-only runtime entry point. Detail
+// pages keep using GetVM; this route lets the frontend collect guest state
+// lazily so a slow guest agent cannot block the first screen.
+func (s *VMService) GetVMRuntime(ctx context.Context, r *view.GetVMRequest) (*view.VMRuntime, error) {
+	if r == nil || !canonicalCatalogUUID(r.VmId) {
+		return nil, vmInvalid()
+	}
+	tenant, actor, err := s.scope(ctx, "runtime")
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.binding.client.Runtime(ctx, tenant, actor, r.VmId)
+	if err != nil {
+		return nil, err
+	}
+	out := new(view.VMRuntime)
+	return out, vmWire(result.GetRuntime(), out)
+}
 func (s *VMService) ListVMs(ctx context.Context, r *view.ListVMsRequest) (*view.ListVMsResponse, error) {
 	if r == nil {
 		return nil, vmInvalid()

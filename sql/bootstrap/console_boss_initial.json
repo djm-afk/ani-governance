@@ -7547,6 +7547,15 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/virtual-machines/{vm_id}/runtime",
+      "operation": "VMService_GetVMRuntime",
+      "module": "VIRTUAL_MACHINE",
+      "permissions": [
+        "vm:read"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/virtual-machines/{vm_id}/snapshots",
       "operation": "VMService_ListVMSnapshots",
       "module": "VIRTUAL_MACHINE",

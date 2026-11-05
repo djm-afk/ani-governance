@@ -63,6 +63,15 @@ func (c *VMClient) Get(ctx context.Context, t, a, id string) (*vm.VirtualMachine
 		return c.client.GetVM(ctx, &vm.GetVMRequest{TenantId: t, VmId: id})
 	})
 }
+
+// Runtime serves the dedicated runtime read: the owner collects guest state
+// exactly once for this call, with include_runtime set explicitly because the
+// public runtime route must not depend on the owner-side default.
+func (c *VMClient) Runtime(ctx context.Context, t, a, id string) (*vm.VirtualMachine, error) {
+	return vmCall(c, ctx, t, a, func(ctx context.Context) (*vm.VirtualMachine, error) {
+		return c.client.GetVM(ctx, &vm.GetVMRequest{TenantId: t, VmId: id, IncludeRuntime: proto.Bool(true)})
+	})
+}
 func (c *VMClient) List(ctx context.Context, t, a string, page, size uint32, state, keyword string) (*vm.ListVMsResponse, error) {
 	return vmCall(c, ctx, t, a, func(ctx context.Context) (*vm.ListVMsResponse, error) {
 		return c.client.ListVMs(ctx, &vm.ListVMsRequest{TenantId: t, Page: page, PageSize: size, State: state, Keyword: keyword})

@@ -32,7 +32,7 @@ func RegisterVMHTTPServer(server *http.Server, s *service.VMService) {
 		{"set-security-groups", "SetVMSecurityGroups", change},
 		{"create", "CreateVM", func() proto.Message { return new(view.CreateVMRequest) }},
 		{"list", "ListVMs", func() proto.Message { return new(view.ListVMsRequest) }},
-		{"get", "GetVM", get}, {"delete", "DeleteVM", change},
+		{"get", "GetVM", get}, {"runtime", "GetVMRuntime", get}, {"delete", "DeleteVM", change},
 		{"operation", "GetVMOperation", func() proto.Message { return new(view.GetOperationRequest) }},
 		{"start", "StartVM", change}, {"stop", "StopVM", change}, {"restart", "RestartVM", change}, {"force-stop", "ForceStopVM", change},
 		{"disks", "ListVMDisks", get}, {"create-disk", "CreateVMDisk", change}, {"attach-disk", "AttachVMDisk", change}, {"detach-disk", "DetachVMDisk", change}, {"delete-disk", "DeleteVMDisk", change},
@@ -185,6 +185,8 @@ func invokeVMHTTP(ctx context.Context, s *service.VMService, action string, in p
 		return s.ListVMs(ctx, in.(*view.ListVMsRequest))
 	case "get":
 		return s.GetVM(ctx, in.(*view.GetVMRequest))
+	case "runtime":
+		return s.GetVMRuntime(ctx, in.(*view.GetVMRequest))
 	case "delete":
 		return s.DeleteVM(ctx, in.(*view.ChangeVMRequest))
 	case "operation":
