@@ -98,7 +98,10 @@ func modelDevFinetuningBusinessReason(reason modeldevv1.ErrorReason) bool {
 		modeldevv1.ErrorReason_ERROR_REASON_CONTEXT_LIMIT_EXCEEDED, modeldevv1.ErrorReason_ERROR_REASON_CONTEXT_LIMIT_UNKNOWN,
 		modeldevv1.ErrorReason_ERROR_REASON_FINETUNING_TEMPLATE_REQUIRED, modeldevv1.ErrorReason_ERROR_REASON_FINETUNING_TEMPLATE_UNSUPPORTED,
 		modeldevv1.ErrorReason_ERROR_REASON_CONTENT_LIMIT_EXCEEDED, modeldevv1.ErrorReason_ERROR_REASON_STRUCTURE_LIMIT_EXCEEDED,
-		modeldevv1.ErrorReason_ERROR_REASON_DATASET_RECORD_TOO_LARGE, modeldevv1.ErrorReason_ERROR_REASON_DATASET_INVALID:
+		modeldevv1.ErrorReason_ERROR_REASON_DATASET_RECORD_TOO_LARGE, modeldevv1.ErrorReason_ERROR_REASON_DATASET_INVALID,
+		// A READY input whose format the execution kind does not accept is a
+		// definitive business answer, not an upstream-unavailable failure.
+		modeldevv1.ErrorReason_ERROR_REASON_INPUT_KIND_FORMAT_MISMATCH:
 		return true
 	default:
 		return false

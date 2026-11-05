@@ -394,7 +394,10 @@ func modelDevResolutionBusinessReason(reason modeldevcontractv1.ErrorReason) boo
 		modeldevcontractv1.ErrorReason_ERROR_REASON_CONTEXT_LIMIT_EXCEEDED, modeldevcontractv1.ErrorReason_ERROR_REASON_CONTEXT_LIMIT_UNKNOWN,
 		modeldevcontractv1.ErrorReason_ERROR_REASON_FINETUNING_TEMPLATE_REQUIRED, modeldevcontractv1.ErrorReason_ERROR_REASON_FINETUNING_TEMPLATE_UNSUPPORTED,
 		modeldevcontractv1.ErrorReason_ERROR_REASON_CONTENT_LIMIT_EXCEEDED, modeldevcontractv1.ErrorReason_ERROR_REASON_STRUCTURE_LIMIT_EXCEEDED,
-		modeldevcontractv1.ErrorReason_ERROR_REASON_DATASET_RECORD_TOO_LARGE, modeldevcontractv1.ErrorReason_ERROR_REASON_DATASET_INVALID:
+		modeldevcontractv1.ErrorReason_ERROR_REASON_DATASET_RECORD_TOO_LARGE, modeldevcontractv1.ErrorReason_ERROR_REASON_DATASET_INVALID,
+		// A READY input whose format the execution kind does not accept: a
+		// definitive business answer that must map to 422, not the generic 503.
+		modeldevcontractv1.ErrorReason_ERROR_REASON_INPUT_KIND_FORMAT_MISMATCH:
 		return true
 	default:
 		return false
