@@ -54,9 +54,11 @@ const OperationNetworkServiceListNetworkInstances = "/admin.service.v1.NetworkSe
 const OperationNetworkServiceListSecurityGroupBindings = "/admin.service.v1.NetworkService/ListSecurityGroupBindings"
 const OperationNetworkServiceListSecurityGroupRules = "/admin.service.v1.NetworkService/ListSecurityGroupRules"
 const OperationNetworkServiceListSecurityGroups = "/admin.service.v1.NetworkService/ListSecurityGroups"
+const OperationNetworkServiceListSubnetAssociatedInstances = "/admin.service.v1.NetworkService/ListSubnetAssociatedInstances"
 const OperationNetworkServiceListSubnets = "/admin.service.v1.NetworkService/ListSubnets"
 const OperationNetworkServiceListVNicBindingTargets = "/admin.service.v1.NetworkService/ListVNicBindingTargets"
 const OperationNetworkServiceListVNics = "/admin.service.v1.NetworkService/ListVNics"
+const OperationNetworkServiceListVPCAssociatedInstances = "/admin.service.v1.NetworkService/ListVPCAssociatedInstances"
 const OperationNetworkServiceListVPCCIDRPresets = "/admin.service.v1.NetworkService/ListVPCCIDRPresets"
 const OperationNetworkServiceListVPCs = "/admin.service.v1.NetworkService/ListVPCs"
 const OperationNetworkServiceSetEIPSecurityGroups = "/admin.service.v1.NetworkService/SetEIPSecurityGroups"
@@ -100,9 +102,11 @@ type NetworkServiceHTTPServer interface {
 	ListSecurityGroupBindings(context.Context, *v1.ListSecurityGroupBindingsRequest) (*v1.ListSecurityGroupBindingsResponse, error)
 	ListSecurityGroupRules(context.Context, *v1.ListSecurityGroupRulesRequest) (*v1.ListSecurityGroupRulesResponse, error)
 	ListSecurityGroups(context.Context, *v1.ListSecurityGroupsRequest) (*v1.ListSecurityGroupsResponse, error)
+	ListSubnetAssociatedInstances(context.Context, *v1.ListSubnetAssociatedInstancesRequest) (*v1.ListAssociatedInstancesResponse, error)
 	ListSubnets(context.Context, *v1.ListSubnetsRequest) (*v1.ListSubnetsResponse, error)
 	ListVNicBindingTargets(context.Context, *v1.ListVNicBindingTargetsRequest) (*v1.ListVNicBindingTargetsResponse, error)
 	ListVNics(context.Context, *v1.ListVNicsRequest) (*v1.ListVNicsResponse, error)
+	ListVPCAssociatedInstances(context.Context, *v1.ListVPCAssociatedInstancesRequest) (*v1.ListAssociatedInstancesResponse, error)
 	ListVPCCIDRPresets(context.Context, *v1.ListVPCCIDRPresetsRequest) (*v1.ListVPCCIDRPresetsResponse, error)
 	ListVPCs(context.Context, *v1.ListVPCsRequest) (*v1.ListVPCsResponse, error)
 	SetEIPSecurityGroups(context.Context, *v1.SetEIPSecurityGroupsRequest) (*v1.SetEIPSecurityGroupsResponse, error)
@@ -138,6 +142,7 @@ func RegisterNetworkServiceHTTPServer(s *http.Server, srv NetworkServiceHTTPServ
 	r.GET("/api/v1/networks/vpcs", _NetworkService_ListVPCs0_HTTP_Handler(srv))
 	r.POST("/api/v1/networks/vpcs", _NetworkService_CreateVPC0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/networks/vpcs/{vpc_id}", _NetworkService_DeleteVPC0_HTTP_Handler(srv))
+	r.GET("/api/v1/networks/vpcs/{vpc_id}/associated-instances", _NetworkService_ListVPCAssociatedInstances0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/operations/{operation_id}", _NetworkService_GetOperation0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/eips/{eip_id}", _NetworkService_GetEIP0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/eips", _NetworkService_ListEIPs0_HTTP_Handler(srv))
@@ -149,6 +154,7 @@ func RegisterNetworkServiceHTTPServer(s *http.Server, srv NetworkServiceHTTPServ
 	r.GET("/api/v1/networks/subnets/{subnet_id}", _NetworkService_GetSubnet0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/subnets", _NetworkService_ListSubnets0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/networks/subnets/{subnet_id}", _NetworkService_DeleteSubnet0_HTTP_Handler(srv))
+	r.GET("/api/v1/networks/subnets/{subnet_id}/associated-instances", _NetworkService_ListSubnetAssociatedInstances0_HTTP_Handler(srv))
 	r.GET("/api/v1/networks/snat/bindings/{binding_id}", _NetworkService_GetVPCSnatBinding0_HTTP_Handler(srv))
 	r.PATCH("/api/v1/networks/snat/bindings/{binding_id}", _NetworkService_SetVPCSnatEnabled0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/networks/snat/bindings/{binding_id}", _NetworkService_DeleteVPCSnatBinding0_HTTP_Handler(srv))
@@ -685,6 +691,28 @@ func _NetworkService_DeleteVPC0_HTTP_Handler(srv NetworkServiceHTTPServer) func(
 	}
 }
 
+func _NetworkService_ListVPCAssociatedInstances0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListVPCAssociatedInstancesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceListVPCAssociatedInstances)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListVPCAssociatedInstances(ctx, req.(*v1.ListVPCAssociatedInstancesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListAssociatedInstancesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _NetworkService_GetOperation0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in v1.GetOperationRequest
@@ -924,6 +952,28 @@ func _NetworkService_DeleteSubnet0_HTTP_Handler(srv NetworkServiceHTTPServer) fu
 	}
 }
 
+func _NetworkService_ListSubnetAssociatedInstances0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListSubnetAssociatedInstancesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationNetworkServiceListSubnetAssociatedInstances)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListSubnetAssociatedInstances(ctx, req.(*v1.ListSubnetAssociatedInstancesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListAssociatedInstancesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _NetworkService_GetVPCSnatBinding0_HTTP_Handler(srv NetworkServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in v1.GetVPCSnatBindingRequest
@@ -1160,9 +1210,11 @@ type NetworkServiceHTTPClient interface {
 	ListSecurityGroupBindings(ctx context.Context, req *v1.ListSecurityGroupBindingsRequest, opts ...http.CallOption) (rsp *v1.ListSecurityGroupBindingsResponse, err error)
 	ListSecurityGroupRules(ctx context.Context, req *v1.ListSecurityGroupRulesRequest, opts ...http.CallOption) (rsp *v1.ListSecurityGroupRulesResponse, err error)
 	ListSecurityGroups(ctx context.Context, req *v1.ListSecurityGroupsRequest, opts ...http.CallOption) (rsp *v1.ListSecurityGroupsResponse, err error)
+	ListSubnetAssociatedInstances(ctx context.Context, req *v1.ListSubnetAssociatedInstancesRequest, opts ...http.CallOption) (rsp *v1.ListAssociatedInstancesResponse, err error)
 	ListSubnets(ctx context.Context, req *v1.ListSubnetsRequest, opts ...http.CallOption) (rsp *v1.ListSubnetsResponse, err error)
 	ListVNicBindingTargets(ctx context.Context, req *v1.ListVNicBindingTargetsRequest, opts ...http.CallOption) (rsp *v1.ListVNicBindingTargetsResponse, err error)
 	ListVNics(ctx context.Context, req *v1.ListVNicsRequest, opts ...http.CallOption) (rsp *v1.ListVNicsResponse, err error)
+	ListVPCAssociatedInstances(ctx context.Context, req *v1.ListVPCAssociatedInstancesRequest, opts ...http.CallOption) (rsp *v1.ListAssociatedInstancesResponse, err error)
 	ListVPCCIDRPresets(ctx context.Context, req *v1.ListVPCCIDRPresetsRequest, opts ...http.CallOption) (rsp *v1.ListVPCCIDRPresetsResponse, err error)
 	ListVPCs(ctx context.Context, req *v1.ListVPCsRequest, opts ...http.CallOption) (rsp *v1.ListVPCsResponse, err error)
 	SetEIPSecurityGroups(ctx context.Context, req *v1.SetEIPSecurityGroupsRequest, opts ...http.CallOption) (rsp *v1.SetEIPSecurityGroupsResponse, err error)
@@ -1622,6 +1674,19 @@ func (c *NetworkServiceHTTPClientImpl) ListSecurityGroups(ctx context.Context, i
 	return &out, nil
 }
 
+func (c *NetworkServiceHTTPClientImpl) ListSubnetAssociatedInstances(ctx context.Context, in *v1.ListSubnetAssociatedInstancesRequest, opts ...http.CallOption) (*v1.ListAssociatedInstancesResponse, error) {
+	var out v1.ListAssociatedInstancesResponse
+	pattern := "/api/v1/networks/subnets/{subnet_id}/associated-instances"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationNetworkServiceListSubnetAssociatedInstances))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *NetworkServiceHTTPClientImpl) ListSubnets(ctx context.Context, in *v1.ListSubnetsRequest, opts ...http.CallOption) (*v1.ListSubnetsResponse, error) {
 	var out v1.ListSubnetsResponse
 	pattern := "/api/v1/networks/subnets"
@@ -1653,6 +1718,19 @@ func (c *NetworkServiceHTTPClientImpl) ListVNics(ctx context.Context, in *v1.Lis
 	pattern := "/api/v1/networks/vnics"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationNetworkServiceListVNics))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *NetworkServiceHTTPClientImpl) ListVPCAssociatedInstances(ctx context.Context, in *v1.ListVPCAssociatedInstancesRequest, opts ...http.CallOption) (*v1.ListAssociatedInstancesResponse, error) {
+	var out v1.ListAssociatedInstancesResponse
+	pattern := "/api/v1/networks/vpcs/{vpc_id}/associated-instances"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationNetworkServiceListVPCAssociatedInstances))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

@@ -12,10 +12,12 @@ var ServiceTagToBusinessModule = map[string]identityV1.Module{
 	"ImageService":    identityV1.Module_IMAGE,
 	"InstanceService": identityV1.Module_INSTANCE,
 	// 首页资源统计卡片为租户级只读聚合，挂 INSTANCE 模块（现有套餐均含 INSTANCE）。
-	"OverviewService":             identityV1.Module_INSTANCE,
-	"StorageService":              identityV1.Module_STORAGE,
-	"VMService":                   identityV1.Module_VIRTUAL_MACHINE,
-	"SandboxService":              identityV1.Module_INSTANCE,
+	"OverviewService": identityV1.Module_INSTANCE,
+	"StorageService":  identityV1.Module_STORAGE,
+	"VMService":       identityV1.Module_VIRTUAL_MACHINE,
+	// 租户镜像目录与 VM 同属一个套餐模块：能用 VM 的租户才应该能列/传镜像。
+	"VMImageService":              identityV1.Module_VIRTUAL_MACHINE,
+	"SandboxService":              identityV1.Module_SANDBOX,
 	"ComputePresetService":        identityV1.Module_SYSTEM,
 	"AcceleratorAdminService":     identityV1.Module_ACCELERATOR,
 	"AcceleratorService":          identityV1.Module_ACCELERATOR,
@@ -30,7 +32,7 @@ var ServiceTagToBusinessModule = map[string]identityV1.Module{
 	"InferenceService":            identityV1.Module_INFERENCE,
 	"InferenceKeyService":         identityV1.Module_INFERENCE,
 	"InferenceDiagnosticsService": identityV1.Module_INFERENCE,
-	"ModelDevService":             identityV1.Module_MODEL,
+	"ModelDevService":             identityV1.Module_MODELDEV,
 	"AdminPortalService":          identityV1.Module_DASHBOARD,
 	"DashboardService":            identityV1.Module_DASHBOARD,
 

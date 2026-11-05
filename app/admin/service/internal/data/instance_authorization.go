@@ -75,6 +75,8 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 		return r.current.authorizeRoute(ctx, tenant, user, path, "NETWORK", method)
 	}
 	allowed := false
+	// 沙箱是独立套餐模块，不能复用容器实例的 INSTANCE 资格。
+	module := "INSTANCE"
 	switch path {
 	case InstanceNetworkInterfacesPath:
 		allowed = method == "GET"
@@ -94,19 +96,24 @@ func (r *InstanceAuthorizationRepo) Authorize(ctx context.Context, tenant, user 
 		allowed = method == "GET"
 	case SandboxCreatePath:
 		allowed = method == "POST" || method == "GET"
+		module = "SANDBOX"
 	case SandboxPausePath, SandboxResumePath, SandboxCodeRunPath, SandboxTokenCreatePath:
 		allowed = method == "POST"
+		module = "SANDBOX"
 	case SandboxFilesMutatePath:
 		allowed = method == "POST" || method == "DELETE"
+		module = "SANDBOX"
 	case SandboxDeletePath, SandboxTokenRevokePath:
 		allowed = method == "DELETE"
+		module = "SANDBOX"
 	case SandboxGetPath, SandboxOperationPath, SandboxCodeRunGetPath, SandboxFilesListPath, SandboxFilesContentPath, SandboxFilesOperationPath:
 		allowed = method == "GET"
+		module = "SANDBOX"
 	}
 	if !allowed || r == nil || r.current == nil {
 		return ErrActionAuthorizationDenied
 	}
-	return r.current.authorizeRoute(ctx, tenant, user, path, "INSTANCE", method)
+	return r.current.authorizeRoute(ctx, tenant, user, path, module, method)
 }
 
 // AuthorizeSource 供首页聚合按数据源二次鉴权：只允许 GET，模块由调用方指定

@@ -510,14 +510,6 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		sandboxOwner = instanceOwner
 	}
 	sandboxService := service.NewSandboxService(sandboxOwner, data.NewInstanceAuthorizationRepo(entClient), tenantRepo, quotaLedgerRepo)
-	overviewService := service.NewOverviewService(
-		ctx.NewLoggerHelper("overview/service/admin-service"),
-		instanceService,
-		inferenceService,
-		modelService,
-		quotaAdminRepo,
-		data.NewInstanceAuthorizationRepo(entClient),
-	)
 	vmAcceptance, err := service.NewGpuAcceptance(quotaLedgerRepo, quotaRegistry, tenantRepo, nil, vmBinding, quotaWorker)
 	if err != nil {
 		rollback()
@@ -528,6 +520,25 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		vmSessions = instanceSession
 	}
 	vmService := service.NewVMService(vmAcceptance, vmBinding, tenantRepo, quotaLedgerRepo, vmSessions)
+	// The image lane reuses the same trusted Resource connection and the same
+	// compiled tenant permission check; it is a separate service so the VM quota
+	// admission chain stays untouched by it.
+	var vmImageClient service.VMImageOwnerClient
+	if instanceOwner != nil {
+		vmImageClient = instanceOwner.VMImage()
+	}
+	vmImageService := service.NewVMImageService(vmImageClient, data.NewVMAuthorizationRepo(entClient), tenantRepo)
+	// 首页实例卡要合并容器实例、虚拟机与沙箱，因此 overviewService 必须在这三者之后构造。
+	overviewService := service.NewOverviewService(
+		ctx.NewLoggerHelper("overview/service/admin-service"),
+		instanceService,
+		inferenceService,
+		modelService,
+		vmService,
+		sandboxService,
+		quotaAdminRepo,
+		data.NewInstanceAuthorizationRepo(entClient),
+	)
 	computeService := service.NewComputePresetService(computeClient, computeCatalog)
 	modeldevGPU := service.ModelDevGPUAdmission{Eligibility: data.NewGpuUseAuthorizationRepo(entClient)}
 	if acceleratorClient != nil {
@@ -591,6 +602,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 	if restServer != nil {
 		server.RegisterVMHTTPServer(restServer, vmService)
 		server.RegisterVMLogsHTTP(restServer, vmService)
+		server.RegisterVMImageHTTPServer(restServer, vmImageService)
 		gpuMonitoringService := service.NewGpuMonitoringService(acceleratorService, observabilityClient, instanceService, inferenceService, data.NewGpuResourceReadAuthorizationRepo(entClient))
 		server.RegisterGpuHTTPServer(restServer, gpuMonitoringService)
 		server.RegisterGpuTenantHTTPServer(restServer, service.NewGpuTenantAdminService(quotaAdminRepo, gpuMonitoringService, acceleratorService))
