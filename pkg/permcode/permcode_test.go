@@ -270,11 +270,13 @@ func TestCountsAndKeys(t *testing.T) {
 	// platformBaseNetworkEntry 补记 2060ba35（#93）合入 capability_gen 的
 	// GET /api/v1/networks/instances：该提交漏更本测试计数，属存量缺陷修复。
 	const platformBaseNetworkEntry = 1
-	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry; CapabilityCount() != want {
+	// vmRuntimeCapabilities 补记 GET /api/v1/virtual-machines/{vm_id}/runtime（vm:read）。
+	const vmRuntimeCapabilities = 1
+	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmRuntimeCapabilities; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry; len(keys) != want {
+	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmRuntimeCapabilities; len(keys) != want {
 		t.Errorf("AllKeys() = %d, want %d", len(keys), want)
 	}
 	keySet := make(map[string]bool, len(keys))
