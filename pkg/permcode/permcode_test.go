@@ -255,7 +255,7 @@ func TestCountsAndKeys(t *testing.T) {
 	// describe, so each new (method, path) still needs its own capability row.
 	const networkAssociatedInstances = 2
 	networkAssociatedInstanceReads := map[string]expectation{
-		"GET /api/v1/networks/vpcs/{vpc_id}/associated-instances":     {Code: "network:vpc:get", Source: "sql/data/20261009_network_permissions.sql ; pkg/middleware/auth/network_policy.go", BusinessModule: "NETWORK", ScopeKind: "tenant"},
+		"GET /api/v1/networks/vpcs/{vpc_id}/associated-instances":       {Code: "network:vpc:get", Source: "sql/data/20261009_network_permissions.sql ; pkg/middleware/auth/network_policy.go", BusinessModule: "NETWORK", ScopeKind: "tenant"},
 		"GET /api/v1/networks/subnets/{subnet_id}/associated-instances": {Code: "network:subnet:get", Source: "sql/data/20261009_network_permissions.sql ; pkg/middleware/auth/network_policy.go", BusinessModule: "NETWORK", ScopeKind: "tenant"},
 	}
 	// The tenant VM image catalog adds six route rows. The key set is keyed by
@@ -265,12 +265,12 @@ func TestCountsAndKeys(t *testing.T) {
 	const vmImageCapabilities = 6
 	const vmImageKeysPerRoute = 6
 	vmImageRoutes := map[string]expectation{
-		"GET /api/v1/virtual-machine-images":                                   {Code: "vm:read", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
-		"GET /api/v1/virtual-machine-images/{image_id}":                        {Code: "vm:read", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
-		"POST /api/v1/virtual-machine-images":                                  {Code: "vm:image:upload", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
-		"POST /api/v1/virtual-machine-images/{image_id}/upload-sessions":       {Code: "vm:image:upload", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
-		"PATCH /api/v1/virtual-machine-images/{image_id}":                      {Code: "vm:image:update", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
-		"DELETE /api/v1/virtual-machine-images/{image_id}":                     {Code: "vm:image:delete", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
+		"GET /api/v1/virtual-machine-images":                             {Code: "vm:read", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
+		"GET /api/v1/virtual-machine-images/{image_id}":                  {Code: "vm:read", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
+		"POST /api/v1/virtual-machine-images":                            {Code: "vm:image:upload", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
+		"POST /api/v1/virtual-machine-images/{image_id}/upload-sessions": {Code: "vm:image:upload", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
+		"PATCH /api/v1/virtual-machine-images/{image_id}":                {Code: "vm:image:update", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
+		"DELETE /api/v1/virtual-machine-images/{image_id}":               {Code: "vm:image:delete", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
 	}
 	if want := 227; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)

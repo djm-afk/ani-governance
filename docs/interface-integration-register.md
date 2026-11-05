@@ -1,5 +1,37 @@
 # 功能对接与接口风格改动登记
 
+## VM-IMAGE-01～06：租户虚拟机镜像自助管理
+
+当前公开合同见 `api/protos/admin/service/v1/i_vm_image.proto`，请求 DTO 见
+`api/protos/vm/service/v1/image.proto`。六个入口使用用户 JWT、VIRTUAL_MACHINE
+套餐和逐动作权限；当前 Service 不接受 API Key 主体。可信租户取自 Principal，
+通过持久映射转换为 Resource UUID，不接受公网自报 tenant 或 actor。
+
+| 编号 | HTTP | 权限码 | 成功响应 |
+| --- | --- | --- | --- |
+| VM-IMAGE-01 | GET `/api/v1/virtual-machine-images` | `vm:read` | 200，`items` / `total` |
+| VM-IMAGE-02 | GET `/api/v1/virtual-machine-images/{image_id}` | `vm:read` | 200，镜像对象 |
+| VM-IMAGE-03 | POST `/api/v1/virtual-machine-images` | `vm:image:upload` | 202，持久镜像记录 |
+| VM-IMAGE-04 | POST `/api/v1/virtual-machine-images/{image_id}/upload-sessions` | `vm:image:upload` | 200，上传票据，`Cache-Control: no-store` |
+| VM-IMAGE-05 | PATCH `/api/v1/virtual-machine-images/{image_id}` | `vm:image:update` | 200，更新后的镜像 |
+| VM-IMAGE-06 | DELETE `/api/v1/virtual-machine-images/{image_id}` | `vm:image:delete` | 202，删除中的镜像 |
+
+列表使用 `page` / `pageSize`（默认 1/20，上限 100）及 `kind` / `state` / `keyword`；
+写请求保持 `{data:{...}}`，PATCH 另带字符串 `update_mask`，仅允许 name/description。
+写操作传 `idempotency_key`，PATCH/DELETE 传 `expected_version`；响应字段采用 lowerCamel。
+上传文件经票据中的 method/url/headers 直达上传入口，Gov 不接收文件字节。
+认证失败 401，权限或套餐拒绝 403，不存在与跨租户对象均 404，版本/幂等/占用冲突 409，
+依赖失败 503。API 目录同步及 `scripts/ops/sql/*vm-image*permissions*.sql` 均需按部署授权
+显式执行；代码合并不表示已授权、已部署或已通过真实上传验收。
+
+Gov → Resource 使用已管理的 Resource mTLS 连接，调用身份 `ani-governance`，接收者
+身份由受管 `server_name` 校验；完整方法为 `/vm.v1.VMImageService/` 下的
+`ListImages`、`GetImage`、`CreateImage`、`CreateUploadSession`、`UpdateImage`、`DeleteImage`。
+调用均为当前用户的租户内委托，每次超时 30 秒；重建 `x-ani-tenant-id`、
+`x-ani-actor=governance:user:<用户ID>` 和新 `x-ani-request-id`，不透传公网身份头。
+读操作无业务幂等键；四个写方法沿用上述请求幂等键，更新/删除沿用版本检查。
+Resource 承担对象归属、持久幂等、源盘/上传生命周期及原生系统副作用。
+
 总体状态：**进行中，未结项**。最后更新：2026-10-13。
 
 本文件覆盖所有后续对接功能。每次用户对接一个新功能时，AI 先排查真实调用链，将涉及的接口、请求和响应、鉴权条件、现有问题追加到对应功能组。先累计登记，等用户指定某个批次后，再统一修改该批接口的路径、字段和响应风格；不能因排查或登记就自动改接口风格。

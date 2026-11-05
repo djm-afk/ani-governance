@@ -56,6 +56,7 @@ func TestVMImageHTTPErrorKeepsAuthenticationFailuresUnauthenticated(t *testing.T
 	}{
 		{"platform middleware", kratoserrors.Unauthorized("UNAUTHORIZED", "missing bearer token")},
 		{"transport status", status.Error(codes.Unauthenticated, "missing bearer token")},
+		{"transport status with scope reason", status.Error(codes.Unauthenticated, "VM_SCOPE_DENIED")},
 	} {
 		result := vmImageHTTPError(test.err)
 		require.Equalf(t, 401, kratoserrors.Code(result), "%s: %v", test.name, result)

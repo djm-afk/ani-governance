@@ -77,6 +77,17 @@ func TestSelectActiveTemplatesRejectsMissingDuplicateAndFormerModel(t *testing.T
 	}
 }
 
+func TestRepositoryGenerationTemplatesAreAccepted(t *testing.T) {
+	api := filepath.Join(repoRoot(t), "api")
+	found, err := scanYAMLFiles(api)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := selectActiveTemplates(api, found); err != nil {
+		t.Fatalf("repository API generation is blocked: %v", err)
+	}
+}
+
 func TestScanYAMLFilesMissingRoot(t *testing.T) {
 	got, err := scanYAMLFiles(filepath.Join(t.TempDir(), "nope"))
 	if err != nil {
