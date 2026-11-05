@@ -5,6 +5,8 @@ package bootstrap
 import (
 	"context"
 	"database/sql"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -17,7 +19,14 @@ type API struct {
 	Path, Method, Operation, Module, ModuleDescription, Description, BusinessModule string
 }
 
+// Short labels belong to the management catalog; OpenAPI retains the detailed
+// request, authorization and response contracts.
+//
+//go:embed api_descriptions_zh.json
+var apiDescriptionsJSON []byte
+
 // Catalog uses the OpenAPI shipped with this binary, in a deterministic order.
+// Initialization and later synchronization share the same display metadata.
 func Catalog(document []byte) ([]API, error) {
 	doc, err := openapi3.NewLoader().LoadFromData(document)
 	if err != nil {
@@ -26,15 +35,19 @@ func Catalog(document []byte) ([]API, error) {
 	if doc == nil || doc.Paths == nil {
 		return nil, fmt.Errorf("API catalog has no paths")
 	}
+	var descriptions map[string]string
+	if err = json.Unmarshal(apiDescriptionsJSON, &descriptions); err != nil {
+		return nil, fmt.Errorf("load API catalog descriptions: %w", err)
+	}
 	var result []API
 	for path, item := range doc.Paths.Map() {
 		for method, op := range item.Operations() {
 			a := API{Path: path, Method: method, Operation: op.OperationID, Description: op.Description}
+			if description, ok := descriptions[method+" "+path]; ok {
+				a.Description = description
+			}
 			if len(op.Tags) > 0 {
 				a.Module = op.Tags[0]
-				if tag := doc.Tags.Get(a.Module); tag != nil {
-					a.ModuleDescription = tag.Description
-				}
 			}
 			if module, ok := constants.ServiceTagToBusinessModule[a.Module]; ok {
 				a.BusinessModule = module.String()

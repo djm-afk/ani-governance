@@ -43,7 +43,11 @@ func NewPermissionGroupService(
 }
 
 func (s *PermissionGroupService) List(ctx context.Context, req *paginationV1.PagingRequest) (*permissionV1.ListPermissionGroupResponse, error) {
-	return s.permissionGroupRepo.List(ctx, req, true)
+	// A page can contain children whose parent is on another page. Building a
+	// tree from that partial window silently drops them. Explicit page requests
+	// return flat rows; complete-tree queries retain the existing representation.
+	treeTravel := req == nil || req.GetNoPaging() || (req.Page == nil && req.PageSize == nil)
+	return s.permissionGroupRepo.List(ctx, req, treeTravel)
 }
 
 func (s *PermissionGroupService) Get(ctx context.Context, req *permissionV1.GetPermissionGroupRequest) (*permissionV1.PermissionGroup, error) {

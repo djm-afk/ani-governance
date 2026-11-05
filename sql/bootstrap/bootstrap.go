@@ -40,6 +40,10 @@ func Initialize(ctx context.Context, db *sql.DB, catalog []API, username, passwo
 	if strings.TrimSpace(username) != username || username == "" || len(username) > 64 {
 		return false, fmt.Errorf("administrator username must contain 1-64 characters without surrounding whitespace")
 	}
+	seed, err := loadInitialSeed(catalog)
+	if err != nil {
+		return false, err
+	}
 	if err = passwordPolicy.ValidateComplexity(password, passwordPolicy.DefaultMinLen); err != nil {
 		return false, err
 	}
@@ -47,7 +51,7 @@ func Initialize(ctx context.Context, db *sql.DB, catalog []API, username, passwo
 	if err != nil {
 		return false, fmt.Errorf("hash administrator password: %w", err)
 	}
-	if _, err = SyncAPIs(ctx, tx, catalog, false); err != nil {
+	if _, err = SyncAPIs(ctx, tx, seed.catalogForInit(catalog), false); err != nil {
 		return false, err
 	}
 	if _, err = tx.ExecContext(ctx, `SELECT set_config('ani.bootstrap_username',$1,true),set_config('ani.bootstrap_password_hash',$2,true)`, username, string(hash)); err != nil {
@@ -55,6 +59,9 @@ func Initialize(ctx context.Context, db *sql.DB, catalog []API, username, passwo
 	}
 	if _, err = tx.ExecContext(ctx, InitialSQL); err != nil {
 		return false, fmt.Errorf("seed data rolled back: %w", err)
+	}
+	if err = seed.apply(ctx, tx); err != nil {
+		return false, fmt.Errorf("Console/BOSS seed rolled back: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
 		return false, err

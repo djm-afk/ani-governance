@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -12,8 +13,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 
+	permissionV1 "go-wind-admin/api/gen/go/permission/service/v1"
 	"go-wind-admin/app/admin/service/cmd/server/assets"
 	"go-wind-admin/app/admin/service/internal/data/ent"
+	"go-wind-admin/app/admin/service/internal/data/ent/tenant"
+	"go-wind-admin/pkg/authorizer"
+	appViewer "go-wind-admin/pkg/entgo/viewer"
+	entCrud "go-wind-admin/pkg/localdeps/go-crud/entgo"
+	"go-wind-admin/pkg/localdeps/go-utils/trans"
+	authzEngine "go-wind-admin/pkg/localdeps/kratos-authz/engine"
+	conf "go-wind-admin/pkg/localdeps/kratos-bootstrap/api/gen/go/conf/v1"
+	bBootstrap "go-wind-admin/pkg/localdeps/kratos-bootstrap/bootstrap"
+	bLogger "go-wind-admin/pkg/localdeps/kratos-bootstrap/logger"
 	dbbootstrap "go-wind-admin/sql/bootstrap"
 )
 
@@ -78,6 +89,16 @@ func TestBootstrapPostgres(t *testing.T) {
 	require.Zero(t, count("sys_users"))
 	require.Zero(t, count("sys_apis"))
 	require.Zero(t, count("sys_roles"))
+	// An API-only database can still contain out-of-release routes. Do not keep
+	// them just because the base fresh-install guard allows an API pre-sync.
+	_, err = db.ExecContext(ctx, `INSERT INTO sys_apis(path,method,operation,module,business_module,status,scope) VALUES('/api/v1/out-of-release','GET','Extra_Get','UserService','OPM','ON','ADMIN')`)
+	require.NoError(t, err)
+	withExtraAPI := snapshot()
+	_, err = dbbootstrap.Initialize(ctx, db, catalog, "owner", "Valid-bootstrap@2026")
+	require.ErrorContains(t, err, "exactly 482 APIs")
+	require.Equal(t, withExtraAPI, snapshot(), "out-of-release API rejection must roll back the whole seed")
+	_, err = db.ExecContext(ctx, `DELETE FROM sys_apis WHERE path='/api/v1/out-of-release' AND method='GET'`)
+	require.NoError(t, err)
 	// Prove that role/user/API bindings do not depend on a sequence beginning at 1.
 	_, err = db.ExecContext(ctx, `SELECT setval(pg_get_serial_sequence('sys_roles','id'),100,false),setval(pg_get_serial_sequence('sys_users','id'),200,false),setval(pg_get_serial_sequence('sys_permissions','id'),300,false)`)
 	require.NoError(t, err)
@@ -85,6 +106,37 @@ func TestBootstrapPostgres(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, created)
 	require.NoError(t, dbbootstrap.Check(ctx, db))
+	require.Equal(t, 482, count("sys_apis"))
+	var vmImageAPIs int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM sys_apis WHERE path LIKE '/api/v1/virtual-machine-images%'`).Scan(&vmImageAPIs))
+	require.Zero(t, vmImageAPIs, "VM image APIs are intentionally excluded until frontend integration")
+	require.Equal(t, 370, count("sys_permissions"))
+	require.Equal(t, 49, count("sys_menus"))
+	require.Equal(t, 5, count("sys_roles"))
+	require.Equal(t, 2, count("sys_plans"))
+	require.Zero(t, count("sys_tenants"), "the full plan is a template and must not be assigned")
+	require.Zero(t, count("sys_plan_quotas"), "never invent customer resource quotas")
+	queryCount := func(query string) int {
+		t.Helper()
+		var n int
+		require.NoError(t, db.QueryRowContext(ctx, query).Scan(&n))
+		return n
+	}
+	require.Equal(t, 19, queryCount(`SELECT count(*) FROM sys_plan_modules pm JOIN sys_plans p ON p.id=pm.plan_id WHERE p.name='完整功能模板'`))
+	require.Zero(t, queryCount(`SELECT count(*) FROM sys_user_roles ur JOIN sys_roles r ON r.id=ur.role_id WHERE r.type='TEMPLATE'`), "templates must not be automatically assigned")
+	require.Equal(t, 3, queryCount(`SELECT count(*) FROM sys_role_metadata m JOIN sys_roles r ON r.id=m.role_id WHERE r.code IN ('template:platform:operator','template:tenant:developer','template:tenant:viewer') AND r.type='TEMPLATE' AND m.is_template AND m.sync_policy='MANUAL' AND m.template_for=substring(r.code from 10) AND m.scope=CASE WHEN r.code LIKE 'template:platform:%' THEN 'PLATFORM' ELSE 'TENANT' END`))
+	require.Zero(t, queryCount(`SELECT count(*) FROM sys_permissions p LEFT JOIN sys_permission_groups g ON g.id=p.group_id WHERE g.id IS NULL OR g.status<>'ON'`))
+	require.Equal(t, 10, queryCount(`SELECT count(*) FROM sys_apis a WHERE NOT EXISTS(SELECT 1 FROM sys_permission_apis pa WHERE pa.api_id=a.id)`))
+	require.Zero(t, queryCount(`SELECT count(*) FROM sys_apis a WHERE a.path NOT LIKE '/api/v1/auth/%' AND NOT EXISTS(SELECT 1 FROM sys_permission_apis pa WHERE pa.api_id=a.id)`))
+	require.Zero(t, queryCount(`SELECT count(*) FROM sys_role_permissions rp JOIN sys_roles r ON r.id=rp.role_id JOIN sys_permission_apis pa ON pa.permission_id=rp.permission_id JOIN sys_apis a ON a.id=pa.api_id WHERE r.code='template:tenant:manager' AND (a.path LIKE '/api/v1/admin/networks/%' OR a.path IN ('/api/v1/admin/apis','/api/v1/admin/permissions','/api/v1/admin/tenants','/api/v1/admin/compute-presets'))`))
+	require.Zero(t, queryCount(`SELECT count(*) FROM sys_role_permissions rp JOIN sys_roles r ON r.id=rp.role_id JOIN sys_permission_menus pm ON pm.permission_id=rp.permission_id JOIN sys_menus m ON m.id=pm.menu_id WHERE r.code='template:tenant:manager' AND m.remark LIKE 'boss:%'`))
+	require.Equal(t, 1, queryCount(`SELECT count(*) FROM sys_role_permissions rp JOIN sys_roles r ON r.id=rp.role_id JOIN sys_permissions p ON p.id=rp.permission_id WHERE r.code='template:tenant:manager' AND p.code='modeldev:compute-preset:read'`))
+	require.Equal(t, 1, queryCount(`SELECT count(*) FROM sys_permission_apis pa JOIN sys_permissions p ON p.id=pa.permission_id JOIN sys_apis a ON a.id=pa.api_id WHERE p.code='network:platform:intranet-pool:auto-allocate' AND a.path='/api/v1/admin/networks/intranet-address-pools/{pool_id}/auto-allocation'`))
+	t.Run("template clone and policy chain", func(t *testing.T) {
+		bootstrapRolePolicyChain(t, db, client)
+	})
+	require.Equal(t, 5, count("sys_roles"))
+	require.Zero(t, count("sys_tenants"))
 	// Fresh seed must grant logout to the existing tenant-manager permission.
 	const logoutGrant = `SELECT COUNT(*) FROM sys_permission_apis pa
  JOIN sys_permissions p ON p.id=pa.permission_id JOIN sys_apis a ON a.id=pa.api_id
@@ -160,4 +212,109 @@ func TestBootstrapPostgres(t *testing.T) {
 	_, err = dbbootstrap.Initialize(ctx, db, catalog, "owner", "Different-password@2026")
 	require.ErrorContains(t, err, "existing installation")
 	require.Equal(t, before, snapshot())
+}
+
+// Verify the seed through the production template copier, policy provider and
+// tenant plan checker. The tenant is a fixture, not an onboarding acceptance.
+func bootstrapRolePolicyChain(t *testing.T, db *sql.DB, client *ent.Client) {
+	t.Helper()
+	ctx := appViewer.NewSystemViewerContext(context.Background())
+	db.SetMaxOpenConns(4) // The template reader and its destination transaction use separate connections.
+	defer db.SetMaxOpenConns(1)
+	ec := entCrud.NewEntClient(client, entsql.OpenDB(dialect.Postgres, db))
+	bctx := bBootstrap.NewContextWithParam(ctx, &conf.AppInfo{}, &conf.Bootstrap{Authz: &conf.Authorization{Type: "casbin"}}, bLogger.NopLogger())
+	roles := NewRoleRepo(bctx, ec, NewRolePermissionRepo(bctx, ec), NewRoleOrgUnitRepo(bctx, ec),
+		NewPermissionRepo(bctx, ec, NewPermissionApiRepo(bctx, ec), NewPermissionMenuRepo(bctx, ec)),
+		NewRoleMetadataRepo(bctx, ec), NewRoleFieldPermissionRepo(bctx, ec))
+	var planID uint32
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT id FROM sys_plans WHERE name='完整功能模板'`).Scan(&planID))
+	fixture, err := client.Tenant.Create().SetName("Bootstrap policy fixture").SetCode("bootstrap-policy-fixture").SetStatus(tenant.StatusOn).SetPlanID(planID).Save(ctx)
+	require.NoError(t, err)
+	defer func() {
+		_, err := db.ExecContext(ctx, `DELETE FROM sys_tenants WHERE id=$1`, fixture.ID)
+		require.NoError(t, err)
+	}()
+	tx, err := client.Tx(ctx)
+	require.NoError(t, err)
+	defer tx.Rollback()
+	role, err := roles.CreateTenantRoleFromTemplate(ctx, tx, fixture.ID, 0)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+	defer func() {
+		for _, query := range []string{`DELETE FROM sys_role_permissions WHERE role_id=$1`, `DELETE FROM sys_role_metadata WHERE role_id=$1`, `DELETE FROM sys_roles WHERE id=$1`} {
+			_, err := db.ExecContext(ctx, query, role.GetId())
+			require.NoError(t, err)
+		}
+	}()
+	// Apply the stored permission lists through the real role creation path.
+	// Template records themselves remain unassignable and never become policies.
+	for _, spec := range []struct {
+		code        string
+		tenantID    uint32
+		typ         permissionV1.Role_Type
+		permissions int
+	}{
+		{"platform:operator", 0, permissionV1.Role_SYSTEM, 106},
+		{"tenant:developer", fixture.ID, permissionV1.Role_TENANT, 182},
+		{"tenant:viewer", fixture.ID, permissionV1.Role_TENANT, 95},
+	} {
+		template, err := roles.GetTemplateRole(ctx, spec.code)
+		require.NoError(t, err)
+		require.Len(t, template.GetPermissions(), spec.permissions)
+		tx, err := client.Tx(ctx)
+		require.NoError(t, err)
+		created, createErr := roles.CreateWithTx(ctx, tx, &permissionV1.Role{
+			Name: trans.Ptr("Bootstrap " + spec.code), Code: trans.Ptr(spec.code),
+			TenantId: trans.Ptr(spec.tenantID), Type: spec.typ.Enum(), Status: permissionV1.Role_ON.Enum(),
+			Permissions: template.GetPermissions(),
+		})
+		if createErr != nil {
+			require.NoError(t, tx.Rollback())
+			require.NoError(t, createErr)
+		}
+		require.NoError(t, tx.Commit())
+		defer func() {
+			for _, query := range []string{`DELETE FROM sys_role_permissions WHERE role_id=$1`, `DELETE FROM sys_role_metadata WHERE role_id=$1`, `DELETE FROM sys_roles WHERE id=$1`} {
+				_, err := db.ExecContext(ctx, query, created.GetId())
+				require.NoError(t, err)
+			}
+		}()
+	}
+	policy := authorizer.NewAuthorizer(bctx, NewAuthorizerProvider(bctx, roles, NewApiRepo(bctx, ec)))
+	require.NotNil(t, policy.Engine())
+	require.NoError(t, policy.ResetPolicies(ctx))
+	for _, check := range []struct {
+		role, domain, path, method string
+		allowed                    bool
+	}{
+		{"platform:admin", "0", "/api/v1/admin/plans", "GET", true},
+		{"platform:admin", "0", "/api/v1/admin/networks/virtual-switches", "POST", true},
+		{role.GetCode(), fmt.Sprint(fixture.ID), "/api/v1/virtual-machines", "GET", true},
+		{role.GetCode(), fmt.Sprint(fixture.ID), "/api/v1/admin/users", "GET", true},
+		{role.GetCode(), fmt.Sprint(fixture.ID), "/api/v1/admin/networks/virtual-switches", "POST", false},
+		{role.GetCode(), "0", "/api/v1/virtual-machines", "GET", false},
+		{"template:tenant:manager", "0", "/api/v1/virtual-machines", "GET", false},
+		{"platform:operator", "0", "/api/v1/admin/networks/virtual-switches", "POST", true},
+		{"platform:operator", "0", "/api/v1/admin/roles", "POST", false},
+		{"platform:operator", "0", "/api/v1/admin/plans", "POST", false},
+		{"tenant:developer", fmt.Sprint(fixture.ID), "/api/v1/virtual-machines", "POST", true},
+		{"tenant:developer", fmt.Sprint(fixture.ID), "/api/v1/admin/users", "POST", false},
+		{"tenant:developer", fmt.Sprint(fixture.ID), "/api/v1/auth/api-keys", "POST", false},
+		{"tenant:viewer", fmt.Sprint(fixture.ID), "/api/v1/virtual-machines", "GET", true},
+		{"tenant:viewer", fmt.Sprint(fixture.ID), "/api/v1/virtual-machines", "POST", false},
+		{"tenant:viewer", fmt.Sprint(fixture.ID), "/api/v1/inference-keys", "GET", false},
+		{"tenant:viewer", fmt.Sprint(fixture.ID), "/api/v1/auth/logout", "POST", true},
+		{"tenant:viewer", "0", "/api/v1/virtual-machines", "GET", false},
+		{"template:platform:operator", "0", "/api/v1/admin/networks/virtual-switches", "POST", false},
+		{"template:tenant:viewer", "0", "/api/v1/virtual-machines", "GET", false},
+	} {
+		allowed, err := policy.Engine().IsAuthorized(ctx, authzEngine.Subject(check.role), authzEngine.Action(check.method), authzEngine.Resource(check.path), authzEngine.Project(check.domain))
+		require.NoError(t, err)
+		require.Equal(t, check.allowed, allowed, "%s in %s: %s %s", check.role, check.domain, check.method, check.path)
+	}
+	checker := NewTenantAccessCheckerImpl(bctx, ec)
+	require.NoError(t, checker.CheckTenantAccess(ctx, fixture.ID, "/api/v1/virtual-machines", "GET"))
+	_, err = db.ExecContext(ctx, `UPDATE sys_tenants SET plan_id=(SELECT id FROM sys_plans WHERE name='基础管理') WHERE id=$1`, fixture.ID)
+	require.NoError(t, err)
+	require.Error(t, checker.CheckTenantAccess(ctx, fixture.ID, "/api/v1/virtual-machines", "GET"), "a role grant cannot bypass the selected plan")
 }

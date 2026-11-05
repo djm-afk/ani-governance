@@ -2241,3 +2241,9 @@ PUT `.../network-interfaces/primary` 的 data 为 mode、可选 vnic_id、expect
 新 owner 网卡接口同时接受 JWT/AK；AK 使用当前绑定租户角色执行新接口及手动选择所需 NETWORK 授权，主体 ID 不作为 User ID。PUT 只接收 data 对象的明确 snake_case 字段；expected_version 必须为规范的正十进制 int64 字符串。旧 owner 生命周期入口不因本批扩展 HMAC 表面。
 
 实例网卡读视图另返回 `configuration_state`（`configuring/ready/failed`）、`operation_id`、`operation_reason`，直接保留 owner 的持久配置操作投影。配置仍在处理中不能展示为保存完成或允许重启应用；当前地址与目标地址分别保留。Gov 不追加操作查询或轮询。
+
+## PERMGROUP-PAGE-01：权限分组页码列表保留跨页父节点的子分组（2026-11-05）
+
+`GET /api/v1/admin/permission-groups` 显式传入 `page` 或 `pageSize` 时，返回当前页的平铺 `items`；`parentId` 和物化路径保留，`total` 仍按相同筛选条件统计全部分组。分页窗口和搜索结果中的子分组不再因父节点不在结果内而消失。
+
+未显式指定页码参数的旧树查询，以及 `noPaging=true` 的完整树查询，保留树形响应。BOSS 分组管理页使用页码列表；权限选择器通过完整树查询取得选项。本次不迁移其他存量分页窗口、鉴权或写入接口。
