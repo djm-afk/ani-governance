@@ -2009,6 +2009,13 @@ Linux `DISK_IMAGE` 仅在 Resource 媒体目录 `initializationCapability=CLOUD_
 
 组合编译核验发现既有 ModelDev 根 SDK `v0.0.0-20261021184454-44188466290f` 仍引入 Model 根 SDK `v0.0.0-20261013092523-8951c85bc150`，其 `api/model/v1` 与本仓已固定的 Model/api 子模块同路径冲突。Gov 显式将该间接父模块固定到与现有 Model/api 同一提交的 `v0.0.0-20261021113912-a21befaaa5e5`；该提交含 `api/go.mod`，父模块不再导出该子树。不更改 Model/ModelDev 源码，不回退既有 API，也不以本地 replace 作为正式依赖修复。
 
+## VM-RUNTIME-20261105：VM 运行态独立只读入口
+
+新增 `GET /api/v1/virtual-machines/{vm_id}/runtime`（Proto：`api/protos/admin/service/v1/i_vm.proto` 的 `GetVMRuntime`），无请求体、无查询参数，路径变量 `{vm_id}` 与详情路由一致。鉴权沿用 `vm:read` 与 `VIRTUAL_MACHINE` 套餐闸门（`data/vm_authorization.go` 新增 `runtime` 路由，权限 SQL 见 `scripts/ops/sql/register-vm-permissions.sql` 新增行；同步顺序仍是先 `admin sync-apis` 再跑 SQL）。响应为原详情 `runtime` 对象（`state/agent_state/observed_at/node_name/started_at/hostname/agent_version/os_name/os_version/kernel_release/kernel_version/interfaces[]/filesystems[]/filesystems_state`），不返回 VM 基础信息，403/404/依赖失败沿用既有错误封装（`VM_SCOPE_DENIED`/`VM_NOT_FOUND`/`VM_DEPENDENCY_NOT_READY`）。
+
+该路由不改变 `GET /api/v1/virtual-machines/{vm_id}` 的既有行为：Resource 侧 `GetVMRequest.include_runtime` 为三态开关，缺省仍内联返回 `runtime`，旧前端零改动；显式 `false` 时跳过全部 QGA 读取并返回 `runtime.state=NOT_QUERIED`（见 Resource 合同 C07 修订）。Gov → Resource 仍走受管 mTLS VM 客户端与 30 秒 deadline，`runtime` 调用显式携带 `include_runtime=true`。前端懒加载对接说明由交付的前端对接文档给出；`version` 复用规则与详情页一致，本路由不返回 `version`。
+
+
 ## Sandbox 规格目录与权限接入（2026-10-27）
 
 **当前合同更新：** Sandbox 是独立资源，接口及安全边界见[前端 HTTP 合同](contracts/frontend-http-api.md)。以下为历史记录，父实例相关规则已被本次需求取代，历史验收不能证明独立创建已验证。

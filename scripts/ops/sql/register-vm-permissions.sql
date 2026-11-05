@@ -11,6 +11,7 @@ BEGIN
  ('GET','/api/v1/virtual-machines','vm:list'),
  ('POST','/api/v1/virtual-machines','vm:create'),
  ('GET','/api/v1/virtual-machines/{vm_id}','vm:read'),
+ ('GET','/api/v1/virtual-machines/{vm_id}/runtime','vm:read'),
  ('DELETE','/api/v1/virtual-machines/{data.vm_id}','vm:delete'),
  ('GET','/api/v1/virtual-machines/{vm_id}/operations/{operation_id}','vm:read'),
  ('POST','/api/v1/virtual-machines/{data.vm_id}/start','vm:power'),

@@ -10,8 +10,7 @@ import (
 	context "context"
 	http "github.com/go-kratos/kratos/v2/transport/http"
 	binding "github.com/go-kratos/kratos/v2/transport/http/binding"
-	v1 "go-wind-admin/api/gen/go/catalog/service/v1"
-	v11 "go-wind-admin/api/gen/go/vm/service/v1"
+	v1 "go-wind-admin/api/gen/go/vm/service/v1"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -34,8 +33,8 @@ const OperationVMServiceEjectVMMedia = "/admin.service.v1.VMService/EjectVMMedia
 const OperationVMServiceForceStopVM = "/admin.service.v1.VMService/ForceStopVM"
 const OperationVMServiceGetVM = "/admin.service.v1.VMService/GetVM"
 const OperationVMServiceGetVMDNSDefaults = "/admin.service.v1.VMService/GetVMDNSDefaults"
-const OperationVMServiceGetVMNetworkInterfaces = "/admin.service.v1.VMService/GetVMNetworkInterfaces"
 const OperationVMServiceGetVMOperation = "/admin.service.v1.VMService/GetVMOperation"
+const OperationVMServiceGetVMRuntime = "/admin.service.v1.VMService/GetVMRuntime"
 const OperationVMServiceGetVMSnapshot = "/admin.service.v1.VMService/GetVMSnapshot"
 const OperationVMServiceListVMDisks = "/admin.service.v1.VMService/ListVMDisks"
 const OperationVMServiceListVMMedia = "/admin.service.v1.VMService/ListVMMedia"
@@ -46,51 +45,48 @@ const OperationVMServiceRestartVM = "/admin.service.v1.VMService/RestartVM"
 const OperationVMServiceRestoreVMSnapshot = "/admin.service.v1.VMService/RestoreVMSnapshot"
 const OperationVMServiceSetVMBootDevice = "/admin.service.v1.VMService/SetVMBootDevice"
 const OperationVMServiceSetVMMedia = "/admin.service.v1.VMService/SetVMMedia"
-const OperationVMServiceSetVMNetworkInterface = "/admin.service.v1.VMService/SetVMNetworkInterface"
 const OperationVMServiceSetVMSecurityGroups = "/admin.service.v1.VMService/SetVMSecurityGroups"
 const OperationVMServiceStartVM = "/admin.service.v1.VMService/StartVM"
 const OperationVMServiceStopVM = "/admin.service.v1.VMService/StopVM"
 
 type VMServiceHTTPServer interface {
-	AttachVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	CreateVM(context.Context, *v11.CreateVMRequest) (*v11.VMAcceptance, error)
-	CreateVMConsoleSession(context.Context, *v11.ChangeVMRequest) (*v11.VMConsoleSession, error)
-	CreateVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	CreateVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	DeleteVM(context.Context, *v11.ChangeVMRequest) (*v11.VMAcceptance, error)
-	DeleteVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	DeleteVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	DetachVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	EjectVMMedia(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	ForceStopVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	GetVM(context.Context, *v11.GetVMRequest) (*v11.VirtualMachine, error)
-	GetVMDNSDefaults(context.Context, *v11.GetDNSDefaultsRequest) (*v11.DNSDefaults, error)
-	GetVMNetworkInterfaces(context.Context, *v1.GetVMNetworkInterfacesRequest) (*v1.NetworkInterfaces, error)
-	GetVMOperation(context.Context, *v11.GetOperationRequest) (*v11.VMOperation, error)
-	GetVMSnapshot(context.Context, *v11.GetSnapshotRequest) (*v11.VMSnapshot, error)
-	ListVMDisks(context.Context, *v11.GetVMRequest) (*v11.ListDisksResponse, error)
-	ListVMMedia(context.Context, *v11.ListMediaRequest) (*v11.ListMediaResponse, error)
-	ListVMSnapshots(context.Context, *v11.GetVMRequest) (*v11.ListSnapshotsResponse, error)
-	ListVMs(context.Context, *v11.ListVMsRequest) (*v11.ListVMsResponse, error)
-	PreviewVMRestore(context.Context, *v11.ChangeVMRequest) (*v11.VMRestorePreview, error)
-	RestartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	RestoreVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	SetVMBootDevice(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	SetVMMedia(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	SetVMNetworkInterface(context.Context, *v1.SetVMNetworkInterfaceRequest) (*v11.VMOperation, error)
-	SetVMSecurityGroups(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	StartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	StopVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
+	AttachVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	CreateVM(context.Context, *v1.CreateVMRequest) (*v1.VMAcceptance, error)
+	CreateVMConsoleSession(context.Context, *v1.ChangeVMRequest) (*v1.VMConsoleSession, error)
+	CreateVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	CreateVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	DeleteVM(context.Context, *v1.ChangeVMRequest) (*v1.VMAcceptance, error)
+	DeleteVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	DeleteVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	DetachVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	EjectVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	ForceStopVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	GetVM(context.Context, *v1.GetVMRequest) (*v1.VirtualMachine, error)
+	GetVMDNSDefaults(context.Context, *v1.GetDNSDefaultsRequest) (*v1.DNSDefaults, error)
+	GetVMOperation(context.Context, *v1.GetOperationRequest) (*v1.VMOperation, error)
+	GetVMRuntime(context.Context, *v1.GetVMRequest) (*v1.VMRuntime, error)
+	GetVMSnapshot(context.Context, *v1.GetSnapshotRequest) (*v1.VMSnapshot, error)
+	ListVMDisks(context.Context, *v1.GetVMRequest) (*v1.ListDisksResponse, error)
+	ListVMMedia(context.Context, *v1.ListMediaRequest) (*v1.ListMediaResponse, error)
+	ListVMSnapshots(context.Context, *v1.GetVMRequest) (*v1.ListSnapshotsResponse, error)
+	ListVMs(context.Context, *v1.ListVMsRequest) (*v1.ListVMsResponse, error)
+	PreviewVMRestore(context.Context, *v1.ChangeVMRequest) (*v1.VMRestorePreview, error)
+	RestartVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	RestoreVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	SetVMBootDevice(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	SetVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	SetVMSecurityGroups(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	StartVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	StopVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
 }
 
 func RegisterVMServiceHTTPServer(s *http.Server, srv VMServiceHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/virtual-machines/{vm_id}/network-interfaces", _VMService_GetVMNetworkInterfaces0_HTTP_Handler(srv))
-	r.PUT("/api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}", _VMService_SetVMNetworkInterface0_HTTP_Handler(srv))
 	r.PUT("/api/v1/virtual-machines/{data.vm_id}/security-groups", _VMService_SetVMSecurityGroups0_HTTP_Handler(srv))
 	r.POST("/api/v1/virtual-machines", _VMService_CreateVM0_HTTP_Handler(srv))
 	r.GET("/api/v1/virtual-machines", _VMService_ListVMs0_HTTP_Handler(srv))
 	r.GET("/api/v1/virtual-machines/{vm_id}", _VMService_GetVM0_HTTP_Handler(srv))
+	r.GET("/api/v1/virtual-machines/{vm_id}/runtime", _VMService_GetVMRuntime0_HTTP_Handler(srv))
 	r.DELETE("/api/v1/virtual-machines/{data.vm_id}", _VMService_DeleteVM0_HTTP_Handler(srv))
 	r.GET("/api/v1/virtual-machines/{vm_id}/operations/{operation_id}", _VMService_GetVMOperation0_HTTP_Handler(srv))
 	r.POST("/api/v1/virtual-machines/{data.vm_id}/start", _VMService_StartVM0_HTTP_Handler(srv))
@@ -116,56 +112,9 @@ func RegisterVMServiceHTTPServer(s *http.Server, srv VMServiceHTTPServer) {
 	r.POST("/api/v1/virtual-machines/{data.vm_id}/console-sessions", _VMService_CreateVMConsoleSession0_HTTP_Handler(srv))
 }
 
-func _VMService_GetVMNetworkInterfaces0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.GetVMNetworkInterfacesRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationVMServiceGetVMNetworkInterfaces)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetVMNetworkInterfaces(ctx, req.(*v1.GetVMNetworkInterfacesRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.NetworkInterfaces)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _VMService_SetVMNetworkInterface0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.SetVMNetworkInterfaceRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationVMServiceSetVMNetworkInterface)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.SetVMNetworkInterface(ctx, req.(*v1.SetVMNetworkInterfaceRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v11.VMOperation)
-		return ctx.Result(200, reply)
-	}
-}
-
 func _VMService_SetVMSecurityGroups0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -177,20 +126,20 @@ func _VMService_SetVMSecurityGroups0_HTTP_Handler(srv VMServiceHTTPServer) func(
 		}
 		http.SetOperation(ctx, OperationVMServiceSetVMSecurityGroups)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.SetVMSecurityGroups(ctx, req.(*v11.ChangeVMRequest))
+			return srv.SetVMSecurityGroups(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_CreateVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.CreateVMRequest
+		var in v1.CreateVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -199,39 +148,39 @@ func _VMService_CreateVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Co
 		}
 		http.SetOperation(ctx, OperationVMServiceCreateVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateVM(ctx, req.(*v11.CreateVMRequest))
+			return srv.CreateVM(ctx, req.(*v1.CreateVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMAcceptance)
+		reply := out.(*v1.VMAcceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_ListVMs0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ListVMsRequest
+		var in v1.ListVMsRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationVMServiceListVMs)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListVMs(ctx, req.(*v11.ListVMsRequest))
+			return srv.ListVMs(ctx, req.(*v1.ListVMsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.ListVMsResponse)
+		reply := out.(*v1.ListVMsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_GetVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.GetVMRequest
+		var in v1.GetVMRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -240,20 +189,42 @@ func _VMService_GetVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Conte
 		}
 		http.SetOperation(ctx, OperationVMServiceGetVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetVM(ctx, req.(*v11.GetVMRequest))
+			return srv.GetVM(ctx, req.(*v1.GetVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VirtualMachine)
+		reply := out.(*v1.VirtualMachine)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _VMService_GetVMRuntime0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetVMRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationVMServiceGetVMRuntime)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetVMRuntime(ctx, req.(*v1.GetVMRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.VMRuntime)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_DeleteVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -265,20 +236,20 @@ func _VMService_DeleteVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Co
 		}
 		http.SetOperation(ctx, OperationVMServiceDeleteVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteVM(ctx, req.(*v11.ChangeVMRequest))
+			return srv.DeleteVM(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMAcceptance)
+		reply := out.(*v1.VMAcceptance)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_GetVMOperation0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.GetOperationRequest
+		var in v1.GetOperationRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -287,20 +258,20 @@ func _VMService_GetVMOperation0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx h
 		}
 		http.SetOperation(ctx, OperationVMServiceGetVMOperation)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetVMOperation(ctx, req.(*v11.GetOperationRequest))
+			return srv.GetVMOperation(ctx, req.(*v1.GetOperationRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_StartVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -312,20 +283,20 @@ func _VMService_StartVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Con
 		}
 		http.SetOperation(ctx, OperationVMServiceStartVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.StartVM(ctx, req.(*v11.ChangeVMRequest))
+			return srv.StartVM(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_StopVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -337,20 +308,20 @@ func _VMService_StopVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Cont
 		}
 		http.SetOperation(ctx, OperationVMServiceStopVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.StopVM(ctx, req.(*v11.ChangeVMRequest))
+			return srv.StopVM(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_ForceStopVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -362,20 +333,20 @@ func _VMService_ForceStopVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http
 		}
 		http.SetOperation(ctx, OperationVMServiceForceStopVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ForceStopVM(ctx, req.(*v11.ChangeVMRequest))
+			return srv.ForceStopVM(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_RestartVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -387,20 +358,20 @@ func _VMService_RestartVM0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.C
 		}
 		http.SetOperation(ctx, OperationVMServiceRestartVM)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.RestartVM(ctx, req.(*v11.ChangeVMRequest))
+			return srv.RestartVM(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_ListVMDisks0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.GetVMRequest
+		var in v1.GetVMRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -409,20 +380,20 @@ func _VMService_ListVMDisks0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http
 		}
 		http.SetOperation(ctx, OperationVMServiceListVMDisks)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListVMDisks(ctx, req.(*v11.GetVMRequest))
+			return srv.ListVMDisks(ctx, req.(*v1.GetVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.ListDisksResponse)
+		reply := out.(*v1.ListDisksResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_CreateVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -434,20 +405,20 @@ func _VMService_CreateVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx htt
 		}
 		http.SetOperation(ctx, OperationVMServiceCreateVMDisk)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateVMDisk(ctx, req.(*v11.ChangeVMRequest))
+			return srv.CreateVMDisk(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_AttachVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -459,20 +430,20 @@ func _VMService_AttachVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx htt
 		}
 		http.SetOperation(ctx, OperationVMServiceAttachVMDisk)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.AttachVMDisk(ctx, req.(*v11.ChangeVMRequest))
+			return srv.AttachVMDisk(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_DetachVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -484,20 +455,20 @@ func _VMService_DetachVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx htt
 		}
 		http.SetOperation(ctx, OperationVMServiceDetachVMDisk)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DetachVMDisk(ctx, req.(*v11.ChangeVMRequest))
+			return srv.DetachVMDisk(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_DeleteVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -509,20 +480,20 @@ func _VMService_DeleteVMDisk0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx htt
 		}
 		http.SetOperation(ctx, OperationVMServiceDeleteVMDisk)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteVMDisk(ctx, req.(*v11.ChangeVMRequest))
+			return srv.DeleteVMDisk(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_SetVMMedia0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -534,20 +505,20 @@ func _VMService_SetVMMedia0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.
 		}
 		http.SetOperation(ctx, OperationVMServiceSetVMMedia)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.SetVMMedia(ctx, req.(*v11.ChangeVMRequest))
+			return srv.SetVMMedia(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_EjectVMMedia0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -559,20 +530,20 @@ func _VMService_EjectVMMedia0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx htt
 		}
 		http.SetOperation(ctx, OperationVMServiceEjectVMMedia)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.EjectVMMedia(ctx, req.(*v11.ChangeVMRequest))
+			return srv.EjectVMMedia(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_SetVMBootDevice0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -584,58 +555,58 @@ func _VMService_SetVMBootDevice0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx 
 		}
 		http.SetOperation(ctx, OperationVMServiceSetVMBootDevice)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.SetVMBootDevice(ctx, req.(*v11.ChangeVMRequest))
+			return srv.SetVMBootDevice(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_GetVMDNSDefaults0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.GetDNSDefaultsRequest
+		var in v1.GetDNSDefaultsRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationVMServiceGetVMDNSDefaults)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetVMDNSDefaults(ctx, req.(*v11.GetDNSDefaultsRequest))
+			return srv.GetVMDNSDefaults(ctx, req.(*v1.GetDNSDefaultsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.DNSDefaults)
+		reply := out.(*v1.DNSDefaults)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_ListVMMedia0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ListMediaRequest
+		var in v1.ListMediaRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationVMServiceListVMMedia)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListVMMedia(ctx, req.(*v11.ListMediaRequest))
+			return srv.ListVMMedia(ctx, req.(*v1.ListMediaRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.ListMediaResponse)
+		reply := out.(*v1.ListMediaResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_ListVMSnapshots0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.GetVMRequest
+		var in v1.GetVMRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -644,20 +615,20 @@ func _VMService_ListVMSnapshots0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx 
 		}
 		http.SetOperation(ctx, OperationVMServiceListVMSnapshots)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListVMSnapshots(ctx, req.(*v11.GetVMRequest))
+			return srv.ListVMSnapshots(ctx, req.(*v1.GetVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.ListSnapshotsResponse)
+		reply := out.(*v1.ListSnapshotsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_GetVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.GetSnapshotRequest
+		var in v1.GetSnapshotRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
@@ -666,20 +637,20 @@ func _VMService_GetVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx ht
 		}
 		http.SetOperation(ctx, OperationVMServiceGetVMSnapshot)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetVMSnapshot(ctx, req.(*v11.GetSnapshotRequest))
+			return srv.GetVMSnapshot(ctx, req.(*v1.GetSnapshotRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMSnapshot)
+		reply := out.(*v1.VMSnapshot)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_CreateVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -691,20 +662,20 @@ func _VMService_CreateVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx
 		}
 		http.SetOperation(ctx, OperationVMServiceCreateVMSnapshot)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateVMSnapshot(ctx, req.(*v11.ChangeVMRequest))
+			return srv.CreateVMSnapshot(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_DeleteVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -716,20 +687,20 @@ func _VMService_DeleteVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx
 		}
 		http.SetOperation(ctx, OperationVMServiceDeleteVMSnapshot)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteVMSnapshot(ctx, req.(*v11.ChangeVMRequest))
+			return srv.DeleteVMSnapshot(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_PreviewVMRestore0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -741,20 +712,20 @@ func _VMService_PreviewVMRestore0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx
 		}
 		http.SetOperation(ctx, OperationVMServicePreviewVMRestore)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.PreviewVMRestore(ctx, req.(*v11.ChangeVMRequest))
+			return srv.PreviewVMRestore(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMRestorePreview)
+		reply := out.(*v1.VMRestorePreview)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_RestoreVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -766,20 +737,20 @@ func _VMService_RestoreVMSnapshot0_HTTP_Handler(srv VMServiceHTTPServer) func(ct
 		}
 		http.SetOperation(ctx, OperationVMServiceRestoreVMSnapshot)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.RestoreVMSnapshot(ctx, req.(*v11.ChangeVMRequest))
+			return srv.RestoreVMSnapshot(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMOperation)
+		reply := out.(*v1.VMOperation)
 		return ctx.Result(200, reply)
 	}
 }
 
 func _VMService_CreateVMConsoleSession0_HTTP_Handler(srv VMServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in v11.ChangeVMRequest
+		var in v1.ChangeVMRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -791,47 +762,46 @@ func _VMService_CreateVMConsoleSession0_HTTP_Handler(srv VMServiceHTTPServer) fu
 		}
 		http.SetOperation(ctx, OperationVMServiceCreateVMConsoleSession)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateVMConsoleSession(ctx, req.(*v11.ChangeVMRequest))
+			return srv.CreateVMConsoleSession(ctx, req.(*v1.ChangeVMRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*v11.VMConsoleSession)
+		reply := out.(*v1.VMConsoleSession)
 		return ctx.Result(200, reply)
 	}
 }
 
 type VMServiceHTTPClient interface {
-	AttachVMDisk(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	CreateVM(ctx context.Context, req *v11.CreateVMRequest, opts ...http.CallOption) (rsp *v11.VMAcceptance, err error)
-	CreateVMConsoleSession(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMConsoleSession, err error)
-	CreateVMDisk(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	CreateVMSnapshot(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	DeleteVM(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMAcceptance, err error)
-	DeleteVMDisk(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	DeleteVMSnapshot(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	DetachVMDisk(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	EjectVMMedia(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	ForceStopVM(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	GetVM(ctx context.Context, req *v11.GetVMRequest, opts ...http.CallOption) (rsp *v11.VirtualMachine, err error)
-	GetVMDNSDefaults(ctx context.Context, req *v11.GetDNSDefaultsRequest, opts ...http.CallOption) (rsp *v11.DNSDefaults, err error)
-	GetVMNetworkInterfaces(ctx context.Context, req *v1.GetVMNetworkInterfacesRequest, opts ...http.CallOption) (rsp *v1.NetworkInterfaces, err error)
-	GetVMOperation(ctx context.Context, req *v11.GetOperationRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	GetVMSnapshot(ctx context.Context, req *v11.GetSnapshotRequest, opts ...http.CallOption) (rsp *v11.VMSnapshot, err error)
-	ListVMDisks(ctx context.Context, req *v11.GetVMRequest, opts ...http.CallOption) (rsp *v11.ListDisksResponse, err error)
-	ListVMMedia(ctx context.Context, req *v11.ListMediaRequest, opts ...http.CallOption) (rsp *v11.ListMediaResponse, err error)
-	ListVMSnapshots(ctx context.Context, req *v11.GetVMRequest, opts ...http.CallOption) (rsp *v11.ListSnapshotsResponse, err error)
-	ListVMs(ctx context.Context, req *v11.ListVMsRequest, opts ...http.CallOption) (rsp *v11.ListVMsResponse, err error)
-	PreviewVMRestore(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMRestorePreview, err error)
-	RestartVM(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	RestoreVMSnapshot(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	SetVMBootDevice(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	SetVMMedia(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	SetVMNetworkInterface(ctx context.Context, req *v1.SetVMNetworkInterfaceRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	SetVMSecurityGroups(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	StartVM(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
-	StopVM(ctx context.Context, req *v11.ChangeVMRequest, opts ...http.CallOption) (rsp *v11.VMOperation, err error)
+	AttachVMDisk(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	CreateVM(ctx context.Context, req *v1.CreateVMRequest, opts ...http.CallOption) (rsp *v1.VMAcceptance, err error)
+	CreateVMConsoleSession(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMConsoleSession, err error)
+	CreateVMDisk(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	CreateVMSnapshot(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	DeleteVM(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMAcceptance, err error)
+	DeleteVMDisk(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	DeleteVMSnapshot(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	DetachVMDisk(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	EjectVMMedia(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	ForceStopVM(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	GetVM(ctx context.Context, req *v1.GetVMRequest, opts ...http.CallOption) (rsp *v1.VirtualMachine, err error)
+	GetVMDNSDefaults(ctx context.Context, req *v1.GetDNSDefaultsRequest, opts ...http.CallOption) (rsp *v1.DNSDefaults, err error)
+	GetVMOperation(ctx context.Context, req *v1.GetOperationRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	GetVMRuntime(ctx context.Context, req *v1.GetVMRequest, opts ...http.CallOption) (rsp *v1.VMRuntime, err error)
+	GetVMSnapshot(ctx context.Context, req *v1.GetSnapshotRequest, opts ...http.CallOption) (rsp *v1.VMSnapshot, err error)
+	ListVMDisks(ctx context.Context, req *v1.GetVMRequest, opts ...http.CallOption) (rsp *v1.ListDisksResponse, err error)
+	ListVMMedia(ctx context.Context, req *v1.ListMediaRequest, opts ...http.CallOption) (rsp *v1.ListMediaResponse, err error)
+	ListVMSnapshots(ctx context.Context, req *v1.GetVMRequest, opts ...http.CallOption) (rsp *v1.ListSnapshotsResponse, err error)
+	ListVMs(ctx context.Context, req *v1.ListVMsRequest, opts ...http.CallOption) (rsp *v1.ListVMsResponse, err error)
+	PreviewVMRestore(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMRestorePreview, err error)
+	RestartVM(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	RestoreVMSnapshot(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	SetVMBootDevice(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	SetVMMedia(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	SetVMSecurityGroups(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	StartVM(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
+	StopVM(ctx context.Context, req *v1.ChangeVMRequest, opts ...http.CallOption) (rsp *v1.VMOperation, err error)
 }
 
 type VMServiceHTTPClientImpl struct {
@@ -842,8 +812,8 @@ func NewVMServiceHTTPClient(client *http.Client) VMServiceHTTPClient {
 	return &VMServiceHTTPClientImpl{client}
 }
 
-func (c *VMServiceHTTPClientImpl) AttachVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) AttachVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/attach"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceAttachVMDisk))
@@ -855,8 +825,8 @@ func (c *VMServiceHTTPClientImpl) AttachVMDisk(ctx context.Context, in *v11.Chan
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) CreateVM(ctx context.Context, in *v11.CreateVMRequest, opts ...http.CallOption) (*v11.VMAcceptance, error) {
-	var out v11.VMAcceptance
+func (c *VMServiceHTTPClientImpl) CreateVM(ctx context.Context, in *v1.CreateVMRequest, opts ...http.CallOption) (*v1.VMAcceptance, error) {
+	var out v1.VMAcceptance
 	pattern := "/api/v1/virtual-machines"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceCreateVM))
@@ -868,8 +838,8 @@ func (c *VMServiceHTTPClientImpl) CreateVM(ctx context.Context, in *v11.CreateVM
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) CreateVMConsoleSession(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMConsoleSession, error) {
-	var out v11.VMConsoleSession
+func (c *VMServiceHTTPClientImpl) CreateVMConsoleSession(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMConsoleSession, error) {
+	var out v1.VMConsoleSession
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/console-sessions"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceCreateVMConsoleSession))
@@ -881,8 +851,8 @@ func (c *VMServiceHTTPClientImpl) CreateVMConsoleSession(ctx context.Context, in
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) CreateVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) CreateVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/disks"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceCreateVMDisk))
@@ -894,8 +864,8 @@ func (c *VMServiceHTTPClientImpl) CreateVMDisk(ctx context.Context, in *v11.Chan
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) CreateVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) CreateVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/snapshots"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceCreateVMSnapshot))
@@ -907,8 +877,8 @@ func (c *VMServiceHTTPClientImpl) CreateVMSnapshot(ctx context.Context, in *v11.
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) DeleteVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMAcceptance, error) {
-	var out v11.VMAcceptance
+func (c *VMServiceHTTPClientImpl) DeleteVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMAcceptance, error) {
+	var out v1.VMAcceptance
 	pattern := "/api/v1/virtual-machines/{data.vm_id}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceDeleteVM))
@@ -920,8 +890,8 @@ func (c *VMServiceHTTPClientImpl) DeleteVM(ctx context.Context, in *v11.ChangeVM
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) DeleteVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) DeleteVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceDeleteVMDisk))
@@ -933,8 +903,8 @@ func (c *VMServiceHTTPClientImpl) DeleteVMDisk(ctx context.Context, in *v11.Chan
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) DeleteVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) DeleteVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceDeleteVMSnapshot))
@@ -946,8 +916,8 @@ func (c *VMServiceHTTPClientImpl) DeleteVMSnapshot(ctx context.Context, in *v11.
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) DetachVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) DetachVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/disks/{data.disk_id}/detach"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceDetachVMDisk))
@@ -959,8 +929,8 @@ func (c *VMServiceHTTPClientImpl) DetachVMDisk(ctx context.Context, in *v11.Chan
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) EjectVMMedia(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) EjectVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/media/{data.slot}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceEjectVMMedia))
@@ -972,8 +942,8 @@ func (c *VMServiceHTTPClientImpl) EjectVMMedia(ctx context.Context, in *v11.Chan
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) ForceStopVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) ForceStopVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/force-stop"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceForceStopVM))
@@ -985,8 +955,8 @@ func (c *VMServiceHTTPClientImpl) ForceStopVM(ctx context.Context, in *v11.Chang
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) GetVM(ctx context.Context, in *v11.GetVMRequest, opts ...http.CallOption) (*v11.VirtualMachine, error) {
-	var out v11.VirtualMachine
+func (c *VMServiceHTTPClientImpl) GetVM(ctx context.Context, in *v1.GetVMRequest, opts ...http.CallOption) (*v1.VirtualMachine, error) {
+	var out v1.VirtualMachine
 	pattern := "/api/v1/virtual-machines/{vm_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceGetVM))
@@ -998,8 +968,8 @@ func (c *VMServiceHTTPClientImpl) GetVM(ctx context.Context, in *v11.GetVMReques
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) GetVMDNSDefaults(ctx context.Context, in *v11.GetDNSDefaultsRequest, opts ...http.CallOption) (*v11.DNSDefaults, error) {
-	var out v11.DNSDefaults
+func (c *VMServiceHTTPClientImpl) GetVMDNSDefaults(ctx context.Context, in *v1.GetDNSDefaultsRequest, opts ...http.CallOption) (*v1.DNSDefaults, error) {
+	var out v1.DNSDefaults
 	pattern := "/api/v1/virtual-machine-dns-defaults"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceGetVMDNSDefaults))
@@ -1011,21 +981,8 @@ func (c *VMServiceHTTPClientImpl) GetVMDNSDefaults(ctx context.Context, in *v11.
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) GetVMNetworkInterfaces(ctx context.Context, in *v1.GetVMNetworkInterfacesRequest, opts ...http.CallOption) (*v1.NetworkInterfaces, error) {
-	var out v1.NetworkInterfaces
-	pattern := "/api/v1/virtual-machines/{vm_id}/network-interfaces"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationVMServiceGetVMNetworkInterfaces))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *VMServiceHTTPClientImpl) GetVMOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) GetVMOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{vm_id}/operations/{operation_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceGetVMOperation))
@@ -1037,8 +994,21 @@ func (c *VMServiceHTTPClientImpl) GetVMOperation(ctx context.Context, in *v11.Ge
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) GetVMSnapshot(ctx context.Context, in *v11.GetSnapshotRequest, opts ...http.CallOption) (*v11.VMSnapshot, error) {
-	var out v11.VMSnapshot
+func (c *VMServiceHTTPClientImpl) GetVMRuntime(ctx context.Context, in *v1.GetVMRequest, opts ...http.CallOption) (*v1.VMRuntime, error) {
+	var out v1.VMRuntime
+	pattern := "/api/v1/virtual-machines/{vm_id}/runtime"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationVMServiceGetVMRuntime))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *VMServiceHTTPClientImpl) GetVMSnapshot(ctx context.Context, in *v1.GetSnapshotRequest, opts ...http.CallOption) (*v1.VMSnapshot, error) {
+	var out v1.VMSnapshot
 	pattern := "/api/v1/virtual-machines/{vm_id}/snapshots/{snapshot_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceGetVMSnapshot))
@@ -1050,8 +1020,8 @@ func (c *VMServiceHTTPClientImpl) GetVMSnapshot(ctx context.Context, in *v11.Get
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) ListVMDisks(ctx context.Context, in *v11.GetVMRequest, opts ...http.CallOption) (*v11.ListDisksResponse, error) {
-	var out v11.ListDisksResponse
+func (c *VMServiceHTTPClientImpl) ListVMDisks(ctx context.Context, in *v1.GetVMRequest, opts ...http.CallOption) (*v1.ListDisksResponse, error) {
+	var out v1.ListDisksResponse
 	pattern := "/api/v1/virtual-machines/{vm_id}/disks"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceListVMDisks))
@@ -1063,8 +1033,8 @@ func (c *VMServiceHTTPClientImpl) ListVMDisks(ctx context.Context, in *v11.GetVM
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) ListVMMedia(ctx context.Context, in *v11.ListMediaRequest, opts ...http.CallOption) (*v11.ListMediaResponse, error) {
-	var out v11.ListMediaResponse
+func (c *VMServiceHTTPClientImpl) ListVMMedia(ctx context.Context, in *v1.ListMediaRequest, opts ...http.CallOption) (*v1.ListMediaResponse, error) {
+	var out v1.ListMediaResponse
 	pattern := "/api/v1/virtual-machine-media"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceListVMMedia))
@@ -1076,8 +1046,8 @@ func (c *VMServiceHTTPClientImpl) ListVMMedia(ctx context.Context, in *v11.ListM
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) ListVMSnapshots(ctx context.Context, in *v11.GetVMRequest, opts ...http.CallOption) (*v11.ListSnapshotsResponse, error) {
-	var out v11.ListSnapshotsResponse
+func (c *VMServiceHTTPClientImpl) ListVMSnapshots(ctx context.Context, in *v1.GetVMRequest, opts ...http.CallOption) (*v1.ListSnapshotsResponse, error) {
+	var out v1.ListSnapshotsResponse
 	pattern := "/api/v1/virtual-machines/{vm_id}/snapshots"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceListVMSnapshots))
@@ -1089,8 +1059,8 @@ func (c *VMServiceHTTPClientImpl) ListVMSnapshots(ctx context.Context, in *v11.G
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) ListVMs(ctx context.Context, in *v11.ListVMsRequest, opts ...http.CallOption) (*v11.ListVMsResponse, error) {
-	var out v11.ListVMsResponse
+func (c *VMServiceHTTPClientImpl) ListVMs(ctx context.Context, in *v1.ListVMsRequest, opts ...http.CallOption) (*v1.ListVMsResponse, error) {
+	var out v1.ListVMsResponse
 	pattern := "/api/v1/virtual-machines"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationVMServiceListVMs))
@@ -1102,8 +1072,8 @@ func (c *VMServiceHTTPClientImpl) ListVMs(ctx context.Context, in *v11.ListVMsRe
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) PreviewVMRestore(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMRestorePreview, error) {
-	var out v11.VMRestorePreview
+func (c *VMServiceHTTPClientImpl) PreviewVMRestore(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMRestorePreview, error) {
+	var out v1.VMRestorePreview
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}/restore-preview"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServicePreviewVMRestore))
@@ -1115,8 +1085,8 @@ func (c *VMServiceHTTPClientImpl) PreviewVMRestore(ctx context.Context, in *v11.
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) RestartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) RestartVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/restart"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceRestartVM))
@@ -1128,8 +1098,8 @@ func (c *VMServiceHTTPClientImpl) RestartVM(ctx context.Context, in *v11.ChangeV
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) RestoreVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) RestoreVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/snapshots/{data.snapshot_id}/restore"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceRestoreVMSnapshot))
@@ -1141,8 +1111,8 @@ func (c *VMServiceHTTPClientImpl) RestoreVMSnapshot(ctx context.Context, in *v11
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) SetVMBootDevice(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) SetVMBootDevice(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/boot"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceSetVMBootDevice))
@@ -1154,8 +1124,8 @@ func (c *VMServiceHTTPClientImpl) SetVMBootDevice(ctx context.Context, in *v11.C
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) SetVMMedia(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) SetVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/media/{data.slot}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceSetVMMedia))
@@ -1167,21 +1137,8 @@ func (c *VMServiceHTTPClientImpl) SetVMMedia(ctx context.Context, in *v11.Change
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) SetVMNetworkInterface(ctx context.Context, in *v1.SetVMNetworkInterfaceRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
-	pattern := "/api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}"
-	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationVMServiceSetVMNetworkInterface))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *VMServiceHTTPClientImpl) SetVMSecurityGroups(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) SetVMSecurityGroups(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/security-groups"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceSetVMSecurityGroups))
@@ -1193,8 +1150,8 @@ func (c *VMServiceHTTPClientImpl) SetVMSecurityGroups(ctx context.Context, in *v
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) StartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) StartVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/start"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceStartVM))
@@ -1206,8 +1163,8 @@ func (c *VMServiceHTTPClientImpl) StartVM(ctx context.Context, in *v11.ChangeVMR
 	return &out, nil
 }
 
-func (c *VMServiceHTTPClientImpl) StopVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...http.CallOption) (*v11.VMOperation, error) {
-	var out v11.VMOperation
+func (c *VMServiceHTTPClientImpl) StopVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...http.CallOption) (*v1.VMOperation, error) {
+	var out v1.VMOperation
 	pattern := "/api/v1/virtual-machines/{data.vm_id}/stop"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationVMServiceStopVM))

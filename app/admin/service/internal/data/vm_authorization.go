@@ -9,6 +9,7 @@ import (
 
 const VMCollectionPath = "/api/v1/virtual-machines"
 const VMGetPath = "/api/v1/virtual-machines/{vm_id}"
+const VMRuntimePath = "/api/v1/virtual-machines/{vm_id}/runtime"
 const VMDeletePath = "/api/v1/virtual-machines/{data.vm_id}"
 const VMOperationPath = "/api/v1/virtual-machines/{vm_id}/operations/{operation_id}"
 const VMMediaPath = "/api/v1/virtual-machine-media"
@@ -21,7 +22,7 @@ var vmRoutes = map[string]VMRoute{
 	"network-interfaces":    {"/api/v1/virtual-machines/{vm_id}/network-interfaces", "GET"},
 	"set-network-interface": {"/api/v1/virtual-machines/{vm_id}/network-interfaces/{slot}", "PUT"},
 	"set-security-groups":   {"/api/v1/virtual-machines/{data.vm_id}/security-groups", "PUT"},
-	"create":                {VMCollectionPath, "POST"}, "list": {VMCollectionPath, "GET"}, "get": {VMGetPath, "GET"}, "delete": {VMDeletePath, "DELETE"}, "operation": {VMOperationPath, "GET"},
+	"create":                {VMCollectionPath, "POST"}, "list": {VMCollectionPath, "GET"}, "get": {VMGetPath, "GET"}, "runtime": {VMRuntimePath, "GET"}, "delete": {VMDeletePath, "DELETE"}, "operation": {VMOperationPath, "GET"},
 	"start":            {"/api/v1/virtual-machines/{data.vm_id}/start", "POST"},
 	"stop":             {"/api/v1/virtual-machines/{data.vm_id}/stop", "POST"},
 	"restart":          {"/api/v1/virtual-machines/{data.vm_id}/restart", "POST"},

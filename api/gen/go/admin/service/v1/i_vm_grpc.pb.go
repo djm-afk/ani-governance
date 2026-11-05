@@ -8,8 +8,7 @@ package adminpb
 
 import (
 	context "context"
-	v1 "go-wind-admin/api/gen/go/catalog/service/v1"
-	v11 "go-wind-admin/api/gen/go/vm/service/v1"
+	v1 "go-wind-admin/api/gen/go/vm/service/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -21,12 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	VMService_GetVMNetworkInterfaces_FullMethodName = "/admin.service.v1.VMService/GetVMNetworkInterfaces"
-	VMService_SetVMNetworkInterface_FullMethodName  = "/admin.service.v1.VMService/SetVMNetworkInterface"
 	VMService_SetVMSecurityGroups_FullMethodName    = "/admin.service.v1.VMService/SetVMSecurityGroups"
 	VMService_CreateVM_FullMethodName               = "/admin.service.v1.VMService/CreateVM"
 	VMService_ListVMs_FullMethodName                = "/admin.service.v1.VMService/ListVMs"
 	VMService_GetVM_FullMethodName                  = "/admin.service.v1.VMService/GetVM"
+	VMService_GetVMRuntime_FullMethodName           = "/admin.service.v1.VMService/GetVMRuntime"
 	VMService_DeleteVM_FullMethodName               = "/admin.service.v1.VMService/DeleteVM"
 	VMService_GetVMOperation_FullMethodName         = "/admin.service.v1.VMService/GetVMOperation"
 	VMService_StartVM_FullMethodName                = "/admin.service.v1.VMService/StartVM"
@@ -57,36 +55,35 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type VMServiceClient interface {
-	GetVMNetworkInterfaces(ctx context.Context, in *v1.GetVMNetworkInterfacesRequest, opts ...grpc.CallOption) (*v1.NetworkInterfaces, error)
-	SetVMNetworkInterface(ctx context.Context, in *v1.SetVMNetworkInterfaceRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	SetVMSecurityGroups(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	CreateVM(ctx context.Context, in *v11.CreateVMRequest, opts ...grpc.CallOption) (*v11.VMAcceptance, error)
-	ListVMs(ctx context.Context, in *v11.ListVMsRequest, opts ...grpc.CallOption) (*v11.ListVMsResponse, error)
-	GetVM(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.VirtualMachine, error)
-	DeleteVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMAcceptance, error)
-	GetVMOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	StartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	StopVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	ForceStopVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	RestartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	ListVMDisks(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.ListDisksResponse, error)
-	CreateVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	AttachVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	DetachVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	DeleteVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	SetVMMedia(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	EjectVMMedia(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	SetVMBootDevice(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	GetVMDNSDefaults(ctx context.Context, in *v11.GetDNSDefaultsRequest, opts ...grpc.CallOption) (*v11.DNSDefaults, error)
-	ListVMMedia(ctx context.Context, in *v11.ListMediaRequest, opts ...grpc.CallOption) (*v11.ListMediaResponse, error)
-	ListVMSnapshots(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.ListSnapshotsResponse, error)
-	GetVMSnapshot(ctx context.Context, in *v11.GetSnapshotRequest, opts ...grpc.CallOption) (*v11.VMSnapshot, error)
-	CreateVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	DeleteVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	PreviewVMRestore(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMRestorePreview, error)
-	RestoreVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error)
-	CreateVMConsoleSession(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMConsoleSession, error)
-	StreamVMLogs(ctx context.Context, in *v11.VMLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.VMLogFrame], error)
+	SetVMSecurityGroups(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	CreateVM(ctx context.Context, in *v1.CreateVMRequest, opts ...grpc.CallOption) (*v1.VMAcceptance, error)
+	ListVMs(ctx context.Context, in *v1.ListVMsRequest, opts ...grpc.CallOption) (*v1.ListVMsResponse, error)
+	GetVM(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.VirtualMachine, error)
+	GetVMRuntime(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.VMRuntime, error)
+	DeleteVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMAcceptance, error)
+	GetVMOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	StartVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	StopVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	ForceStopVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	RestartVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	ListVMDisks(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.ListDisksResponse, error)
+	CreateVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	AttachVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	DetachVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	DeleteVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	SetVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	EjectVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	SetVMBootDevice(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	GetVMDNSDefaults(ctx context.Context, in *v1.GetDNSDefaultsRequest, opts ...grpc.CallOption) (*v1.DNSDefaults, error)
+	ListVMMedia(ctx context.Context, in *v1.ListMediaRequest, opts ...grpc.CallOption) (*v1.ListMediaResponse, error)
+	ListVMSnapshots(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.ListSnapshotsResponse, error)
+	GetVMSnapshot(ctx context.Context, in *v1.GetSnapshotRequest, opts ...grpc.CallOption) (*v1.VMSnapshot, error)
+	CreateVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	DeleteVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	PreviewVMRestore(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMRestorePreview, error)
+	RestoreVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error)
+	CreateVMConsoleSession(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMConsoleSession, error)
+	StreamVMLogs(ctx context.Context, in *v1.VMLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.VMLogFrame], error)
 }
 
 type vMServiceClient struct {
@@ -97,29 +94,9 @@ func NewVMServiceClient(cc grpc.ClientConnInterface) VMServiceClient {
 	return &vMServiceClient{cc}
 }
 
-func (c *vMServiceClient) GetVMNetworkInterfaces(ctx context.Context, in *v1.GetVMNetworkInterfacesRequest, opts ...grpc.CallOption) (*v1.NetworkInterfaces, error) {
+func (c *vMServiceClient) SetVMSecurityGroups(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.NetworkInterfaces)
-	err := c.cc.Invoke(ctx, VMService_GetVMNetworkInterfaces_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *vMServiceClient) SetVMNetworkInterface(ctx context.Context, in *v1.SetVMNetworkInterfaceRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
-	err := c.cc.Invoke(ctx, VMService_SetVMNetworkInterface_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *vMServiceClient) SetVMSecurityGroups(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_SetVMSecurityGroups_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -127,9 +104,9 @@ func (c *vMServiceClient) SetVMSecurityGroups(ctx context.Context, in *v11.Chang
 	return out, nil
 }
 
-func (c *vMServiceClient) CreateVM(ctx context.Context, in *v11.CreateVMRequest, opts ...grpc.CallOption) (*v11.VMAcceptance, error) {
+func (c *vMServiceClient) CreateVM(ctx context.Context, in *v1.CreateVMRequest, opts ...grpc.CallOption) (*v1.VMAcceptance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMAcceptance)
+	out := new(v1.VMAcceptance)
 	err := c.cc.Invoke(ctx, VMService_CreateVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -137,9 +114,9 @@ func (c *vMServiceClient) CreateVM(ctx context.Context, in *v11.CreateVMRequest,
 	return out, nil
 }
 
-func (c *vMServiceClient) ListVMs(ctx context.Context, in *v11.ListVMsRequest, opts ...grpc.CallOption) (*v11.ListVMsResponse, error) {
+func (c *vMServiceClient) ListVMs(ctx context.Context, in *v1.ListVMsRequest, opts ...grpc.CallOption) (*v1.ListVMsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.ListVMsResponse)
+	out := new(v1.ListVMsResponse)
 	err := c.cc.Invoke(ctx, VMService_ListVMs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -147,9 +124,9 @@ func (c *vMServiceClient) ListVMs(ctx context.Context, in *v11.ListVMsRequest, o
 	return out, nil
 }
 
-func (c *vMServiceClient) GetVM(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.VirtualMachine, error) {
+func (c *vMServiceClient) GetVM(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.VirtualMachine, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VirtualMachine)
+	out := new(v1.VirtualMachine)
 	err := c.cc.Invoke(ctx, VMService_GetVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -157,9 +134,19 @@ func (c *vMServiceClient) GetVM(ctx context.Context, in *v11.GetVMRequest, opts 
 	return out, nil
 }
 
-func (c *vMServiceClient) DeleteVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMAcceptance, error) {
+func (c *vMServiceClient) GetVMRuntime(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.VMRuntime, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMAcceptance)
+	out := new(v1.VMRuntime)
+	err := c.cc.Invoke(ctx, VMService_GetVMRuntime_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vMServiceClient) DeleteVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMAcceptance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.VMAcceptance)
 	err := c.cc.Invoke(ctx, VMService_DeleteVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -167,9 +154,9 @@ func (c *vMServiceClient) DeleteVM(ctx context.Context, in *v11.ChangeVMRequest,
 	return out, nil
 }
 
-func (c *vMServiceClient) GetVMOperation(ctx context.Context, in *v11.GetOperationRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) GetVMOperation(ctx context.Context, in *v1.GetOperationRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_GetVMOperation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -177,9 +164,9 @@ func (c *vMServiceClient) GetVMOperation(ctx context.Context, in *v11.GetOperati
 	return out, nil
 }
 
-func (c *vMServiceClient) StartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) StartVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_StartVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -187,9 +174,9 @@ func (c *vMServiceClient) StartVM(ctx context.Context, in *v11.ChangeVMRequest, 
 	return out, nil
 }
 
-func (c *vMServiceClient) StopVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) StopVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_StopVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -197,9 +184,9 @@ func (c *vMServiceClient) StopVM(ctx context.Context, in *v11.ChangeVMRequest, o
 	return out, nil
 }
 
-func (c *vMServiceClient) ForceStopVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) ForceStopVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_ForceStopVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -207,9 +194,9 @@ func (c *vMServiceClient) ForceStopVM(ctx context.Context, in *v11.ChangeVMReque
 	return out, nil
 }
 
-func (c *vMServiceClient) RestartVM(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) RestartVM(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_RestartVM_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -217,9 +204,9 @@ func (c *vMServiceClient) RestartVM(ctx context.Context, in *v11.ChangeVMRequest
 	return out, nil
 }
 
-func (c *vMServiceClient) ListVMDisks(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.ListDisksResponse, error) {
+func (c *vMServiceClient) ListVMDisks(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.ListDisksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.ListDisksResponse)
+	out := new(v1.ListDisksResponse)
 	err := c.cc.Invoke(ctx, VMService_ListVMDisks_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -227,9 +214,9 @@ func (c *vMServiceClient) ListVMDisks(ctx context.Context, in *v11.GetVMRequest,
 	return out, nil
 }
 
-func (c *vMServiceClient) CreateVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) CreateVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_CreateVMDisk_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -237,9 +224,9 @@ func (c *vMServiceClient) CreateVMDisk(ctx context.Context, in *v11.ChangeVMRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) AttachVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) AttachVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_AttachVMDisk_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -247,9 +234,9 @@ func (c *vMServiceClient) AttachVMDisk(ctx context.Context, in *v11.ChangeVMRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) DetachVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) DetachVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_DetachVMDisk_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -257,9 +244,9 @@ func (c *vMServiceClient) DetachVMDisk(ctx context.Context, in *v11.ChangeVMRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) DeleteVMDisk(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) DeleteVMDisk(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_DeleteVMDisk_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -267,9 +254,9 @@ func (c *vMServiceClient) DeleteVMDisk(ctx context.Context, in *v11.ChangeVMRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) SetVMMedia(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) SetVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_SetVMMedia_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -277,9 +264,9 @@ func (c *vMServiceClient) SetVMMedia(ctx context.Context, in *v11.ChangeVMReques
 	return out, nil
 }
 
-func (c *vMServiceClient) EjectVMMedia(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) EjectVMMedia(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_EjectVMMedia_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -287,9 +274,9 @@ func (c *vMServiceClient) EjectVMMedia(ctx context.Context, in *v11.ChangeVMRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) SetVMBootDevice(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) SetVMBootDevice(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_SetVMBootDevice_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -297,9 +284,9 @@ func (c *vMServiceClient) SetVMBootDevice(ctx context.Context, in *v11.ChangeVMR
 	return out, nil
 }
 
-func (c *vMServiceClient) GetVMDNSDefaults(ctx context.Context, in *v11.GetDNSDefaultsRequest, opts ...grpc.CallOption) (*v11.DNSDefaults, error) {
+func (c *vMServiceClient) GetVMDNSDefaults(ctx context.Context, in *v1.GetDNSDefaultsRequest, opts ...grpc.CallOption) (*v1.DNSDefaults, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.DNSDefaults)
+	out := new(v1.DNSDefaults)
 	err := c.cc.Invoke(ctx, VMService_GetVMDNSDefaults_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -307,9 +294,9 @@ func (c *vMServiceClient) GetVMDNSDefaults(ctx context.Context, in *v11.GetDNSDe
 	return out, nil
 }
 
-func (c *vMServiceClient) ListVMMedia(ctx context.Context, in *v11.ListMediaRequest, opts ...grpc.CallOption) (*v11.ListMediaResponse, error) {
+func (c *vMServiceClient) ListVMMedia(ctx context.Context, in *v1.ListMediaRequest, opts ...grpc.CallOption) (*v1.ListMediaResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.ListMediaResponse)
+	out := new(v1.ListMediaResponse)
 	err := c.cc.Invoke(ctx, VMService_ListVMMedia_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -317,9 +304,9 @@ func (c *vMServiceClient) ListVMMedia(ctx context.Context, in *v11.ListMediaRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) ListVMSnapshots(ctx context.Context, in *v11.GetVMRequest, opts ...grpc.CallOption) (*v11.ListSnapshotsResponse, error) {
+func (c *vMServiceClient) ListVMSnapshots(ctx context.Context, in *v1.GetVMRequest, opts ...grpc.CallOption) (*v1.ListSnapshotsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.ListSnapshotsResponse)
+	out := new(v1.ListSnapshotsResponse)
 	err := c.cc.Invoke(ctx, VMService_ListVMSnapshots_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -327,9 +314,9 @@ func (c *vMServiceClient) ListVMSnapshots(ctx context.Context, in *v11.GetVMRequ
 	return out, nil
 }
 
-func (c *vMServiceClient) GetVMSnapshot(ctx context.Context, in *v11.GetSnapshotRequest, opts ...grpc.CallOption) (*v11.VMSnapshot, error) {
+func (c *vMServiceClient) GetVMSnapshot(ctx context.Context, in *v1.GetSnapshotRequest, opts ...grpc.CallOption) (*v1.VMSnapshot, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMSnapshot)
+	out := new(v1.VMSnapshot)
 	err := c.cc.Invoke(ctx, VMService_GetVMSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -337,9 +324,9 @@ func (c *vMServiceClient) GetVMSnapshot(ctx context.Context, in *v11.GetSnapshot
 	return out, nil
 }
 
-func (c *vMServiceClient) CreateVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) CreateVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_CreateVMSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -347,9 +334,9 @@ func (c *vMServiceClient) CreateVMSnapshot(ctx context.Context, in *v11.ChangeVM
 	return out, nil
 }
 
-func (c *vMServiceClient) DeleteVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) DeleteVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_DeleteVMSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -357,9 +344,9 @@ func (c *vMServiceClient) DeleteVMSnapshot(ctx context.Context, in *v11.ChangeVM
 	return out, nil
 }
 
-func (c *vMServiceClient) PreviewVMRestore(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMRestorePreview, error) {
+func (c *vMServiceClient) PreviewVMRestore(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMRestorePreview, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMRestorePreview)
+	out := new(v1.VMRestorePreview)
 	err := c.cc.Invoke(ctx, VMService_PreviewVMRestore_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -367,9 +354,9 @@ func (c *vMServiceClient) PreviewVMRestore(ctx context.Context, in *v11.ChangeVM
 	return out, nil
 }
 
-func (c *vMServiceClient) RestoreVMSnapshot(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMOperation, error) {
+func (c *vMServiceClient) RestoreVMSnapshot(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMOperation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMOperation)
+	out := new(v1.VMOperation)
 	err := c.cc.Invoke(ctx, VMService_RestoreVMSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -377,9 +364,9 @@ func (c *vMServiceClient) RestoreVMSnapshot(ctx context.Context, in *v11.ChangeV
 	return out, nil
 }
 
-func (c *vMServiceClient) CreateVMConsoleSession(ctx context.Context, in *v11.ChangeVMRequest, opts ...grpc.CallOption) (*v11.VMConsoleSession, error) {
+func (c *vMServiceClient) CreateVMConsoleSession(ctx context.Context, in *v1.ChangeVMRequest, opts ...grpc.CallOption) (*v1.VMConsoleSession, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v11.VMConsoleSession)
+	out := new(v1.VMConsoleSession)
 	err := c.cc.Invoke(ctx, VMService_CreateVMConsoleSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -387,13 +374,13 @@ func (c *vMServiceClient) CreateVMConsoleSession(ctx context.Context, in *v11.Ch
 	return out, nil
 }
 
-func (c *vMServiceClient) StreamVMLogs(ctx context.Context, in *v11.VMLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.VMLogFrame], error) {
+func (c *vMServiceClient) StreamVMLogs(ctx context.Context, in *v1.VMLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.VMLogFrame], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &VMService_ServiceDesc.Streams[0], VMService_StreamVMLogs_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[v11.VMLogsRequest, v11.VMLogFrame]{ClientStream: stream}
+	x := &grpc.GenericClientStream[v1.VMLogsRequest, v1.VMLogFrame]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -404,42 +391,41 @@ func (c *vMServiceClient) StreamVMLogs(ctx context.Context, in *v11.VMLogsReques
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type VMService_StreamVMLogsClient = grpc.ServerStreamingClient[v11.VMLogFrame]
+type VMService_StreamVMLogsClient = grpc.ServerStreamingClient[v1.VMLogFrame]
 
 // VMServiceServer is the server API for VMService service.
 // All implementations must embed UnimplementedVMServiceServer
 // for forward compatibility.
 type VMServiceServer interface {
-	GetVMNetworkInterfaces(context.Context, *v1.GetVMNetworkInterfacesRequest) (*v1.NetworkInterfaces, error)
-	SetVMNetworkInterface(context.Context, *v1.SetVMNetworkInterfaceRequest) (*v11.VMOperation, error)
-	SetVMSecurityGroups(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	CreateVM(context.Context, *v11.CreateVMRequest) (*v11.VMAcceptance, error)
-	ListVMs(context.Context, *v11.ListVMsRequest) (*v11.ListVMsResponse, error)
-	GetVM(context.Context, *v11.GetVMRequest) (*v11.VirtualMachine, error)
-	DeleteVM(context.Context, *v11.ChangeVMRequest) (*v11.VMAcceptance, error)
-	GetVMOperation(context.Context, *v11.GetOperationRequest) (*v11.VMOperation, error)
-	StartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	StopVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	ForceStopVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	RestartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	ListVMDisks(context.Context, *v11.GetVMRequest) (*v11.ListDisksResponse, error)
-	CreateVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	AttachVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	DetachVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	DeleteVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	SetVMMedia(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	EjectVMMedia(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	SetVMBootDevice(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	GetVMDNSDefaults(context.Context, *v11.GetDNSDefaultsRequest) (*v11.DNSDefaults, error)
-	ListVMMedia(context.Context, *v11.ListMediaRequest) (*v11.ListMediaResponse, error)
-	ListVMSnapshots(context.Context, *v11.GetVMRequest) (*v11.ListSnapshotsResponse, error)
-	GetVMSnapshot(context.Context, *v11.GetSnapshotRequest) (*v11.VMSnapshot, error)
-	CreateVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	DeleteVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	PreviewVMRestore(context.Context, *v11.ChangeVMRequest) (*v11.VMRestorePreview, error)
-	RestoreVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error)
-	CreateVMConsoleSession(context.Context, *v11.ChangeVMRequest) (*v11.VMConsoleSession, error)
-	StreamVMLogs(*v11.VMLogsRequest, grpc.ServerStreamingServer[v11.VMLogFrame]) error
+	SetVMSecurityGroups(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	CreateVM(context.Context, *v1.CreateVMRequest) (*v1.VMAcceptance, error)
+	ListVMs(context.Context, *v1.ListVMsRequest) (*v1.ListVMsResponse, error)
+	GetVM(context.Context, *v1.GetVMRequest) (*v1.VirtualMachine, error)
+	GetVMRuntime(context.Context, *v1.GetVMRequest) (*v1.VMRuntime, error)
+	DeleteVM(context.Context, *v1.ChangeVMRequest) (*v1.VMAcceptance, error)
+	GetVMOperation(context.Context, *v1.GetOperationRequest) (*v1.VMOperation, error)
+	StartVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	StopVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	ForceStopVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	RestartVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	ListVMDisks(context.Context, *v1.GetVMRequest) (*v1.ListDisksResponse, error)
+	CreateVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	AttachVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	DetachVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	DeleteVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	SetVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	EjectVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	SetVMBootDevice(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	GetVMDNSDefaults(context.Context, *v1.GetDNSDefaultsRequest) (*v1.DNSDefaults, error)
+	ListVMMedia(context.Context, *v1.ListMediaRequest) (*v1.ListMediaResponse, error)
+	ListVMSnapshots(context.Context, *v1.GetVMRequest) (*v1.ListSnapshotsResponse, error)
+	GetVMSnapshot(context.Context, *v1.GetSnapshotRequest) (*v1.VMSnapshot, error)
+	CreateVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	DeleteVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	PreviewVMRestore(context.Context, *v1.ChangeVMRequest) (*v1.VMRestorePreview, error)
+	RestoreVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error)
+	CreateVMConsoleSession(context.Context, *v1.ChangeVMRequest) (*v1.VMConsoleSession, error)
+	StreamVMLogs(*v1.VMLogsRequest, grpc.ServerStreamingServer[v1.VMLogFrame]) error
 	mustEmbedUnimplementedVMServiceServer()
 }
 
@@ -450,94 +436,91 @@ type VMServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedVMServiceServer struct{}
 
-func (UnimplementedVMServiceServer) GetVMNetworkInterfaces(context.Context, *v1.GetVMNetworkInterfacesRequest) (*v1.NetworkInterfaces, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetVMNetworkInterfaces not implemented")
-}
-func (UnimplementedVMServiceServer) SetVMNetworkInterface(context.Context, *v1.SetVMNetworkInterfaceRequest) (*v11.VMOperation, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetVMNetworkInterface not implemented")
-}
-func (UnimplementedVMServiceServer) SetVMSecurityGroups(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) SetVMSecurityGroups(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetVMSecurityGroups not implemented")
 }
-func (UnimplementedVMServiceServer) CreateVM(context.Context, *v11.CreateVMRequest) (*v11.VMAcceptance, error) {
+func (UnimplementedVMServiceServer) CreateVM(context.Context, *v1.CreateVMRequest) (*v1.VMAcceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVM not implemented")
 }
-func (UnimplementedVMServiceServer) ListVMs(context.Context, *v11.ListVMsRequest) (*v11.ListVMsResponse, error) {
+func (UnimplementedVMServiceServer) ListVMs(context.Context, *v1.ListVMsRequest) (*v1.ListVMsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListVMs not implemented")
 }
-func (UnimplementedVMServiceServer) GetVM(context.Context, *v11.GetVMRequest) (*v11.VirtualMachine, error) {
+func (UnimplementedVMServiceServer) GetVM(context.Context, *v1.GetVMRequest) (*v1.VirtualMachine, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVM not implemented")
 }
-func (UnimplementedVMServiceServer) DeleteVM(context.Context, *v11.ChangeVMRequest) (*v11.VMAcceptance, error) {
+func (UnimplementedVMServiceServer) GetVMRuntime(context.Context, *v1.GetVMRequest) (*v1.VMRuntime, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVMRuntime not implemented")
+}
+func (UnimplementedVMServiceServer) DeleteVM(context.Context, *v1.ChangeVMRequest) (*v1.VMAcceptance, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteVM not implemented")
 }
-func (UnimplementedVMServiceServer) GetVMOperation(context.Context, *v11.GetOperationRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) GetVMOperation(context.Context, *v1.GetOperationRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVMOperation not implemented")
 }
-func (UnimplementedVMServiceServer) StartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) StartVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method StartVM not implemented")
 }
-func (UnimplementedVMServiceServer) StopVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) StopVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopVM not implemented")
 }
-func (UnimplementedVMServiceServer) ForceStopVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) ForceStopVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method ForceStopVM not implemented")
 }
-func (UnimplementedVMServiceServer) RestartVM(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) RestartVM(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestartVM not implemented")
 }
-func (UnimplementedVMServiceServer) ListVMDisks(context.Context, *v11.GetVMRequest) (*v11.ListDisksResponse, error) {
+func (UnimplementedVMServiceServer) ListVMDisks(context.Context, *v1.GetVMRequest) (*v1.ListDisksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListVMDisks not implemented")
 }
-func (UnimplementedVMServiceServer) CreateVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) CreateVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVMDisk not implemented")
 }
-func (UnimplementedVMServiceServer) AttachVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) AttachVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method AttachVMDisk not implemented")
 }
-func (UnimplementedVMServiceServer) DetachVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) DetachVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method DetachVMDisk not implemented")
 }
-func (UnimplementedVMServiceServer) DeleteVMDisk(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) DeleteVMDisk(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteVMDisk not implemented")
 }
-func (UnimplementedVMServiceServer) SetVMMedia(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) SetVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetVMMedia not implemented")
 }
-func (UnimplementedVMServiceServer) EjectVMMedia(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) EjectVMMedia(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method EjectVMMedia not implemented")
 }
-func (UnimplementedVMServiceServer) SetVMBootDevice(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) SetVMBootDevice(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetVMBootDevice not implemented")
 }
-func (UnimplementedVMServiceServer) GetVMDNSDefaults(context.Context, *v11.GetDNSDefaultsRequest) (*v11.DNSDefaults, error) {
+func (UnimplementedVMServiceServer) GetVMDNSDefaults(context.Context, *v1.GetDNSDefaultsRequest) (*v1.DNSDefaults, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVMDNSDefaults not implemented")
 }
-func (UnimplementedVMServiceServer) ListVMMedia(context.Context, *v11.ListMediaRequest) (*v11.ListMediaResponse, error) {
+func (UnimplementedVMServiceServer) ListVMMedia(context.Context, *v1.ListMediaRequest) (*v1.ListMediaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListVMMedia not implemented")
 }
-func (UnimplementedVMServiceServer) ListVMSnapshots(context.Context, *v11.GetVMRequest) (*v11.ListSnapshotsResponse, error) {
+func (UnimplementedVMServiceServer) ListVMSnapshots(context.Context, *v1.GetVMRequest) (*v1.ListSnapshotsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListVMSnapshots not implemented")
 }
-func (UnimplementedVMServiceServer) GetVMSnapshot(context.Context, *v11.GetSnapshotRequest) (*v11.VMSnapshot, error) {
+func (UnimplementedVMServiceServer) GetVMSnapshot(context.Context, *v1.GetSnapshotRequest) (*v1.VMSnapshot, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVMSnapshot not implemented")
 }
-func (UnimplementedVMServiceServer) CreateVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) CreateVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVMSnapshot not implemented")
 }
-func (UnimplementedVMServiceServer) DeleteVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) DeleteVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteVMSnapshot not implemented")
 }
-func (UnimplementedVMServiceServer) PreviewVMRestore(context.Context, *v11.ChangeVMRequest) (*v11.VMRestorePreview, error) {
+func (UnimplementedVMServiceServer) PreviewVMRestore(context.Context, *v1.ChangeVMRequest) (*v1.VMRestorePreview, error) {
 	return nil, status.Error(codes.Unimplemented, "method PreviewVMRestore not implemented")
 }
-func (UnimplementedVMServiceServer) RestoreVMSnapshot(context.Context, *v11.ChangeVMRequest) (*v11.VMOperation, error) {
+func (UnimplementedVMServiceServer) RestoreVMSnapshot(context.Context, *v1.ChangeVMRequest) (*v1.VMOperation, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreVMSnapshot not implemented")
 }
-func (UnimplementedVMServiceServer) CreateVMConsoleSession(context.Context, *v11.ChangeVMRequest) (*v11.VMConsoleSession, error) {
+func (UnimplementedVMServiceServer) CreateVMConsoleSession(context.Context, *v1.ChangeVMRequest) (*v1.VMConsoleSession, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVMConsoleSession not implemented")
 }
-func (UnimplementedVMServiceServer) StreamVMLogs(*v11.VMLogsRequest, grpc.ServerStreamingServer[v11.VMLogFrame]) error {
+func (UnimplementedVMServiceServer) StreamVMLogs(*v1.VMLogsRequest, grpc.ServerStreamingServer[v1.VMLogFrame]) error {
 	return status.Error(codes.Unimplemented, "method StreamVMLogs not implemented")
 }
 func (UnimplementedVMServiceServer) mustEmbedUnimplementedVMServiceServer() {}
@@ -561,44 +544,8 @@ func RegisterVMServiceServer(s grpc.ServiceRegistrar, srv VMServiceServer) {
 	s.RegisterService(&VMService_ServiceDesc, srv)
 }
 
-func _VMService_GetVMNetworkInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.GetVMNetworkInterfacesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VMServiceServer).GetVMNetworkInterfaces(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: VMService_GetVMNetworkInterfaces_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).GetVMNetworkInterfaces(ctx, req.(*v1.GetVMNetworkInterfacesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VMService_SetVMNetworkInterface_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.SetVMNetworkInterfaceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VMServiceServer).SetVMNetworkInterface(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: VMService_SetVMNetworkInterface_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).SetVMNetworkInterface(ctx, req.(*v1.SetVMNetworkInterfaceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _VMService_SetVMSecurityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -610,13 +557,13 @@ func _VMService_SetVMSecurityGroups_Handler(srv interface{}, ctx context.Context
 		FullMethod: VMService_SetVMSecurityGroups_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).SetVMSecurityGroups(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).SetVMSecurityGroups(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_CreateVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.CreateVMRequest)
+	in := new(v1.CreateVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -628,13 +575,13 @@ func _VMService_CreateVM_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: VMService_CreateVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).CreateVM(ctx, req.(*v11.CreateVMRequest))
+		return srv.(VMServiceServer).CreateVM(ctx, req.(*v1.CreateVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_ListVMs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ListVMsRequest)
+	in := new(v1.ListVMsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -646,13 +593,13 @@ func _VMService_ListVMs_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: VMService_ListVMs_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).ListVMs(ctx, req.(*v11.ListVMsRequest))
+		return srv.(VMServiceServer).ListVMs(ctx, req.(*v1.ListVMsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_GetVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.GetVMRequest)
+	in := new(v1.GetVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -664,13 +611,31 @@ func _VMService_GetVM_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: VMService_GetVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).GetVM(ctx, req.(*v11.GetVMRequest))
+		return srv.(VMServiceServer).GetVM(ctx, req.(*v1.GetVMRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VMService_GetVMRuntime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetVMRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VMServiceServer).GetVMRuntime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VMService_GetVMRuntime_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VMServiceServer).GetVMRuntime(ctx, req.(*v1.GetVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_DeleteVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -682,13 +647,13 @@ func _VMService_DeleteVM_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: VMService_DeleteVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).DeleteVM(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).DeleteVM(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_GetVMOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.GetOperationRequest)
+	in := new(v1.GetOperationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -700,13 +665,13 @@ func _VMService_GetVMOperation_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: VMService_GetVMOperation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).GetVMOperation(ctx, req.(*v11.GetOperationRequest))
+		return srv.(VMServiceServer).GetVMOperation(ctx, req.(*v1.GetOperationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_StartVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -718,13 +683,13 @@ func _VMService_StartVM_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: VMService_StartVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).StartVM(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).StartVM(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_StopVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -736,13 +701,13 @@ func _VMService_StopVM_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: VMService_StopVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).StopVM(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).StopVM(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_ForceStopVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -754,13 +719,13 @@ func _VMService_ForceStopVM_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: VMService_ForceStopVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).ForceStopVM(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).ForceStopVM(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_RestartVM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -772,13 +737,13 @@ func _VMService_RestartVM_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: VMService_RestartVM_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).RestartVM(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).RestartVM(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_ListVMDisks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.GetVMRequest)
+	in := new(v1.GetVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -790,13 +755,13 @@ func _VMService_ListVMDisks_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: VMService_ListVMDisks_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).ListVMDisks(ctx, req.(*v11.GetVMRequest))
+		return srv.(VMServiceServer).ListVMDisks(ctx, req.(*v1.GetVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_CreateVMDisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -808,13 +773,13 @@ func _VMService_CreateVMDisk_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: VMService_CreateVMDisk_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).CreateVMDisk(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).CreateVMDisk(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_AttachVMDisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -826,13 +791,13 @@ func _VMService_AttachVMDisk_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: VMService_AttachVMDisk_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).AttachVMDisk(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).AttachVMDisk(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_DetachVMDisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -844,13 +809,13 @@ func _VMService_DetachVMDisk_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: VMService_DetachVMDisk_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).DetachVMDisk(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).DetachVMDisk(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_DeleteVMDisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -862,13 +827,13 @@ func _VMService_DeleteVMDisk_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: VMService_DeleteVMDisk_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).DeleteVMDisk(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).DeleteVMDisk(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_SetVMMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -880,13 +845,13 @@ func _VMService_SetVMMedia_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: VMService_SetVMMedia_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).SetVMMedia(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).SetVMMedia(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_EjectVMMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -898,13 +863,13 @@ func _VMService_EjectVMMedia_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: VMService_EjectVMMedia_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).EjectVMMedia(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).EjectVMMedia(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_SetVMBootDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -916,13 +881,13 @@ func _VMService_SetVMBootDevice_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: VMService_SetVMBootDevice_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).SetVMBootDevice(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).SetVMBootDevice(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_GetVMDNSDefaults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.GetDNSDefaultsRequest)
+	in := new(v1.GetDNSDefaultsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -934,13 +899,13 @@ func _VMService_GetVMDNSDefaults_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: VMService_GetVMDNSDefaults_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).GetVMDNSDefaults(ctx, req.(*v11.GetDNSDefaultsRequest))
+		return srv.(VMServiceServer).GetVMDNSDefaults(ctx, req.(*v1.GetDNSDefaultsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_ListVMMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ListMediaRequest)
+	in := new(v1.ListMediaRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -952,13 +917,13 @@ func _VMService_ListVMMedia_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: VMService_ListVMMedia_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).ListVMMedia(ctx, req.(*v11.ListMediaRequest))
+		return srv.(VMServiceServer).ListVMMedia(ctx, req.(*v1.ListMediaRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_ListVMSnapshots_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.GetVMRequest)
+	in := new(v1.GetVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -970,13 +935,13 @@ func _VMService_ListVMSnapshots_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: VMService_ListVMSnapshots_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).ListVMSnapshots(ctx, req.(*v11.GetVMRequest))
+		return srv.(VMServiceServer).ListVMSnapshots(ctx, req.(*v1.GetVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_GetVMSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.GetSnapshotRequest)
+	in := new(v1.GetSnapshotRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -988,13 +953,13 @@ func _VMService_GetVMSnapshot_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: VMService_GetVMSnapshot_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).GetVMSnapshot(ctx, req.(*v11.GetSnapshotRequest))
+		return srv.(VMServiceServer).GetVMSnapshot(ctx, req.(*v1.GetSnapshotRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_CreateVMSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1006,13 +971,13 @@ func _VMService_CreateVMSnapshot_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: VMService_CreateVMSnapshot_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).CreateVMSnapshot(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).CreateVMSnapshot(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_DeleteVMSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1024,13 +989,13 @@ func _VMService_DeleteVMSnapshot_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: VMService_DeleteVMSnapshot_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).DeleteVMSnapshot(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).DeleteVMSnapshot(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_PreviewVMRestore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1042,13 +1007,13 @@ func _VMService_PreviewVMRestore_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: VMService_PreviewVMRestore_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).PreviewVMRestore(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).PreviewVMRestore(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_RestoreVMSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1060,13 +1025,13 @@ func _VMService_RestoreVMSnapshot_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: VMService_RestoreVMSnapshot_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).RestoreVMSnapshot(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).RestoreVMSnapshot(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_CreateVMConsoleSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v11.ChangeVMRequest)
+	in := new(v1.ChangeVMRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1078,21 +1043,21 @@ func _VMService_CreateVMConsoleSession_Handler(srv interface{}, ctx context.Cont
 		FullMethod: VMService_CreateVMConsoleSession_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VMServiceServer).CreateVMConsoleSession(ctx, req.(*v11.ChangeVMRequest))
+		return srv.(VMServiceServer).CreateVMConsoleSession(ctx, req.(*v1.ChangeVMRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _VMService_StreamVMLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(v11.VMLogsRequest)
+	m := new(v1.VMLogsRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(VMServiceServer).StreamVMLogs(m, &grpc.GenericServerStream[v11.VMLogsRequest, v11.VMLogFrame]{ServerStream: stream})
+	return srv.(VMServiceServer).StreamVMLogs(m, &grpc.GenericServerStream[v1.VMLogsRequest, v1.VMLogFrame]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type VMService_StreamVMLogsServer = grpc.ServerStreamingServer[v11.VMLogFrame]
+type VMService_StreamVMLogsServer = grpc.ServerStreamingServer[v1.VMLogFrame]
 
 // VMService_ServiceDesc is the grpc.ServiceDesc for VMService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -1101,14 +1066,6 @@ var VMService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.service.v1.VMService",
 	HandlerType: (*VMServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetVMNetworkInterfaces",
-			Handler:    _VMService_GetVMNetworkInterfaces_Handler,
-		},
-		{
-			MethodName: "SetVMNetworkInterface",
-			Handler:    _VMService_SetVMNetworkInterface_Handler,
-		},
 		{
 			MethodName: "SetVMSecurityGroups",
 			Handler:    _VMService_SetVMSecurityGroups_Handler,
@@ -1124,6 +1081,10 @@ var VMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVM",
 			Handler:    _VMService_GetVM_Handler,
+		},
+		{
+			MethodName: "GetVMRuntime",
+			Handler:    _VMService_GetVMRuntime_Handler,
 		},
 		{
 			MethodName: "DeleteVM",

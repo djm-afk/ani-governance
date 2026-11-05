@@ -25,6 +25,7 @@ type VMOwnerClient interface {
 	Create(context.Context, string, string, *vm.AcceptCreateRequest) (*vm.Acceptance, error)
 	Delete(context.Context, string, string, *vm.AcceptDeleteRequest) (*vm.Acceptance, error)
 	Get(context.Context, string, string, string) (*vm.VirtualMachine, error)
+	Runtime(context.Context, string, string, string) (*vm.VirtualMachine, error)
 	List(context.Context, string, string, uint32, uint32, string, string) (*vm.ListVMsResponse, error)
 	Operation(context.Context, string, string, string, string) (*vm.Operation, error)
 	Lookup(context.Context, string, string, *vm.LookupCommandReplayRequest) (*vm.Operation, error)
