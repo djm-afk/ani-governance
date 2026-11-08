@@ -272,6 +272,20 @@ func TestCountsAndKeys(t *testing.T) {
 		"PATCH /api/v1/virtual-machine-images/{image_id}":                {Code: "vm:image:update", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
 		"DELETE /api/v1/virtual-machine-images/{image_id}":               {Code: "vm:image:delete", Source: vmImageSource, BusinessModule: "VIRTUAL_MACHINE", ScopeKind: "tenant"},
 	}
+	const clusterOpsSource = "scripts/ops/sql/register-cluster-ops-permissions.sql"
+	clusterOpsCapabilities := map[string]expectation{
+		"GET /api/v1/admin/cluster-ops/clusters":                                                          {Code: "cluster:ops:read", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"GET /api/v1/admin/cluster-ops/clusters/{cluster_id}/overview":                                    {Code: "cluster:ops:read", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"GET /api/v1/admin/cluster-ops/clusters/{cluster_id}/resource-types":                              {Code: "cluster:ops:read", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"GET /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources":                                   {Code: "cluster:ops:read", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"GET /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}":                            {Code: "cluster:ops:read", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"POST /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources":                                  {Code: "cluster:ops:create", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"PUT /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}":                            {Code: "cluster:ops:update", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"DELETE /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}":                         {Code: "cluster:ops:delete", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"POST /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/scale":                     {Code: "cluster:ops:scale", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"POST /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/restart":                   {Code: "cluster:ops:restart", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+		"GET /api/v1/admin/cluster-ops/clusters/{cluster_id}/namespaces/{namespace}/pods/{pod_name}/logs": {Code: "cluster:ops:logs", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
+	}
 	if want := 227; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
@@ -286,11 +300,11 @@ func TestCountsAndKeys(t *testing.T) {
 	const platformBaseNetworkEntry = 1
 	// vmRuntimeCapabilities 补记 GET /api/v1/virtual-machines/{vm_id}/runtime（vm:read）。
 	const vmRuntimeCapabilities = 1
-	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageCapabilities + vmRuntimeCapabilities; CapabilityCount() != want {
+	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageCapabilities + vmRuntimeCapabilities + len(clusterOpsCapabilities); CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageKeysPerRoute + vmRuntimeCapabilities; len(keys) != want {
+	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageKeysPerRoute + vmRuntimeCapabilities + len(clusterOpsCapabilities); len(keys) != want {
 		t.Errorf("AllKeys() = %d, want %d", len(keys), want)
 	}
 	keySet := make(map[string]bool, len(keys))
@@ -307,6 +321,7 @@ func TestCountsAndKeys(t *testing.T) {
 		{"storage-write-capability", storageWriteSource, capabilityOperations, storageWrites},
 		{"storage-stats-capability", "sql/data/20261030_storage_bucket_stats_permission.sql", capabilityOperations, storageStats},
 		{"vm-image-capability", vmImageSource, capabilityOperations, vmImageRoutes},
+		{"cluster-ops-capability", clusterOpsSource, capabilityOperations, clusterOpsCapabilities},
 	} {
 		t.Run(table.name, func(t *testing.T) {
 			actual := make(map[string]expectation)

@@ -534,7 +534,101 @@ def require_modeldev_device_mode(text):
     return text[:start] + section + text[end:]
 
 
+def add_cluster_ops_log_stream(text):
+    """Document the single hand-written stream without generating a second handler."""
+    if "            operationId: PlatformClusterOpsService_ListClusters\n" not in text:
+        return text
+    route = "    /api/v1/admin/cluster-ops/clusters/{cluster_id}/namespaces/{namespace}/pods/{pod_name}/logs:\n"
+    if route in text:
+        raise SystemExit("cluster operations logs must be declared once as SSE")
+    operation = route + """        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_StreamPodLogs
+            description: One raw Pod/container stream. READY precedes HTTP 200. ready/data(base64 bytes)/end/error; no resume, retry or persistence.
+            security:
+                - BearerAuth: []
+            parameters:
+"""
+    for name in ("cluster_id", "namespace", "pod_name"):
+        operation += f"""                - name: {name}
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+"""
+    for name in ("container", "expected_pod_uid"):
+        operation += f"""                - name: {name}
+                  in: query
+                  schema:
+                    type: string
+"""
+    for name in ("follow", "previous", "timestamps"):
+        operation += f"""                - name: {name}
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+"""
+    for name in ("tail_lines", "since_seconds", "limit_bytes"):
+        pattern = "^(0|[1-9][0-9]*)$" if name == "tail_lines" else "^[1-9][0-9]*$"
+        operation += f"""                - name: {name}
+                  in: query
+                  schema:
+                    type: string
+                    pattern: '{pattern}'
+                    description: Optional int64 decimal string; presence is retained.
+"""
+    operation += """                - name: since_time
+                  in: query
+                  description: RFC 3339, mutually exclusive with since_seconds.
+                  schema:
+                    type: string
+                    format: date-time
+            responses:
+                "200":
+                    description: SSE ready/data/end/error. Independent bounded lifetime; no-store, no proxy buffering.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+"""
+    for code in (400, 401, 403, 404, 409, 429, 500, 502, 503, 504):
+        operation += f"""                "{code}":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+"""
+    marker = "\ncomponents:\n"
+    if text.count(marker) != 1:
+        raise SystemExit("expected one OpenAPI components section")
+    text = text.replace(marker, "\n" + operation + "components:\n", 1)
+    schemas = "components:\n    schemas:\n"
+    error_schema = """        ClusterOpsHTTPError:
+            type: object
+            required: [code, reason, message, metadata]
+            properties:
+                code:
+                    type: integer
+                    format: int32
+                reason:
+                    type: string
+                message:
+                    type: string
+                metadata:
+                    type: object
+                    additionalProperties:
+                        type: string
+"""
+    if text.count(schemas) != 1 or "        ClusterOpsHTTPError:\n" in text:
+        raise SystemExit("cluster operations error schema must be declared once")
+    return text.replace(schemas, schemas + error_schema, 1)
+
+
 def finalize(text):
+    text = add_cluster_ops_log_stream(text)
     text = require_modeldev_device_mode(text)
     text = remove_synthetic_200(text, "/api/v1/auth/api-keys", "201")
     # Minimal generator fixtures may omit ModelDev. Its public contract test

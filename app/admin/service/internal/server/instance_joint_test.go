@@ -294,7 +294,7 @@ func instancePublicHTTPJoint(t *testing.T, newCommands bool) {
 		t.Setenv("INSTANCE_JOINT_QUOTA_FILE", path)
 	}
 	resourcePeer := testutil.StartInstanceResourcePeer(t, gpuRequest, gpuProfile)
-	owner, computeOwner, closeOwner, e := data.NewResourceClientsFromEnv()
+	owner, computeOwner, _, closeOwner, e := data.NewResourceClientsFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeOwner)
 	// This suite covers the current frozen instance admission contract.

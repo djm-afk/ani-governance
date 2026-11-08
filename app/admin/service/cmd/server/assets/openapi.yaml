@@ -1100,6 +1100,307 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /api/v1/admin/cluster-ops/clusters:
+        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_ListClusters
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsListClustersResponse'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/overview:
+        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_GetClusterOverview
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsClusterOverview'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/resource-types:
+        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_ListResourceTypes
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsListResourceTypesResponse'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources:
+        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_ListResources
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: group
+                  in: query
+                  schema:
+                    type: string
+                - name: version
+                  in: query
+                  schema:
+                    type: string
+                - name: resource
+                  in: query
+                  schema:
+                    type: string
+                - name: namespace
+                  in: query
+                  schema:
+                    type: string
+                - name: all_namespaces
+                  in: query
+                  schema:
+                    type: boolean
+                - name: page_size
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: continue_token
+                  in: query
+                  schema:
+                    type: string
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                - name: label_selector
+                  in: query
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsListResourcesResponse'
+        post:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_CreateResource
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ClusterOpsCreateResourceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsMutationResponse'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}:
+        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_GetResource
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: group
+                  in: query
+                  schema:
+                    type: string
+                - name: version
+                  in: query
+                  schema:
+                    type: string
+                - name: resource
+                  in: query
+                  schema:
+                    type: string
+                - name: namespace
+                  in: query
+                  schema:
+                    type: string
+                - name: include_secret_data
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsGetResourceResponse'
+        put:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_UpdateResource
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ClusterOpsUpdateResourceRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsMutationResponse'
+        delete:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_DeleteResource
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: group
+                  in: query
+                  schema:
+                    type: string
+                - name: version
+                  in: query
+                  schema:
+                    type: string
+                - name: resource
+                  in: query
+                  schema:
+                    type: string
+                - name: namespace
+                  in: query
+                  schema:
+                    type: string
+                - name: expected_uid
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsDeleteResourceResponse'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/restart:
+        post:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_RestartWorkload
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ClusterOpsRestartWorkloadRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsMutationResponse'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/scale:
+        post:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_ScaleWorkload
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ClusterOpsScaleWorkloadRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsScaleWorkloadResponse'
     /api/v1/admin/compute-presets:
         get:
             tags:
@@ -14105,6 +14406,144 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/VMSnapshot'
+    /api/v1/admin/cluster-ops/clusters/{cluster_id}/namespaces/{namespace}/pods/{pod_name}/logs:
+        get:
+            tags:
+                - PlatformClusterOpsService
+            operationId: PlatformClusterOpsService_StreamPodLogs
+            description: One raw Pod/container stream. READY precedes HTTP 200. ready/data(base64 bytes)/end/error; no resume, retry or persistence.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: cluster_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: namespace
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: pod_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: container
+                  in: query
+                  schema:
+                    type: string
+                - name: expected_pod_uid
+                  in: query
+                  schema:
+                    type: string
+                - name: follow
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+                - name: previous
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+                - name: timestamps
+                  in: query
+                  schema:
+                    type: boolean
+                    default: false
+                - name: tail_lines
+                  in: query
+                  schema:
+                    type: string
+                    pattern: '^(0|[1-9][0-9]*)$'
+                    description: Optional int64 decimal string; presence is retained.
+                - name: since_seconds
+                  in: query
+                  schema:
+                    type: string
+                    pattern: '^[1-9][0-9]*$'
+                    description: Optional int64 decimal string; presence is retained.
+                - name: limit_bytes
+                  in: query
+                  schema:
+                    type: string
+                    pattern: '^[1-9][0-9]*$'
+                    description: Optional int64 decimal string; presence is retained.
+                - name: since_time
+                  in: query
+                  description: RFC 3339, mutually exclusive with since_seconds.
+                  schema:
+                    type: string
+                    format: date-time
+            responses:
+                "200":
+                    description: SSE ready/data/end/error. Independent bounded lifetime; no-store, no proxy buffering.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                "400":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "401":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "403":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "404":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "409":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "429":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "500":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "502":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "503":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
+                "504":
+                    description: Request failed before READY; Kubernetes credential failures are 502, not user 401.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ClusterOpsHTTPError'
     /api/v1/instances/{instance_id}/logs:
         get:
             tags:
@@ -14384,6 +14823,21 @@ components:
                     format: date-time
                 reason_message:
                     type: string
+        ClusterOpsHTTPError:
+            type: object
+            required: [code, reason, message, metadata]
+            properties:
+                code:
+                    type: integer
+                    format: int32
+                reason:
+                    type: string
+                message:
+                    type: string
+                metadata:
+                    type: object
+                    additionalProperties:
+                        type: string
         AcceleratorAdminBinding:
             type: object
             properties:
@@ -15657,6 +16111,255 @@ components:
                     description: 租户ID
                     format: uint32
             description: 清理租户数据 - 请求
+        ClusterOpsCluster:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                display_name:
+                    type: string
+        ClusterOpsClusterOverview:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                kubernetes_version:
+                    type: string
+                nodes_total:
+                    type: string
+                nodes_ready:
+                    type: string
+                namespaces_total:
+                    type: string
+                pods_total:
+                    type: string
+                pod_phase_counts:
+                    type: object
+                    additionalProperties:
+                        type: string
+                capacity:
+                    type: object
+                    additionalProperties:
+                        type: string
+                allocatable:
+                    type: object
+                    additionalProperties:
+                        type: string
+                sampled_at:
+                    type: string
+                    format: date-time
+        ClusterOpsCreateResourceData:
+            type: object
+            properties:
+                type:
+                    $ref: '#/components/schemas/ClusterOpsResourceTypeRef'
+                namespace:
+                    type: string
+                name:
+                    type: string
+                manifest_yaml:
+                    type: string
+                dry_run:
+                    type: boolean
+        ClusterOpsCreateResourceRequest:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/ClusterOpsCreateResourceData'
+        ClusterOpsDeleteResourceResponse:
+            type: object
+            properties:
+                deletion_requested:
+                    type: boolean
+                already_absent:
+                    type: boolean
+        ClusterOpsGetResourceResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/ClusterOpsResourceDocument'
+                manifest_yaml:
+                    type: string
+        ClusterOpsListClustersResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ClusterOpsCluster'
+        ClusterOpsListResourceTypesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ClusterOpsResourceDescriptor'
+        ClusterOpsListResourcesResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ClusterOpsResourceDocument'
+                next_continue_token:
+                    type: string
+                list_resource_version:
+                    type: string
+        ClusterOpsMutationResponse:
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/ClusterOpsResourceDocument'
+                dry_run:
+                    type: boolean
+        ClusterOpsResourceDescriptor:
+            type: object
+            properties:
+                type:
+                    $ref: '#/components/schemas/ClusterOpsResourceTypeRef'
+                kind:
+                    type: string
+                namespaced:
+                    type: boolean
+                actions:
+                    type: array
+                    items:
+                        type: string
+                custom_resource:
+                    type: boolean
+                crd_name:
+                    type: string
+        ClusterOpsResourceDocument:
+            type: object
+            properties:
+                ref:
+                    $ref: '#/components/schemas/ClusterOpsResourceRef'
+                uid:
+                    type: string
+                resource_version:
+                    type: string
+                object_json:
+                    type: string
+                read_only:
+                    type: boolean
+                read_only_reason:
+                    type: string
+                secret_data_redacted:
+                    type: boolean
+                secret_keys:
+                    type: array
+                    items:
+                        type: string
+        ClusterOpsResourceRef:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                type:
+                    $ref: '#/components/schemas/ClusterOpsResourceTypeRef'
+                namespace:
+                    type: string
+                name:
+                    type: string
+        ClusterOpsResourceTypeRef:
+            type: object
+            properties:
+                group:
+                    type: string
+                version:
+                    type: string
+                resource:
+                    type: string
+        ClusterOpsRestartWorkloadData:
+            type: object
+            properties:
+                type:
+                    $ref: '#/components/schemas/ClusterOpsResourceTypeRef'
+                namespace:
+                    type: string
+                expected_uid:
+                    type: string
+                expected_resource_version:
+                    type: string
+                dry_run:
+                    type: boolean
+        ClusterOpsRestartWorkloadRequest:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                name:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/ClusterOpsRestartWorkloadData'
+        ClusterOpsScaleWorkloadData:
+            type: object
+            properties:
+                type:
+                    $ref: '#/components/schemas/ClusterOpsResourceTypeRef'
+                namespace:
+                    type: string
+                expected_uid:
+                    type: string
+                expected_resource_version:
+                    type: string
+                replicas:
+                    type: integer
+                    format: int32
+                dry_run:
+                    type: boolean
+        ClusterOpsScaleWorkloadRequest:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                name:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/ClusterOpsScaleWorkloadData'
+        ClusterOpsScaleWorkloadResponse:
+            type: object
+            properties:
+                ref:
+                    $ref: '#/components/schemas/ClusterOpsResourceRef'
+                uid:
+                    type: string
+                resource_version:
+                    type: string
+                desired_replicas:
+                    type: integer
+                    format: int32
+                observed_replicas:
+                    type: integer
+                    format: int32
+                dry_run:
+                    type: boolean
+        ClusterOpsUpdateResourceData:
+            type: object
+            properties:
+                type:
+                    $ref: '#/components/schemas/ClusterOpsResourceTypeRef'
+                namespace:
+                    type: string
+                manifest_yaml:
+                    type: string
+                expected_uid:
+                    type: string
+                expected_resource_version:
+                    type: string
+                dry_run:
+                    type: boolean
+        ClusterOpsUpdateResourceRequest:
+            type: object
+            properties:
+                cluster_id:
+                    type: string
+                name:
+                    type: string
+                data:
+                    $ref: '#/components/schemas/ClusterOpsUpdateResourceData'
         Config:
             type: object
             properties:
@@ -28064,6 +28767,8 @@ tags:
       description: 套餐配额管理服务
     - name: PlanService
       description: 套餐管理服务
+    - name: PlatformClusterOpsService
+      description: Platform JWT/API authorization remains mandatory. No arbitrary Kubernetes proxy.
     - name: PlatformComponentService
       description: 平台组件健康快照服务（BOSS「组件状态」页表格数据源，只读）
     - name: PlatformNetworkService

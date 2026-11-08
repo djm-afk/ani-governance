@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/zhangzhe-ctrl/ani-modeldev-service/contract/cpup01"
 	"go-wind-admin/app/admin/service/internal/commandcontract"
 	"go-wind-admin/app/admin/service/internal/data/ent/modeldevacceptance"
 	"go-wind-admin/app/admin/service/internal/data/ent/quotaaccount"
@@ -121,7 +120,12 @@ func TestModelDevGPUConcurrentOriginalKeyChargesOnce(t *testing.T) {
 	second := first
 	second.OperationID, second.ExecutionID = uuid.NewString(), uuid.NewString()
 	second.Snapshot.IdentityRef.OperationID, second.Snapshot.IdentityRef.ExecutionID = second.OperationID, second.ExecutionID
-	second.Snapshot.RuntimePlan.Name = cpup01.RuntimeName(second.Snapshot.Environment.NamespaceUID, second.ExecutionID)
+	bindModelDevFixtureScope(t, &second.Snapshot)
+	// Both candidates must be valid before racing the shared idempotency key.
+	_, err := first.Snapshot.Digest()
+	require.NoError(t, err)
+	_, err = second.Snapshot.Digest()
+	require.NoError(t, err)
 	type outcome struct {
 		accepted *ModelDevAcceptance
 		replayed bool
