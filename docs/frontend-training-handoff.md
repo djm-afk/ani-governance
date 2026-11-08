@@ -375,12 +375,15 @@ GET /api/v1/modeldev/input-versions/{input_version_id}
 **请求形状**（与既有约定一致，不要混用）：
 
 - 写请求外层 `{ "idempotency_key": "...", "data": { ... } }`；`PATCH` 额外带 `update_mask`，只接受 `name`/`description`。
+- **取消 / 重试是例外**：只接受 `{ "idempotency_key": "..." }`，**不要包 `data`**；多带 `data` 会返回 `400 INVALID_DATASET_REQUEST`。
 - `expected_revision` 放在 `data` 内，必须是十进制字符串（如 `"3"`），不能是数字。
 - **幂等键是消息字段，不是 HTTP header**，不要发 `Idempotency-Key`（只有环境 Ensure 那条路由用 header）。
 - 未知键、重复键、尾随内容、错误的 `Content-Type` 一律 `400 INVALID_DATASET_REQUEST`。
 - 列表请求的未知 query 参数一律 `400`，不会静默忽略。
 
 **状态码**：创建 `201`；编辑/归档/恢复/查询 `200`；导入/取消/重试 `202`。
+
+**`expected_revision` 过期返回 `409 COMMAND_CONFLICT`**（与重名同码）。前端收到 409 后应重新 GET 详情取最新 `revision` 再重试，不要盲目重放。
 
 **导入返回 202 只表示已受理**，不代表版本已 READY；用任务详情或版本列表确认最终状态。
 

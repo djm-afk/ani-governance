@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	modeldevv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
 	"google.golang.org/grpc"
@@ -35,27 +36,31 @@ func datasetReasonName(reason modeldevv1.ErrorReason) string {
 	return name
 }
 
-// modelDevDatasetReasons binds each owner reason to the single gRPC code the
-// owner contract assigns it. A reason arriving with another code, an unknown
+// modelDevDatasetReasons binds each owner reason to the gRPC codes the owner
+// contract allows for it. A reason arriving with another code, an unknown
 // reason, or any owner prose is a contract violation and degrades to the
 // generic upstream failure instead of reaching the public mapping.
-var modelDevDatasetReasons = map[modeldevv1.ErrorReason]codes.Code{
-	modeldevv1.ErrorReason_ERROR_REASON_INVALID_ARGUMENT:               codes.InvalidArgument,
-	modeldevv1.ErrorReason_ERROR_REASON_RESOURCE_NOT_FOUND:             codes.NotFound,
-	modeldevv1.ErrorReason_ERROR_REASON_IDEMPOTENCY_CONFLICT:           codes.AlreadyExists,
-	modeldevv1.ErrorReason_ERROR_REASON_COMMAND_CONFLICT:               codes.AlreadyExists,
-	modeldevv1.ErrorReason_ERROR_REASON_INPUT_NOT_READY:                codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_INPUT_KIND_FORMAT_MISMATCH:     codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_FORBIDDEN:                      codes.PermissionDenied,
-	modeldevv1.ErrorReason_ERROR_REASON_ENVIRONMENT_NOT_READY:          codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_ENVIRONMENT_NOT_REGISTERED:     codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_INTEGRITY_MISMATCH:             codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_DATASET_INVALID:                codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_DATASET_RECORD_TOO_LARGE:       codes.FailedPrecondition,
-	modeldevv1.ErrorReason_ERROR_REASON_INPUT_VALIDATION_BUSY:          codes.ResourceExhausted,
-	modeldevv1.ErrorReason_ERROR_REASON_DEADLINE_EXCEEDED:              codes.DeadlineExceeded,
-	modeldevv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE:           codes.Unavailable,
-	modeldevv1.ErrorReason_ERROR_REASON_FINETUNING_RUNTIME_UNAVAILABLE: codes.Unavailable,
+//
+// COMMAND_CONFLICT carries two distinct facts: a duplicate dataset name is
+// AlreadyExists, while a stale expected_revision is Aborted. Both are the same
+// public 409, so the reason alone cannot pick one code.
+var modelDevDatasetReasons = map[modeldevv1.ErrorReason][]codes.Code{
+	modeldevv1.ErrorReason_ERROR_REASON_INVALID_ARGUMENT:               {codes.InvalidArgument},
+	modeldevv1.ErrorReason_ERROR_REASON_RESOURCE_NOT_FOUND:             {codes.NotFound},
+	modeldevv1.ErrorReason_ERROR_REASON_IDEMPOTENCY_CONFLICT:           {codes.AlreadyExists},
+	modeldevv1.ErrorReason_ERROR_REASON_COMMAND_CONFLICT:               {codes.AlreadyExists, codes.Aborted},
+	modeldevv1.ErrorReason_ERROR_REASON_INPUT_NOT_READY:                {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_INPUT_KIND_FORMAT_MISMATCH:     {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_FORBIDDEN:                      {codes.PermissionDenied},
+	modeldevv1.ErrorReason_ERROR_REASON_ENVIRONMENT_NOT_READY:          {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_ENVIRONMENT_NOT_REGISTERED:     {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_INTEGRITY_MISMATCH:             {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_DATASET_INVALID:                {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_DATASET_RECORD_TOO_LARGE:       {codes.FailedPrecondition},
+	modeldevv1.ErrorReason_ERROR_REASON_INPUT_VALIDATION_BUSY:          {codes.ResourceExhausted},
+	modeldevv1.ErrorReason_ERROR_REASON_DEADLINE_EXCEEDED:              {codes.DeadlineExceeded},
+	modeldevv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE:           {codes.Unavailable},
+	modeldevv1.ErrorReason_ERROR_REASON_FINETUNING_RUNTIME_UNAVAILABLE: {codes.Unavailable},
 }
 
 // modelDevDatasetContext builds the delegated call context. Every Dataset
@@ -103,7 +108,7 @@ func modelDevDatasetError(err error) error {
 		return modelDevQueryUnavailable()
 	}
 	expected, known := modelDevDatasetReasons[detail.Reason]
-	if !known || expected != failure.Code() {
+	if !known || !slices.Contains(expected, failure.Code()) {
 		return modelDevQueryUnavailable()
 	}
 	return &ModelDevDatasetFailure{Code: failure.Code(), Reason: detail.Reason}
