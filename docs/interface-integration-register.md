@@ -2147,6 +2147,8 @@ Linux `DISK_IMAGE` 仅在 Resource 媒体目录 `initializationCapability=CLOUD_
 
 该路由不改变 `GET /api/v1/virtual-machines/{vm_id}` 的既有行为：Resource 侧 `GetVMRequest.include_runtime` 为三态开关，缺省仍内联返回 `runtime`，旧前端零改动；显式 `false` 时跳过全部 QGA 读取并返回 `runtime.state=NOT_QUERIED`（见 Resource 合同 C07 修订）。Gov → Resource 仍走受管 mTLS VM 客户端与 30 秒 deadline，`runtime` 调用显式携带 `include_runtime=true`。前端懒加载对接说明由交付的前端对接文档给出；`version` 复用规则与详情页一致，本路由不返回 `version`。
 
+**2026-11-09 增补：详情缺省不再采集 runtime。** 按前端确认的终态方案，Gov 详情链路（`data/vm_client.go` 的 `Get`）显式携带 `include_runtime=false`，`GET /api/v1/virtual-machines/{vm_id}` 不再做任何 QGA 读取，响应中的 `runtime` 块保留但 `state="NOT_QUERIED"`、`filesystemsState="NOT_QUERIED"`、其余字段为空；运行态唯一公开入口即本节 `/runtime` 路由（其调用仍显式 `include_runtime=true`）。不新增查询参数、不改 proto、无目录与权限变更；未开放过面向前端的 `include_runtime` 透传（此前详情传该查询参数返回 400 `VM_INVALID_REQUEST` 的行为随本次调整继续存在，前端不要传）。受同一调用方影响的 `ValidateGpuDelete`（GPU 配额删除前的版本一致性校验）只比较 `Id`/`Version`，不读 runtime，改后免受 QGA 采集延迟。测试：`data/vm_client_get_test.go` 锁定 `Get` 显式 false、`Runtime` 显式 true。回滚：revert 该提交即可恢复"详情缺省采集 runtime"。
+
 
 ## Sandbox 规格目录与权限接入（2026-10-27）
 

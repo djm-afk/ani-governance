@@ -58,9 +58,14 @@ func (c *VMClient) Delete(ctx context.Context, t, a string, in *vm.AcceptDeleteR
 	}
 	return vmCall(c, ctx, t, a, func(ctx context.Context) (*vm.Acceptance, error) { return c.client.AcceptDelete(ctx, in) })
 }
+// Get serves the VM detail projection. Runtime collection is disabled
+// explicitly: the public detail endpoint must not block on QGA reads, and the
+// dedicated Runtime route is the single runtime source. Callers comparing
+// versions (e.g. quota delete validation) get the same persisted fields
+// without paying the guest read.
 func (c *VMClient) Get(ctx context.Context, t, a, id string) (*vm.VirtualMachine, error) {
 	return vmCall(c, ctx, t, a, func(ctx context.Context) (*vm.VirtualMachine, error) {
-		return c.client.GetVM(ctx, &vm.GetVMRequest{TenantId: t, VmId: id})
+		return c.client.GetVM(ctx, &vm.GetVMRequest{TenantId: t, VmId: id, IncludeRuntime: proto.Bool(false)})
 	})
 }
 
