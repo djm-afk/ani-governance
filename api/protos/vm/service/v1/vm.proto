@@ -98,7 +98,7 @@ message VMMedia {
  string architecture=6; string firmware=7; string root_bus=8; string data_bus=9;
  string nic_model=10; bool persistent_tpm=11; bool persistent_uefi=12; string driver_media_key=13;
  int64 virtual_capacity_bytes=14;
- string initialization_capability=15; bool initialization_verified=16;
+ string initialization_capability=15;
 }
 message ListMediaResponse { repeated VMMedia items=1; }
 message VMSnapshot {

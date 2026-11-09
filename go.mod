@@ -209,3 +209,5 @@ require (
 )
 
 replace github.com/zhangzhe-ctrl/ani-modeldev-service => github.com/djm-afk/ani-modeldev-service v0.0.0-20261104021256-2571d89b2dc4
+
+replace github.com/zhangzhe-ctrl/ani-resource-service => github.com/java559/ani-resource-service v0.0.0-20261109065359-b4bbc6686459

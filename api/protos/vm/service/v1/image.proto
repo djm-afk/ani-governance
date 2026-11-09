@@ -48,6 +48,9 @@ message VMImage {
   string created_by=18;
   string created_at=19;
   string updated_at=20;
+  // NONE or CLOUD_INIT_NOCLOUD: the tenant's create-time declaration of the
+  // initialization support this image provides. Empty means NONE.
+  string initialization_capability=21 [json_name="initializationCapability"];
 }
 
 message ListVMImagesRequest {
@@ -70,6 +73,9 @@ message CreateVMImageData {
   string format=5;
   int64 source_capacity_gb=6 [json_name="source_capacity_gb"];
   VMImageOS os=7;
+  // Optional tenant declaration frozen at create time. CLOUD_INIT_NOCLOUD is
+  // accepted only for a linux DISK_IMAGE; empty means NONE.
+  string initialization_capability=8 [json_name="initialization_capability"];
 }
 message CreateVMImageRequest { CreateVMImageData data=1; }
 

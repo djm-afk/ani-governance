@@ -118,7 +118,7 @@ func vmSummary(spec *vm.CreateSpec, out *view.VirtualMachine) {
 	out.Hardware = &view.VMHardware{Sockets: spec.Sockets, Cores: spec.Cores, Threads: spec.Threads}
 	if spec.Media != nil {
 		m := spec.Media
-		out.SourceMedia = &view.VMMedia{MediaKey: m.MediaKey, Name: m.Name, Kind: m.Kind, OsFamily: m.OsFamily, OsVersion: m.OsVersion, Architecture: m.Architecture, Firmware: m.Firmware, RootBus: m.RootBus, DataBus: m.DataBus, NicModel: m.NicModel, PersistentTpm: m.PersistentTpm, PersistentUefi: m.PersistentUefi, DriverMediaKey: m.DriverMediaKey, VirtualCapacityBytes: m.VirtualCapacityBytes, InitializationCapability: m.InitializationCapability, InitializationVerified: m.InitializationVerified}
+		out.SourceMedia = &view.VMMedia{MediaKey: m.MediaKey, Name: m.Name, Kind: m.Kind, OsFamily: m.OsFamily, OsVersion: m.OsVersion, Architecture: m.Architecture, Firmware: m.Firmware, RootBus: m.RootBus, DataBus: m.DataBus, NicModel: m.NicModel, PersistentTpm: m.PersistentTpm, PersistentUefi: m.PersistentUefi, DriverMediaKey: m.DriverMediaKey, VirtualCapacityBytes: m.VirtualCapacityBytes, InitializationCapability: m.InitializationCapability}
 		out.Hardware.Architecture, out.Hardware.Firmware = m.Architecture, m.Firmware
 		out.Hardware.RootBus, out.Hardware.DataBus, out.Hardware.NicModel = m.RootBus, m.DataBus, m.NicModel
 		out.Hardware.PersistentTpm, out.Hardware.PersistentUefi = m.PersistentTpm, m.PersistentUefi

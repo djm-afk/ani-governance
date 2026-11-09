@@ -95,6 +95,8 @@ func (x *VMImage) Redact() {
 	// Safe field: CreatedAt
 
 	// Safe field: UpdatedAt
+
+	// Safe field: InitializationCapability
 }
 
 // Ensure ListVMImagesRequest implements the Redactor interface at compile time.
@@ -165,6 +167,8 @@ func (x *CreateVMImageData) Redact() {
 	// Safe field: SourceCapacityGb
 
 	// Safe field: Os
+
+	// Safe field: InitializationCapability
 }
 
 // Ensure CreateVMImageRequest implements the Redactor interface at compile time.
