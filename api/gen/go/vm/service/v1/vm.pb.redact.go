@@ -133,6 +133,24 @@ func (x *CreateVMData) Redact() {
 	// Safe field: Dns
 
 	// Safe field: SecurityGroupIds
+
+	// Safe field: CloneSource
+}
+
+// Ensure VMCloneSource implements the Redactor interface at compile time.
+var _ redact.Redactor = (*VMCloneSource)(nil)
+
+// Redact method implementation for VMCloneSource
+func (x *VMCloneSource) Redact() {
+	if x == nil {
+		return
+	}
+
+	// Safe field: SourceVmId
+
+	// Safe field: ExpectedSourceVersion
+
+	// Safe field: SourceName
 }
 
 // Ensure CreateGuestInitialization implements the Redactor interface at compile time.
@@ -408,6 +426,8 @@ func (x *VirtualMachine) Redact() {
 	// Safe field: Runtime
 
 	// Safe field: Relations
+
+	// Safe field: CloneSource
 }
 
 // Ensure ResourceReference implements the Redactor interface at compile time.

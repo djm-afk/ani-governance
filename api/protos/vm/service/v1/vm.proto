@@ -16,7 +16,11 @@ message CreateVMData {
  CreateGuestInitialization guest_initialization=10;
  VMDNSSelection dns=11;
  repeated string security_group_ids=12 [json_name="security_group_ids"];
+ // VM_CLONE only. All overrides the source owns must be omitted.
+ VMCloneSource clone_source=13;
 }
+// User selector for a managed source; source_name is a read-only display snapshot.
+message VMCloneSource { string source_vm_id=1; int64 expected_source_version=2; string source_name=3; }
 message CreateGuestInitialization { string username=1; string password=2 [(redact.value).string=""]; string ssh_public_key=3; }
 message CreateVMRequest { CreateVMData data=1; }
 message ChangeVMData {
@@ -51,6 +55,8 @@ message VirtualMachine {
  string created_at=24 [json_name="createdAt"];
  string preset_name=25; VMHardware hardware=26; VMInitialization initialization=27;
  VMMedia source_media=28; VMRuntime runtime=29; VMRelations relations=30;
+ // Source snapshot for VM_CLONE targets, read-only for display.
+ VMCloneSource clone_source=31;
 }
 // Read-only detail projection. Runtime is collected only by GetVM, never by ListVMs.
 message ResourceReference { string id = 1; string name = 2; string state = 3; }
