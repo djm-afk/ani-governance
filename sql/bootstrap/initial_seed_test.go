@@ -22,15 +22,15 @@ func releaseSeed(t *testing.T) (*initialSeed, []API) {
 
 func TestInitialSeedReleaseCoverage(t *testing.T) {
 	seed, catalog := releaseSeed(t)
-	require.Len(t, seed.Routes, 483)
+	require.Len(t, seed.Routes, 494)
 	require.Len(t, seed.ExcludedRoutes, 6)
 	selected := seed.catalogForInit(catalog)
-	require.Len(t, selected, 483)
+	require.Len(t, selected, 494)
 	for _, api := range selected {
 		require.NotEqual(t, "VMImageService", api.Module, api.Path)
 	}
-	require.Len(t, seed.Permissions, 370)
-	require.Len(t, seed.Menus, 49) // 21 Console pages, 26 BOSS pages and two containers.
+	require.Len(t, seed.Permissions, 377)
+	require.Len(t, seed.Menus, 51) // 21 Console pages, 28 BOSS pages and two containers.
 	require.Len(t, seed.FullPlanModules, 19)
 	routes := map[string]initialRoute{}
 	independent := 0
@@ -49,6 +49,12 @@ func TestInitialSeedReleaseCoverage(t *testing.T) {
 			require.Contains(t, r.Permissions, op.Permission, r.Path)
 		}
 	}
+	for _, op := range auth.ClusterOpsOperations {
+		r, ok := routes[op.Method+" "+op.Path]
+		require.True(t, ok, op.Path)
+		require.Equal(t, "SYSTEM", r.Module)
+		require.Equal(t, []string{op.Permission}, r.Permissions, r.Path)
+	}
 	require.ElementsMatch(t, []string{"instance:preset:read", "modeldev:compute-preset:read", "vm:compute-preset:read", "inference:compute-preset:read", "sandbox:preset:read"}, routes["GET /api/v1/compute-presets"].Permissions)
 	require.Equal(t, []string{"modeldev:input:list"}, routes["GET /api/v1/modeldev/input-versions"].Permissions, "retain the main handler's input grant")
 	require.Equal(t, "MODELDEV", routes["GET /api/v1/modeldev/input-versions"].Module)
@@ -56,6 +62,22 @@ func TestInitialSeedReleaseCoverage(t *testing.T) {
 	require.Equal(t, []string{"network:vpc:get"}, routes["GET /api/v1/networks/vpcs/{vpc_id}/associated-instances"].Permissions)
 	require.Equal(t, []string{"network:subnet:get"}, routes["GET /api/v1/networks/subnets/{subnet_id}/associated-instances"].Permissions)
 	require.Equal(t, []string{"modeldev:manage_execution"}, routes["POST /api/v1/modeldev/executions/{execution_id}:resume-model-registration"].Permissions)
+	clusterCodes := map[string]bool{}
+	for _, p := range seed.Permissions {
+		if p.Group == "boss.cluster-ops" {
+			clusterCodes[p.Code] = true
+			require.Equal(t, []string{"platform"}, p.Roles, p.Code)
+		}
+	}
+	require.Len(t, clusterCodes, 7)
+	for _, action := range []string{"read", "create", "update", "delete", "scale", "restart", "logs"} {
+		require.True(t, clusterCodes["cluster:ops:"+action], action)
+	}
+	for _, template := range seed.RoleTemplates {
+		for _, code := range template.Permissions {
+			require.False(t, clusterCodes[code], template.Code+": "+code)
+		}
+	}
 	for _, p := range seed.Permissions {
 		require.Regexp(t, `[一-龥]`, p.Name, p.Code)
 	}
@@ -67,7 +89,7 @@ func TestInitialSeedRejectsIncompleteOrExpandedRelease(t *testing.T) {
 	require.ErrorContains(t, err, "API catalog is incomplete")
 	expanded := append(append([]API{}, catalog...), API{Method: "GET", Path: "/api/v1/extra", Operation: "Extra_Get", BusinessModule: "SYSTEM"})
 	_, err = loadInitialSeed(expanded)
-	require.ErrorContains(t, err, "expected exactly 489")
+	require.ErrorContains(t, err, "expected exactly 500")
 	changed := append([]API{}, catalog...)
 	changed[0].BusinessModule = "SYSTEM"
 	if changed[0].BusinessModule == catalog[0].BusinessModule {
@@ -150,10 +172,10 @@ func TestInitialSeedAdministratorAPICoverage(t *testing.T) {
 			shared++
 		}
 	}
-	require.Equal(t, map[string]int{"platform": 257, "tenant": 259}, coverage)
+	require.Equal(t, map[string]int{"platform": 268, "tenant": 259}, coverage)
 	require.Equal(t, 43, shared)
 	require.Equal(t, 10, independent)
-	require.Equal(t, 483, coverage["platform"]+coverage["tenant"]-shared+independent)
+	require.Equal(t, 494, coverage["platform"]+coverage["tenant"]-shared+independent)
 }
 
 func TestInitialSeedAdditionalRoleTemplateBoundaries(t *testing.T) {

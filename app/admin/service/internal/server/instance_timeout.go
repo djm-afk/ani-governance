@@ -10,6 +10,7 @@ import (
 
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/internal/modeldevbudget"
+	"go-wind-admin/pkg/middleware/auth"
 )
 
 var instanceLogsHTTPPath = regexp.MustCompile(`^/api/v1/instances/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logs$`)
@@ -64,7 +65,12 @@ func instanceHTTPTimeoutFilter(ordinary time.Duration, ownerBudgets ...time.Dura
 			readiness := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/finetuning/readiness/check"
 			create := r.Method == http.MethodPost && r.URL.Path == "/api/v1/modeldev/executions"
 			modelImport := r.Method == http.MethodPost && (r.URL.Path == "/api/v1/model-versions" || modelUploadHTTPPath.MatchString(r.URL.Path))
-			if r.Method == http.MethodPost && r.URL.Path == data.ModelDevEnsureEnvironmentPath {
+			clusterOperation, _, clusterMatched := auth.MatchClusterOpsHTTP(r.Method, r.URL.Path)
+			if clusterMatched && clusterOperation == clusterOpsLogsOperation {
+				ctx, cancel = context.WithCancel(ctx)
+			} else if clusterMatched {
+				ctx, cancel = context.WithTimeout(ctx, 35*time.Second)
+			} else if r.Method == http.MethodPost && r.URL.Path == data.ModelDevEnsureEnvironmentPath {
 				ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 			} else if r.Method == http.MethodGet && r.URL.Path == data.ModelDevGetEnvironmentPath {
 				ctx, cancel = context.WithTimeout(ctx, 5*time.Second)

@@ -224,12 +224,17 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		inferenceClient = client
 	}
 
-	instanceOwner, computeOwner, closeResource, err := data.NewResourceClientsFromEnv()
+	instanceOwner, computeOwner, clusterOpsOwner, closeResource, err := data.NewResourceClientsFromEnv()
 	if err != nil {
 		rollback()
 		return nil, nil, err
 	}
 	cleanups = append(cleanups, closeResource)
+	var clusterOpsClient service.ClusterOpsPlatformClient
+	if clusterOpsOwner != nil {
+		clusterOpsClient = clusterOpsOwner
+	}
+	clusterOpsService := service.NewPlatformClusterOpsService(clusterOpsClient)
 	inferenceBinding := service.NewInferenceComputeBinding(inferenceClient, data.NewInferenceAuthorizationRepo(entClient), modelClient, computeOwner)
 	observabilityClient, closeObservability, err := data.NewObservabilityClientFromEnv()
 	if err != nil {
@@ -593,6 +598,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		sandboxService,
 		overviewService,
 		platformComponentService,
+		clusterOpsService,
 		instanceService,
 	)
 	if err != nil {

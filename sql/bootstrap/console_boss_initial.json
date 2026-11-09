@@ -6,7 +6,10 @@
     "boss": "7352521e784047974eb410365c7f2cbd9f056f0d",
     "observed": "2026-11-05",
     "note": "基于最新 main 保留原 480 条并纳入 VPC、子网关联实例查询；云主机镜像 6 条未接前端，明确不播种。不复制现场租户、账号、测试权限、价格或配额。",
-    "baseline_governance": "fe5c9b7c78c75d5e07c64c915c2cd25736be09f2"
+    "baseline_governance": "fe5c9b7c78c75d5e07c64c915c2cd25736be09f2",
+    "cluster_ops_governance": "61b7b6c74bd16d32f327aef42182566a87fe024f",
+    "cluster_ops_boss": "4f4024049a9f848138702bb93c9ffee719aad2b3",
+    "cluster_ops_contract": "docs/contracts/cluster-operations-http.md"
   },
   "groups": [
     {
@@ -23,6 +26,12 @@
       "key": "boss",
       "name": "BOSS 管理平台",
       "module": "boss"
+    },
+    {
+      "key": "boss.cluster-ops",
+      "name": "集群运维",
+      "module": "cluster",
+      "parent": "boss"
     },
     {
       "key": "common",
@@ -500,6 +509,62 @@
       "roles": [
         "platform",
         "tenant"
+      ]
+    },
+    {
+      "code": "cluster:ops:create",
+      "name": "创建集群运维资源",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "cluster:ops:delete",
+      "name": "删除集群运维资源",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "cluster:ops:logs",
+      "name": "读取集群Pod日志",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "cluster:ops:read",
+      "name": "查看集群运维资源",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "cluster:ops:restart",
+      "name": "提交工作负载重启",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "cluster:ops:scale",
+      "name": "调整工作负载副本数",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "cluster:ops:update",
+      "name": "修改集群运维资源",
+      "group": "boss.cluster-ops",
+      "roles": [
+        "platform"
       ]
     },
     {
@@ -3544,6 +3609,105 @@
       "module": "PERMISSION",
       "permissions": [
         "api:edit"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cluster-ops/clusters",
+      "operation": "PlatformClusterOpsService_ListClusters",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/namespaces/{namespace}/pods/{pod_name}/logs",
+      "operation": "PlatformClusterOpsService_StreamPodLogs",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:logs"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/overview",
+      "operation": "PlatformClusterOpsService_GetClusterOverview",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resource-types",
+      "operation": "PlatformClusterOpsService_ListResourceTypes",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources",
+      "operation": "PlatformClusterOpsService_ListResources",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources",
+      "operation": "PlatformClusterOpsService_CreateResource",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:create"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}",
+      "operation": "PlatformClusterOpsService_DeleteResource",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:delete"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}",
+      "operation": "PlatformClusterOpsService_GetResource",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}",
+      "operation": "PlatformClusterOpsService_UpdateResource",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/restart",
+      "operation": "PlatformClusterOpsService_RestartWorkload",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:restart"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/scale",
+      "operation": "PlatformClusterOpsService_ScaleWorkload",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:scale"
       ]
     },
     {
@@ -8712,6 +8876,34 @@
         "position:delete",
         "position:edit",
         "position:view"
+      ],
+      "client": "boss",
+      "parent": "Boss"
+    },
+    {
+      "key": "BossClusterOperations",
+      "name": "集群概览",
+      "path": "/cluster-operations",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read"
+      ],
+      "client": "boss",
+      "parent": "Boss"
+    },
+    {
+      "key": "BossClusterResources",
+      "name": "集群资源管理",
+      "path": "/cluster-operations/resources",
+      "module": "SYSTEM",
+      "permissions": [
+        "cluster:ops:read",
+        "cluster:ops:create",
+        "cluster:ops:update",
+        "cluster:ops:delete",
+        "cluster:ops:scale",
+        "cluster:ops:restart",
+        "cluster:ops:logs"
       ],
       "client": "boss",
       "parent": "Boss"

@@ -1,0 +1,40 @@
+syntax = "proto3";
+package admin.service.v1;
+import "google/api/annotations.proto";
+import "catalog/service/v1/cluster_ops.proto";
+
+// Platform JWT/API authorization remains mandatory. No arbitrary Kubernetes proxy.
+service PlatformClusterOpsService {
+  rpc ListClusters(catalog.service.v1.ClusterOpsListClustersRequest) returns (catalog.service.v1.ClusterOpsListClustersResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/cluster-ops/clusters" };
+  }
+  rpc GetClusterOverview(catalog.service.v1.ClusterOpsGetClusterOverviewRequest) returns (catalog.service.v1.ClusterOpsClusterOverview) {
+    option (google.api.http) = { get: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/overview" };
+  }
+  rpc ListResourceTypes(catalog.service.v1.ClusterOpsListResourceTypesRequest) returns (catalog.service.v1.ClusterOpsListResourceTypesResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resource-types" };
+  }
+  rpc ListResources(catalog.service.v1.ClusterOpsListResourcesRequest) returns (catalog.service.v1.ClusterOpsListResourcesResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources" };
+  }
+  rpc GetResource(catalog.service.v1.ClusterOpsGetResourceRequest) returns (catalog.service.v1.ClusterOpsGetResourceResponse) {
+    option (google.api.http) = { get: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}" };
+  }
+  rpc CreateResource(catalog.service.v1.ClusterOpsCreateResourceRequest) returns (catalog.service.v1.ClusterOpsMutationResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources" body: "*" };
+  }
+  rpc UpdateResource(catalog.service.v1.ClusterOpsUpdateResourceRequest) returns (catalog.service.v1.ClusterOpsMutationResponse) {
+    option (google.api.http) = { put: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}" body: "*" };
+  }
+  rpc DeleteResource(catalog.service.v1.ClusterOpsDeleteResourceRequest) returns (catalog.service.v1.ClusterOpsDeleteResourceResponse) {
+    option (google.api.http) = { delete: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}" };
+  }
+  rpc ScaleWorkload(catalog.service.v1.ClusterOpsScaleWorkloadRequest) returns (catalog.service.v1.ClusterOpsScaleWorkloadResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/scale" body: "*" };
+  }
+  rpc RestartWorkload(catalog.service.v1.ClusterOpsRestartWorkloadRequest) returns (catalog.service.v1.ClusterOpsMutationResponse) {
+    option (google.api.http) = { post: "/api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/restart" body: "*" };
+  }
+  // The only public log transport is the separately registered SSE handler.
+  rpc StreamPodLogs(catalog.service.v1.ClusterOpsStreamPodLogsRequest) returns (stream catalog.service.v1.ClusterOpsPodLogFrame);
+}

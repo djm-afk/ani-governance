@@ -339,3 +339,27 @@ Gov calls the existing `/network.v1.NetworkService/ListNetworkInstances` on the 
 Only VPC/Subnet Get/List accept Resource's explicit PLATFORM owner scope with an empty internal tenant. TENANT requires the trusted current tenant, and unspecified or inconsistent scope is rejected. Mutation responses and VNIC/Attachment/operation/consumer identities remain strict tenant data. Public capability filters preserve optional presence; no request may choose owner scope, Provider UID, namespace or BasicNetworkIsolation group.
 
 VM requests, persisted commands and dispatch/recovery share the pinned Resource SDK's v1 canonical codec. Initial `nad_uid` may be empty and remains frozen in the command; later runtime identity is Resource's own snapshot and does not rewrite Gov's original digest or credentials. A first Resource acceptance rejected with `NETWORK_NEW_ADMISSION_CLOSED` / FailedPrecondition follows the existing dispatch worker's `MarkUnknown(..., blocked=true)`: `dispatch_state=unknown`, `retry_blocked=true`, original reason and charge retained. This feature does not create a terminal success/failure, refund or compensation path.
+
+
+## Platform cluster operations delegation
+
+`ani-governance` calls the eleven exact `/clusterops.v1.PlatformClusterOpsService/`
+methods registered in the [cluster operations contract](cluster-operations-http.md#1-路由和权限).
+This is a platform-user delegation after the existing JWT, platform role, capability
+and exact HTTP API authorization. API Keys and tenant users are not admitted.
+No tenant mapping, quota or owner lookup participates in this management surface.
+
+The client shares the managed Resource connection (`ANI_INSTANCE_ADDR/CA/CERT/KEY`),
+existing TLS 1.3 mutual authentication and exact server SAN `ani-network-service`;
+the verified caller remains `ani-governance`. Every call replaces outgoing metadata
+with `x-ani-scope=platform`, the authenticated `governance:user:<id>` actor and a fresh
+nonzero UUID request ID. `x-ani-tenant-id` is absent; public Authorization and
+self-asserted `x-ani-*` values never become downstream identity.
+
+The ten unary methods use 30-second deadlines within their exact 35-second HTTP
+budgets. StreamPodLogs inherits browser cancellation and its independent 10m15s
+request lifetime, with one READY handshake and bounded SSE writes; its complete
+wire and termination behavior is defined in the linked contract. These operations
+have no operation/idempotency key or automatic write retry. Resource owns supported
+actions, tenant-Namespace write protection, native UID/RV checks and CRD inspection;
+Governance maps protocol fields and safe errors without a Kubernetes client.

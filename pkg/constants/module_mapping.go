@@ -84,5 +84,6 @@ var ServiceTagToBusinessModule = map[string]identityV1.Module{
 	"QuotaLabService":   identityV1.Module_TENANT,
 
 	// 平台组件健康快照（BOSS 组件状态页）：平台级只读接口，仅 platform:admin 可达。
-	"PlatformComponentService": identityV1.Module_SYSTEM,
+	"PlatformComponentService":  identityV1.Module_SYSTEM,
+	"PlatformClusterOpsService": identityV1.Module_SYSTEM,
 }
