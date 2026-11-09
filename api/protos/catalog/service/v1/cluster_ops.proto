@@ -1,0 +1,230 @@
+syntax = "proto3";
+package catalog.service.v1;
+import "google/protobuf/timestamp.proto";
+
+// Platform cluster operations preserve native cursor pages and raw object/YAML strings.
+// Secret contents require explicit read; a successful mutation does not imply readiness.
+// Requests are never automatically replayed after an uncertain outcome.
+
+message ClusterOpsCluster {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string display_name = 2 [json_name = "display_name"];
+}
+
+message ClusterOpsResourceTypeRef {
+  string group = 1 [json_name = "group"];
+  string version = 2 [json_name = "version"];
+  string resource = 3 [json_name = "resource"];
+}
+
+message ClusterOpsResourceRef {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  ClusterOpsResourceTypeRef type = 2 [json_name = "type"];
+  string namespace = 3 [json_name = "namespace"];
+  string name = 4 [json_name = "name"];
+}
+
+message ClusterOpsResourceDescriptor {
+  ClusterOpsResourceTypeRef type = 1 [json_name = "type"];
+  string kind = 2 [json_name = "kind"];
+  bool namespaced = 3 [json_name = "namespaced"];
+  repeated string actions = 4 [json_name = "actions"];
+  bool custom_resource = 5 [json_name = "custom_resource"];
+  string crd_name = 6 [json_name = "crd_name"];
+}
+
+message ClusterOpsResourceDocument {
+  ClusterOpsResourceRef ref = 1 [json_name = "ref"];
+  string uid = 2 [json_name = "uid"];
+  string resource_version = 3 [json_name = "resource_version"];
+  string object_json = 4 [json_name = "object_json"];
+  bool read_only = 5 [json_name = "read_only"];
+  string read_only_reason = 6 [json_name = "read_only_reason"];
+  bool secret_data_redacted = 7 [json_name = "secret_data_redacted"];
+  repeated string secret_keys = 8 [json_name = "secret_keys"];
+}
+
+message ClusterOpsClusterOverview {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string kubernetes_version = 2 [json_name = "kubernetes_version"];
+  int64 nodes_total = 3 [json_name = "nodes_total"];
+  int64 nodes_ready = 4 [json_name = "nodes_ready"];
+  int64 namespaces_total = 5 [json_name = "namespaces_total"];
+  int64 pods_total = 6 [json_name = "pods_total"];
+  map<string, int64> pod_phase_counts = 7 [json_name = "pod_phase_counts"];
+  map<string, string> capacity = 8 [json_name = "capacity"];
+  map<string, string> allocatable = 9 [json_name = "allocatable"];
+  google.protobuf.Timestamp sampled_at = 10 [json_name = "sampled_at"];
+}
+
+message ClusterOpsListClustersResponse {
+  repeated ClusterOpsCluster items = 1 [json_name = "items"];
+}
+
+message ClusterOpsListResourceTypesResponse {
+  repeated ClusterOpsResourceDescriptor items = 1 [json_name = "items"];
+}
+
+message ClusterOpsListResourcesResponse {
+  repeated ClusterOpsResourceDocument items = 1 [json_name = "items"];
+  string next_continue_token = 2 [json_name = "next_continue_token"];
+  string list_resource_version = 3 [json_name = "list_resource_version"];
+}
+
+message ClusterOpsGetResourceResponse {
+  ClusterOpsResourceDocument resource = 1 [json_name = "resource"];
+  string manifest_yaml = 2 [json_name = "manifest_yaml"];
+}
+
+message ClusterOpsMutationResponse {
+  ClusterOpsResourceDocument resource = 1 [json_name = "resource"];
+  bool dry_run = 2 [json_name = "dry_run"];
+}
+
+message ClusterOpsDeleteResourceResponse {
+  bool deletion_requested = 1 [json_name = "deletion_requested"];
+  bool already_absent = 2 [json_name = "already_absent"];
+}
+
+message ClusterOpsScaleWorkloadResponse {
+  ClusterOpsResourceRef ref = 1 [json_name = "ref"];
+  string uid = 2 [json_name = "uid"];
+  string resource_version = 3 [json_name = "resource_version"];
+  int32 desired_replicas = 4 [json_name = "desired_replicas"];
+  int32 observed_replicas = 5 [json_name = "observed_replicas"];
+  bool dry_run = 6 [json_name = "dry_run"];
+}
+
+message ClusterOpsListClustersRequest {
+}
+
+message ClusterOpsGetClusterOverviewRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+}
+
+message ClusterOpsListResourceTypesRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+}
+
+message ClusterOpsListResourcesRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string group = 2 [json_name = "group"];
+  string version = 3 [json_name = "version"];
+  string resource = 4 [json_name = "resource"];
+  string namespace = 5 [json_name = "namespace"];
+  bool all_namespaces = 6 [json_name = "all_namespaces"];
+  optional uint32 page_size = 7 [json_name = "page_size"];
+  string continue_token = 8 [json_name = "continue_token"];
+  string name = 9 [json_name = "name"];
+  string label_selector = 10 [json_name = "label_selector"];
+  string field_selector = 11 [json_name = "field_selector"];
+}
+
+message ClusterOpsGetResourceRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string name = 2 [json_name = "name"];
+  string group = 3 [json_name = "group"];
+  string version = 4 [json_name = "version"];
+  string resource = 5 [json_name = "resource"];
+  string namespace = 6 [json_name = "namespace"];
+  bool include_secret_data = 7 [json_name = "include_secret_data"];
+}
+
+message ClusterOpsCreateResourceData {
+  ClusterOpsResourceTypeRef type = 1 [json_name = "type"];
+  string namespace = 2 [json_name = "namespace"];
+  string name = 3 [json_name = "name"];
+  string manifest_yaml = 4 [json_name = "manifest_yaml"];
+  bool dry_run = 5 [json_name = "dry_run"];
+}
+
+message ClusterOpsCreateResourceRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  ClusterOpsCreateResourceData data = 2 [json_name = "data"];
+}
+
+message ClusterOpsUpdateResourceData {
+  ClusterOpsResourceTypeRef type = 1 [json_name = "type"];
+  string namespace = 2 [json_name = "namespace"];
+  string manifest_yaml = 3 [json_name = "manifest_yaml"];
+  string expected_uid = 4 [json_name = "expected_uid"];
+  string expected_resource_version = 5 [json_name = "expected_resource_version"];
+  bool dry_run = 6 [json_name = "dry_run"];
+}
+
+message ClusterOpsUpdateResourceRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string name = 2 [json_name = "name"];
+  ClusterOpsUpdateResourceData data = 3 [json_name = "data"];
+}
+
+message ClusterOpsDeleteResourceRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string name = 2 [json_name = "name"];
+  string group = 3 [json_name = "group"];
+  string version = 4 [json_name = "version"];
+  string resource = 5 [json_name = "resource"];
+  string namespace = 6 [json_name = "namespace"];
+  string expected_uid = 7 [json_name = "expected_uid"];
+}
+
+message ClusterOpsScaleWorkloadData {
+  ClusterOpsResourceTypeRef type = 1 [json_name = "type"];
+  string namespace = 2 [json_name = "namespace"];
+  string expected_uid = 3 [json_name = "expected_uid"];
+  string expected_resource_version = 4 [json_name = "expected_resource_version"];
+  optional int32 replicas = 5 [json_name = "replicas"];
+  bool dry_run = 6 [json_name = "dry_run"];
+}
+
+message ClusterOpsScaleWorkloadRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string name = 2 [json_name = "name"];
+  ClusterOpsScaleWorkloadData data = 3 [json_name = "data"];
+}
+
+message ClusterOpsRestartWorkloadData {
+  ClusterOpsResourceTypeRef type = 1 [json_name = "type"];
+  string namespace = 2 [json_name = "namespace"];
+  string expected_uid = 3 [json_name = "expected_uid"];
+  string expected_resource_version = 4 [json_name = "expected_resource_version"];
+  bool dry_run = 5 [json_name = "dry_run"];
+}
+
+message ClusterOpsRestartWorkloadRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string name = 2 [json_name = "name"];
+  ClusterOpsRestartWorkloadData data = 3 [json_name = "data"];
+}
+
+message ClusterOpsStreamPodLogsRequest {
+  string cluster_id = 1 [json_name = "cluster_id"];
+  string namespace = 2 [json_name = "namespace"];
+  string pod_name = 3 [json_name = "pod_name"];
+  string container = 4 [json_name = "container"];
+  string expected_pod_uid = 5 [json_name = "expected_pod_uid"];
+  bool follow = 6 [json_name = "follow"];
+  bool previous = 7 [json_name = "previous"];
+  bool timestamps = 8 [json_name = "timestamps"];
+  optional int64 tail_lines = 9 [json_name = "tail_lines"];
+  optional int64 since_seconds = 10 [json_name = "since_seconds"];
+  google.protobuf.Timestamp since_time = 11 [json_name = "since_time"];
+  optional int64 limit_bytes = 12 [json_name = "limit_bytes"];
+}
+
+message ClusterOpsPodLogFrame {
+  ClusterOpsPodLogFrameType type = 1 [json_name = "type"];
+  bytes data = 2 [json_name = "data"];
+  string pod_uid = 3 [json_name = "pod_uid"];
+  string container = 4 [json_name = "container"];
+  string reason = 5 [json_name = "reason"];
+  string message = 6 [json_name = "message"];
+}
+
+enum ClusterOpsPodLogFrameType {
+  CLUSTER_OPS_POD_LOG_FRAME_TYPE_UNSPECIFIED = 0;
+  CLUSTER_OPS_POD_LOG_FRAME_TYPE_READY = 1;
+  CLUSTER_OPS_POD_LOG_FRAME_TYPE_DATA = 2;
+  CLUSTER_OPS_POD_LOG_FRAME_TYPE_END = 3;
+  CLUSTER_OPS_POD_LOG_FRAME_TYPE_ERROR = 4;
+}

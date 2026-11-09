@@ -102,7 +102,7 @@ func TestComputeClientSharedConnectionIdentityAndSelection(t *testing.T) {
 	for key, value := range map[string]string{"ANI_INSTANCE_ADDR": listener.Addr().String(), "ANI_INSTANCE_CA": f.caFile, "ANI_INSTANCE_CERT": f.certFile, "ANI_INSTANCE_KEY": f.keyFile} {
 		t.Setenv(key, value)
 	}
-	owner, catalog, cleanup, err := NewResourceClientsFromEnv()
+	owner, catalog, _, cleanup, err := NewResourceClientsFromEnv()
 	require.NoError(t, err)
 	t.Cleanup(cleanup)
 	const tenant, actor, preset = "20000000-0000-4000-8000-000000000002", "governance:user:9", "30000000-0000-4000-8000-000000000003"

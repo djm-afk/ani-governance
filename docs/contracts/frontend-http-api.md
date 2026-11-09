@@ -72,7 +72,7 @@ GET /api/v1/networks/vpcs/vpc_0123456789abcdef0123456789abcdef
 
 ## 3 列表响应与分页
 
-列表统一返回 `items` 和 `total`：
+除[平台集群运维的正式原生游标协议](cluster-operations-http.md)外，列表统一返回 `items` 和 `total`：
 
 - `items`：当前页的数据数组。
 - `total`：当前调用者有权查看、且符合筛选条件的总条数，不是当前页条数。JSON 中使用十进制字符串。
@@ -241,3 +241,11 @@ During the one-time ModelDev environment maintenance window, startup setting
 `MODELDEV_CREATE_MAINTENANCE` only for the ModelDev Create action. Existing
 authentication and tenant-user restrictions still run; Ensure/Get, queries,
 Stop and quota release do not use that gate.
+
+
+## 平台集群运维
+
+`/api/v1/admin/cluster-ops` 的十一条接口采用[集群运维 HTTP 合同](cluster-operations-http.md)。
+该域资源列表正式使用 Kubernetes 原生游标，不提供 `page/pageSize/total`，也不扫描全集补总数；
+其他业务列表继续遵守各自已声明的分页规范。写请求保留 `data` 包装，响应保留类型化变更、
+删除及扩缩容结果；YAML、Secret、UID/RV、错误和单 Pod SSE 的具体字段与行为以该合同为准。

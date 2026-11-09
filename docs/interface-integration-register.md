@@ -61,9 +61,109 @@ Resource 承担对象归属、持久幂等、源盘/上传生命周期及原生�
 | Gov → Resource Sandbox 生命周期 | SANDBOX-01～08 | 当前需求为独立 Sandbox：源码调整、跨仓兼容和验收结果见 Resource 唯一状态；旧父实例模型的历史证据不能代表新模型已验收 | Gov 需固定支持独立创建的 Resource 正式版本；升级前执行切换门禁，整体验收待完成 |
 | 通用配额、GPU 实例与 Inference 接入 | QUOTA-01～03；INF-01/02；QUOTA-LAB-01～04；复用 PLAN-11～14、TENANT-04/08 | 保留 ACC 目录与 Resource 实例执行/释放合同；Inference 管理由 Governance BFF 接入并通过受信 mTLS 客户端投递；旧模拟 owner 入口退役 | 当前合同见 [GPU owner 指南](contracts/gpu-owner-integration-guide.md)；源码、部署与真实 GPU 验收分别记录 |
 | ModelDev 训练、微调及原登记恢复 | MODELDEV-01～MODELDEV-08、MODELDEV-12；服务间调用登记 S2S-MODELDEV-CPUP01-01 | 单一 typed 受理/查询及当前授权恢复已实现；原登记 Resume 的 HTTP/JWT/PG/mTLS 边界 GREEN，真实 provider Resume 与完整微调/GPU分别验收；历史 CPU-P01 结果保留原范围 | v2.1，进行中 |
-| 存储接入（独立盘与对象只读） | STORAGE-01～STORAGE-10 | 已实现并在 kcn 新环境完成正/负向验证；对象列表是本登记中唯一分页合同例外 | 待指定；前端合同与交付文档另行提供 |
+| 平台集群运维 | CLUSTEROPS-01～11 | Gov/BOSS 已实现并部署 66；R67-01/准入阻塞已修复，真实页面补验和清理完成 | 正式原生游标及类型化变更响应见唯一合同；其他域规范不变 |
+| 存储接入（独立盘与对象只读） | STORAGE-01～STORAGE-10 | 已实现并在 kcn 新环境完成正/负向验证；对象列表沿用其原生游标合同 | 待指定；前端合同与交付文档另行提供 |
 | 平台组件健康快照（BOSS 组件状态页） | PLAT-COMP-01 | 已实现并在 kcn 新环境实测（快照、鉴权、降级、缓存）；前端对接文档见 `local-remote/平台健康/` | 待指定 |
 | 平台组件日志流（BOSS 日志窗口） | PLAT-COMP-02；复用 PLAT-COMP-01 组件清单 | 已实现并在 kcn 新环境直连 30085 实测（SSE 六字段、8 秒生命周期、参数严格校验、鉴权、并发配额、客户端取消）；AUTH-02「平台身份但无日志能力」未取到有效证据 | 待指定；旧格式错误体为本登记唯一例外，见下方小节 |
+
+## CLUSTEROPS-01～11：平台集群运维
+
+公开入口为 `/api/v1/admin/cluster-ops`；十一条路由、七个权限、请求/响应、正式游标、
+Secret 和 SSE 的唯一当前定义见[集群运维 HTTP 合同](contracts/cluster-operations-http.md)。
+Gov 使用现有平台用户 JWT、平台角色、逐动作能力和精确 API 授权，拒绝租户与 API Key；
+下游仅通过既有 Res mTLS 连接重建 platform scope、用户 actor 和新 request ID，不携带 tenant。
+Res 决定资源动作、租户 Namespace 只读和原生 UID/RV 语义，Gov/BOSS 不增加归属推断或兜底重删。
+
+已有库按同版 `admin sync-apis --dry-run`、正式 `sync-apis`、
+[本域精确权限 SQL](../scripts/ops/sql/register-cluster-ops-permissions.sql)、全部 Gov 实例
+策略刷新、平台管理员重新登录的顺序接入。SQL 只向既有 `tenant_id=0`、
+`code=platform:admin`、`type=SYSTEM`、`status=ON` 角色授予本模块，不创建角色，
+不自动授予运营/租户角色、套餐或 API Key。首次安装种子包含本模块及两个 BOSS 页面；
+已有数据库不重跑 `admin init`。
+
+2026-11-08 本模块接入、真实联调及补验已完成。Gov 的代码/依赖快照为
+`94d92fd575ed392220e772656cf8fcdb4b34c814`，固定 Res module
+`v1.6.1-0.20261108021506-5d9682f75e41`，对应 [Res 修复提交](https://github.com/zhangzhe-ctrl/ani-resource-service/commit/5d9682f75e41f6dbf972a7084e2a144dbc504bac)。
+最终依赖和构建使用 GOWORK=off，无本地 replace。BOSS 仍为 `51cdbfe525bd81516bb854f1fe4d47fccce677ce`。
+
+66 部署使用 registry `10.10.1.66:30003/ani-gpu-platform/` 的固定镜像：
+
+| 对象 | 版本/源提交 | 实际镜像 digest |
+| --- | --- | --- |
+| Res Deployment | clusterops-r67fix-20261108 / 5d9682f | sha256:eff884edeb1165208ba0beefa6bc64cb6f7fe594cc38cf32c3ec2f26fb75d22d |
+| Gov Deployment | clusterops-listrecv-20261108-g3 / 94d92fd5 | sha256:91d045a8f44b6d273c990e7eaf894b3c5ede28a956b65baf73c835ef57097e90 |
+| Admin CLI 镜像/只读目录任务 | clusterops-20261108-g2 / c09e3ef3 | sha256:18fb3c169db7d728291b26a43eaf337a01ba21f3d8df02b4f732fa2ab190471f |
+| BOSS Deployment | clusterops-20261108-b1 / 51cdbfe | sha256:d8b1e5b163b299143cf556f6f66e3e0fe6f7d03e31ff47db1e4dd29ba75f5d62 |
+
+三个 Deployment 最终 Ready 1/1，BOSS 入口为 `http://10.10.1.66:30081`。
+此前已执行同版 API 目录 dry-run/同步、本域 SQL（11 条 API、7 个权限及既有平台管理员精确授权）、
+策略刷新及真实重新登录。先前依赖修复不改 HTTP/OpenAPI；g2 Admin 使用当前 Gov 运行配置执行
+只读 dry-run，CLI exit 0，仅提示保留 51 条既有非本域目录项，无本域差异或新增/修改建议，未再写库。
+旧 CLI Pod 的连接信息已失效；使用当前运行配置后通过。最初核对脚本把 REVIEW 提示误判为变化而返回 1，
+随后对该次成功输出分类核对，无再次同步或放宽检查。所有临时目录任务均已删除，未重跑 admin init。
+
+本轮列表传输补修（Gov 94d92fd5）：仅 ListResources 的单次 RPC 显式接收预算及相关错误表达变化，
+值和作用范围见 [H04](contracts/cluster-operations-http.md#h04listresources) 与[错误映射](contracts/cluster-operations-http.md#7-错误映射)。
+66 的 Gov 保持 768 MiB 内存限制；64 MiB 预算容纳默认 50 个约 1 MiB 的常见大对象及元数据，
+给解码和 HTTP 编码留下余量；最大 200 条不承诺任意聚合大小都可接收，无预分配、截断、自动缩页或重试。
+修复前真实 mTLS/protobuf 回归失败于 4,609,851 > 4,194,304 字节；修复后调用生产方法成功，
+五项正文逐项长度/hash、完整 ResourceDocument、UID/RV、只读字段、游标及列表版本均保留。
+同一受管连接的裸生成调用仍按默认接收限制拒绝，证明没有改共享连接预算。
+ClusterOpsClient、错误域/脱敏/传输错误定向 go test 均 exit 0（默认 vet 未关闭），
+两包生产文件与本轮测试/既有证书 helper 的完整 go vet 均 exit 0；server 的 clean 构建、gofmt、diff check 通过。
+可信 clusterops.ani.io / RESOURCE_EXHAUSTED 仍 429；无可信领域信息的接收失败为安全 502，原始错误不出站。
+
+66 本轮只更新 Gov Deployment 的镜像，其他 spec 字段、Res/BOSS 镜像均核对保持。
+临时 Namespace co-list-20261108-44157b 中五个 large-cm-1～5 的 payload 各为 900 KiB ASCII，使用 create，
+没有 last-applied 大注解。经平台管理员认证的无名称/selector 过滤列表，在默认、50、200 条三种请求下
+均 HTTP 200、响应各 4,613,672 字节；五个测试对象完整，另含 Namespace 自动生成的 kube-root-ca.crt。
+page_size=2 的三次原生 continue 请求得到六个不重复条目，列表版本不变，无 total。
+BOSS 实际重新登录后选择该 Namespace，五个测试 ConfigMap 正常加载且无错误提示；
+large-cm-1 详情原生 UID 匹配，YAML 中 payload 保持 921,600 字符。
+五个 ConfigMap 与 Namespace 已显式删除并回查无残留，无临时驱动/服务进程；没有目录同步、权限 SQL 或准入变更。
+[修复代码 CI](https://github.com/zhangzhe-ctrl/ani-governance/actions/runs/42484618046) 的 checks、generation、integration 全部通过，含本轮回归及既有集成门禁；本段记录更新不改变该代码快照。
+
+检查：此前本地 WSL 完整 make check、正式 make api（最终 0 to write）、本域 auth/data/service/server/logging、
+权限能力及 SYSTEM 映射闭集通过。固定新 module 后，data/service 的 ClusterOps/ResourceClient 定向测试与
+server 测试、clean source 的 server/admin 构建和 go mod verify 通过。g2 接入时的 data/service 窄测试命令使用
+-vet=off，原因是既已定位的 13 项存量测试 vet 告警；生产文件和 server 的 vet 结果仍沿用已通过检查。
+本机重新 make check 在既有 TestLookupAndCheckHost_Unresolvable 失败：实测 WSL 将 nonexistent.invalid
+解析成 28.0.0.12；未修改该测试或全局 DNS。[固定依赖提交 CI](https://github.com/zhangzhe-ctrl/ani-governance/actions/runs/42437923666)
+的 checks、generation、integration 全部成功，含完整 quota_pg 与所选 data/service race。
+此前并发候选绑定的测试准备数据修正保留原断言，未改 ModelDev 仓库或配额业务逻辑。
+BOSS lint、格式、类型检查、生产构建和 8 项日志协议测试通过；生产构建仍有既有大 chunk 提示。
+
+真实 BOSS → Gov → Res → Kubernetes 已验证三个页面、事件/关联资源、原生 continue 分页、ConfigMap 创建/修改
+且不触发重启、Secret 默认脱敏/显式展开/编辑/关闭清理、UID/RV 冲突保留草稿、dry-run 不落盘、
+超过 64 KiB 的合法 YAML、CR 大整数原样保存、Deployment 缩至 0/恢复/重启、删除受理/已不存在/Terminating。
+真实 Pod 日志保留中文、空行和重复行，先前连续读取超过 100 秒；停止、离开页签和退出会话均结束 Gov 下游流，
+非跟随正常结束与无上次容器日志的异常状态已区分。g2 新版链路再次通过 API 和 BOSS 页面读取一次性真实 Pod 日志并正常结束。
+
+用户补充授权修复两个阻塞后，Res 只修改 R67-01 与两条 Sandbox Role/Binding 准入策略：普通非租户空间
+允许通用平台运维，租户/UID 标记和固定 Sandbox 名称或 roleRef 仍要求完整身份及原固定规则。
+60 个发货 YAML CEL 正反用例、原生服务端 dry-run/type-check 及实际 Res 身份的成功/拒绝路径通过；
+两条策略 generation/observedGeneration=2、无类型警告，Deny bindings 和其他准入策略保持。
+合成租户标记 fixture 仅用于原生策略测试，不冒充已登记租户；业务隔离仍以 Res 双登记来源为准。
+真实已登记租户 Namespace 可读，其 Role/Binding CREATE 与 Namespace UPDATE dry-run 在 g2 仍返回
+403 TENANT_NAMESPACE_READ_ONLY，普通空间 Role dry-run 成功且不落盘，伪造身份输入拒绝通过。
+
+RBAC/CRD 补验已完成：BOSS 实际创建/修改/删除 Role、RoleBinding，原生 UID/RV/规则及 subject 回查一致；
+实际创建/修改/删除 CR，大整数原文保留；CRD 更新与 v2 发现沿用此前通过结果。
+自有未 Established CRD 本体存在、实例 LIST 404 时，BOSS 删除失败，原生 UID/RV 不变且无 deletionTimestamp。
+正常自有 CRD 经 BOSS 删除受理并最终消失；再次请求由初始 GET 确认不存在后返回 already_absent=true。
+首/后页 404、转换失败、删除竞争均由 Res 回归测试确认，不在 Gov/BOSS 增加补查、重放或猜测成功。
+
+Namespace 删除已通过先前 BOSS 补验：仅对唯一临时名称授予 Res get/delete，展示受理和 Terminating 后确认消失，
+随后撤销该授权；Res 默认无通用 Namespace 删除权限，未扩大长期原生写权限。
+原前缀 co-gb-20261108-4ede13、补验前缀 co-gb-20261108-del-5ac41d、本轮 co-gb-20261108-fix-0f6a92 的
+Namespace、Pod/工作负载、配置/假凭据 Secret、RBAC、CR/CRD、临时原生写授权和目录任务均已清理，按前缀回查无残留。
+反例 CRD 因预检必须失败而由 kubectl 清理，不计作成功页面删除；正常 CRD 由 BOSS 删除。
+临时前端、独占 PG 及 API 驱动已停止。保留部署需要的 get/list-only ani-resource-clusterops-reader 和已授权两条策略修复。
+
+边界：GitNexus 的产品原型索引不可用，图分析有流程预算裁剪，不宣称完整调用图；完整 data/service 测试包仍有
+上述 13 项既有 vet 告警。Res 的 source/image 与本次 make verify 通过，但整仓 CI 仍有既有 Network 和全历史
+Gitleaks 1017 项失败，详见 [Res 唯一执行状态](https://github.com/zhangzhe-ctrl/ani-resource-service/blob/codex/clusterops-phase1-20261107/docs/execution/status.md#cluster-operations-phase1)。
+这些不标为本次业务验收失败或整仓全绿。三仓 PR 均未合并，无生产发布，不结项其他域的接口风格登记。
 
 ## 风格改动批次
 
