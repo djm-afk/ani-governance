@@ -141,13 +141,33 @@ func vmSummary(spec *vm.CreateSpec, out *view.VirtualMachine) {
 		out.SourceKind = spec.Intent.SourceKind
 		out.MediaKey = spec.Intent.MediaKey
 	}
+	if spec.CloneSource != nil {
+		// Display the frozen source snapshot; a clone has no preset/media or size
+		// input of its own, so read the plan instead of showing zero.
+		out.CloneSource = &view.VMCloneSource{SourceVmId: spec.CloneSource.SourceVmId, SourceName: spec.CloneSource.SourceName}
+		for _, disk := range spec.CloneSource.Disks {
+			if disk.Role == "system" {
+				out.SystemDiskSizeGb = disk.SizeGb
+			}
+		}
+	}
 }
 func (s *VMService) CreateVM(ctx context.Context, r *view.CreateVMRequest) (*view.VMAcceptance, error) {
 	if r == nil || r.Data == nil || s.acceptance == nil {
 		return nil, vmInvalid()
 	}
 	d := r.Data
+	// The clone selector is identified on the raw request, before DNS or guest
+	// initialization are normalized; an empty message is not an inheritance hint.
+	if d.SourceKind == "VM_CLONE" {
+		if err := s.validateCloneCreate(ctx, d); err != nil {
+			return nil, err
+		}
+	}
 	intent := &vm.CreateVMData{Name: d.Name, PresetId: d.PresetId, SourceKind: d.SourceKind, MediaKey: d.MediaKey, SystemDiskSizeGb: d.SystemDiskSizeGb, StartAfterCreate: d.StartAfterCreate, SecurityGroupIds: append([]string(nil), d.SecurityGroupIds...)}
+	if d.CloneSource != nil {
+		intent.CloneSource = &vm.VMCloneSource{SourceVmId: d.CloneSource.SourceVmId, ExpectedSourceVersion: d.CloneSource.ExpectedSourceVersion}
+	}
 	if d.Dns != nil {
 		var err error
 		intent.Dns, err = vm.NormalizeDNSSelection(&vm.DNSSelection{Mode: d.Dns.Mode, Nameservers: d.Dns.Nameservers})
@@ -188,6 +208,29 @@ func (s *VMService) CreateVM(ctx context.Context, r *view.CreateVMRequest) (*vie
 		return nil, err
 	}
 	return &view.VMAcceptance{OperationId: result.OperationID, ResourceId: result.ResourceID, Replayed: result.Replayed, Result: "ACCEPTED"}, nil
+}
+
+// validateCloneCreate enforces the clone selector on the raw request and checks
+// the current source read permission before any acceptance or replay lookup.
+// It never reads, resolves or lists the source itself.
+func (s *VMService) validateCloneCreate(ctx context.Context, d *view.CreateVMData) error {
+	c := d.CloneSource
+	if c == nil || !canonicalCatalogUUID(c.SourceVmId) || c.ExpectedSourceVersion < 1 || c.SourceName != "" {
+		return vmInvalid()
+	}
+	if d.PresetId != "" || d.MediaKey != "" || d.SystemDiskSizeGb != 0 {
+		return vmInvalid()
+	}
+	if len(d.DataDisks) != 0 || len(d.SecurityGroupIds) != 0 {
+		return vmInvalid()
+	}
+	if d.Network != nil || d.Dns != nil || d.GuestInitialization != nil {
+		return vmInvalid()
+	}
+	if _, _, err := s.scope(ctx, "get"); err != nil {
+		return err
+	}
+	return nil
 }
 func (s *VMService) DeleteVM(ctx context.Context, r *view.ChangeVMRequest) (*view.VMAcceptance, error) {
 	if r == nil || !validVMChange(r.Data, "delete") || s.acceptance == nil {
