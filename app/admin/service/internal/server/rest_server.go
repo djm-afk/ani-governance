@@ -249,7 +249,12 @@ func NewRestServer(
 	if err != nil || modelConfig.Timeout > 24*time.Hour {
 		return nil, fmt.Errorf("invalid bounded model import HTTP budget")
 	}
-	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout, modeldevConfig.ModelResolutionTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, clusterOpsHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter, storageQueryHTTPFilter},
+	// 最外层观测 filter 必须早于 CORS、手写 bind、鉴权与路由：404/405、解码失败、
+	// panic 与正常业务共享同一个 trace，并由同一处产出完成记录。
+	// errorEncoder 在记录真实原错之后才合并 trace_id，保持既有错误协议不变。
+	observability := httpObservabilityFilter(ctx.GetLogger())
+	srv, err := rpc.CreateRestServerWithOuterFilter(streamConfig, observability, traceErrorEncoder(nil),
+		[]http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout, modeldevConfig.ModelResolutionTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, clusterOpsHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter, storageQueryHTTPFilter},
 		middlewares...,
 	)
 	if err != nil {
