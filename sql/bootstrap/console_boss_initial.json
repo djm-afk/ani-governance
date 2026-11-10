@@ -3284,6 +3284,46 @@
       "roles": [
         "tenant"
       ]
+    },
+    {
+      "code": "modeldev:dataset:create",
+      "name": "创建数据集集合",
+      "group": "console.training",
+      "roles": [
+        "tenant"
+      ]
+    },
+    {
+      "code": "modeldev:dataset:read",
+      "name": "查看数据集集合、版本与导入任务",
+      "group": "console.training",
+      "roles": [
+        "tenant"
+      ]
+    },
+    {
+      "code": "modeldev:dataset:update",
+      "name": "编辑数据集名称与描述",
+      "group": "console.training",
+      "roles": [
+        "tenant"
+      ]
+    },
+    {
+      "code": "modeldev:dataset:archive",
+      "name": "归档或恢复数据集集合",
+      "group": "console.training",
+      "roles": [
+        "tenant"
+      ]
+    },
+    {
+      "code": "modeldev:dataset:import",
+      "name": "提交、取消或重试数据集导入",
+      "group": "console.training",
+      "roles": [
+        "tenant"
+      ]
     }
   ],
   "routes": [
@@ -6469,6 +6509,132 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/modeldev/dataset-import-tasks/{import_task_id}",
+      "operation": "ModelDevService_GetDatasetImportTask",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel",
+      "operation": "ModelDevService_CancelDatasetImport",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:import"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry",
+      "operation": "ModelDevService_RetryDatasetImport",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:import"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/dataset-sources:inspect",
+      "operation": "ModelDevService_InspectDatasetSource",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/modeldev/datasets",
+      "operation": "ModelDevService_ListDatasets",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/datasets",
+      "operation": "ModelDevService_CreateDataset",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}",
+      "operation": "ModelDevService_GetDataset",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}",
+      "operation": "ModelDevService_UpdateDataset",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}/import-tasks",
+      "operation": "ModelDevService_ListDatasetImportTasks",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}/operations",
+      "operation": "ModelDevService_ListDatasetOperations",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}/versions",
+      "operation": "ModelDevService_ListDatasetVersions",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}:archive",
+      "operation": "ModelDevService_ArchiveDataset",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:archive"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}:import",
+      "operation": "ModelDevService_ImportDatasetVersion",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:import"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/modeldev/datasets/{dataset_id}:restore",
+      "operation": "ModelDevService_RestoreDataset",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:archive"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/modeldev/environment",
       "operation": "ModelDevService_GetTenantExecutionEnvironment",
       "module": "MODELDEV",
@@ -6608,7 +6774,7 @@
       "operation": "ModelDevService_ListInputVersions",
       "module": "MODELDEV",
       "permissions": [
-        "modeldev:input:list"
+        "modeldev:dataset:read"
       ]
     },
     {
@@ -6617,7 +6783,16 @@
       "operation": "ModelDevService_GetInputVersion",
       "module": "MODELDEV",
       "permissions": [
-        "modeldev:input:get"
+        "modeldev:dataset:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/modeldev/input-versions/{input_version_id}/preview",
+      "operation": "ModelDevService_GetInputVersionPreview",
+      "module": "MODELDEV",
+      "permissions": [
+        "modeldev:dataset:read"
       ]
     },
     {

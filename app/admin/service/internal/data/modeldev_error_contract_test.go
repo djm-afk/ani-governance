@@ -23,6 +23,7 @@ func TestModelDevResolutionPreservesFiniteCurrentErrors(t *testing.T) {
 	}{
 		{"unsupported", codes.FailedPrecondition, modeldevv1.ErrorReason_ERROR_REASON_BASE_MODEL_UNSUPPORTED, false},
 		{"template required", codes.FailedPrecondition, modeldevv1.ErrorReason_ERROR_REASON_FINETUNING_TEMPLATE_REQUIRED, false},
+		{"kind/format mismatch", codes.FailedPrecondition, modeldevv1.ErrorReason_ERROR_REASON_INPUT_KIND_FORMAT_MISMATCH, false},
 		{"content", codes.FailedPrecondition, modeldevv1.ErrorReason_ERROR_REASON_CONTENT_LIMIT_EXCEEDED, true},
 		{"busy", codes.ResourceExhausted, modeldevv1.ErrorReason_ERROR_REASON_INPUT_VALIDATION_BUSY, false},
 		{"runtime", codes.Unavailable, modeldevv1.ErrorReason_ERROR_REASON_FINETUNING_RUNTIME_UNAVAILABLE, false},

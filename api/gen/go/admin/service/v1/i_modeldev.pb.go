@@ -27,7 +27,7 @@ var File_admin_service_v1_i_modeldev_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_modeldev_proto_rawDesc = "" +
 	"\n" +
-	"!admin/service/v1/i_modeldev.proto\x12\x10admin.service.v1\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1cgoogle/api/annotations.proto\x1a%modeldev/service/v1/environment.proto\x1a#modeldev/service/v1/execution.proto2\xb7&\n" +
+	"!admin/service/v1/i_modeldev.proto\x12\x10admin.service.v1\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1cgoogle/api/annotations.proto\x1a%modeldev/service/v1/environment.proto\x1a!modeldev/service/v1/dataset.proto\x1a#modeldev/service/v1/execution.proto2\xda;\n" +
 	"\x0fModelDevService\x12\xc2\x06\n" +
 	" EnsureTenantExecutionEnvironment\x12<.modeldev.service.v1.EnsureTenantExecutionEnvironmentRequest\x1a=.modeldev.service.v1.EnsureTenantExecutionEnvironmentResponse\"\xa0\x05\xbaG\xee\x04\x1a\xb5\x01Explicit current-tenant environment provisioning. Exactly one canonical UUID Idempotency-Key header, empty JSON object at most 1024 bytes, no query. No execution or quota admission.21\n" +
 	"/\n" +
@@ -126,7 +126,23 @@ const file_admin_service_v1_i_modeldev_proto_rawDesc = "" +
 	",#/components/schemas/CreateExecutionResponseZ\x10\n" +
 	"\x0e\n" +
 	"\n" +
-	"BearerAuth\x12\x00\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/modeldev/executionsB\xbb\x01\n" +
+	"BearerAuth\x12\x00\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/modeldev/executions\x12\x8c\x01\n" +
+	"\rCreateDataset\x12).modeldev.service.v1.CreateDatasetRequest\x1a*.modeldev.service.v1.CreateDatasetResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/modeldev/datasets\x12\x96\x01\n" +
+	"\n" +
+	"GetDataset\x12&.modeldev.service.v1.GetDatasetRequest\x1a'.modeldev.service.v1.GetDatasetResponse\"7\x82\xd3\xe4\x93\x021b\adataset\x12&/api/v1/modeldev/datasets/{dataset_id}\x12\x86\x01\n" +
+	"\fListDatasets\x12(.modeldev.service.v1.ListDatasetsRequest\x1a).modeldev.service.v1.ListDatasetsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/modeldev/datasets\x12\x99\x01\n" +
+	"\rUpdateDataset\x12).modeldev.service.v1.UpdateDatasetRequest\x1a*.modeldev.service.v1.UpdateDatasetResponse\"1\x82\xd3\xe4\x93\x02+:\x01*2&/api/v1/modeldev/datasets/{dataset_id}\x12\xa4\x01\n" +
+	"\x0eArchiveDataset\x12*.modeldev.service.v1.ArchiveDatasetRequest\x1a+.modeldev.service.v1.ArchiveDatasetResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/modeldev/datasets/{dataset_id}:archive\x12\xa4\x01\n" +
+	"\x0eRestoreDataset\x12*.modeldev.service.v1.RestoreDatasetRequest\x1a+.modeldev.service.v1.RestoreDatasetResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/modeldev/datasets/{dataset_id}:restore\x12\xb0\x01\n" +
+	"\x14InspectDatasetSource\x120.modeldev.service.v1.InspectDatasetSourceRequest\x1a1.modeldev.service.v1.InspectDatasetSourceResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/modeldev/dataset-sources:inspect\x12\x8c\x02\n" +
+	"\x14ImportDatasetVersion\x120.modeldev.service.v1.ImportDatasetVersionRequest\x1a1.modeldev.service.v1.ImportDatasetVersionResponse\"\x8e\x01\xbaGS\x1aQAccept one import. 202 with a stable receipt; does not mean the version is ready.\x82\xd3\xe4\x93\x022:\x01*\"-/api/v1/modeldev/datasets/{dataset_id}:import\x12\xb1\x01\n" +
+	"\x13ListDatasetVersions\x12/.modeldev.service.v1.ListDatasetVersionsRequest\x1a0.modeldev.service.v1.ListDatasetVersionsResponse\"7\x82\xd3\xe4\x93\x021\x12//api/v1/modeldev/datasets/{dataset_id}/versions\x12\xce\x01\n" +
+	"\x16GetInputVersionPreview\x122.modeldev.service.v1.GetInputVersionPreviewRequest\x1a3.modeldev.service.v1.GetInputVersionPreviewResponse\"K\x82\xd3\xe4\x93\x02Eb\apreview\x12:/api/v1/modeldev/input-versions/{input_version_id}/preview\x12\xbe\x01\n" +
+	"\x16ListDatasetImportTasks\x122.modeldev.service.v1.ListDatasetImportTasksRequest\x1a3.modeldev.service.v1.ListDatasetImportTasksResponse\";\x82\xd3\xe4\x93\x025\x123/api/v1/modeldev/datasets/{dataset_id}/import-tasks\x12\xc1\x01\n" +
+	"\x14GetDatasetImportTask\x120.modeldev.service.v1.GetDatasetImportTaskRequest\x1a1.modeldev.service.v1.GetDatasetImportTaskResponse\"D\x82\xd3\xe4\x93\x02>b\x04task\x126/api/v1/modeldev/dataset-import-tasks/{import_task_id}\x12\xbf\x01\n" +
+	"\x13CancelDatasetImport\x12/.modeldev.service.v1.CancelDatasetImportRequest\x1a0.modeldev.service.v1.CancelDatasetImportResponse\"E\x82\xd3\xe4\x93\x02?\"=/api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel\x12\xbb\x01\n" +
+	"\x12RetryDatasetImport\x12..modeldev.service.v1.RetryDatasetImportRequest\x1a/.modeldev.service.v1.RetryDatasetImportResponse\"D\x82\xd3\xe4\x93\x02>\"</api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry\x12\xb9\x01\n" +
+	"\x15ListDatasetOperations\x121.modeldev.service.v1.ListDatasetOperationsRequest\x1a2.modeldev.service.v1.ListDatasetOperationsResponse\"9\x82\xd3\xe4\x93\x023\x121/api/v1/modeldev/datasets/{dataset_id}/operationsB\xbb\x01\n" +
 	"\x14com.admin.service.v1B\x0eIModeldevProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var file_admin_service_v1_i_modeldev_proto_goTypes = []any{
@@ -147,22 +163,52 @@ var file_admin_service_v1_i_modeldev_proto_goTypes = []any{
 	(*v1.ListExecutionArtifactsRequest)(nil),            // 14: modeldev.service.v1.ListExecutionArtifactsRequest
 	(*v1.AuthorizeArtifactDownloadRequest)(nil),         // 15: modeldev.service.v1.AuthorizeArtifactDownloadRequest
 	(*v1.CreateExecutionRequest)(nil),                   // 16: modeldev.service.v1.CreateExecutionRequest
-	(*v1.EnsureTenantExecutionEnvironmentResponse)(nil), // 17: modeldev.service.v1.EnsureTenantExecutionEnvironmentResponse
-	(*v1.GetTenantExecutionEnvironmentResponse)(nil),    // 18: modeldev.service.v1.GetTenantExecutionEnvironmentResponse
-	(*v1.CheckFinetuningReadinessResponse)(nil),         // 19: modeldev.service.v1.CheckFinetuningReadinessResponse
-	(*v1.ListImplementationsResponse)(nil),              // 20: modeldev.service.v1.ListImplementationsResponse
-	(*v1.GetInputVersionResponse)(nil),                  // 21: modeldev.service.v1.GetInputVersionResponse
-	(*v1.ListInputVersionsResponse)(nil),                // 22: modeldev.service.v1.ListInputVersionsResponse
-	(*v1.ListExecutionsResponse)(nil),                   // 23: modeldev.service.v1.ListExecutionsResponse
-	(*v1.GetExecutionLogsResponse)(nil),                 // 24: modeldev.service.v1.GetExecutionLogsResponse
-	(*v1.ListExecutionPodsResponse)(nil),                // 25: modeldev.service.v1.ListExecutionPodsResponse
-	(*v1.ListExecutionEventsResponse)(nil),              // 26: modeldev.service.v1.ListExecutionEventsResponse
-	(*v1.QueryExecutionMetricsResponse)(nil),            // 27: modeldev.service.v1.QueryExecutionMetricsResponse
-	(*v1.StopExecutionResponse)(nil),                    // 28: modeldev.service.v1.StopExecutionResponse
-	(*v1.GetExecutionResponse)(nil),                     // 29: modeldev.service.v1.GetExecutionResponse
-	(*v1.ListExecutionArtifactsResponse)(nil),           // 30: modeldev.service.v1.ListExecutionArtifactsResponse
-	(*v1.AuthorizeArtifactDownloadResponse)(nil),        // 31: modeldev.service.v1.AuthorizeArtifactDownloadResponse
-	(*v1.CreateExecutionResponse)(nil),                  // 32: modeldev.service.v1.CreateExecutionResponse
+	(*v1.CreateDatasetRequest)(nil),                     // 17: modeldev.service.v1.CreateDatasetRequest
+	(*v1.GetDatasetRequest)(nil),                        // 18: modeldev.service.v1.GetDatasetRequest
+	(*v1.ListDatasetsRequest)(nil),                      // 19: modeldev.service.v1.ListDatasetsRequest
+	(*v1.UpdateDatasetRequest)(nil),                     // 20: modeldev.service.v1.UpdateDatasetRequest
+	(*v1.ArchiveDatasetRequest)(nil),                    // 21: modeldev.service.v1.ArchiveDatasetRequest
+	(*v1.RestoreDatasetRequest)(nil),                    // 22: modeldev.service.v1.RestoreDatasetRequest
+	(*v1.InspectDatasetSourceRequest)(nil),              // 23: modeldev.service.v1.InspectDatasetSourceRequest
+	(*v1.ImportDatasetVersionRequest)(nil),              // 24: modeldev.service.v1.ImportDatasetVersionRequest
+	(*v1.ListDatasetVersionsRequest)(nil),               // 25: modeldev.service.v1.ListDatasetVersionsRequest
+	(*v1.GetInputVersionPreviewRequest)(nil),            // 26: modeldev.service.v1.GetInputVersionPreviewRequest
+	(*v1.ListDatasetImportTasksRequest)(nil),            // 27: modeldev.service.v1.ListDatasetImportTasksRequest
+	(*v1.GetDatasetImportTaskRequest)(nil),              // 28: modeldev.service.v1.GetDatasetImportTaskRequest
+	(*v1.CancelDatasetImportRequest)(nil),               // 29: modeldev.service.v1.CancelDatasetImportRequest
+	(*v1.RetryDatasetImportRequest)(nil),                // 30: modeldev.service.v1.RetryDatasetImportRequest
+	(*v1.ListDatasetOperationsRequest)(nil),             // 31: modeldev.service.v1.ListDatasetOperationsRequest
+	(*v1.EnsureTenantExecutionEnvironmentResponse)(nil), // 32: modeldev.service.v1.EnsureTenantExecutionEnvironmentResponse
+	(*v1.GetTenantExecutionEnvironmentResponse)(nil),    // 33: modeldev.service.v1.GetTenantExecutionEnvironmentResponse
+	(*v1.CheckFinetuningReadinessResponse)(nil),         // 34: modeldev.service.v1.CheckFinetuningReadinessResponse
+	(*v1.ListImplementationsResponse)(nil),              // 35: modeldev.service.v1.ListImplementationsResponse
+	(*v1.GetInputVersionResponse)(nil),                  // 36: modeldev.service.v1.GetInputVersionResponse
+	(*v1.ListInputVersionsResponse)(nil),                // 37: modeldev.service.v1.ListInputVersionsResponse
+	(*v1.ListExecutionsResponse)(nil),                   // 38: modeldev.service.v1.ListExecutionsResponse
+	(*v1.GetExecutionLogsResponse)(nil),                 // 39: modeldev.service.v1.GetExecutionLogsResponse
+	(*v1.ListExecutionPodsResponse)(nil),                // 40: modeldev.service.v1.ListExecutionPodsResponse
+	(*v1.ListExecutionEventsResponse)(nil),              // 41: modeldev.service.v1.ListExecutionEventsResponse
+	(*v1.QueryExecutionMetricsResponse)(nil),            // 42: modeldev.service.v1.QueryExecutionMetricsResponse
+	(*v1.StopExecutionResponse)(nil),                    // 43: modeldev.service.v1.StopExecutionResponse
+	(*v1.GetExecutionResponse)(nil),                     // 44: modeldev.service.v1.GetExecutionResponse
+	(*v1.ListExecutionArtifactsResponse)(nil),           // 45: modeldev.service.v1.ListExecutionArtifactsResponse
+	(*v1.AuthorizeArtifactDownloadResponse)(nil),        // 46: modeldev.service.v1.AuthorizeArtifactDownloadResponse
+	(*v1.CreateExecutionResponse)(nil),                  // 47: modeldev.service.v1.CreateExecutionResponse
+	(*v1.CreateDatasetResponse)(nil),                    // 48: modeldev.service.v1.CreateDatasetResponse
+	(*v1.GetDatasetResponse)(nil),                       // 49: modeldev.service.v1.GetDatasetResponse
+	(*v1.ListDatasetsResponse)(nil),                     // 50: modeldev.service.v1.ListDatasetsResponse
+	(*v1.UpdateDatasetResponse)(nil),                    // 51: modeldev.service.v1.UpdateDatasetResponse
+	(*v1.ArchiveDatasetResponse)(nil),                   // 52: modeldev.service.v1.ArchiveDatasetResponse
+	(*v1.RestoreDatasetResponse)(nil),                   // 53: modeldev.service.v1.RestoreDatasetResponse
+	(*v1.InspectDatasetSourceResponse)(nil),             // 54: modeldev.service.v1.InspectDatasetSourceResponse
+	(*v1.ImportDatasetVersionResponse)(nil),             // 55: modeldev.service.v1.ImportDatasetVersionResponse
+	(*v1.ListDatasetVersionsResponse)(nil),              // 56: modeldev.service.v1.ListDatasetVersionsResponse
+	(*v1.GetInputVersionPreviewResponse)(nil),           // 57: modeldev.service.v1.GetInputVersionPreviewResponse
+	(*v1.ListDatasetImportTasksResponse)(nil),           // 58: modeldev.service.v1.ListDatasetImportTasksResponse
+	(*v1.GetDatasetImportTaskResponse)(nil),             // 59: modeldev.service.v1.GetDatasetImportTaskResponse
+	(*v1.CancelDatasetImportResponse)(nil),              // 60: modeldev.service.v1.CancelDatasetImportResponse
+	(*v1.RetryDatasetImportResponse)(nil),               // 61: modeldev.service.v1.RetryDatasetImportResponse
+	(*v1.ListDatasetOperationsResponse)(nil),            // 62: modeldev.service.v1.ListDatasetOperationsResponse
 }
 var file_admin_service_v1_i_modeldev_proto_depIdxs = []int32{
 	0,  // 0: admin.service.v1.ModelDevService.EnsureTenantExecutionEnvironment:input_type -> modeldev.service.v1.EnsureTenantExecutionEnvironmentRequest
@@ -182,25 +228,55 @@ var file_admin_service_v1_i_modeldev_proto_depIdxs = []int32{
 	14, // 14: admin.service.v1.ModelDevService.ListExecutionArtifacts:input_type -> modeldev.service.v1.ListExecutionArtifactsRequest
 	15, // 15: admin.service.v1.ModelDevService.AuthorizeArtifactDownload:input_type -> modeldev.service.v1.AuthorizeArtifactDownloadRequest
 	16, // 16: admin.service.v1.ModelDevService.CreateExecution:input_type -> modeldev.service.v1.CreateExecutionRequest
-	17, // 17: admin.service.v1.ModelDevService.EnsureTenantExecutionEnvironment:output_type -> modeldev.service.v1.EnsureTenantExecutionEnvironmentResponse
-	18, // 18: admin.service.v1.ModelDevService.GetTenantExecutionEnvironment:output_type -> modeldev.service.v1.GetTenantExecutionEnvironmentResponse
-	19, // 19: admin.service.v1.ModelDevService.CheckFinetuningReadiness:output_type -> modeldev.service.v1.CheckFinetuningReadinessResponse
-	20, // 20: admin.service.v1.ModelDevService.ListImplementations:output_type -> modeldev.service.v1.ListImplementationsResponse
-	21, // 21: admin.service.v1.ModelDevService.GetInputVersion:output_type -> modeldev.service.v1.GetInputVersionResponse
-	22, // 22: admin.service.v1.ModelDevService.ListInputVersions:output_type -> modeldev.service.v1.ListInputVersionsResponse
-	23, // 23: admin.service.v1.ModelDevService.ListExecutions:output_type -> modeldev.service.v1.ListExecutionsResponse
-	24, // 24: admin.service.v1.ModelDevService.GetExecutionLogs:output_type -> modeldev.service.v1.GetExecutionLogsResponse
-	25, // 25: admin.service.v1.ModelDevService.ListExecutionPods:output_type -> modeldev.service.v1.ListExecutionPodsResponse
-	26, // 26: admin.service.v1.ModelDevService.ListExecutionEvents:output_type -> modeldev.service.v1.ListExecutionEventsResponse
-	27, // 27: admin.service.v1.ModelDevService.QueryExecutionMetrics:output_type -> modeldev.service.v1.QueryExecutionMetricsResponse
-	28, // 28: admin.service.v1.ModelDevService.StopExecution:output_type -> modeldev.service.v1.StopExecutionResponse
-	29, // 29: admin.service.v1.ModelDevService.ResumeModelRegistration:output_type -> modeldev.service.v1.GetExecutionResponse
-	29, // 30: admin.service.v1.ModelDevService.GetExecution:output_type -> modeldev.service.v1.GetExecutionResponse
-	30, // 31: admin.service.v1.ModelDevService.ListExecutionArtifacts:output_type -> modeldev.service.v1.ListExecutionArtifactsResponse
-	31, // 32: admin.service.v1.ModelDevService.AuthorizeArtifactDownload:output_type -> modeldev.service.v1.AuthorizeArtifactDownloadResponse
-	32, // 33: admin.service.v1.ModelDevService.CreateExecution:output_type -> modeldev.service.v1.CreateExecutionResponse
-	17, // [17:34] is the sub-list for method output_type
-	0,  // [0:17] is the sub-list for method input_type
+	17, // 17: admin.service.v1.ModelDevService.CreateDataset:input_type -> modeldev.service.v1.CreateDatasetRequest
+	18, // 18: admin.service.v1.ModelDevService.GetDataset:input_type -> modeldev.service.v1.GetDatasetRequest
+	19, // 19: admin.service.v1.ModelDevService.ListDatasets:input_type -> modeldev.service.v1.ListDatasetsRequest
+	20, // 20: admin.service.v1.ModelDevService.UpdateDataset:input_type -> modeldev.service.v1.UpdateDatasetRequest
+	21, // 21: admin.service.v1.ModelDevService.ArchiveDataset:input_type -> modeldev.service.v1.ArchiveDatasetRequest
+	22, // 22: admin.service.v1.ModelDevService.RestoreDataset:input_type -> modeldev.service.v1.RestoreDatasetRequest
+	23, // 23: admin.service.v1.ModelDevService.InspectDatasetSource:input_type -> modeldev.service.v1.InspectDatasetSourceRequest
+	24, // 24: admin.service.v1.ModelDevService.ImportDatasetVersion:input_type -> modeldev.service.v1.ImportDatasetVersionRequest
+	25, // 25: admin.service.v1.ModelDevService.ListDatasetVersions:input_type -> modeldev.service.v1.ListDatasetVersionsRequest
+	26, // 26: admin.service.v1.ModelDevService.GetInputVersionPreview:input_type -> modeldev.service.v1.GetInputVersionPreviewRequest
+	27, // 27: admin.service.v1.ModelDevService.ListDatasetImportTasks:input_type -> modeldev.service.v1.ListDatasetImportTasksRequest
+	28, // 28: admin.service.v1.ModelDevService.GetDatasetImportTask:input_type -> modeldev.service.v1.GetDatasetImportTaskRequest
+	29, // 29: admin.service.v1.ModelDevService.CancelDatasetImport:input_type -> modeldev.service.v1.CancelDatasetImportRequest
+	30, // 30: admin.service.v1.ModelDevService.RetryDatasetImport:input_type -> modeldev.service.v1.RetryDatasetImportRequest
+	31, // 31: admin.service.v1.ModelDevService.ListDatasetOperations:input_type -> modeldev.service.v1.ListDatasetOperationsRequest
+	32, // 32: admin.service.v1.ModelDevService.EnsureTenantExecutionEnvironment:output_type -> modeldev.service.v1.EnsureTenantExecutionEnvironmentResponse
+	33, // 33: admin.service.v1.ModelDevService.GetTenantExecutionEnvironment:output_type -> modeldev.service.v1.GetTenantExecutionEnvironmentResponse
+	34, // 34: admin.service.v1.ModelDevService.CheckFinetuningReadiness:output_type -> modeldev.service.v1.CheckFinetuningReadinessResponse
+	35, // 35: admin.service.v1.ModelDevService.ListImplementations:output_type -> modeldev.service.v1.ListImplementationsResponse
+	36, // 36: admin.service.v1.ModelDevService.GetInputVersion:output_type -> modeldev.service.v1.GetInputVersionResponse
+	37, // 37: admin.service.v1.ModelDevService.ListInputVersions:output_type -> modeldev.service.v1.ListInputVersionsResponse
+	38, // 38: admin.service.v1.ModelDevService.ListExecutions:output_type -> modeldev.service.v1.ListExecutionsResponse
+	39, // 39: admin.service.v1.ModelDevService.GetExecutionLogs:output_type -> modeldev.service.v1.GetExecutionLogsResponse
+	40, // 40: admin.service.v1.ModelDevService.ListExecutionPods:output_type -> modeldev.service.v1.ListExecutionPodsResponse
+	41, // 41: admin.service.v1.ModelDevService.ListExecutionEvents:output_type -> modeldev.service.v1.ListExecutionEventsResponse
+	42, // 42: admin.service.v1.ModelDevService.QueryExecutionMetrics:output_type -> modeldev.service.v1.QueryExecutionMetricsResponse
+	43, // 43: admin.service.v1.ModelDevService.StopExecution:output_type -> modeldev.service.v1.StopExecutionResponse
+	44, // 44: admin.service.v1.ModelDevService.ResumeModelRegistration:output_type -> modeldev.service.v1.GetExecutionResponse
+	44, // 45: admin.service.v1.ModelDevService.GetExecution:output_type -> modeldev.service.v1.GetExecutionResponse
+	45, // 46: admin.service.v1.ModelDevService.ListExecutionArtifacts:output_type -> modeldev.service.v1.ListExecutionArtifactsResponse
+	46, // 47: admin.service.v1.ModelDevService.AuthorizeArtifactDownload:output_type -> modeldev.service.v1.AuthorizeArtifactDownloadResponse
+	47, // 48: admin.service.v1.ModelDevService.CreateExecution:output_type -> modeldev.service.v1.CreateExecutionResponse
+	48, // 49: admin.service.v1.ModelDevService.CreateDataset:output_type -> modeldev.service.v1.CreateDatasetResponse
+	49, // 50: admin.service.v1.ModelDevService.GetDataset:output_type -> modeldev.service.v1.GetDatasetResponse
+	50, // 51: admin.service.v1.ModelDevService.ListDatasets:output_type -> modeldev.service.v1.ListDatasetsResponse
+	51, // 52: admin.service.v1.ModelDevService.UpdateDataset:output_type -> modeldev.service.v1.UpdateDatasetResponse
+	52, // 53: admin.service.v1.ModelDevService.ArchiveDataset:output_type -> modeldev.service.v1.ArchiveDatasetResponse
+	53, // 54: admin.service.v1.ModelDevService.RestoreDataset:output_type -> modeldev.service.v1.RestoreDatasetResponse
+	54, // 55: admin.service.v1.ModelDevService.InspectDatasetSource:output_type -> modeldev.service.v1.InspectDatasetSourceResponse
+	55, // 56: admin.service.v1.ModelDevService.ImportDatasetVersion:output_type -> modeldev.service.v1.ImportDatasetVersionResponse
+	56, // 57: admin.service.v1.ModelDevService.ListDatasetVersions:output_type -> modeldev.service.v1.ListDatasetVersionsResponse
+	57, // 58: admin.service.v1.ModelDevService.GetInputVersionPreview:output_type -> modeldev.service.v1.GetInputVersionPreviewResponse
+	58, // 59: admin.service.v1.ModelDevService.ListDatasetImportTasks:output_type -> modeldev.service.v1.ListDatasetImportTasksResponse
+	59, // 60: admin.service.v1.ModelDevService.GetDatasetImportTask:output_type -> modeldev.service.v1.GetDatasetImportTaskResponse
+	60, // 61: admin.service.v1.ModelDevService.CancelDatasetImport:output_type -> modeldev.service.v1.CancelDatasetImportResponse
+	61, // 62: admin.service.v1.ModelDevService.RetryDatasetImport:output_type -> modeldev.service.v1.RetryDatasetImportResponse
+	62, // 63: admin.service.v1.ModelDevService.ListDatasetOperations:output_type -> modeldev.service.v1.ListDatasetOperationsResponse
+	32, // [32:64] is the sub-list for method output_type
+	0,  // [0:32] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

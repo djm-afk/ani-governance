@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/xiaoqidun/entps v1.50.1
 	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261104060553-30420850c4bd
-	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261031195825-d807cbdbd5dd
+	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261104021256-2571d89b2dc4
 	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261104060620-47ceb0edf98e
 	github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261110011435-20f33f0e711f
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
@@ -207,3 +207,7 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
+
+// Temporary: the dataset domain lives in djm-afk/ani-modeldev-service PR #19.
+// Replace with the zhangzhe-ctrl pseudo-version once that PR merges upstream.
+replace github.com/zhangzhe-ctrl/ani-modeldev-service => github.com/djm-afk/ani-modeldev-service v0.0.0-20261104021256-2571d89b2dc4

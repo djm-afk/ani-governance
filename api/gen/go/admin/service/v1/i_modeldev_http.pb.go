@@ -20,14 +20,26 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
+const OperationModelDevServiceArchiveDataset = "/admin.service.v1.ModelDevService/ArchiveDataset"
 const OperationModelDevServiceAuthorizeArtifactDownload = "/admin.service.v1.ModelDevService/AuthorizeArtifactDownload"
+const OperationModelDevServiceCancelDatasetImport = "/admin.service.v1.ModelDevService/CancelDatasetImport"
 const OperationModelDevServiceCheckFinetuningReadiness = "/admin.service.v1.ModelDevService/CheckFinetuningReadiness"
+const OperationModelDevServiceCreateDataset = "/admin.service.v1.ModelDevService/CreateDataset"
 const OperationModelDevServiceCreateExecution = "/admin.service.v1.ModelDevService/CreateExecution"
 const OperationModelDevServiceEnsureTenantExecutionEnvironment = "/admin.service.v1.ModelDevService/EnsureTenantExecutionEnvironment"
+const OperationModelDevServiceGetDataset = "/admin.service.v1.ModelDevService/GetDataset"
+const OperationModelDevServiceGetDatasetImportTask = "/admin.service.v1.ModelDevService/GetDatasetImportTask"
 const OperationModelDevServiceGetExecution = "/admin.service.v1.ModelDevService/GetExecution"
 const OperationModelDevServiceGetExecutionLogs = "/admin.service.v1.ModelDevService/GetExecutionLogs"
 const OperationModelDevServiceGetInputVersion = "/admin.service.v1.ModelDevService/GetInputVersion"
+const OperationModelDevServiceGetInputVersionPreview = "/admin.service.v1.ModelDevService/GetInputVersionPreview"
 const OperationModelDevServiceGetTenantExecutionEnvironment = "/admin.service.v1.ModelDevService/GetTenantExecutionEnvironment"
+const OperationModelDevServiceImportDatasetVersion = "/admin.service.v1.ModelDevService/ImportDatasetVersion"
+const OperationModelDevServiceInspectDatasetSource = "/admin.service.v1.ModelDevService/InspectDatasetSource"
+const OperationModelDevServiceListDatasetImportTasks = "/admin.service.v1.ModelDevService/ListDatasetImportTasks"
+const OperationModelDevServiceListDatasetOperations = "/admin.service.v1.ModelDevService/ListDatasetOperations"
+const OperationModelDevServiceListDatasetVersions = "/admin.service.v1.ModelDevService/ListDatasetVersions"
+const OperationModelDevServiceListDatasets = "/admin.service.v1.ModelDevService/ListDatasets"
 const OperationModelDevServiceListExecutionArtifacts = "/admin.service.v1.ModelDevService/ListExecutionArtifacts"
 const OperationModelDevServiceListExecutionEvents = "/admin.service.v1.ModelDevService/ListExecutionEvents"
 const OperationModelDevServiceListExecutionPods = "/admin.service.v1.ModelDevService/ListExecutionPods"
@@ -35,18 +47,34 @@ const OperationModelDevServiceListExecutions = "/admin.service.v1.ModelDevServic
 const OperationModelDevServiceListImplementations = "/admin.service.v1.ModelDevService/ListImplementations"
 const OperationModelDevServiceListInputVersions = "/admin.service.v1.ModelDevService/ListInputVersions"
 const OperationModelDevServiceQueryExecutionMetrics = "/admin.service.v1.ModelDevService/QueryExecutionMetrics"
+const OperationModelDevServiceRestoreDataset = "/admin.service.v1.ModelDevService/RestoreDataset"
 const OperationModelDevServiceResumeModelRegistration = "/admin.service.v1.ModelDevService/ResumeModelRegistration"
+const OperationModelDevServiceRetryDatasetImport = "/admin.service.v1.ModelDevService/RetryDatasetImport"
 const OperationModelDevServiceStopExecution = "/admin.service.v1.ModelDevService/StopExecution"
+const OperationModelDevServiceUpdateDataset = "/admin.service.v1.ModelDevService/UpdateDataset"
 
 type ModelDevServiceHTTPServer interface {
+	ArchiveDataset(context.Context, *v1.ArchiveDatasetRequest) (*v1.ArchiveDatasetResponse, error)
 	AuthorizeArtifactDownload(context.Context, *v1.AuthorizeArtifactDownloadRequest) (*v1.AuthorizeArtifactDownloadResponse, error)
+	CancelDatasetImport(context.Context, *v1.CancelDatasetImportRequest) (*v1.CancelDatasetImportResponse, error)
 	CheckFinetuningReadiness(context.Context, *v1.CheckFinetuningReadinessRequest) (*v1.CheckFinetuningReadinessResponse, error)
+	// CreateDataset ---- dataset management ----
+	CreateDataset(context.Context, *v1.CreateDatasetRequest) (*v1.CreateDatasetResponse, error)
 	CreateExecution(context.Context, *v1.CreateExecutionRequest) (*v1.CreateExecutionResponse, error)
 	EnsureTenantExecutionEnvironment(context.Context, *v1.EnsureTenantExecutionEnvironmentRequest) (*v1.EnsureTenantExecutionEnvironmentResponse, error)
+	GetDataset(context.Context, *v1.GetDatasetRequest) (*v1.GetDatasetResponse, error)
+	GetDatasetImportTask(context.Context, *v1.GetDatasetImportTaskRequest) (*v1.GetDatasetImportTaskResponse, error)
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v1.GetExecutionResponse, error)
 	GetExecutionLogs(context.Context, *v1.GetExecutionLogsRequest) (*v1.GetExecutionLogsResponse, error)
 	GetInputVersion(context.Context, *v1.GetInputVersionRequest) (*v1.GetInputVersionResponse, error)
+	GetInputVersionPreview(context.Context, *v1.GetInputVersionPreviewRequest) (*v1.GetInputVersionPreviewResponse, error)
 	GetTenantExecutionEnvironment(context.Context, *v1.GetTenantExecutionEnvironmentRequest) (*v1.GetTenantExecutionEnvironmentResponse, error)
+	ImportDatasetVersion(context.Context, *v1.ImportDatasetVersionRequest) (*v1.ImportDatasetVersionResponse, error)
+	InspectDatasetSource(context.Context, *v1.InspectDatasetSourceRequest) (*v1.InspectDatasetSourceResponse, error)
+	ListDatasetImportTasks(context.Context, *v1.ListDatasetImportTasksRequest) (*v1.ListDatasetImportTasksResponse, error)
+	ListDatasetOperations(context.Context, *v1.ListDatasetOperationsRequest) (*v1.ListDatasetOperationsResponse, error)
+	ListDatasetVersions(context.Context, *v1.ListDatasetVersionsRequest) (*v1.ListDatasetVersionsResponse, error)
+	ListDatasets(context.Context, *v1.ListDatasetsRequest) (*v1.ListDatasetsResponse, error)
 	ListExecutionArtifacts(context.Context, *v1.ListExecutionArtifactsRequest) (*v1.ListExecutionArtifactsResponse, error)
 	ListExecutionEvents(context.Context, *v1.ListExecutionEventsRequest) (*v1.ListExecutionEventsResponse, error)
 	ListExecutionPods(context.Context, *v1.ListExecutionPodsRequest) (*v1.ListExecutionPodsResponse, error)
@@ -54,8 +82,11 @@ type ModelDevServiceHTTPServer interface {
 	ListImplementations(context.Context, *v1.ListImplementationsRequest) (*v1.ListImplementationsResponse, error)
 	ListInputVersions(context.Context, *v1.ListInputVersionsRequest) (*v1.ListInputVersionsResponse, error)
 	QueryExecutionMetrics(context.Context, *v1.QueryExecutionMetricsRequest) (*v1.QueryExecutionMetricsResponse, error)
+	RestoreDataset(context.Context, *v1.RestoreDatasetRequest) (*v1.RestoreDatasetResponse, error)
 	ResumeModelRegistration(context.Context, *v1.ResumeModelRegistrationRequest) (*v1.GetExecutionResponse, error)
+	RetryDatasetImport(context.Context, *v1.RetryDatasetImportRequest) (*v1.RetryDatasetImportResponse, error)
 	StopExecution(context.Context, *v1.StopExecutionRequest) (*v1.StopExecutionResponse, error)
+	UpdateDataset(context.Context, *v1.UpdateDatasetRequest) (*v1.UpdateDatasetResponse, error)
 }
 
 func RegisterModelDevServiceHTTPServer(s *http.Server, srv ModelDevServiceHTTPServer) {
@@ -77,6 +108,21 @@ func RegisterModelDevServiceHTTPServer(s *http.Server, srv ModelDevServiceHTTPSe
 	r.GET("/api/v1/modeldev/executions/{execution_id}/artifacts", _ModelDevService_ListExecutionArtifacts0_HTTP_Handler(srv))
 	r.GET("/api/v1/modeldev/artifacts/{artifact_id}/content", _ModelDevService_AuthorizeArtifactDownload0_HTTP_Handler(srv))
 	r.POST("/api/v1/modeldev/executions", _ModelDevService_CreateExecution0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/datasets", _ModelDevService_CreateDataset0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/datasets/{dataset_id}", _ModelDevService_GetDataset0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/datasets", _ModelDevService_ListDatasets0_HTTP_Handler(srv))
+	r.PATCH("/api/v1/modeldev/datasets/{dataset_id}", _ModelDevService_UpdateDataset0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/datasets/{dataset_id}:archive", _ModelDevService_ArchiveDataset0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/datasets/{dataset_id}:restore", _ModelDevService_RestoreDataset0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/dataset-sources:inspect", _ModelDevService_InspectDatasetSource0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/datasets/{dataset_id}:import", _ModelDevService_ImportDatasetVersion0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/datasets/{dataset_id}/versions", _ModelDevService_ListDatasetVersions0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/input-versions/{input_version_id}/preview", _ModelDevService_GetInputVersionPreview0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/datasets/{dataset_id}/import-tasks", _ModelDevService_ListDatasetImportTasks0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/dataset-import-tasks/{import_task_id}", _ModelDevService_GetDatasetImportTask0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel", _ModelDevService_CancelDatasetImport0_HTTP_Handler(srv))
+	r.POST("/api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry", _ModelDevService_RetryDatasetImport0_HTTP_Handler(srv))
+	r.GET("/api/v1/modeldev/datasets/{dataset_id}/operations", _ModelDevService_ListDatasetOperations0_HTTP_Handler(srv))
 }
 
 func _ModelDevService_EnsureTenantExecutionEnvironment0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
@@ -441,15 +487,367 @@ func _ModelDevService_CreateExecution0_HTTP_Handler(srv ModelDevServiceHTTPServe
 	}
 }
 
+func _ModelDevService_CreateDataset0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.CreateDatasetRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceCreateDataset)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateDataset(ctx, req.(*v1.CreateDatasetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.CreateDatasetResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_GetDataset0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetDatasetRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceGetDataset)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetDataset(ctx, req.(*v1.GetDatasetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetDatasetResponse)
+		return ctx.Result(200, reply.Dataset)
+	}
+}
+
+func _ModelDevService_ListDatasets0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListDatasetsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceListDatasets)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListDatasets(ctx, req.(*v1.ListDatasetsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListDatasetsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_UpdateDataset0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.UpdateDatasetRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceUpdateDataset)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateDataset(ctx, req.(*v1.UpdateDatasetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.UpdateDatasetResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_ArchiveDataset0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ArchiveDatasetRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceArchiveDataset)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ArchiveDataset(ctx, req.(*v1.ArchiveDatasetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ArchiveDatasetResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_RestoreDataset0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.RestoreDatasetRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceRestoreDataset)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RestoreDataset(ctx, req.(*v1.RestoreDatasetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.RestoreDatasetResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_InspectDatasetSource0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.InspectDatasetSourceRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceInspectDatasetSource)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.InspectDatasetSource(ctx, req.(*v1.InspectDatasetSourceRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.InspectDatasetSourceResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_ImportDatasetVersion0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ImportDatasetVersionRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceImportDatasetVersion)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ImportDatasetVersion(ctx, req.(*v1.ImportDatasetVersionRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ImportDatasetVersionResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_ListDatasetVersions0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListDatasetVersionsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceListDatasetVersions)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListDatasetVersions(ctx, req.(*v1.ListDatasetVersionsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListDatasetVersionsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_GetInputVersionPreview0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetInputVersionPreviewRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceGetInputVersionPreview)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetInputVersionPreview(ctx, req.(*v1.GetInputVersionPreviewRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetInputVersionPreviewResponse)
+		return ctx.Result(200, reply.Preview)
+	}
+}
+
+func _ModelDevService_ListDatasetImportTasks0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListDatasetImportTasksRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceListDatasetImportTasks)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListDatasetImportTasks(ctx, req.(*v1.ListDatasetImportTasksRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListDatasetImportTasksResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_GetDatasetImportTask0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetDatasetImportTaskRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceGetDatasetImportTask)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetDatasetImportTask(ctx, req.(*v1.GetDatasetImportTaskRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.GetDatasetImportTaskResponse)
+		return ctx.Result(200, reply.Task)
+	}
+}
+
+func _ModelDevService_CancelDatasetImport0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.CancelDatasetImportRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceCancelDatasetImport)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CancelDatasetImport(ctx, req.(*v1.CancelDatasetImportRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.CancelDatasetImportResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_RetryDatasetImport0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.RetryDatasetImportRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceRetryDatasetImport)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RetryDatasetImport(ctx, req.(*v1.RetryDatasetImportRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.RetryDatasetImportResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _ModelDevService_ListDatasetOperations0_HTTP_Handler(srv ModelDevServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.ListDatasetOperationsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationModelDevServiceListDatasetOperations)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListDatasetOperations(ctx, req.(*v1.ListDatasetOperationsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.ListDatasetOperationsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 type ModelDevServiceHTTPClient interface {
+	ArchiveDataset(ctx context.Context, req *v1.ArchiveDatasetRequest, opts ...http.CallOption) (rsp *v1.ArchiveDatasetResponse, err error)
 	AuthorizeArtifactDownload(ctx context.Context, req *v1.AuthorizeArtifactDownloadRequest, opts ...http.CallOption) (rsp *v1.AuthorizeArtifactDownloadResponse, err error)
+	CancelDatasetImport(ctx context.Context, req *v1.CancelDatasetImportRequest, opts ...http.CallOption) (rsp *v1.CancelDatasetImportResponse, err error)
 	CheckFinetuningReadiness(ctx context.Context, req *v1.CheckFinetuningReadinessRequest, opts ...http.CallOption) (rsp *v1.CheckFinetuningReadinessResponse, err error)
+	// CreateDataset ---- dataset management ----
+	CreateDataset(ctx context.Context, req *v1.CreateDatasetRequest, opts ...http.CallOption) (rsp *v1.CreateDatasetResponse, err error)
 	CreateExecution(ctx context.Context, req *v1.CreateExecutionRequest, opts ...http.CallOption) (rsp *v1.CreateExecutionResponse, err error)
 	EnsureTenantExecutionEnvironment(ctx context.Context, req *v1.EnsureTenantExecutionEnvironmentRequest, opts ...http.CallOption) (rsp *v1.EnsureTenantExecutionEnvironmentResponse, err error)
+	GetDataset(ctx context.Context, req *v1.GetDatasetRequest, opts ...http.CallOption) (rsp *v1.GetDatasetResponse, err error)
+	GetDatasetImportTask(ctx context.Context, req *v1.GetDatasetImportTaskRequest, opts ...http.CallOption) (rsp *v1.GetDatasetImportTaskResponse, err error)
 	GetExecution(ctx context.Context, req *v1.GetExecutionRequest, opts ...http.CallOption) (rsp *v1.GetExecutionResponse, err error)
 	GetExecutionLogs(ctx context.Context, req *v1.GetExecutionLogsRequest, opts ...http.CallOption) (rsp *v1.GetExecutionLogsResponse, err error)
 	GetInputVersion(ctx context.Context, req *v1.GetInputVersionRequest, opts ...http.CallOption) (rsp *v1.GetInputVersionResponse, err error)
+	GetInputVersionPreview(ctx context.Context, req *v1.GetInputVersionPreviewRequest, opts ...http.CallOption) (rsp *v1.GetInputVersionPreviewResponse, err error)
 	GetTenantExecutionEnvironment(ctx context.Context, req *v1.GetTenantExecutionEnvironmentRequest, opts ...http.CallOption) (rsp *v1.GetTenantExecutionEnvironmentResponse, err error)
+	ImportDatasetVersion(ctx context.Context, req *v1.ImportDatasetVersionRequest, opts ...http.CallOption) (rsp *v1.ImportDatasetVersionResponse, err error)
+	InspectDatasetSource(ctx context.Context, req *v1.InspectDatasetSourceRequest, opts ...http.CallOption) (rsp *v1.InspectDatasetSourceResponse, err error)
+	ListDatasetImportTasks(ctx context.Context, req *v1.ListDatasetImportTasksRequest, opts ...http.CallOption) (rsp *v1.ListDatasetImportTasksResponse, err error)
+	ListDatasetOperations(ctx context.Context, req *v1.ListDatasetOperationsRequest, opts ...http.CallOption) (rsp *v1.ListDatasetOperationsResponse, err error)
+	ListDatasetVersions(ctx context.Context, req *v1.ListDatasetVersionsRequest, opts ...http.CallOption) (rsp *v1.ListDatasetVersionsResponse, err error)
+	ListDatasets(ctx context.Context, req *v1.ListDatasetsRequest, opts ...http.CallOption) (rsp *v1.ListDatasetsResponse, err error)
 	ListExecutionArtifacts(ctx context.Context, req *v1.ListExecutionArtifactsRequest, opts ...http.CallOption) (rsp *v1.ListExecutionArtifactsResponse, err error)
 	ListExecutionEvents(ctx context.Context, req *v1.ListExecutionEventsRequest, opts ...http.CallOption) (rsp *v1.ListExecutionEventsResponse, err error)
 	ListExecutionPods(ctx context.Context, req *v1.ListExecutionPodsRequest, opts ...http.CallOption) (rsp *v1.ListExecutionPodsResponse, err error)
@@ -457,8 +855,11 @@ type ModelDevServiceHTTPClient interface {
 	ListImplementations(ctx context.Context, req *v1.ListImplementationsRequest, opts ...http.CallOption) (rsp *v1.ListImplementationsResponse, err error)
 	ListInputVersions(ctx context.Context, req *v1.ListInputVersionsRequest, opts ...http.CallOption) (rsp *v1.ListInputVersionsResponse, err error)
 	QueryExecutionMetrics(ctx context.Context, req *v1.QueryExecutionMetricsRequest, opts ...http.CallOption) (rsp *v1.QueryExecutionMetricsResponse, err error)
+	RestoreDataset(ctx context.Context, req *v1.RestoreDatasetRequest, opts ...http.CallOption) (rsp *v1.RestoreDatasetResponse, err error)
 	ResumeModelRegistration(ctx context.Context, req *v1.ResumeModelRegistrationRequest, opts ...http.CallOption) (rsp *v1.GetExecutionResponse, err error)
+	RetryDatasetImport(ctx context.Context, req *v1.RetryDatasetImportRequest, opts ...http.CallOption) (rsp *v1.RetryDatasetImportResponse, err error)
 	StopExecution(ctx context.Context, req *v1.StopExecutionRequest, opts ...http.CallOption) (rsp *v1.StopExecutionResponse, err error)
+	UpdateDataset(ctx context.Context, req *v1.UpdateDatasetRequest, opts ...http.CallOption) (rsp *v1.UpdateDatasetResponse, err error)
 }
 
 type ModelDevServiceHTTPClientImpl struct {
@@ -467,6 +868,19 @@ type ModelDevServiceHTTPClientImpl struct {
 
 func NewModelDevServiceHTTPClient(client *http.Client) ModelDevServiceHTTPClient {
 	return &ModelDevServiceHTTPClientImpl{client}
+}
+
+func (c *ModelDevServiceHTTPClientImpl) ArchiveDataset(ctx context.Context, in *v1.ArchiveDatasetRequest, opts ...http.CallOption) (*v1.ArchiveDatasetResponse, error) {
+	var out v1.ArchiveDatasetResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}:archive"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationModelDevServiceArchiveDataset))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 func (c *ModelDevServiceHTTPClientImpl) AuthorizeArtifactDownload(ctx context.Context, in *v1.AuthorizeArtifactDownloadRequest, opts ...http.CallOption) (*v1.AuthorizeArtifactDownloadResponse, error) {
@@ -482,11 +896,38 @@ func (c *ModelDevServiceHTTPClientImpl) AuthorizeArtifactDownload(ctx context.Co
 	return &out, nil
 }
 
+func (c *ModelDevServiceHTTPClientImpl) CancelDatasetImport(ctx context.Context, in *v1.CancelDatasetImportRequest, opts ...http.CallOption) (*v1.CancelDatasetImportResponse, error) {
+	var out v1.CancelDatasetImportResponse
+	pattern := "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceCancelDatasetImport))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *ModelDevServiceHTTPClientImpl) CheckFinetuningReadiness(ctx context.Context, in *v1.CheckFinetuningReadinessRequest, opts ...http.CallOption) (*v1.CheckFinetuningReadinessResponse, error) {
 	var out v1.CheckFinetuningReadinessResponse
 	pattern := "/api/v1/modeldev/finetuning/readiness/check"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationModelDevServiceCheckFinetuningReadiness))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// CreateDataset ---- dataset management ----
+func (c *ModelDevServiceHTTPClientImpl) CreateDataset(ctx context.Context, in *v1.CreateDatasetRequest, opts ...http.CallOption) (*v1.CreateDatasetResponse, error) {
+	var out v1.CreateDatasetResponse
+	pattern := "/api/v1/modeldev/datasets"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationModelDevServiceCreateDataset))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
@@ -515,6 +956,32 @@ func (c *ModelDevServiceHTTPClientImpl) EnsureTenantExecutionEnvironment(ctx con
 	opts = append(opts, http.Operation(OperationModelDevServiceEnsureTenantExecutionEnvironment))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) GetDataset(ctx context.Context, in *v1.GetDatasetRequest, opts ...http.CallOption) (*v1.GetDatasetResponse, error) {
+	var out v1.GetDatasetResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceGetDataset))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Dataset, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) GetDatasetImportTask(ctx context.Context, in *v1.GetDatasetImportTaskRequest, opts ...http.CallOption) (*v1.GetDatasetImportTaskResponse, error) {
+	var out v1.GetDatasetImportTaskResponse
+	pattern := "/api/v1/modeldev/dataset-import-tasks/{import_task_id}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceGetDatasetImportTask))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Task, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -560,11 +1027,102 @@ func (c *ModelDevServiceHTTPClientImpl) GetInputVersion(ctx context.Context, in 
 	return &out, nil
 }
 
+func (c *ModelDevServiceHTTPClientImpl) GetInputVersionPreview(ctx context.Context, in *v1.GetInputVersionPreviewRequest, opts ...http.CallOption) (*v1.GetInputVersionPreviewResponse, error) {
+	var out v1.GetInputVersionPreviewResponse
+	pattern := "/api/v1/modeldev/input-versions/{input_version_id}/preview"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceGetInputVersionPreview))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Preview, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *ModelDevServiceHTTPClientImpl) GetTenantExecutionEnvironment(ctx context.Context, in *v1.GetTenantExecutionEnvironmentRequest, opts ...http.CallOption) (*v1.GetTenantExecutionEnvironmentResponse, error) {
 	var out v1.GetTenantExecutionEnvironmentResponse
 	pattern := "/api/v1/modeldev/environment"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationModelDevServiceGetTenantExecutionEnvironment))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) ImportDatasetVersion(ctx context.Context, in *v1.ImportDatasetVersionRequest, opts ...http.CallOption) (*v1.ImportDatasetVersionResponse, error) {
+	var out v1.ImportDatasetVersionResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}:import"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationModelDevServiceImportDatasetVersion))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) InspectDatasetSource(ctx context.Context, in *v1.InspectDatasetSourceRequest, opts ...http.CallOption) (*v1.InspectDatasetSourceResponse, error) {
+	var out v1.InspectDatasetSourceResponse
+	pattern := "/api/v1/modeldev/dataset-sources:inspect"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationModelDevServiceInspectDatasetSource))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) ListDatasetImportTasks(ctx context.Context, in *v1.ListDatasetImportTasksRequest, opts ...http.CallOption) (*v1.ListDatasetImportTasksResponse, error) {
+	var out v1.ListDatasetImportTasksResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}/import-tasks"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceListDatasetImportTasks))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) ListDatasetOperations(ctx context.Context, in *v1.ListDatasetOperationsRequest, opts ...http.CallOption) (*v1.ListDatasetOperationsResponse, error) {
+	var out v1.ListDatasetOperationsResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}/operations"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceListDatasetOperations))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) ListDatasetVersions(ctx context.Context, in *v1.ListDatasetVersionsRequest, opts ...http.CallOption) (*v1.ListDatasetVersionsResponse, error) {
+	var out v1.ListDatasetVersionsResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}/versions"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceListDatasetVersions))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) ListDatasets(ctx context.Context, in *v1.ListDatasetsRequest, opts ...http.CallOption) (*v1.ListDatasetsResponse, error) {
+	var out v1.ListDatasetsResponse
+	pattern := "/api/v1/modeldev/datasets"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceListDatasets))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
@@ -664,6 +1222,19 @@ func (c *ModelDevServiceHTTPClientImpl) QueryExecutionMetrics(ctx context.Contex
 	return &out, nil
 }
 
+func (c *ModelDevServiceHTTPClientImpl) RestoreDataset(ctx context.Context, in *v1.RestoreDatasetRequest, opts ...http.CallOption) (*v1.RestoreDatasetResponse, error) {
+	var out v1.RestoreDatasetResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}:restore"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationModelDevServiceRestoreDataset))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *ModelDevServiceHTTPClientImpl) ResumeModelRegistration(ctx context.Context, in *v1.ResumeModelRegistrationRequest, opts ...http.CallOption) (*v1.GetExecutionResponse, error) {
 	var out v1.GetExecutionResponse
 	pattern := "/api/v1/modeldev/executions/{execution_id}:resume-model-registration"
@@ -677,6 +1248,19 @@ func (c *ModelDevServiceHTTPClientImpl) ResumeModelRegistration(ctx context.Cont
 	return &out, nil
 }
 
+func (c *ModelDevServiceHTTPClientImpl) RetryDatasetImport(ctx context.Context, in *v1.RetryDatasetImportRequest, opts ...http.CallOption) (*v1.RetryDatasetImportResponse, error) {
+	var out v1.RetryDatasetImportResponse
+	pattern := "/api/v1/modeldev/dataset-import-tasks/{import_task_id}:retry"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationModelDevServiceRetryDatasetImport))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *ModelDevServiceHTTPClientImpl) StopExecution(ctx context.Context, in *v1.StopExecutionRequest, opts ...http.CallOption) (*v1.StopExecutionResponse, error) {
 	var out v1.StopExecutionResponse
 	pattern := "/api/v1/modeldev/executions/{execution_id}:stop"
@@ -684,6 +1268,19 @@ func (c *ModelDevServiceHTTPClientImpl) StopExecution(ctx context.Context, in *v
 	opts = append(opts, http.Operation(OperationModelDevServiceStopExecution))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ModelDevServiceHTTPClientImpl) UpdateDataset(ctx context.Context, in *v1.UpdateDatasetRequest, opts ...http.CallOption) (*v1.UpdateDatasetResponse, error) {
+	var out v1.UpdateDatasetResponse
+	pattern := "/api/v1/modeldev/datasets/{dataset_id}"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationModelDevServiceUpdateDataset))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

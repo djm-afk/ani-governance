@@ -13,6 +13,7 @@ func TestModelDevResolutionBusinessReasons(t *testing.T) {
 		modeldevcontractv1.ErrorReason_ERROR_REASON_IMPLEMENTATION_UNAVAILABLE,
 		modeldevcontractv1.ErrorReason_ERROR_REASON_UNSUPPORTED_DEVICE,
 		modeldevcontractv1.ErrorReason_ERROR_REASON_BASE_MODEL_INVALID,
+		modeldevcontractv1.ErrorReason_ERROR_REASON_INPUT_KIND_FORMAT_MISMATCH,
 	} {
 		if !modelDevResolutionBusinessReason(reason) {
 			t.Fatalf("%s must be a business reason", reason)
