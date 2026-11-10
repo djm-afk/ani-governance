@@ -39,13 +39,31 @@ credentials, raw environment values, cookies and tokens out of evidence.
 
 ## Explicit schema and data steps
 
-Review Atlas status against the actual target revisions and schema. Apply any
-missing, already-reviewed historical migrations in their established order,
-then apply `20261110010000_retire_acc_usage_sync.sql`. Do not edit applied files
-or checksums. The new migration drops only `sys_gpu_usage_sync`, without CASCADE.
-It preserves `sys_quota_operations`, charges, accounts, release receipts and
-`sys_gpu_delete_acceptances`, including the latter's restrictive foreign keys
-onto the original CREATE and DELETE operations.
+Review Atlas status **and** the actual target schema. On the verified 66
+snapshot, `20261031010000_drop_instance_contract_version` is recorded applied
+2/2 without a nonempty error, but its bigint NOT NULL DEFAULT 1 column and
+IN (1,2) check still exist. The target also has independently published
+`20261104120000_sandbox_clone_dispatch` and
+`20261110010000_logging_telemetry_context` applied. Do not edit those historical
+revision records, remove those migrations or reuse their version numbers.
+
+The historical `20261031010000` source file requires an empty container operation
+ledger. **Do not rerun it or delete retained CPU/GPU operations to satisfy that
+guard.** This batch instead uses unique migration
+`20261110154500_retire_acc_usage_sync.sql`. It drops only the unused placeholder
+constraint/column with IF EXISTS, then drops `sys_gpu_usage_sync` without CASCADE.
+The IF EXISTS path also accepts fresh databases where the historical drop has
+already run. Existing CPU canonical bytes, hashes and replay facts are preserved.
+
+The deployment operator must reconcile the target's complete migration history
+and checksums, including the separately published clone/logging revisions,
+before applying this unique new migration through the existing explicit
+migration workflow. The feature branch's source migration directory alone does
+not establish that those other published revisions can be omitted or baselined.
+Do not rewrite or mark old revisions to hide an unreviewed schema difference.
+The new migration preserves `sys_quota_operations`, charges, accounts, release
+receipts and `sys_gpu_delete_acceptances`, including the latter's restrictive
+foreign keys onto the original CREATE and DELETE operations.
 
 Gov never deletes or rewrites original `canonical_request`, `request_hash`,
 `ack_json`, charge IDs/amounts or release receipts in this cutover. Closed old
