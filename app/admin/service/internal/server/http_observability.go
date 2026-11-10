@@ -213,7 +213,10 @@ func finishHTTP(logger bLogger.Logger, ctx context.Context, capture *httpRequest
 		"result", httpResult(status),
 		"duration_ms", float64(elapsed.Microseconds()) / 1000.0,
 	}
-	if status >= http.StatusInternalServerError && capture.err != nil {
+	// A captured error is the real bind/JSON/upstream cause and must be readable
+	// at any status: a 4xx decode failure that only printed "400" is exactly what
+	// this phase removes. The level still follows the status ladder.
+	if capture.err != nil {
 		attrs = append(attrs, telemetry.ErrorFields(capture.err)...)
 	}
 	logAt(logger, ctx, level, "http request completed", attrs...)
