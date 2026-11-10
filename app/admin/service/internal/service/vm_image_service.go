@@ -203,9 +203,22 @@ func (s *VMImageService) CreateVMImage(ctx context.Context, r *view.CreateVMImag
 	if err != nil {
 		return nil, err
 	}
+	// The declaration is frozen at create time: same closed value set and the same
+	// linux DISK_IMAGE binding the owner enforces, rejected here so a bad claim
+	// fails as VM_IMAGE_INVALID_ARGUMENT before any idempotent write exists.
+	capability := strings.ToUpper(strings.TrimSpace(d.InitializationCapability))
+	if capability == "" {
+		capability = "NONE"
+	}
+	if capability != "NONE" && capability != "CLOUD_INIT_NOCLOUD" {
+		return nil, vmImageInvalid()
+	}
+	if capability == "CLOUD_INIT_NOCLOUD" && (d.Kind != "DISK_IMAGE" || profile.OsFamily != "linux") {
+		return nil, vmImageInvalid()
+	}
 	result, err := s.client.Create(ctx, tenant, actor, &vm.CreateImageRequest{TenantId: tenant,
 		IdempotencyKey: d.IdempotencyKey, Name: name, Description: d.Description, Kind: d.Kind, Format: d.Format,
-		SourceCapacityGb: d.SourceCapacityGb, Os: profile})
+		SourceCapacityGb: d.SourceCapacityGb, Os: profile, InitializationCapability: capability})
 	if err != nil {
 		return nil, err
 	}

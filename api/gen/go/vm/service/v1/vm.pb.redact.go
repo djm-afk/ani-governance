@@ -682,8 +682,6 @@ func (x *VMMedia) Redact() {
 	// Safe field: VirtualCapacityBytes
 
 	// Safe field: InitializationCapability
-
-	// Safe field: InitializationVerified
 }
 
 // Ensure ListMediaResponse implements the Redactor interface at compile time.

@@ -2465,7 +2465,6 @@ type VMMedia struct {
 	DriverMediaKey           string                 `protobuf:"bytes,13,opt,name=driver_media_key,json=driverMediaKey,proto3" json:"driver_media_key,omitempty"`
 	VirtualCapacityBytes     int64                  `protobuf:"varint,14,opt,name=virtual_capacity_bytes,json=virtualCapacityBytes,proto3" json:"virtual_capacity_bytes,omitempty"`
 	InitializationCapability string                 `protobuf:"bytes,15,opt,name=initialization_capability,json=initializationCapability,proto3" json:"initialization_capability,omitempty"`
-	InitializationVerified   bool                   `protobuf:"varint,16,opt,name=initialization_verified,json=initializationVerified,proto3" json:"initialization_verified,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -2603,13 +2602,6 @@ func (x *VMMedia) GetInitializationCapability() string {
 		return x.InitializationCapability
 	}
 	return ""
-}
-
-func (x *VMMedia) GetInitializationVerified() bool {
-	if x != nil {
-		return x.InitializationVerified
-	}
-	return false
 }
 
 type ListMediaResponse struct {
@@ -3390,7 +3382,7 @@ const file_vm_service_v1_vm_proto_rawDesc = "" +
 	"\rdesired_media\x18\x02 \x01(\tR\fdesiredMedia\x12%\n" +
 	"\x0eobserved_media\x18\x03 \x01(\tR\robservedMedia\x12#\n" +
 	"\reffective_now\x18\x04 \x01(\bR\feffectiveNow\x12'\n" +
-	"\x0fpending_restart\x18\x05 \x01(\bR\x0ependingRestart\"\xc3\x04\n" +
+	"\x0fpending_restart\x18\x05 \x01(\bR\x0ependingRestart\"\x8a\x04\n" +
 	"\aVMMedia\x12\x1b\n" +
 	"\tmedia_key\x18\x01 \x01(\tR\bmediaKey\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -3408,8 +3400,7 @@ const file_vm_service_v1_vm_proto_rawDesc = "" +
 	"\x0fpersistent_uefi\x18\f \x01(\bR\x0epersistentUefi\x12(\n" +
 	"\x10driver_media_key\x18\r \x01(\tR\x0edriverMediaKey\x124\n" +
 	"\x16virtual_capacity_bytes\x18\x0e \x01(\x03R\x14virtualCapacityBytes\x12;\n" +
-	"\x19initialization_capability\x18\x0f \x01(\tR\x18initializationCapability\x127\n" +
-	"\x17initialization_verified\x18\x10 \x01(\bR\x16initializationVerified\"A\n" +
+	"\x19initialization_capability\x18\x0f \x01(\tR\x18initializationCapability\"A\n" +
 	"\x11ListMediaResponse\x12,\n" +
 	"\x05items\x18\x01 \x03(\v2\x16.vm.service.v1.VMMediaR\x05items\"\xa0\x03\n" +
 	"\n" +

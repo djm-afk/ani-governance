@@ -53,7 +53,6 @@ func testVMGuestDurableRestartPostgres(t *testing.T, request context.Context) {
 	bctx := testutil.NewBootstrapContext(nil)
 	spec := vmFixtureSpec(t)
 	spec.Media.InitializationCapability = vm.CloudInitNoCloud
-	spec.Media.InitializationVerified = true
 	peer := &vmGuestRestartPeer{vmResolvePeer: vmResolvePeer{spec: spec}, test: t}
 	binding := NewVMBinding(peer, data.NewVMAuthorizationRepo(client), spec.ClusterId, cipher)
 	registry := NewQuotaAdapterRegistry()

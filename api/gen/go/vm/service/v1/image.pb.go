@@ -148,11 +148,14 @@ type VMImage struct {
 	Version        int64      `protobuf:"varint,16,opt,name=version,proto3" json:"version,omitempty"`
 	UploadDeadline string     `protobuf:"bytes,17,opt,name=upload_deadline,json=uploadDeadline,proto3" json:"upload_deadline,omitempty"`
 	// Audit only. It is never a filter, an authorization input or an owner.
-	CreatedBy     string `protobuf:"bytes,18,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	CreatedAt     string `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CreatedBy string `protobuf:"bytes,18,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedAt string `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt string `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// NONE or CLOUD_INIT_NOCLOUD: the tenant's create-time declaration of the
+	// initialization support this image provides. Empty means NONE.
+	InitializationCapability string `protobuf:"bytes,21,opt,name=initialization_capability,json=initializationCapability,proto3" json:"initialization_capability,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *VMImage) Reset() {
@@ -321,6 +324,13 @@ func (x *VMImage) GetCreatedAt() string {
 func (x *VMImage) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *VMImage) GetInitializationCapability() string {
+	if x != nil {
+		return x.InitializationCapability
 	}
 	return ""
 }
@@ -506,8 +516,11 @@ type CreateVMImageData struct {
 	Format           string                 `protobuf:"bytes,5,opt,name=format,proto3" json:"format,omitempty"`
 	SourceCapacityGb int64                  `protobuf:"varint,6,opt,name=source_capacity_gb,proto3" json:"source_capacity_gb,omitempty"`
 	Os               *VMImageOS             `protobuf:"bytes,7,opt,name=os,proto3" json:"os,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Optional tenant declaration frozen at create time. CLOUD_INIT_NOCLOUD is
+	// accepted only for a linux DISK_IMAGE; empty means NONE.
+	InitializationCapability string `protobuf:"bytes,8,opt,name=initialization_capability,proto3" json:"initialization_capability,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *CreateVMImageData) Reset() {
@@ -587,6 +600,13 @@ func (x *CreateVMImageData) GetOs() *VMImageOS {
 		return x.Os
 	}
 	return nil
+}
+
+func (x *CreateVMImageData) GetInitializationCapability() string {
+	if x != nil {
+		return x.InitializationCapability
+	}
+	return ""
 }
 
 type CreateVMImageRequest struct {
@@ -1078,7 +1098,7 @@ const file_vm_service_v1_image_proto_rawDesc = "" +
 	"\bfirmware\x18\x04 \x01(\tR\bfirmware\x12\x19\n" +
 	"\broot_bus\x18\x05 \x01(\tR\arootBus\x12\x19\n" +
 	"\bdata_bus\x18\x06 \x01(\tR\adataBus\x12\x1b\n" +
-	"\tnic_model\x18\a \x01(\tR\bnicModel\"\xc2\x05\n" +
+	"\tnic_model\x18\a \x01(\tR\bnicModel\"\xff\x05\n" +
 	"\aVMImage\x12\x19\n" +
 	"\bimage_id\x18\x01 \x01(\tR\aimageId\x12\x1b\n" +
 	"\tmedia_key\x18\x02 \x01(\tR\bmediaKey\x12\x12\n" +
@@ -1103,7 +1123,8 @@ const file_vm_service_v1_image_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x13 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x14 \x01(\tR\tupdatedAt\"\xd9\x01\n" +
+	"updated_at\x18\x14 \x01(\tR\tupdatedAt\x12;\n" +
+	"\x19initialization_capability\x18\x15 \x01(\tR\x18initializationCapability\"\xd9\x01\n" +
 	"\x13ListVMImagesRequest\x12\x17\n" +
 	"\x04page\x18\x01 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
 	"\tpage_size\x18\x02 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12\x17\n" +
@@ -1121,7 +1142,7 @@ const file_vm_service_v1_image_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\x16.vm.service.v1.VMImageR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\"/\n" +
 	"\x11GetVMImageRequest\x12\x1a\n" +
-	"\bimage_id\x18\x01 \x01(\tR\bimage_id\"\xf9\x01\n" +
+	"\bimage_id\x18\x01 \x01(\tR\bimage_id\"\xb7\x02\n" +
 	"\x11CreateVMImageData\x12(\n" +
 	"\x0fidempotency_key\x18\x01 \x01(\tR\x0fidempotency_key\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1129,7 +1150,8 @@ const file_vm_service_v1_image_proto_rawDesc = "" +
 	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x16\n" +
 	"\x06format\x18\x05 \x01(\tR\x06format\x12.\n" +
 	"\x12source_capacity_gb\x18\x06 \x01(\x03R\x12source_capacity_gb\x12(\n" +
-	"\x02os\x18\a \x01(\v2\x18.vm.service.v1.VMImageOSR\x02os\"L\n" +
+	"\x02os\x18\a \x01(\v2\x18.vm.service.v1.VMImageOSR\x02os\x12<\n" +
+	"\x19initialization_capability\x18\b \x01(\tR\x19initialization_capability\"L\n" +
 	"\x14CreateVMImageRequest\x124\n" +
 	"\x04data\x18\x01 \x01(\v2 .vm.service.v1.CreateVMImageDataR\x04data\"J\n" +
 	"\x1eCreateVMImageUploadSessionData\x12(\n" +

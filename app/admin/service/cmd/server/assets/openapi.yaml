@@ -17370,6 +17370,11 @@ components:
                     type: string
                 os:
                     $ref: '#/components/schemas/VMImageOS'
+                initialization_capability:
+                    type: string
+                    description: |-
+                        Optional tenant declaration frozen at create time. CLOUD_INIT_NOCLOUD is
+                         accepted only for a linux DISK_IMAGE; empty means NONE.
         CreateVMImageRequest:
             type: object
             properties:
@@ -27798,6 +27803,11 @@ components:
                     type: string
                 updatedAt:
                     type: string
+                initializationCapability:
+                    type: string
+                    description: |-
+                        NONE or CLOUD_INIT_NOCLOUD: the tenant's create-time declaration of the
+                         initialization support this image provides. Empty means NONE.
         VMImageOS:
             type: object
             properties:
@@ -27900,8 +27910,6 @@ components:
                     type: string
                 initializationCapability:
                     type: string
-                initializationVerified:
-                    type: boolean
         VMMediaState:
             type: object
             properties:
