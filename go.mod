@@ -212,4 +212,4 @@ require (
 // Replace with the zhangzhe-ctrl pseudo-version once that PR merges upstream.
 replace github.com/zhangzhe-ctrl/ani-modeldev-service => github.com/djm-afk/ani-modeldev-service v0.0.0-20261110055406-091f29774a95
 
-replace github.com/zhangzhe-ctrl/ani-resource-service => github.com/java559/ani-resource-service v0.0.0-20261109065359-b4bbc6686459
+replace github.com/zhangzhe-ctrl/ani-resource-service => github.com/java559/ani-resource-service v0.0.0-20261110071948-1831997e2a8c
