@@ -210,4 +210,4 @@ require (
 
 // Temporary: the dataset domain lives in djm-afk/ani-modeldev-service PR #19.
 // Replace with the zhangzhe-ctrl pseudo-version once that PR merges upstream.
-replace github.com/zhangzhe-ctrl/ani-modeldev-service => github.com/djm-afk/ani-modeldev-service v0.0.0-20261104021256-2571d89b2dc4
+replace github.com/zhangzhe-ctrl/ani-modeldev-service => github.com/djm-afk/ani-modeldev-service v0.0.0-20261110055406-091f29774a95

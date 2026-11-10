@@ -119,17 +119,16 @@ func modelDevDatasetProgressView(in *modeldevcontractv1.DatasetImportProgress) *
 	}
 }
 
-// modelDevDatasetFailureView is the asynchronous carrier. It reports the typed
-// reason, the bounded stage and retryability only: the owner's safe_message is
-// not forwarded, because a dataset failure is already fully described by its
-// reason and this surface must not become a channel for owner prose.
-func modelDevDatasetFailureView(in *modeldevcontractv1.ErrorDetail) *modeldevv1.TaskFailureView {
+// modelDevDatasetFailureView is the asynchronous carrier. The owner reports the
+// importer's own code and its retryability verdict; the remaining fields stay
+// empty because this surface must not become a channel for owner prose.
+func modelDevDatasetFailureView(in *modeldevcontractv1.DatasetTaskFailure) *modeldevv1.TaskFailureView {
 	if in == nil {
 		return nil
 	}
 	return &modeldevv1.TaskFailureView{
-		Code:      modelDevDatasetReasonName(in.Reason),
-		Retryable: in.Reason == modeldevcontractv1.ErrorReason_ERROR_REASON_UPSTREAM_UNAVAILABLE || in.Reason == modeldevcontractv1.ErrorReason_ERROR_REASON_INPUT_VALIDATION_BUSY,
+		Code:      in.Code,
+		Retryable: in.Retryable,
 	}
 }
 

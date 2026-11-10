@@ -211,7 +211,9 @@ func registerModelDevDatasetHTTP(server *khttp.Server, modeldev *service.ModelDe
 		if err != nil {
 			return err
 		}
-		return ctx.Result(nethttp.StatusOK, out)
+		// A detail route returns the resource object itself, like every other
+		// detail endpoint; only the create/import commands keep their envelope.
+		return ctx.Result(nethttp.StatusOK, out.(*modeldevv1.GetDatasetResponse).GetDataset())
 	})
 
 	route.PATCH(data.ModelDevUpdateDatasetPath, func(ctx khttp.Context) error {
@@ -369,7 +371,7 @@ func registerModelDevDatasetHTTP(server *khttp.Server, modeldev *service.ModelDe
 		if err != nil {
 			return err
 		}
-		return ctx.Result(nethttp.StatusOK, out)
+		return ctx.Result(nethttp.StatusOK, out.(*modeldevv1.GetInputVersionPreviewResponse).GetPreview())
 	})
 
 	route.GET(data.ModelDevListDatasetImportTasksPath, func(ctx khttp.Context) error {
@@ -422,7 +424,7 @@ func registerModelDevDatasetHTTP(server *khttp.Server, modeldev *service.ModelDe
 		if err != nil {
 			return err
 		}
-		return ctx.Result(nethttp.StatusOK, out)
+		return ctx.Result(nethttp.StatusOK, out.(*modeldevv1.GetDatasetImportTaskResponse).GetTask())
 	})
 
 	for _, command := range []struct {
