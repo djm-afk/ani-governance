@@ -11,7 +11,6 @@ import (
 	kerrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	obs "github.com/zhangzhe-ctrl/ani-observability-service/api/observability/gpu/v1"
 	view "go-wind-admin/api/gen/go/gpu/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
@@ -19,7 +18,6 @@ import (
 	"go-wind-admin/app/admin/service/tests/testutil"
 	appViewer "go-wind-admin/pkg/entgo/viewer"
 	"go-wind-admin/pkg/middleware/auth"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -28,38 +26,7 @@ import (
 
 // Probes replace only ACC and Obs RPCs; the list, snapshot, identity mapping,
 // platform guard and GPU target construction all use production constructors.
-type gpuTenantListACCProbe struct {
-	acc.AcceleratorAdminServiceClient
-	mu                         sync.Mutex
-	cluster                    string
-	bindings                   []*acc.GpuBinding
-	clusterCalls, bindingCalls int
-	cycle                      bool
-}
-
-func (p *gpuTenantListACCProbe) ListClusters(_ context.Context, req *acc.ListClustersRequest, _ ...grpc.CallOption) (*acc.ListClustersResponse, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.clusterCalls++
-	if req.Context == nil || req.Context.Actor == nil {
-		return nil, status.Error(codes.PermissionDenied, "missing platform actor")
-	}
-	r := &acc.ListClustersResponse{Items: []*acc.Cluster{{ClusterId: p.cluster}}}
-	if p.cycle {
-		r.Items = nil
-		r.NextToken = "repeat"
-	}
-	return r, nil
-}
-func (p *gpuTenantListACCProbe) AdminListBindings(_ context.Context, req *acc.AdminListBindingsRequest, _ ...grpc.CallOption) (*acc.ListBindingsResponse, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.bindingCalls++
-	if req.ClusterId != p.cluster || req.PhysicalDeviceId != "" {
-		return nil, status.Error(codes.InvalidArgument, "unexpected inventory filter")
-	}
-	return &acc.ListBindingsResponse{Items: p.bindings, Observation: &acc.Observation{Complete: true, SnapshotRef: "allocation-snapshot"}}, nil
-}
+type gpuTenantListACCProbe struct{ clusterCalls, bindingCalls int }
 
 type gpuTenantListObsProbe struct {
 	mu                      sync.Mutex
@@ -118,22 +85,16 @@ func newGpuTenantListFixture(t *testing.T, count int) (*GpuTenantAdminService, *
 		require.NoError(t, err)
 		tenants = append(tenants, tenant)
 	}
-	peer := &gpuTenantListACCProbe{cluster: f.device.ClusterId}
-	for _, tenant := range tenants {
-		ref := proto.Clone(f.ref).(*acc.GpuUsageRef)
-		ref.TenantId = tenant.ResourceTenantID
-		peer.bindings = append(peer.bindings, &acc.GpuBinding{BindingId: uuid.NewString(), VerifiedUsageRef: ref, Pod: &acc.PodRef{ClusterId: peer.cluster, Namespace: "tenant-workloads", Name: uuid.NewString(), Uid: uuid.NewString(), ContainerName: "workspace"}, PhysicalDeviceId: f.device.DeviceId, State: acc.AllocationState_ACTIVE, MemoryMib: 8192, Observation: &acc.Observation{Complete: true}})
-	}
+	peer := &gpuTenantListACCProbe{}
 	monitor := &gpuTenantListObsProbe{delay: 20 * time.Millisecond}
-	f.svc.accelerator.client.Admin = peer
 	f.svc.monitoring = monitor
 	c := testutil.NewQuotaPGClient(t)
 	quota := data.NewQuotaAdminRepo(testutil.NewBootstrapContext(nil), c)
 	platform := auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: 7})
-	return NewGpuTenantAdminService(quota, f.svc, f.svc.accelerator), f, peer, monitor, tenants, platform
+	return NewGpuTenantAdminService(quota, f.svc), f, peer, monitor, tenants, platform
 }
 
-func TestGpuTenantListCurrentQuotaUsageAllocation(t *testing.T) {
+func TestGpuTenantListQuotaAndObservedUsage(t *testing.T) {
 	svc, f, accPeer, monitor, tenants, platform := newGpuTenantListFixture(t, 3)
 	monitor.failTenant = tenants[1].ResourceTenantID
 	out, err := svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
@@ -141,13 +102,13 @@ func TestGpuTenantListCurrentQuotaUsageAllocation(t *testing.T) {
 	require.EqualValues(t, 3, out.Total)
 	require.Len(t, out.Items, 3)
 	require.Equal(t, 2, monitor.maximum, "only two tenant observations run concurrently")
-	require.Equal(t, 1, accPeer.clusterCalls)
-	require.Equal(t, 1, accPeer.bindingCalls, "allocation inventory is not queried per tenant")
+	require.Zero(t, accPeer.clusterCalls)
+	require.Zero(t, accPeer.bindingCalls, "no retired ACC allocation scan")
 	for i, row := range out.Items {
 		require.Equal(t, tenants[i].ID, row.Quota.TenantId)
-		require.Equal(t, "AVAILABLE", row.Allocation.Status)
-		require.Equal(t, "8192", row.Allocation.GetMemoryMib(), "ACC commitment is independent of actual 512-byte known usage and quota")
-		require.EqualValues(t, 1, row.Allocation.GetBindingCount())
+		require.Equal(t, "EXPORTER_OBSERVED", row.ObservationBasis)
+		require.Equal(t, "ani-resource-service", row.OwnerScope)
+
 		if i == 1 {
 			require.Nil(t, row.Usage)
 			require.Equal(t, "UNAVAILABLE", row.UsageStatus)
@@ -181,26 +142,16 @@ func TestGpuTenantListCurrentQuotaUsageAllocation(t *testing.T) {
 	require.EqualValues(t, 3, out.Total)
 }
 
-func TestGpuTenantListUnknownAllocationNeverBecomesZero(t *testing.T) {
-	svc, _, peer, monitor, _, platform := newGpuTenantListFixture(t, 1)
-	unknown := proto.Clone(peer.bindings[0]).(*acc.GpuBinding)
-	unknown.BindingId, unknown.Pod.Uid = uuid.NewString(), uuid.NewString()
-	unknown.VerifiedUsageRef = nil
-	unknown.State = acc.AllocationState_ALLOCATION_UNKNOWN
-	peer.bindings = append(peer.bindings, unknown)
+func TestGpuTenantListMissingObservationNeverBecomesZero(t *testing.T) {
+	svc, _, _, monitor, _, platform := newGpuTenantListFixture(t, 1)
+	monitor.err = status.Error(codes.Unavailable, "missing source")
 	out, err := svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
 	require.NoError(t, err)
-	allocation := out.Items[0].Allocation
-	require.Equal(t, "PARTIAL", allocation.Status)
-	require.Nil(t, allocation.MemoryMib)
-	require.Nil(t, allocation.BindingCount)
-	require.Equal(t, "8192", allocation.GetKnownMemoryMib())
-	require.EqualValues(t, 1, allocation.GetKnownBindingCount())
-	peer.bindings = []*acc.GpuBinding{unknown}
-	out, err = svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
-	require.NoError(t, err)
-	require.Nil(t, out.Items[0].Allocation.KnownMemoryMib, "no observed trusted allocation is unknown, not known zero")
-	require.Nil(t, out.Items[0].Allocation.KnownBindingCount)
+	require.Nil(t, out.Items[0].Usage)
+	require.Equal(t, "UNAVAILABLE", out.Items[0].UsageStatus)
+	require.Equal(t, "EXPORTER_OBSERVED", out.Items[0].ObservationBasis)
+	monitor.err = nil
+
 	monitor.extraSeries = true
 	out, err = svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
 	require.NoError(t, err)
@@ -214,7 +165,7 @@ func TestGpuTenantListUnknownAllocationNeverBecomesZero(t *testing.T) {
 }
 
 func TestGpuTenantListBudgetAndDeadlineFailWholePage(t *testing.T) {
-	svc, _, peer, monitor, _, platform := newGpuTenantListFixture(t, 2)
+	svc, _, _, monitor, _, platform := newGpuTenantListFixture(t, 2)
 	monitor.err = status.Error(codes.ResourceExhausted, "configured source budget exceeded")
 	out, err := svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
 	require.Nil(t, out)
@@ -226,8 +177,9 @@ func TestGpuTenantListBudgetAndDeadlineFailWholePage(t *testing.T) {
 	out, err = svc.ListGpuTenants(short, &view.ListGpuTenantsRequest{})
 	require.Nil(t, out)
 	require.EqualValues(t, 504, kerrors.Code(err))
-	peer.cycle = true
+	monitor.delay = 0
+	monitor.err = status.Error(codes.Unavailable, "source offline")
 	out, err = svc.ListGpuTenants(platform, &view.ListGpuTenantsRequest{})
-	require.NoError(t, err, "ordinary allocation dependency failure stays explicit on each row")
-	require.Equal(t, "UNAVAILABLE", out.Items[0].Allocation.Status)
+	require.NoError(t, err, "ordinary source failure stays explicit on each row")
+	require.Equal(t, "UNAVAILABLE", out.Items[0].UsageStatus)
 }

@@ -14,8 +14,6 @@ import (
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
 	catalog "go-wind-admin/api/gen/go/catalog/service/v1"
 	view "go-wind-admin/api/gen/go/gpu/service/v1"
-	inference "go-wind-admin/api/gen/go/inference/service/v1"
-	instance "go-wind-admin/api/gen/go/instance/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/pkg/middleware/auth"
 	"google.golang.org/grpc/codes"
@@ -38,18 +36,17 @@ type GpuMonitoringService struct {
 	admin.UnimplementedGpuServiceServer
 	accelerator           *AcceleratorService
 	monitoring            GpuMonitoringReader
-	instances             *InstanceService
-	inference             *InferenceService
 	resourceAuthorization GpuResourceReadAuthorizer
 }
 
-func NewGpuMonitoringService(a *AcceleratorService, m GpuMonitoringReader, i *InstanceService, f *InferenceService, read ...GpuResourceReadAuthorizer) *GpuMonitoringService {
-	s := &GpuMonitoringService{accelerator: a, monitoring: m, instances: i, inference: f}
+func NewGpuMonitoringService(a *AcceleratorService, m GpuMonitoringReader, read ...GpuResourceReadAuthorizer) *GpuMonitoringService {
+	s := &GpuMonitoringService{accelerator: a, monitoring: m}
 	if len(read) == 1 {
 		s.resourceAuthorization = read[0]
 	}
 	return s
 }
+
 func gpuInvalid() error {
 	return errors.BadRequest("GPU_INVALID_QUERY", "invalid GPU monitoring query")
 }
@@ -154,7 +151,7 @@ func (s *GpuMonitoringService) physicalDevices(ctx context.Context, cluster, mod
 			return nil, nil, acceleratorInvalidResponse()
 		}
 		for _, d := range r.Items {
-			if d == nil || d.ClusterId != cluster || d.Node == nil || !metricUUID(d.DeviceId) || d.Node.Name == "" || d.Node.Uid == "" || d.VendorDeviceId == "" || seen[d.DeviceId] {
+			if d == nil || d.ClusterId != cluster || d.Node == nil || !metricUUID(d.DeviceId) || d.Node.Name == "" || d.Node.Uid == "" || d.DeviceUid == "" || d.AdapterId == "" || (d.DeviceKind != acc.DeviceKind_PHYSICAL_DEVICE && d.DeviceKind != acc.DeviceKind_FIXED_PARTITION_DEVICE) || seen[d.DeviceId] {
 				return nil, nil, acceleratorInvalidResponse()
 			}
 			seen[d.DeviceId] = true
@@ -199,7 +196,7 @@ func (s *GpuMonitoringService) ListGpuDevices(ctx context.Context, r *view.ListG
 	offset := uint64(page-1) * uint64(size)
 	for n := offset; n < uint64(len(ds)) && n < offset+uint64(size); n++ {
 		d := ds[n]
-		out.Items = append(out.Items, &catalog.AcceleratorDevice{DeviceId: d.DeviceId, ClusterId: d.ClusterId, GroupId: d.GroupId, Node: &catalog.AcceleratorNode{Uid: d.Node.Uid, Name: d.Node.Name}, VendorDeviceId: d.VendorDeviceId, ModelKey: d.ModelKey, PhysicalMemoryBytes: d.PhysicalMemoryBytes, Health: d.Health, Observation: wireAcceleratorObservation(d.Observation)})
+		out.Items = append(out.Items, wireAcceleratorDevice(d))
 	}
 	return out, nil
 }
@@ -215,7 +212,7 @@ func (s *GpuMonitoringService) physicalTarget(ctx context.Context, cluster, mode
 			continue
 		}
 		models[d.ModelKey] = true
-		t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: d.ClusterId, NodeId: d.Node.Name, NodeUid: d.Node.Uid, GpuUuid: d.VendorDeviceId, DeviceId: d.DeviceId})
+		t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: d.ClusterId, NodeName: d.Node.Name, NodeUid: d.Node.Uid, DeviceId: d.DeviceId, AdapterId: d.AdapterId, DeviceUid: d.DeviceUid, ParentDeviceUid: d.ParentDeviceUid, DeviceKind: d.DeviceKind.String()})
 	}
 	if id != "" && len(t.Scopes) == 0 {
 		return nil, "", errors.NotFound("GPU_NOT_FOUND", "GPU target not found")
@@ -297,9 +294,9 @@ func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32
 		return nil, "", "", acceleratorInvalidResponse()
 	}
 	actor := gpuActor(p)
-	var ref *acc.GpuUsageRef
+	var ref *GpuUsageRef
 	if kind != "" || id != "" {
-		if kind != "container" && kind != "inference" {
+		if kind != "container" {
 			return nil, "", "", errors.BadRequest("GPU_RESOURCE_KIND_UNSUPPORTED", "GPU resource kind is not enabled")
 		}
 		if s.resourceAuthorization == nil {
@@ -320,26 +317,8 @@ func (s *GpuMonitoringService) tenantTarget(ctx context.Context, tenantID uint32
 		if platform || !metricUUID(id) {
 			return nil, "", "", gpuInvalid()
 		}
-		owner := ""
-		switch kind {
-		case "container":
-			owner = InstanceOwner
-			if s.instances == nil {
-				return nil, "", "", acceleratorUnavailable()
-			}
-			_, e = s.instances.GetInstance(ctx, &instance.GetInstanceRequest{InstanceId: id})
-		case "inference":
-			owner = "ani-inference"
-			if s.inference == nil {
-				return nil, "", "", acceleratorUnavailable()
-			}
-			_, e = s.inference.GetInference(ctx, &inference.GetInferenceRequest{ResourceId: id})
-		default:
-			return nil, "", "", errors.BadRequest("GPU_RESOURCE_KIND_UNSUPPORTED", "GPU resource kind is not enabled")
-		}
-		if e != nil {
-			return nil, "", "", e
-		}
+		owner := InstanceOwner
+
 		if s.accelerator.refs == nil {
 			return nil, "", "", acceleratorUnavailable()
 		}

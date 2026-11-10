@@ -12,12 +12,9 @@ import (
 
 	kerrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
-	runtimev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
-	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	obs "github.com/zhangzhe-ctrl/ani-observability-service/api/observability/gpu/v1"
-	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	res "github.com/zhangzhe-ctrl/ani-resource-service/api/instance/v1"
 	view "go-wind-admin/api/gen/go/gpu/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
@@ -45,7 +42,6 @@ import (
 // Mapping, original ledger reads, resource authorization and DTOs are real Gov.
 type gpuMonitoringACCProbe struct {
 	acc.AcceleratorAdminServiceClient
-	acc.AcceleratorUsageServiceClient
 	deviceCalls int
 	devices     func(*acc.ListDevicesRequest) (*acc.ListDevicesResponse, error)
 }
@@ -121,7 +117,7 @@ type gpuMonitoringFixture struct {
 	acc        *gpuMonitoringACCProbe
 	obs        *gpuMonitoringObsProbe
 	owner      *gpuMonitoringOwnerProbe
-	ref        *acc.GpuUsageRef
+	ref        *GpuUsageRef
 	device     *acc.PhysicalDevice
 }
 
@@ -161,7 +157,7 @@ func newGpuMonitoringFixture(t *testing.T) *gpuMonitoringFixture {
 	ctx = auth.NewPrincipalContext(ctx, &auth.Principal{Type: auth.SubjectUser, ID: operator.ID, TenantID: tenant.ID})
 	plan, _, _ := gpuVector(t)
 	business := instanceSettingsBusiness(t)
-	business.ComputeType, business.GpuExecution, business.GpuDisplay = "gpu", plan.Resolved.Execution, plan.Resolved.Selection
+	business.ComputeType, business.GpuExecution, business.GpuBusinessSpec = "gpu", plan.Resolved.Execution, plan.Resolved.BusinessSpec
 	payload, err := res.CanonicalBusinessPayload(business)
 	require.NoError(t, err)
 	sum := sha256.Sum256(payload)
@@ -171,14 +167,13 @@ func newGpuMonitoringFixture(t *testing.T) *gpuMonitoringFixture {
 	resourceID, createID := uuid.NewString(), uuid.NewString()
 	_, err = ledger.Occupy(ctx, &data.QuotaOccupyInput{TenantID: tenant.ID, ResourceTenantID: tenant.ResourceTenantID, ResourceID: resourceID, OperationID: createID, OwnerService: InstanceOwner, Action: InstanceCreateAction, ActorType: "user", ActorID: strconv.FormatUint(uint64(operator.ID), 10), IdempotencyKey: uuid.NewString(), RequestHash: "monitoring-original", CanonicalRequest: string(canonical), Items: []data.QuotaOccupyItem{{QuotaCode: GpuSharedQuotaCode, Units: 8192}}})
 	require.NoError(t, err)
-	ref := &acc.GpuUsageRef{TenantId: tenant.ResourceTenantID, OwnerService: InstanceOwner, ResourceId: resourceID, CreateOperationId: createID}
-	device := &acc.PhysicalDevice{DeviceId: uuid.NewString(), ClusterId: plan.Request.ClusterId, Node: &acc.NodeRef{Name: "secret-node", Uid: uuid.NewString()}, VendorDeviceId: "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", ModelKey: "test-model"}
+	ref := &GpuUsageRef{TenantId: tenant.ResourceTenantID, OwnerService: InstanceOwner, ResourceId: resourceID, CreateOperationId: createID}
+	device := &acc.PhysicalDevice{DeviceId: uuid.NewString(), ClusterId: plan.Request.ClusterId, Node: &acc.NodeRef{Name: "secret-node", Uid: uuid.NewString()}, DeviceUid: "opaque:device/42", AdapterId: "hygon-hcu-v1", DeviceKind: acc.DeviceKind_PHYSICAL_DEVICE, ModelKey: "test-model"}
 	accPeer := &gpuMonitoringACCProbe{}
 	obsPeer, owner := &gpuMonitoringObsProbe{}, &gpuMonitoringOwnerProbe{}
 	tenants := data.NewTenantRepo(bctx, c)
-	accelerator := NewAcceleratorService(&data.AcceleratorClient{Admin: accPeer, Usage: accPeer}, tenants, NewGpuBffLedgerBridge(ledger, nil), nil, nil, NewQuotaAdapterRegistry(), nil)
-	instanceSvc := NewInstanceService(nil, NewInstanceGpuBinding(owner, data.NewInstanceAuthorizationRepo(c), device.ClusterId), tenants, nil, nil)
-	svc := NewGpuMonitoringService(accelerator, obsPeer, instanceSvc, nil, data.NewGpuResourceReadAuthorizationRepo(c))
+	accelerator := NewAcceleratorService(&data.AcceleratorClient{Admin: accPeer}, tenants, NewGpuBffLedgerBridge(ledger), nil, nil)
+	svc := NewGpuMonitoringService(accelerator, obsPeer, data.NewGpuResourceReadAuthorizationRepo(c))
 	return &gpuMonitoringFixture{svc: svc, client: c.Client(), ctx: ctx, tenant: tenant, operator: operator, membership: membership, acc: accPeer, obs: obsPeer, owner: owner, ref: ref, device: device}
 }
 
@@ -188,9 +183,8 @@ func TestGpuMonitoringTenantAndContainerUseTrustedIdentity(t *testing.T) {
 	require.NoError(t, err)
 	r, err := f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: f.ref.ResourceId})
 	require.NoError(t, err)
-	require.Equal(t, 1, f.owner.calls)
-	require.Equal(t, f.tenant.ResourceTenantID, f.owner.tenant)
-	require.Equal(t, "governance:user:"+strconv.FormatUint(uint64(f.operator.ID), 10), f.owner.actor)
+	require.Zero(t, f.owner.calls)
+
 	require.Equal(t, "RESOURCE", f.obs.target.Kind)
 	require.Equal(t, "container", f.obs.target.ResourceKind)
 	require.Empty(t, f.obs.target.Scopes, "business monitoring carries identity without physical scopes")
@@ -214,7 +208,7 @@ func TestGpuMonitoringTenantAndContainerUseTrustedIdentity(t *testing.T) {
 	require.Equal(t, "TENANT", f.obs.target.Kind)
 	require.Empty(t, f.obs.target.Scopes)
 	require.Nil(t, f.obs.target.UsageRef)
-	require.Equal(t, 1, f.owner.calls, "tenant history does not enumerate only currently readable owner objects")
+	require.Zero(t, f.owner.calls, "history does not require a currently readable owner object")
 	require.InDelta(t, 30*24*time.Hour.Seconds(), f.obs.end.AsTime().Sub(f.obs.start.AsTime()).Seconds(), 1)
 	require.Zero(t, f.acc.deviceCalls, "business monitoring never enumerates physical devices")
 	after, err := f.client.QuotaAccount.Query().Only(appViewer.NewSystemViewerContext(context.Background()))
@@ -229,47 +223,11 @@ func TestGpuMonitoringTenantAndContainerUseTrustedIdentity(t *testing.T) {
 	require.Empty(t, f.obs.target.Scopes)
 }
 
-func TestGpuMonitoringInferenceAdapterPreservesOriginalAndReplicas(t *testing.T) {
+func TestGpuMonitoringInferenceResourcesNotEnabled(t *testing.T) {
 	f := newGpuMonitoringFixture(t)
-	c := testutil.NewQuotaPGClient(t) // same exclusive DB, no fixture reset
-	bctx := testutil.NewBootstrapContext(nil)
-	principal, err := auth.PrincipalFromContext(f.ctx)
-	require.NoError(t, err)
-	plan, _, _ := gpuVector(t)
-	plan.Request.ContainerName = "kserve-container"
-	selection := inferenceCPUSelection(t)
-	selection.ComputeType = "gpu"
-	selection.Gpu = &compute.GpuSelection{ProfileId: plan.Request.ProfileId, ProfileVersion: plan.Request.ProfileVersion, SpecDigest: plan.Profile.SpecDigest, DevicesPerUnit: 1, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId, Mode: plan.Resolved.Selection.Mode, ModelKey: plan.Resolved.Selection.ModelKey, MemoryMibPerDevice: 8192, CoreLimitPercent: 25}
-	selection.SelectionDigest, err = compute.SelectionDigest(selection)
-	require.NoError(t, err)
-	intent := inferencePublicIntent()
-	model := &inferenceModelProbe{response: &modelv1.GetModelVersionResponse{Model: &modelv1.Model{TenantId: f.tenant.ResourceTenantID}, Version: &modelv1.ModelVersion{Id: intent.ModelVersionId, Status: "ready"}}}
-	owner := &inferenceMissingOwner{}
-	binding := NewInferenceComputeBinding(owner, data.NewInferenceAuthorizationRepo(c), model, &inferenceComputeProbe{selection: selection})
-	prepared, err := binding.PrepareManagedBusiness(f.ctx, principal, f.tenant.ResourceTenantID, intent)
-	require.NoError(t, err)
-	createID, resourceID := uuid.NewString(), uuid.NewString()
-	actorID := strconv.FormatUint(uint64(principal.ID), 10)
-	canonical, err := prepared.freeze(f.tenant.ResourceTenantID, "user", actorID, createID, resourceID, plan.Resolved)
-	require.NoError(t, err)
-	ledger := data.NewQuotaLedgerRepo(bctx, c)
-	_, err = ledger.Occupy(f.ctx, &data.QuotaOccupyInput{TenantID: f.tenant.ID, ResourceTenantID: f.tenant.ResourceTenantID, ResourceID: resourceID, OperationID: createID, ActorType: "user", ActorID: actorID, OwnerService: "ani-inference", Action: InferenceCreateAction, IdempotencyKey: uuid.NewString(), RequestHash: "inference-monitor-original", CanonicalRequest: string(canonical), Items: []data.QuotaOccupyItem{{QuotaCode: GpuSharedQuotaCode, Units: 8192}}})
-	require.NoError(t, err)
-	owner.service = &runtimev1.InferenceService{Id: resourceID, Replicas: 2, Generation: 1}
-	f.svc.inference = NewInferenceServiceWithOwner(nil, owner, data.NewTenantRepo(bctx, c))
-	r, err := f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "inference", ResourceId: resourceID})
-	require.NoError(t, err)
-	require.Equal(t, "inference", r.ResourceKind)
-	require.Equal(t, resourceID, r.ResourceId)
-	require.Empty(t, f.obs.target.Scopes, "replicas are selected from labeled Prometheus records")
-	require.Equal(t, createID, f.obs.target.UsageRef.CreateOperationId)
-	require.Equal(t, resourceID, f.obs.target.UsageRef.ResourceId)
-	require.Equal(t, "ani-inference", f.obs.target.UsageRef.OwnerService)
-	require.Equal(t, f.tenant.ResourceTenantID, f.obs.target.UsageRef.TenantId)
-	require.Equal(t, 1, owner.gets)
-	require.Equal(t, f.tenant.ResourceTenantID, owner.getTenant)
-	require.Equal(t, "governance:user:"+actorID, owner.getActor)
-	require.Zero(t, f.owner.calls, "inference does not route through the container owner")
+	_, err := f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "inference", ResourceId: f.ref.ResourceId})
+	require.Equal(t, "GPU_RESOURCE_KIND_UNSUPPORTED", kerrors.Reason(err))
+	require.Zero(t, f.obs.calls)
 }
 
 func TestGpuMonitoringResourceAuthorizationAndTenantIsolation(t *testing.T) {
@@ -281,7 +239,7 @@ func TestGpuMonitoringResourceAuthorizationAndTenantIsolation(t *testing.T) {
 	_, err := f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "modeldev", ResourceId: f.ref.ResourceId})
 	require.Equal(t, "GPU_RESOURCE_KIND_UNSUPPORTED", kerrors.FromError(err).Reason)
 	require.Zero(t, f.obs.calls)
-	withoutPermissionReader := NewGpuMonitoringService(f.svc.accelerator, f.obs, f.svc.instances, nil)
+	withoutPermissionReader := NewGpuMonitoringService(f.svc.accelerator, f.obs)
 	_, err = withoutPermissionReader.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: f.ref.ResourceId})
 	require.Equal(t, "GPU_RESOURCE_READ_DENIED", kerrors.FromError(err).Reason)
 	_, err = f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: uuid.NewString()})
@@ -292,13 +250,13 @@ func TestGpuMonitoringResourceAuthorizationAndTenantIsolation(t *testing.T) {
 	require.Zero(t, f.obs.calls)
 	f.owner.err = status.Error(codes.NotFound, "owner resource hidden")
 	_, err = f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: "container", ResourceId: f.ref.ResourceId})
-	require.Error(t, err)
-	require.Zero(t, f.obs.calls, "owner denial precedes Obs")
+	require.NoError(t, err, "deleted owner does not remove original history authorization")
+	require.Equal(t, 1, f.obs.calls)
 	f.owner.err = nil
-	require.Zero(t, f.obs.calls, "unauthorized queries never reach Obs")
+	require.Equal(t, 1, f.obs.calls, "only the authorized historical query reached Obs")
 	require.NoError(t, f.client.UserRole.UpdateOneID(f.membership.ID).SetStatus(userrole.StatusDisabled).Exec(appViewer.NewSystemViewerContext(context.Background())))
 	ownerCalls := f.owner.calls
-	for _, kind := range []string{"container", "inference"} {
+	for _, kind := range []string{"container"} {
 		_, err = f.svc.GetResourceGpuLatest(f.ctx, &view.GpuResourceLatestRequest{ResourceKind: kind, ResourceId: f.ref.ResourceId})
 		require.Equal(t, "GPU_RESOURCE_READ_DENIED", kerrors.FromError(err).Reason)
 	}

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
 	runtimev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,7 @@ func TestInferenceImageRejectPostgresDurableCloseCPUAndGPU(t *testing.T) {
 				fixture, _, _ := gpuVector(t)
 				fixture.Request.ContainerName = "kserve-container"
 				selection.ComputeType = "gpu"
-				selection.Gpu = &compute.GpuSelection{ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion, SpecDigest: fixture.Profile.SpecDigest, DevicesPerUnit: 1, ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, Mode: fixture.Resolved.Selection.Mode, ModelKey: fixture.Resolved.Selection.ModelKey, MemoryMibPerDevice: 8192, CoreLimitPercent: 25}
+				selection.Gpu = &compute.GpuSelection{ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion, SpecDigest: fixture.Profile.SpecDigest, DevicesPerUnit: 1, ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, Mode: fixture.Resolved.BusinessSpec.Mode, ModelKey: fixture.Resolved.BusinessSpec.ModelKey, MemoryMibPerDevice: 8192, CoreLimitPercent: 25, AllocationType: fixture.Resolved.BusinessSpec.AllocationType, ResourceKey: fixture.Resolved.BusinessSpec.ResourceKey, ComputeUnitsPerDevice: fixture.Resolved.BusinessSpec.ComputeUnitsPerDevice, AdapterId: fixture.Resolved.BusinessSpec.AdapterId}
 				selection.SelectionDigest, err = compute.SelectionDigest(selection)
 				require.NoError(t, err)
 				plan = fixture.Resolved
@@ -82,6 +83,18 @@ func TestInferenceImageRejectPostgresDurableCloseCPUAndGPU(t *testing.T) {
 			oldBinding := f.service.acceptance.(*GpuAcceptance).binding.(*InferenceGpuBinding)
 			binding := NewInferenceComputeBinding(owner, oldBinding.authorization, f.model, &inferenceComputeProbe{selection: selection})
 			prepared, err := binding.PrepareManagedBusiness(f.ctx, principal, tenant, intent)
+			if gpu {
+				require.Nil(t, prepared)
+				require.Equal(t, "QUOTA_ADAPTER_UNAVAILABLE", kratoserrors.FromError(err).Reason)
+				operations, e := f.client.QuotaOperation.Query().Count(sys)
+				require.NoError(t, e)
+				require.Zero(t, operations)
+				charges, e := f.client.QuotaCharge.Query().Count(sys)
+				require.NoError(t, e)
+				require.Zero(t, charges)
+				require.Zero(t, owner.createCalls)
+				return
+			}
 			require.NoError(t, err)
 			createID, resourceID := uuid.NewString(), uuid.NewString()
 			actorID := strconv.FormatUint(uint64(principal.ID), 10)
@@ -160,18 +173,6 @@ func TestInferenceImageRejectPostgresDurableCloseCPUAndGPU(t *testing.T) {
 			require.NoError(t, err)
 			for _, charge := range charges {
 				require.Zero(t, charge.ReleasedUnits, "DELETE ACK must never refund original charge")
-			}
-			if gpu {
-				release := &data.QuotaReleaseInput{OwnerService: commandcontract.InferenceOwner, OperationID: createID, ResourceID: resourceID, Complete: true, ReleaseEventID: uuid.NewString(), Reason: "ABORTED_CLEANED", PayloadHash: "owner-release-evidence", PayloadJSON: `{"evidence":"external-owner-boundary"}`}
-				for attempt := 0; attempt < 2; attempt++ {
-					_, err = f.ledger.Release(sys, release)
-					require.NoError(t, err)
-				}
-				refunded, err := f.ledger.GetChargesForOperation(sys, f.tenantID, createID)
-				require.NoError(t, err)
-				for _, charge := range refunded {
-					require.Equal(t, charge.OriginalUnits, charge.ReleasedUnits)
-				}
 			}
 
 			require.Equal(t, 1, owner.createCalls)

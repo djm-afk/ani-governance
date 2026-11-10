@@ -14,11 +14,13 @@
 
 `scheduling` 可以省略；出现时至少含一项。仅允许 `pod_placement` 为 `NONE`、`COLOCATE_PREFERRED`、`SPREAD_PREFERRED`，以及非空 `priority_class_name`。拒绝 null、空对象、字段 null、数值枚举、UNSPECIFIED、未知字段。优先级引用须获本租户授权、在唯一目标集群存在且受运行路径支持。显式值覆盖默认值；没有任何来源的 placement 为 NONE。软亲和仅作用本实例，不增加副本。
 
-可信规格决定 `instance_kind=container` 与 `compute_type=cpu|gpu`。CPU 不调用 ACC，不产生 GPU 执行参数或 GPU charges。GPU 创建由 Resource 解析受管业务规格，ACC 返回 `GpuExecution`、配额向量和 `GpuDisplay`。Gov 将执行参数和展示信息冻结到同一份 `CreateSpec`；`GpuExecution` 只有 `scheduler_name/queue_name/runtime_class_name/node_selector/pod_annotations/resources/execution_digest`，`GpuDisplay` 只有 `profile_id/profile_version/profile_name/model_key/mode`。`resources` 的 GPU 键固定为 `volcano.sh/vgpu-number`、`volcano.sh/vgpu-memory`、`volcano.sh/vgpu-cores`，其中 memory 直接使用 MiB 整数值。Gov→Resource 创建合同只有命令上下文和这份扁平规格，不发送完整 GPU 计划、重复请求或 charges；原 GPU 请求、配额向量和 charge 原账由 Gov 保存。
+可信规格决定 `instance_kind=container` 与 `compute_type=cpu|gpu`。CPU 不调用 ACC，不产生 GPU 执行参数或 GPU charges。GPU 创建由 Resource 解析受管静态引用，ACC 返回 `GpuExecution`、真实配额向量和 `GpuBusinessSpec`。Gov 逐项核对 profile/version/spec_digest、卡数、mode/model、allocation_type/resource_key、每卡显存/core/CU 和 adapter_id，再将业务规格与唯一执行快照冻结到同一份 `CreateSpec` 并清除临时 `gpu_selection`。公共普通 Go 校验内核是唯一厂商规格与执行一致性算法；Gov 不从 NVIDIA 资源值反推业务显存，也不在本地重写厂商换算。
+
+`GpuExecution` 保留 scheduler、queue、RuntimeClass、node selector、annotations、resources 和 execution_digest。NVIDIA 支持整卡及动态共享，实际资源编码沿已登记 F/K；海光整卡与管理员已配置固定片沿静态 resource_key，每卡 memory/core/CU 按合同约束。不存在通用 NVIDIA 资源键白名单或固定 F=1 假设。Gov→Resource 创建仅发送可信命令上下文与冻结业务规格，不发送原账或完整 ACC 计划；Gov 保存原始请求、配额向量与原 charge。库存为空、全忙、监控缺失均不改变合法静态规格，也不成为创建门槛。
 
 受理顺序为当前业务动作授权→原幂等记录→新键才调用一次 `ResolveCreateSpec`。新 GPU 再组合当前业务授权与当前租户的 ACCELERATOR 套餐资格，然后调用 ACC；资格检查不要求 Profile 目录 GET 权限。缺资格返回 403 `GPU_USE_DENIED`，资格存储不可用返回 503 `GPU_USE_AUTHORIZATION_UNAVAILABLE`。已受理原键仍先检查当前业务授权，随后返回原冻结记录，不重查规格、不重做新 GPU 资格。CPU 跳过资格与 ACC。共享资格能力支持 TRAINING（普通训练和微调共用），不依赖 INSTANCE；本次未增加训练或推理创建消费链。
 
-原公开请求哈希不含动态解析的规格、默认值、执行参数或配额向量；当前授权通过后先找原幂等记录。已受理重试返回原 operation/resource，规格编辑、禁用或删除不改变原冻结参数，也不重新解析当前目录。共享按原账的 MiB 占用 `gpu.shared_memory_mib`，整卡按设备数占用 `gpu.physical.count`。最终删除须由 Resource 持久确认资源释放及不会迟到创建，再以 `release_event_id/create_operation_id/resource_id/reason` 上报；Gov 校验可信 owner 和原创建关系，在同一事务中按原账一次性全退。重复事件不重复退额，同事件内容冲突拒绝，同资源换事件也不能产生第二次退款。stop、重启及单独的 Usage ENDED 不触发退额。
+原公开请求哈希不含动态解析的规格、默认值、执行参数或配额向量；当前授权通过后先找原幂等记录。已受理重试返回原 operation/resource，规格编辑、禁用或删除不改变原冻结参数，也不重新解析当前目录。共享按原账的 MiB 占用 `gpu.shared_memory_mib`，整卡按设备数占用 `gpu.physical.count`。最终删除须由 Resource 持久确认资源释放及不会迟到创建，再以 `release_event_id/create_operation_id/resource_id/reason` 上报；Gov 校验可信 owner 和原创建关系，在同一事务中按原账一次性全退。重复事件不重复退额，同事件内容冲突拒绝，同资源换事件也不能产生第二次退款。stop、重启和普通退出不触发退额。删除及退款不查询 ACC、Obs、设备利用率或释放证明。
 
 响应为 `{operationId,resourceId,replayed,result:"ACCEPTED"}`。ACCEPTED 表示持久受理，运行情况通过 operation 和实例状态查询。启停与删除沿用 `{data:{idempotencyKey,expectedVersion}}` 及路径实例 ID；终端沿用既有独立接口。实例没有变配、CPU/GPU 互转或历史规格版本入口。
 
@@ -80,7 +82,7 @@ PVC 候选项含 `pvc_name/phase/requested_capacity/access_modes/volume_mode/sel
 | 422 `INSTANCE_PVC_CATALOG_LIMIT` | PVC 快照扫描超过上限；不能把截断目录展示成完整可选集合 |
 | 503 `INSTANCE_CREATE_DISABLED` / `INSTANCE_NETWORK_NOT_ENABLED` / `INSTANCE_DEPENDENCY_UNAVAILABLE` | 新建维护闸门关闭、网络受理未开放或依赖不可用；保留原键与正文，恢复后查询原 operation 或重试 |
 
-请求意图摘要、冻结载荷及占额在同一事务保存，同键并发比较完整意图。CPU 使用统一规范投影及原 business_payload 字节摘要；GPU 保留唯一冻结 Execution、原始 charges、稳定退额事件与物理释放 fence。显式迁移 `20261031010000_drop_instance_contract_version.sql` 删除共享操作表中无业务用途的 `instance_contract_version` 及其检查约束；所有 owner 均不再传递、复制或判断该占位字段。其它业务自己的协议版本保持原语义；启动迁移保持关闭。
+请求意图摘要、冻结载荷及占额在同一事务保存，同键并发比较完整意图。CPU 使用统一规范投影及原 business_payload 字节摘要；GPU 保留唯一冻结 BusinessSpec/Execution、原始 charges、稳定 owner 清理退额事件与创建封闭事实。显式迁移 `20261031010000_drop_instance_contract_version.sql` 删除共享操作表中无业务用途的 `instance_contract_version` 及其检查约束；所有 owner 均不再传递、复制或判断该占位字段。其它业务自己的协议版本保持原语义；启动迁移保持关闭。
 
 这些是源码接口合同；正式依赖、Fedora 验证及 CSI/终端/网络/GPU 实测结论见 Resource 本任务唯一执行状态，不能据字段或路由存在认定业务验收通过。
 
@@ -139,7 +141,7 @@ CPU/GPU DELETE 均持久关闭新意图闸门。只有当前 dispatcher lease、
 `compute:preset:admin:list/read/create/update/delete` 精确权限；set-enabled 复用 update。
 原 InstanceService 管理方法与旧管理权限判断直接删除。容器目录路径与
 `instance:preset:read`/INSTANCE 授权保持，调用新的 `compute.v1.ComputePresetService/ListPresets`，
-服务端固定用途 CONTAINER_INSTANCE；可信 GPU 五元组交集先于最终计数和分页。
+服务端固定用途 CONTAINER_INSTANCE；可信 GPU 完整静态引用交集先于最终计数和分页。
 目录与实例创建分别调用各自接口；容器创建仍只调用一次活跃 ResolveCreateSpec，
 不先调用公共 ResolveComputePreset，持久化后重放继续使用原冻结配置和摘要。
 
@@ -167,7 +169,7 @@ DELETE 的 202 只表示持久受理，继续轮询原 operation 和详情，分
 
 PATCH 使用 FieldMask 的 JSON 字符串形式，路径按 ProtoJSON lowerCamel 转换；HTTP DTO 字段仍以 Proto 的 json_name 为准。只修改 mask 中的字段；清空 GPU 必须同时给 `gpu:null` 和 `gpu` mask。enabled 必须显式存在。CPU 转换须清掉 GPU，GPU 转换须提供合法 GPU 引用；行锁下合并并原子校验，不先在 Gov 读整行后覆盖。
 
-静态详情新增 instance_kind、compute_type、cpu、memory、createdAt、workspaceSize、preset_name、preset_code、gpu_summary 和实际 scheduling。`gpu_summary` 仅含 `profile_id/profile_version/mode/model_key/devices_per_instance/memory_mib_per_device/memory_mib_total/core_limit_percent`。共享和整卡都返回具体 MiB 值，整卡采用冻结的单卡完整显存值；两个显存字段均为 int64，HTTP 按 ProtoJSON 输出十进制字符串。旧 `shared_memory_mib_per_device/shared_memory_mib_total` 字段已删除且保留编号，不接受旧字段。CPU 的 gpu_summary 为 null。规格候选中的 GPU 目录不可用或无权限时保留 CPU 候选并明确状态，不把不完整 GPU 集合当完整目录。
+静态详情新增 instance_kind、compute_type、cpu、memory、createdAt、workspaceSize、preset_name、preset_code、gpu_summary 和实际 scheduling。`gpu_summary` 包含 `profile_id/profile_version/profile_name/spec_digest/mode/model_key/devices_per_instance/memory_mib_per_device/memory_mib_total/core_limit_percent/allocation_type/resource_key/compute_units_per_device/adapter_id`。显存是冻结的每卡 MiB 值，总量使用检查溢出的整数乘法；海光整卡按合同允许具体显存为 0，不伪造 NVIDIA 值。两个显存字段均为 int64，HTTP 按 ProtoJSON 输出十进制字符串。旧 `shared_memory_mib_per_device/shared_memory_mib_total` 字段保留退役编号。CPU 的 gpu_summary 为 null。规格候选中的 GPU 目录不可用或无权限时保留 CPU 候选并明确状态；TRAINING/INFERENCE GPU 候选标 `GPU_OWNER_NOT_ENABLED`，不查询容量。
 
 ## 平台调度管理
 

@@ -20,7 +20,7 @@ import (
 
 type InstanceResourcePeer struct{ Address, CAFile, CertFile, KeyFile, TerminalAddress, SGClientCertFile, SGClientKeyFile, SGServerCertFile, SGServerKeyFile, GovControlCertFile, GovControlKeyFile, PresetID, ClusterID string }
 
-func StartInstanceResourcePeer(t *testing.T, gpu *acc.GpuRequest, profile *acc.GpuProfile) *InstanceResourcePeer {
+func StartInstanceResourcePeer(t *testing.T, gpu *acc.GpuRequest, profile *acc.GpuProfile, business ...*acc.GpuBusinessSpec) *InstanceResourcePeer {
 	t.Helper()
 	binary := os.Getenv("RESOURCE_INSTANCE_TEST_BINARY")
 	require.True(t, filepath.IsAbs(binary), "fixed Resource subprocess binary required")
@@ -32,7 +32,9 @@ func StartInstanceResourcePeer(t *testing.T, gpu *acc.GpuRequest, profile *acc.G
 		require.NotNil(t, profile)
 		require.NotNil(t, profile.Spec)
 		spec := profile.Spec
-		reference := &res.GpuPresetReference{ProfileId: gpu.ProfileId, ProfileVersion: gpu.ProfileVersion, SpecDigest: profile.SpecDigest, DevicesPerInstance: gpu.DevicesPerReplica, ClusterId: gpu.ClusterId, PoolId: gpu.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, CoreLimitPercent: spec.CoreLimitPercent, MemoryMibPerDevice: spec.MemoryMibPerDevice}
+		require.Len(t, business, 1, "fixture must preserve the frozen adapter identity")
+		require.NotNil(t, business[0])
+		reference := &res.GpuPresetReference{ProfileId: gpu.ProfileId, ProfileVersion: gpu.ProfileVersion, SpecDigest: profile.SpecDigest, DevicesPerInstance: gpu.DevicesPerReplica, ClusterId: gpu.ClusterId, PoolId: gpu.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, CoreLimitPercent: spec.CoreLimitPercent, MemoryMibPerDevice: spec.MemoryMibPerDevice, AllocationType: spec.AllocationType, ResourceKey: spec.ResourceKey, ComputeUnitsPerDevice: spec.ComputeUnitsPerDevice, AdapterId: business[0].AdapterId}
 		raw, e = protojson.Marshal(gpu)
 		require.NoError(t, e)
 		referenceJSON, e = protojson.Marshal(reference)

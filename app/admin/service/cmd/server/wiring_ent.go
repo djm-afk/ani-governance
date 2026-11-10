@@ -455,8 +455,8 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		cleanups = append(cleanups, closeAccelerator)
 		acceleratorClient = client
 	}
-	gpuBffLedger := service.NewGpuBffLedgerBridge(quotaLedgerRepo, quotaAdminRepo)
-	acceleratorService := service.NewAcceleratorService(acceleratorClient, tenantRepo, gpuBffLedger, gpuBffLedger, quotaAdminRepo, quotaRegistry, authz.Engine())
+	gpuBffLedger := service.NewGpuBffLedgerBridge(quotaLedgerRepo)
+	acceleratorService := service.NewAcceleratorService(acceleratorClient, tenantRepo, gpuBffLedger, quotaAdminRepo, authz.Engine())
 	var gpuPlans service.GpuPlanResolver
 	if acceleratorClient != nil {
 		gpuPlans = acceleratorClient.Catalog
@@ -545,11 +545,8 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		data.NewInstanceAuthorizationRepo(entClient),
 	)
 	computeService := service.NewComputePresetService(computeClient, computeCatalog)
-	modeldevGPU := service.ModelDevGPUAdmission{Eligibility: data.NewGpuUseAuthorizationRepo(entClient)}
-	if acceleratorClient != nil {
-		modeldevGPU.Plans = acceleratorClient.Catalog
-	}
-	modeldevService := service.NewModelDevService(modeldevAuthorizationRepo, tenantRepo, modeldevAcceptanceRepo, modeldevClient, computeOwner, modeldevGPU)
+	modeldevService := service.NewModelDevService(modeldevAuthorizationRepo, tenantRepo, modeldevAcceptanceRepo, modeldevClient, computeOwner)
+
 	modeldevService.SetCreateMaintenance(modeldevMaintenance)
 	if observabilityClient != nil {
 		modeldevService.SetMonitoring(observabilityClient)
@@ -609,9 +606,9 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		server.RegisterVMHTTPServer(restServer, vmService)
 		server.RegisterVMLogsHTTP(restServer, vmService)
 		server.RegisterVMImageHTTPServer(restServer, vmImageService)
-		gpuMonitoringService := service.NewGpuMonitoringService(acceleratorService, observabilityClient, instanceService, inferenceService, data.NewGpuResourceReadAuthorizationRepo(entClient))
+		gpuMonitoringService := service.NewGpuMonitoringService(acceleratorService, observabilityClient, data.NewGpuResourceReadAuthorizationRepo(entClient))
 		server.RegisterGpuHTTPServer(restServer, gpuMonitoringService)
-		server.RegisterGpuTenantHTTPServer(restServer, service.NewGpuTenantAdminService(quotaAdminRepo, gpuMonitoringService, acceleratorService))
+		server.RegisterGpuTenantHTTPServer(restServer, service.NewGpuTenantAdminService(quotaAdminRepo, gpuMonitoringService))
 		server.RegisterResourceUsageHTTPServer(restServer, service.NewResourceUsageAdminService(tenantRepo, gpuMonitoringService, observabilityClient))
 	}
 	asynqServer, err := server.NewAsynqServer(ctx, taskService, internalMessageService)
@@ -634,13 +631,7 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		publisher.SetCreateMaintenance(modeldevMaintenance)
 		extraServers = append(extraServers, publisher)
 	}
-	if acceleratorClient != nil {
-		gpuSyncLog := ctx.NewLoggerHelper("gpu-usage-sync")
-		gpuSync := service.NewGpuUsageSyncWorker(quotaLedgerRepo, acceleratorClient, func(err error) {
-			gpuSyncLog.Errorf(ctx.Context(), "GPU usage projection recovery failed: %v", err)
-		})
-		extraServers = append(extraServers, gpuSync)
-	}
+
 	if quotaInternalServer != nil {
 		extraServers = append(extraServers, quotaInternalServer)
 	}

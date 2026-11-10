@@ -20,7 +20,6 @@ import (
 	"go-wind-admin/app/admin/service/internal/data/ent/dictentryi18n"
 	"go-wind-admin/app/admin/service/internal/data/ent/dicttype"
 	"go-wind-admin/app/admin/service/internal/data/ent/gpudeleteacceptance"
-	"go-wind-admin/app/admin/service/internal/data/ent/gpuusagesync"
 	"go-wind-admin/app/admin/service/internal/data/ent/internalmessage"
 	"go-wind-admin/app/admin/service/internal/data/ent/internalmessagecategory"
 	"go-wind-admin/app/admin/service/internal/data/ent/internalmessagerecipient"
@@ -96,8 +95,6 @@ type Client struct {
 	DictType *DictTypeClient
 	// GpuDeleteAcceptance is the client for interacting with the GpuDeleteAcceptance builders.
 	GpuDeleteAcceptance *GpuDeleteAcceptanceClient
-	// GpuUsageSync is the client for interacting with the GpuUsageSync builders.
-	GpuUsageSync *GpuUsageSyncClient
 	// InternalMessage is the client for interacting with the InternalMessage builders.
 	InternalMessage *InternalMessageClient
 	// InternalMessageCategory is the client for interacting with the InternalMessageCategory builders.
@@ -208,7 +205,6 @@ func (c *Client) init() {
 	c.DictEntryI18n = NewDictEntryI18nClient(c.config)
 	c.DictType = NewDictTypeClient(c.config)
 	c.GpuDeleteAcceptance = NewGpuDeleteAcceptanceClient(c.config)
-	c.GpuUsageSync = NewGpuUsageSyncClient(c.config)
 	c.InternalMessage = NewInternalMessageClient(c.config)
 	c.InternalMessageCategory = NewInternalMessageCategoryClient(c.config)
 	c.InternalMessageRecipient = NewInternalMessageRecipientClient(c.config)
@@ -355,7 +351,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		DictEntryI18n:            NewDictEntryI18nClient(cfg),
 		DictType:                 NewDictTypeClient(cfg),
 		GpuDeleteAcceptance:      NewGpuDeleteAcceptanceClient(cfg),
-		GpuUsageSync:             NewGpuUsageSyncClient(cfg),
 		InternalMessage:          NewInternalMessageClient(cfg),
 		InternalMessageCategory:  NewInternalMessageCategoryClient(cfg),
 		InternalMessageRecipient: NewInternalMessageRecipientClient(cfg),
@@ -429,7 +424,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		DictEntryI18n:            NewDictEntryI18nClient(cfg),
 		DictType:                 NewDictTypeClient(cfg),
 		GpuDeleteAcceptance:      NewGpuDeleteAcceptanceClient(cfg),
-		GpuUsageSync:             NewGpuUsageSyncClient(cfg),
 		InternalMessage:          NewInternalMessageClient(cfg),
 		InternalMessageCategory:  NewInternalMessageCategoryClient(cfg),
 		InternalMessageRecipient: NewInternalMessageRecipientClient(cfg),
@@ -506,17 +500,16 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AccessKey, c.AccessKeyIdempotency, c.Api, c.ApiAuditLog, c.DataAccessAuditLog,
 		c.DictEntry, c.DictEntryI18n, c.DictType, c.GpuDeleteAcceptance,
-		c.GpuUsageSync, c.InternalMessage, c.InternalMessageCategory,
-		c.InternalMessageRecipient, c.Language, c.LoginAuditLog, c.LoginPolicy,
-		c.Membership, c.MembershipOrgUnit, c.MembershipPosition, c.MembershipRole,
-		c.Menu, c.ModelDevAcceptance, c.NotificationChannel, c.OperationAuditLog,
-		c.OrgUnit, c.Permission, c.PermissionApi, c.PermissionAuditLog,
-		c.PermissionGroup, c.PermissionMenu, c.PermissionPolicy, c.Plan, c.PlanModule,
-		c.PlanQuota, c.PolicyEvaluationLog, c.Position, c.QuotaAccount, c.QuotaCharge,
-		c.QuotaDefinition, c.QuotaOperation, c.QuotaReleaseReceipt, c.Role,
-		c.RoleFieldPermission, c.RoleMetadata, c.RoleOrgUnit, c.RolePermission,
-		c.SysConfig, c.Task, c.Tenant, c.User, c.UserCredential, c.UserMfaFactor,
-		c.UserOrgUnit, c.UserPosition, c.UserRole,
+		c.InternalMessage, c.InternalMessageCategory, c.InternalMessageRecipient,
+		c.Language, c.LoginAuditLog, c.LoginPolicy, c.Membership, c.MembershipOrgUnit,
+		c.MembershipPosition, c.MembershipRole, c.Menu, c.ModelDevAcceptance,
+		c.NotificationChannel, c.OperationAuditLog, c.OrgUnit, c.Permission,
+		c.PermissionApi, c.PermissionAuditLog, c.PermissionGroup, c.PermissionMenu,
+		c.PermissionPolicy, c.Plan, c.PlanModule, c.PlanQuota, c.PolicyEvaluationLog,
+		c.Position, c.QuotaAccount, c.QuotaCharge, c.QuotaDefinition, c.QuotaOperation,
+		c.QuotaReleaseReceipt, c.Role, c.RoleFieldPermission, c.RoleMetadata,
+		c.RoleOrgUnit, c.RolePermission, c.SysConfig, c.Task, c.Tenant, c.User,
+		c.UserCredential, c.UserMfaFactor, c.UserOrgUnit, c.UserPosition, c.UserRole,
 	} {
 		n.Use(hooks...)
 	}
@@ -528,17 +521,16 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AccessKey, c.AccessKeyIdempotency, c.Api, c.ApiAuditLog, c.DataAccessAuditLog,
 		c.DictEntry, c.DictEntryI18n, c.DictType, c.GpuDeleteAcceptance,
-		c.GpuUsageSync, c.InternalMessage, c.InternalMessageCategory,
-		c.InternalMessageRecipient, c.Language, c.LoginAuditLog, c.LoginPolicy,
-		c.Membership, c.MembershipOrgUnit, c.MembershipPosition, c.MembershipRole,
-		c.Menu, c.ModelDevAcceptance, c.NotificationChannel, c.OperationAuditLog,
-		c.OrgUnit, c.Permission, c.PermissionApi, c.PermissionAuditLog,
-		c.PermissionGroup, c.PermissionMenu, c.PermissionPolicy, c.Plan, c.PlanModule,
-		c.PlanQuota, c.PolicyEvaluationLog, c.Position, c.QuotaAccount, c.QuotaCharge,
-		c.QuotaDefinition, c.QuotaOperation, c.QuotaReleaseReceipt, c.Role,
-		c.RoleFieldPermission, c.RoleMetadata, c.RoleOrgUnit, c.RolePermission,
-		c.SysConfig, c.Task, c.Tenant, c.User, c.UserCredential, c.UserMfaFactor,
-		c.UserOrgUnit, c.UserPosition, c.UserRole,
+		c.InternalMessage, c.InternalMessageCategory, c.InternalMessageRecipient,
+		c.Language, c.LoginAuditLog, c.LoginPolicy, c.Membership, c.MembershipOrgUnit,
+		c.MembershipPosition, c.MembershipRole, c.Menu, c.ModelDevAcceptance,
+		c.NotificationChannel, c.OperationAuditLog, c.OrgUnit, c.Permission,
+		c.PermissionApi, c.PermissionAuditLog, c.PermissionGroup, c.PermissionMenu,
+		c.PermissionPolicy, c.Plan, c.PlanModule, c.PlanQuota, c.PolicyEvaluationLog,
+		c.Position, c.QuotaAccount, c.QuotaCharge, c.QuotaDefinition, c.QuotaOperation,
+		c.QuotaReleaseReceipt, c.Role, c.RoleFieldPermission, c.RoleMetadata,
+		c.RoleOrgUnit, c.RolePermission, c.SysConfig, c.Task, c.Tenant, c.User,
+		c.UserCredential, c.UserMfaFactor, c.UserOrgUnit, c.UserPosition, c.UserRole,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -565,8 +557,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.DictType.mutate(ctx, m)
 	case *GpuDeleteAcceptanceMutation:
 		return c.GpuDeleteAcceptance.mutate(ctx, m)
-	case *GpuUsageSyncMutation:
-		return c.GpuUsageSync.mutate(ctx, m)
 	case *InternalMessageMutation:
 		return c.InternalMessage.mutate(ctx, m)
 	case *InternalMessageCategoryMutation:
@@ -1928,140 +1918,6 @@ func (c *GpuDeleteAcceptanceClient) mutate(ctx context.Context, m *GpuDeleteAcce
 		return (&GpuDeleteAcceptanceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown GpuDeleteAcceptance mutation op: %q", m.Op())
-	}
-}
-
-// GpuUsageSyncClient is a client for the GpuUsageSync schema.
-type GpuUsageSyncClient struct {
-	config
-}
-
-// NewGpuUsageSyncClient returns a client for the GpuUsageSync from the given config.
-func NewGpuUsageSyncClient(c config) *GpuUsageSyncClient {
-	return &GpuUsageSyncClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `gpuusagesync.Hooks(f(g(h())))`.
-func (c *GpuUsageSyncClient) Use(hooks ...Hook) {
-	c.hooks.GpuUsageSync = append(c.hooks.GpuUsageSync, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `gpuusagesync.Intercept(f(g(h())))`.
-func (c *GpuUsageSyncClient) Intercept(interceptors ...Interceptor) {
-	c.inters.GpuUsageSync = append(c.inters.GpuUsageSync, interceptors...)
-}
-
-// Create returns a builder for creating a GpuUsageSync entity.
-func (c *GpuUsageSyncClient) Create() *GpuUsageSyncCreate {
-	mutation := newGpuUsageSyncMutation(c.config, OpCreate)
-	return &GpuUsageSyncCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of GpuUsageSync entities.
-func (c *GpuUsageSyncClient) CreateBulk(builders ...*GpuUsageSyncCreate) *GpuUsageSyncCreateBulk {
-	return &GpuUsageSyncCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *GpuUsageSyncClient) MapCreateBulk(slice any, setFunc func(*GpuUsageSyncCreate, int)) *GpuUsageSyncCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &GpuUsageSyncCreateBulk{err: fmt.Errorf("calling to GpuUsageSyncClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*GpuUsageSyncCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &GpuUsageSyncCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for GpuUsageSync.
-func (c *GpuUsageSyncClient) Update() *GpuUsageSyncUpdate {
-	mutation := newGpuUsageSyncMutation(c.config, OpUpdate)
-	return &GpuUsageSyncUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *GpuUsageSyncClient) UpdateOne(_m *GpuUsageSync) *GpuUsageSyncUpdateOne {
-	mutation := newGpuUsageSyncMutation(c.config, OpUpdateOne, withGpuUsageSync(_m))
-	return &GpuUsageSyncUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *GpuUsageSyncClient) UpdateOneID(id uint32) *GpuUsageSyncUpdateOne {
-	mutation := newGpuUsageSyncMutation(c.config, OpUpdateOne, withGpuUsageSyncID(id))
-	return &GpuUsageSyncUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for GpuUsageSync.
-func (c *GpuUsageSyncClient) Delete() *GpuUsageSyncDelete {
-	mutation := newGpuUsageSyncMutation(c.config, OpDelete)
-	return &GpuUsageSyncDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *GpuUsageSyncClient) DeleteOne(_m *GpuUsageSync) *GpuUsageSyncDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *GpuUsageSyncClient) DeleteOneID(id uint32) *GpuUsageSyncDeleteOne {
-	builder := c.Delete().Where(gpuusagesync.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &GpuUsageSyncDeleteOne{builder}
-}
-
-// Query returns a query builder for GpuUsageSync.
-func (c *GpuUsageSyncClient) Query() *GpuUsageSyncQuery {
-	return &GpuUsageSyncQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeGpuUsageSync},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a GpuUsageSync entity by its id.
-func (c *GpuUsageSyncClient) Get(ctx context.Context, id uint32) (*GpuUsageSync, error) {
-	return c.Query().Where(gpuusagesync.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *GpuUsageSyncClient) GetX(ctx context.Context, id uint32) *GpuUsageSync {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *GpuUsageSyncClient) Hooks() []Hook {
-	hooks := c.hooks.GpuUsageSync
-	return append(hooks[:len(hooks):len(hooks)], gpuusagesync.Hooks[:]...)
-}
-
-// Interceptors returns the client interceptors.
-func (c *GpuUsageSyncClient) Interceptors() []Interceptor {
-	return c.inters.GpuUsageSync
-}
-
-func (c *GpuUsageSyncClient) mutate(ctx context.Context, m *GpuUsageSyncMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&GpuUsageSyncCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&GpuUsageSyncUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&GpuUsageSyncUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&GpuUsageSyncDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown GpuUsageSync mutation op: %q", m.Op())
 	}
 }
 
@@ -8277,28 +8133,28 @@ func (c *UserRoleClient) mutate(ctx context.Context, m *UserRoleMutation) (Value
 type (
 	hooks struct {
 		AccessKey, AccessKeyIdempotency, Api, ApiAuditLog, DataAccessAuditLog,
-		DictEntry, DictEntryI18n, DictType, GpuDeleteAcceptance, GpuUsageSync,
-		InternalMessage, InternalMessageCategory, InternalMessageRecipient, Language,
-		LoginAuditLog, LoginPolicy, Membership, MembershipOrgUnit, MembershipPosition,
-		MembershipRole, Menu, ModelDevAcceptance, NotificationChannel,
-		OperationAuditLog, OrgUnit, Permission, PermissionApi, PermissionAuditLog,
-		PermissionGroup, PermissionMenu, PermissionPolicy, Plan, PlanModule, PlanQuota,
-		PolicyEvaluationLog, Position, QuotaAccount, QuotaCharge, QuotaDefinition,
-		QuotaOperation, QuotaReleaseReceipt, Role, RoleFieldPermission, RoleMetadata,
-		RoleOrgUnit, RolePermission, SysConfig, Task, Tenant, User, UserCredential,
-		UserMfaFactor, UserOrgUnit, UserPosition, UserRole []ent.Hook
+		DictEntry, DictEntryI18n, DictType, GpuDeleteAcceptance, InternalMessage,
+		InternalMessageCategory, InternalMessageRecipient, Language, LoginAuditLog,
+		LoginPolicy, Membership, MembershipOrgUnit, MembershipPosition, MembershipRole,
+		Menu, ModelDevAcceptance, NotificationChannel, OperationAuditLog, OrgUnit,
+		Permission, PermissionApi, PermissionAuditLog, PermissionGroup, PermissionMenu,
+		PermissionPolicy, Plan, PlanModule, PlanQuota, PolicyEvaluationLog, Position,
+		QuotaAccount, QuotaCharge, QuotaDefinition, QuotaOperation,
+		QuotaReleaseReceipt, Role, RoleFieldPermission, RoleMetadata, RoleOrgUnit,
+		RolePermission, SysConfig, Task, Tenant, User, UserCredential, UserMfaFactor,
+		UserOrgUnit, UserPosition, UserRole []ent.Hook
 	}
 	inters struct {
 		AccessKey, AccessKeyIdempotency, Api, ApiAuditLog, DataAccessAuditLog,
-		DictEntry, DictEntryI18n, DictType, GpuDeleteAcceptance, GpuUsageSync,
-		InternalMessage, InternalMessageCategory, InternalMessageRecipient, Language,
-		LoginAuditLog, LoginPolicy, Membership, MembershipOrgUnit, MembershipPosition,
-		MembershipRole, Menu, ModelDevAcceptance, NotificationChannel,
-		OperationAuditLog, OrgUnit, Permission, PermissionApi, PermissionAuditLog,
-		PermissionGroup, PermissionMenu, PermissionPolicy, Plan, PlanModule, PlanQuota,
-		PolicyEvaluationLog, Position, QuotaAccount, QuotaCharge, QuotaDefinition,
-		QuotaOperation, QuotaReleaseReceipt, Role, RoleFieldPermission, RoleMetadata,
-		RoleOrgUnit, RolePermission, SysConfig, Task, Tenant, User, UserCredential,
-		UserMfaFactor, UserOrgUnit, UserPosition, UserRole []ent.Interceptor
+		DictEntry, DictEntryI18n, DictType, GpuDeleteAcceptance, InternalMessage,
+		InternalMessageCategory, InternalMessageRecipient, Language, LoginAuditLog,
+		LoginPolicy, Membership, MembershipOrgUnit, MembershipPosition, MembershipRole,
+		Menu, ModelDevAcceptance, NotificationChannel, OperationAuditLog, OrgUnit,
+		Permission, PermissionApi, PermissionAuditLog, PermissionGroup, PermissionMenu,
+		PermissionPolicy, Plan, PlanModule, PlanQuota, PolicyEvaluationLog, Position,
+		QuotaAccount, QuotaCharge, QuotaDefinition, QuotaOperation,
+		QuotaReleaseReceipt, Role, RoleFieldPermission, RoleMetadata, RoleOrgUnit,
+		RolePermission, SysConfig, Task, Tenant, User, UserCredential, UserMfaFactor,
+		UserOrgUnit, UserPosition, UserRole []ent.Interceptor
 	}
 )

@@ -14,45 +14,6 @@ info:
         url: https://github.com/tx7do/go-wind-admin/blob/master/LICENSE
     version: "1.0"
 paths:
-    /api/v1/accelerator/admission-preview:
-        post:
-            tags:
-                - AcceleratorService
-            operationId: AcceleratorService_AdmissionPreview
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/AcceleratorPreviewRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorPreview'
-    /api/v1/accelerator/capacity:
-        get:
-            tags:
-                - AcceleratorService
-            operationId: AcceleratorService_GetCapacity
-            parameters:
-                - name: profile_id
-                  in: query
-                  schema:
-                    type: string
-                - name: profile_version
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorCapacity'
     /api/v1/accelerator/profiles:
         get:
             tags:
@@ -113,183 +74,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorProfile'
-    /api/v1/accelerator/usages:
-        get:
-            tags:
-                - AcceleratorService
-            operationId: AcceleratorService_ListGpuUsages
-            parameters:
-                - name: page_size
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: page_token
-                  in: query
-                  schema:
-                    type: string
-                - name: cluster_id
-                  in: query
-                  schema:
-                    type: string
-                - name: owner_service
-                  in: query
-                  schema:
-                    type: string
-                - name: mode
-                  in: query
-                  schema:
-                    type: string
-                - name: state
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorUsages'
-    /api/v1/accelerator/usages/{owner_service}/{resource_id}:
-        get:
-            tags:
-                - AcceleratorService
-            operationId: AcceleratorService_GetGpuUsage
-            parameters:
-                - name: owner_service
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                - name: resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                - name: page_size
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: page_token
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorUsage'
-    /api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings:
-        get:
-            tags:
-                - AcceleratorService
-            operationId: AcceleratorService_ListBindings
-            parameters:
-                - name: owner_service
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                - name: resource_id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                - name: page_size
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: page_token
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorBindings'
-    /api/v1/admin/accelerator/bindings:
-        get:
-            tags:
-                - AcceleratorAdminService
-            operationId: AcceleratorAdminService_AdminListBindings
-            parameters:
-                - name: page_size
-                  in: query
-                  schema:
-                    type: integer
-                    format: uint32
-                - name: page_token
-                  in: query
-                  schema:
-                    type: string
-                - name: cluster_id
-                  in: query
-                  schema:
-                    type: string
-                - name: pool_id
-                  in: query
-                  schema:
-                    type: string
-                - name: group_id
-                  in: query
-                  schema:
-                    type: string
-                - name: physical_device_id
-                  in: query
-                  schema:
-                    type: string
-                - name: owner_service
-                  in: query
-                  schema:
-                    type: string
-                - name: mode
-                  in: query
-                  schema:
-                    type: string
-                - name: state
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorAdminBindings'
-    /api/v1/admin/accelerator/capacity:
-        get:
-            tags:
-                - AcceleratorAdminService
-            operationId: AcceleratorAdminService_AdminGetCapacity
-            parameters:
-                - name: profile_id
-                  in: query
-                  schema:
-                    type: string
-                - name: profile_version
-                  in: query
-                  schema:
-                    type: string
-                - name: include_devices
-                  in: query
-                  schema:
-                    type: boolean
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AcceleratorCapacity'
     /api/v1/admin/accelerator/clusters:
         get:
             tags:
@@ -423,6 +207,10 @@ paths:
                   schema:
                     type: integer
                     format: uint32
+                - name: connection_ref
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -435,6 +223,11 @@ paths:
             tags:
                 - AcceleratorAdminService
             operationId: AcceleratorAdminService_GetInitialization
+            parameters:
+                - name: connection_ref
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -636,6 +429,32 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorProfile'
+    /api/v1/admin/accelerator/profiles/{profile_id}/capacity:
+        get:
+            tags:
+                - AcceleratorCapacityAdminService
+            operationId: AcceleratorCapacityAdminService_GetProfileCapacity
+            parameters:
+                - name: profile_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: profile_version
+                  in: query
+                  schema:
+                    type: string
+                - name: include_details
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorProfileCapacity'
     /api/v1/admin/accelerator/profiles/{profile_id}:delete:
         post:
             tags:
@@ -756,6 +575,28 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/AcceleratorSupplies'
+    /api/v1/admin/accelerator/supply-groups/{group_id}/capacity:
+        get:
+            tags:
+                - AcceleratorCapacityAdminService
+            operationId: AcceleratorCapacityAdminService_GetSupplyGroupCapacity
+            parameters:
+                - name: group_id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: include_details
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceleratorSupplyGroupCapacity'
     /api/v1/admin/accelerator/supply-groups/{group_id}:set-admission:
         post:
             tags:
@@ -14838,40 +14679,6 @@ components:
                     type: object
                     additionalProperties:
                         type: string
-        AcceleratorAdminBinding:
-            type: object
-            properties:
-                binding:
-                    $ref: '#/components/schemas/AcceleratorBinding'
-                physical_device_id:
-                    type: string
-                cluster_id:
-                    type: string
-                pod_namespace:
-                    type: string
-                pod_name:
-                    type: string
-                pod_uid:
-                    type: string
-                evidence_ref:
-                    type: string
-                tenant_id:
-                    type: string
-                owner_service:
-                    type: string
-                resource_id:
-                    type: string
-        AcceleratorAdminBindings:
-            type: object
-            properties:
-                items:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/AcceleratorAdminBinding'
-                next_page_token:
-                    type: string
-                observation:
-                    $ref: '#/components/schemas/AcceleratorObservation'
         AcceleratorBaseline:
             type: object
             properties:
@@ -14879,95 +14686,66 @@ components:
                     type: string
                 adapter_id:
                     type: string
-                volcano_version:
-                    type: string
-                volcano_image_digest:
-                    type: string
-                device_plugin_version:
-                    type: string
-                device_plugin_image_digest:
-                    type: string
-                hami_core_revision:
-                    type: string
                 memory_block_mib:
                     type: integer
                     format: uint32
-                memory_encoding:
-                    type: string
                 split_count:
-                    type: integer
-                    format: uint32
-                memory_scale_percent:
-                    type: integer
-                    format: uint32
-                core_scale_percent:
                     type: integer
                     format: uint32
                 core_budget_additive:
                     type: boolean
-                node_config_digest:
-                    type: string
-                scheduler_config_digest:
-                    type: string
-                recipe_version:
-                    type: string
-                baseline_digest:
-                    type: string
                 runtime_class_name:
                     type: string
-        AcceleratorBinding:
-            type: object
-            properties:
-                binding_id:
-                    type: string
-                container_name:
-                    type: string
-                state:
-                    type: string
-                memory_mib:
-                    type: string
-                core_limit_percent:
-                    type: integer
-                    format: uint32
-                observation:
-                    $ref: '#/components/schemas/AcceleratorObservation'
-            description: Tenant view has no physical/Pod IDs, source evidence, raw watermarks or plans.
-        AcceleratorBindings:
-            type: object
-            properties:
-                items:
+                resource_types:
                     type: array
                     items:
-                        $ref: '#/components/schemas/AcceleratorBinding'
-                next_page_token:
-                    type: string
-                observation:
-                    $ref: '#/components/schemas/AcceleratorObservation'
-        AcceleratorCapacity:
+                        $ref: '#/components/schemas/AcceleratorResourceTypeConfig'
+        AcceleratorCapacityDetail:
             type: object
             properties:
-                profile_id:
+                node_uid:
                     type: string
-                profile_version:
+                node_name:
                     type: string
-                mode:
+                device_uid:
                     type: string
-                physical_device_count:
-                    type: string
+                totals:
+                    $ref: '#/components/schemas/AcceleratorCapacityTotals'
                 nominal_units:
+                    nullable: true
                     type: string
-                known_committed_units:
+                    format: int64
+                estimated_available_units:
+                    nullable: true
                     type: string
-                known_free_units:
+                    format: int64
+        AcceleratorCapacityTotals:
+            type: object
+            properties:
+                total_units:
+                    nullable: true
                     type: string
-                unplaced_requested_units:
+                    format: int64
+                allocated_units:
+                    nullable: true
                     type: string
-                observation:
-                    $ref: '#/components/schemas/AcceleratorObservation'
-                devices:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/AcceleratorDeviceCapacity'
+                    format: int64
+                unallocated_units:
+                    nullable: true
+                    type: string
+                    format: int64
+                total_memory_mib:
+                    nullable: true
+                    type: string
+                    format: int64
+                allocated_memory_mib:
+                    nullable: true
+                    type: string
+                    format: int64
+                unallocated_memory_mib:
+                    nullable: true
+                    type: string
+                    format: int64
         AcceleratorCluster:
             type: object
             properties:
@@ -14999,37 +14777,32 @@ components:
                     type: string
                 node:
                     $ref: '#/components/schemas/AcceleratorNode'
-                vendor_device_id:
-                    type: string
                 model_key:
-                    type: string
-                physical_memory_bytes:
                     type: string
                 health:
                     type: string
                 observation:
                     $ref: '#/components/schemas/AcceleratorObservation'
-        AcceleratorDeviceCapacity:
-            type: object
-            properties:
-                device_id:
+                device_uid:
                     type: string
-                nominal_units:
+                parent_device_uid:
                     type: string
-                known_committed_units:
+                device_kind:
                     type: string
-                known_free_units:
+                memory_capacity_bytes:
+                    nullable: true
                     type: string
-                safe_memory_budget_mib:
+                    format: uint64
+                compute_units:
+                    nullable: true
+                    type: integer
+                    format: uint32
+                pci_bdf:
                     type: string
-                committed_memory_mib:
+                adapter_id:
                     type: string
-                complete:
-                    type: boolean
-                issues:
-                    type: array
-                    items:
-                        type: string
+                resource_key:
+                    type: string
         AcceleratorDevices:
             type: object
             properties:
@@ -15039,28 +14812,6 @@ components:
                         $ref: '#/components/schemas/AcceleratorDevice'
                 next_page_token:
                     type: string
-        AcceleratorDiscoveredBaseline:
-            type: object
-            properties:
-                baseline_ref:
-                    type: string
-                mode:
-                    type: string
-                source:
-                    type: string
-        AcceleratorDiscoveredGPU:
-            type: object
-            properties:
-                uuid:
-                    type: string
-                model_key:
-                    type: string
-                physical_memory_bytes:
-                    type: string
-                safe_memory_budget_mib:
-                    type: string
-                budget_reason:
-                    type: string
         AcceleratorDiscoveredNode:
             type: object
             properties:
@@ -15068,20 +14819,20 @@ components:
                     $ref: '#/components/schemas/AcceleratorNode'
                 group_id:
                     type: string
-                gpus:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/AcceleratorDiscoveredGPU'
-                baselines:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/AcceleratorDiscoveredBaseline'
                 selectable:
                     type: boolean
                 blocking_reasons:
                     type: array
                     items:
                         type: string
+                devices:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDevice'
+                provider_configs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorDiscoveredProviderConfig'
         AcceleratorDiscoveredNodes:
             type: object
             properties:
@@ -15093,25 +14844,17 @@ components:
                     type: string
                 discovery_revision:
                     type: string
-        AcceleratorGpuRequest:
+        AcceleratorDiscoveredProviderConfig:
             type: object
             properties:
-                cluster_id:
+                provider_config_ref:
                     type: string
-                pool_id:
+                adapter_id:
                     type: string
-                profile_id:
-                    type: string
-                profile_version:
-                    type: string
-                replicas:
-                    type: integer
-                    format: uint32
-                devices_per_replica:
-                    type: integer
-                    format: uint32
-                container_name:
-                    type: string
+                allocation_types:
+                    type: array
+                    items:
+                        type: string
         AcceleratorInitialization:
             type: object
             properties:
@@ -15184,7 +14927,7 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/AcceleratorNode'
-                baseline_ref:
+                provider_config_ref:
                     type: string
                 queue_name:
                     type: string
@@ -15267,6 +15010,13 @@ components:
                 max_devices_per_replica:
                     type: integer
                     format: uint32
+                allocation_type:
+                    type: string
+                resource_key:
+                    type: string
+                compute_units_per_device:
+                    type: integer
+                    format: uint32
         AcceleratorInitializationProfileResult:
             type: object
             properties:
@@ -15333,42 +15083,6 @@ components:
                         $ref: '#/components/schemas/AcceleratorPool'
                 next_page_token:
                     type: string
-        AcceleratorPreview:
-            type: object
-            properties:
-                requested_quota_items:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/GpuPreviewQuotaItem'
-                quota_checks:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/GpuPreviewQuotaCheck'
-                gpu_fit:
-                    type: string
-                estimated_replicas:
-                    type: string
-                estimate_known:
-                    type: boolean
-                observation:
-                    $ref: '#/components/schemas/AcceleratorObservation'
-                owner_execution_readiness:
-                    type: string
-                cpu:
-                    type: string
-                network:
-                    type: string
-                storage:
-                    type: string
-                reasons:
-                    type: array
-                    items:
-                        type: string
-        AcceleratorPreviewRequest:
-            type: object
-            properties:
-                data:
-                    $ref: '#/components/schemas/AcceleratorGpuRequest'
         AcceleratorProfile:
             type: object
             properties:
@@ -15384,6 +15098,42 @@ components:
                     type: string
                 revision:
                     type: string
+        AcceleratorProfileCapacity:
+            type: object
+            properties:
+                profile_id:
+                    type: string
+                profile_version:
+                    type: string
+                    format: uint64
+                allocation_type:
+                    type: string
+                resource_key:
+                    type: string
+                basis:
+                    type: string
+                granularity:
+                    type: string
+                nominal_units:
+                    nullable: true
+                    type: string
+                    format: int64
+                estimated_available_units:
+                    nullable: true
+                    type: string
+                    format: int64
+                totals:
+                    $ref: '#/components/schemas/AcceleratorCapacityTotals'
+                details:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorCapacityDetail'
+                observed_at:
+                    type: string
+                missing_fields:
+                    type: array
+                    items:
+                        type: string
         AcceleratorProfilePreview:
             type: object
             properties:
@@ -15413,6 +15163,13 @@ components:
                     format: uint32
                 isolation_class:
                     type: string
+                allocation_type:
+                    type: string
+                resource_key:
+                    type: string
+                compute_units_per_device:
+                    type: integer
+                    format: uint32
         AcceleratorProfiles:
             type: object
             properties:
@@ -15421,6 +15178,46 @@ components:
                     items:
                         $ref: '#/components/schemas/AcceleratorProfile'
                 next_page_token:
+                    type: string
+        AcceleratorResourceTypeCapacity:
+            type: object
+            properties:
+                allocation_type:
+                    type: string
+                resource_key:
+                    type: string
+                basis:
+                    type: string
+                granularity:
+                    type: string
+                totals:
+                    $ref: '#/components/schemas/AcceleratorCapacityTotals'
+                details:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AcceleratorCapacityDetail'
+                observed_at:
+                    type: string
+                missing_fields:
+                    type: array
+                    items:
+                        type: string
+        AcceleratorResourceTypeConfig:
+            type: object
+            properties:
+                allocation_type:
+                    type: string
+                resource_key:
+                    type: string
+                memory_capacity_bytes:
+                    type: string
+                compute_units_per_device:
+                    type: integer
+                    format: uint32
+                max_devices_per_replica:
+                    type: integer
+                    format: uint32
+                max_memory_mib_per_device:
                     type: string
         AcceleratorSupplies:
             type: object
@@ -15442,8 +15239,6 @@ components:
                     type: string
                 display_name:
                     type: string
-                mode:
-                    type: string
                 nodes:
                     type: array
                     items:
@@ -15460,35 +15255,20 @@ components:
                     type: string
                 adopted_at:
                     type: string
-        AcceleratorUsage:
+        AcceleratorSupplyGroupCapacity:
             type: object
             properties:
-                owner_service:
+                group_id:
                     type: string
-                resource_id:
+                physical_device_count:
+                    nullable: true
                     type: string
-                create_operation_id:
-                    type: string
-                revision:
-                    type: string
-                state:
-                    type: string
-                end_reason:
-                    type: string
-                profile_id:
-                    type: string
-                profile_version:
-                    type: string
-                source_operation_created_at:
-                    type: string
-        AcceleratorUsages:
-            type: object
-            properties:
-                items:
+                    format: int64
+                resource_types:
                     type: array
                     items:
-                        $ref: '#/components/schemas/AcceleratorUsage'
-                next_page_token:
+                        $ref: '#/components/schemas/AcceleratorResourceTypeCapacity'
+                observed_at:
                     type: string
         AcceptInvitationRequest:
             type: object
@@ -15574,8 +15354,6 @@ components:
                 display_name:
                     type: string
                 pool_id:
-                    type: string
-                mode:
                     type: string
                 nodes:
                     type: array
@@ -16553,6 +16331,8 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/AcceleratorInitializationProfileInput'
+                connection_ref:
+                    type: string
         CreateAcceleratorInitializationRequest:
             type: object
             properties:
@@ -19540,26 +19320,6 @@ components:
                 sampleTimeMax:
                     type: string
                     format: date-time
-        GpuPreviewQuotaCheck:
-            type: object
-            properties:
-                quota_code:
-                    type: string
-                requested:
-                    type: string
-                available:
-                    type: string
-                sufficient:
-                    type: boolean
-                status:
-                    type: string
-        GpuPreviewQuotaItem:
-            type: object
-            properties:
-                quota_code:
-                    type: string
-                units:
-                    type: string
         GpuQuality:
             type: object
             properties:
@@ -19748,28 +19508,18 @@ components:
                 core_limit_percent:
                     type: integer
                     format: uint32
-        GpuTenantCurrentAllocation:
-            type: object
-            properties:
-                memoryMiB:
-                    nullable: true
+                allocation_type:
                     type: string
-                    description: |-
-                        Trusted ACTIVE binding commitments from ACC; never actual usage or quota.
-                         Exact decimal MiB. Absent unless the allocation scan is complete.
-                bindingCount:
-                    nullable: true
+                resource_key:
                     type: string
-                knownMemoryMiB:
-                    nullable: true
+                compute_units_per_device:
+                    type: integer
+                    format: uint32
+                adapter_id:
                     type: string
-                    description: Known verified part, including when unknown ownership prevents a total.
-                knownBindingCount:
-                    nullable: true
+                profile_name:
                     type: string
-                status:
-                    type: string
-                reason:
+                spec_digest:
                     type: string
         GpuTenantCurrentSummary:
             type: object
@@ -19790,8 +19540,10 @@ components:
                 usageReason:
                     type: string
                     description: Stable public code only; never a dependency error message or runtime ID.
-                allocation:
-                    $ref: '#/components/schemas/GpuTenantCurrentAllocation'
+                observation_basis:
+                    type: string
+                owner_scope:
+                    type: string
         GpuTenantQueryRequest:
             type: object
             properties:
@@ -28672,6 +28424,8 @@ tags:
       description: |-
         Governance requires a JWT platform user and current role permission.
          Accelerator validates the service RPC and its provider-managed cluster scope.
+    - name: AcceleratorCapacityAdminService
+      description: Custom HTTP registration preserves optional integer presence as explicit null.
     - name: AcceleratorService
       description: |-
         Governance requires a JWT tenant user, active tenant, ACCELERATOR plan module

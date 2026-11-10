@@ -22,13 +22,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/proto"
 )
 
 type acceleratorIdentityServer struct {
 	acc.UnimplementedAcceleratorAdminServiceServer
 	acc.UnimplementedAcceleratorCatalogServiceServer
-	acc.UnimplementedAcceleratorUsageServiceServer
 	t        *testing.T
 	received chan metadata.MD
 }
@@ -64,12 +62,6 @@ func (s *acceleratorIdentityServer) ListProfiles(ctx context.Context, r *acc.Lis
 	s.received <- md
 	return &acc.ListProfilesResponse{NextToken: r.Page.Token}, nil
 }
-func (s *acceleratorIdentityServer) SyncGpuUsage(ctx context.Context, r *acc.SyncGpuUsageRequest) (*acc.SyncGpuUsageResponse, error) {
-	md, _ := metadata.FromIncomingContext(ctx)
-	s.received <- md
-	return &acc.SyncGpuUsageResponse{Ref: r.Projection.Ref, AppliedRevision: r.Projection.Revision}, nil
-}
-
 func TestAcceleratorMTLSIdentityAndDelegation(t *testing.T) {
 	dir := t.TempDir()
 	caPub, caKey, e := ed25519.GenerateKey(rand.Reader)
@@ -154,7 +146,6 @@ func TestAcceleratorMTLSIdentityAndDelegation(t *testing.T) {
 	srv := grpc.NewServer(grpc.Creds(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{serverCert}, ClientCAs: roots, ClientAuth: tls.RequireAndVerifyClientCert})))
 	impl := &acceleratorIdentityServer{t: t, received: make(chan metadata.MD, 4)}
 	acc.RegisterAcceleratorCatalogServiceServer(srv, impl)
-	acc.RegisterAcceleratorUsageServiceServer(srv, impl)
 	acc.RegisterAcceleratorAdminServiceServer(srv, impl)
 	go srv.Serve(listener)
 	t.Cleanup(srv.Stop)
@@ -184,26 +175,20 @@ func TestAcceleratorMTLSIdentityAndDelegation(t *testing.T) {
 	if len(md.Get("authorization")) != 0 {
 		t.Fatal("bearer credential forwarded")
 	}
-	ref := &acc.GpuUsageRef{TenantId: tenant, OwnerService: "ani-resource-service", ResourceId: uuid.NewString(), CreateOperationId: uuid.NewString()}
-	ack, e := client.SyncGpuUsage(ctx, &acc.SyncGpuUsageRequest{RequestId: uuid.NewString(), Projection: &acc.GpuUsageProjection{Ref: ref, Revision: 1}})
-	if e != nil {
-		t.Fatal(e)
-	}
-	if !proto.Equal(ack.Ref, ref) {
-		t.Fatal("sync ref changed")
-	}
-	md = <-impl.received
-	for _, key := range []string{"authorization", "x-ani-action", "x-ani-tenant-id", "x-ani-actor-type", "x-ani-actor-id"} {
-		if len(md.Get(key)) != 0 {
-			t.Fatalf("sync received delegated %s", key)
-		}
-	}
 	adminRead := &acc.AdminRead{RequestId: uuid.NewString(), Actor: &acc.Actor{Type: "user", Id: "42"}}
 	mutation := &acc.AdminMutation{Context: adminRead, IdempotencyKey: uuid.NewString()}
 	for _, call := range []struct {
 		action string
 		invoke func() error
 	}{
+		{"GetProfileCapacity", func() error {
+			_, err := client.Admin.GetProfileCapacity(ctx, &acc.GetProfileCapacityRequest{Context: adminRead, ProfileId: uuid.NewString(), ProfileVersion: 1})
+			return err
+		}},
+		{"GetSupplyGroupCapacity", func() error {
+			_, err := client.Admin.GetSupplyGroupCapacity(ctx, &acc.GetSupplyGroupCapacityRequest{Context: adminRead, GroupId: uuid.NewString()})
+			return err
+		}},
 		{"GetInitialization", func() error {
 			_, err := client.Admin.GetInitialization(ctx, &acc.GetInitializationRequest{Context: adminRead})
 			return err
@@ -358,6 +343,34 @@ func TestAcceleratorDelegationRequiresRegisteredFullMethod(t *testing.T) {
 	} {
 		if _, err := acceleratorMetadata(method, request); err == nil {
 			t.Fatalf("retired GPU scope method admitted: %s", method)
+		}
+	}
+}
+
+func (s *acceleratorIdentityServer) GetProfileCapacity(ctx context.Context, r *acc.GetProfileCapacityRequest) (*acc.ProfileCapacity, error) {
+	md, _ := metadata.FromIncomingContext(ctx)
+	s.received <- md
+	return &acc.ProfileCapacity{ProfileId: r.ProfileId, ProfileVersion: r.ProfileVersion}, nil
+}
+func (s *acceleratorIdentityServer) GetSupplyGroupCapacity(ctx context.Context, r *acc.GetSupplyGroupCapacityRequest) (*acc.SupplyGroupCapacity, error) {
+	md, _ := metadata.FromIncomingContext(ctx)
+	s.received <- md
+	return &acc.SupplyGroupCapacity{GroupId: r.GroupId}, nil
+}
+func TestAcceleratorCapacityDelegationAndRetiredMethods(t *testing.T) {
+	read := &acc.AdminRead{RequestId: uuid.NewString(), Actor: &acc.Actor{Type: "user", Id: "42"}}
+	for _, tc := range []struct {
+		method  string
+		request any
+	}{{acc.AcceleratorAdminService_GetProfileCapacity_FullMethodName, &acc.GetProfileCapacityRequest{Context: read, ProfileId: uuid.NewString(), ProfileVersion: 1}}, {acc.AcceleratorAdminService_GetSupplyGroupCapacity_FullMethodName, &acc.GetSupplyGroupCapacityRequest{Context: read, GroupId: uuid.NewString()}}} {
+		md, err := acceleratorMetadata(tc.method, tc.request)
+		if err != nil || len(md.Get("x-ani-tenant-id")) != 0 || len(md.Get("x-ani-actor-id")) != 1 || md.Get("x-ani-actor-id")[0] != "42" {
+			t.Fatal(md, err)
+		}
+	}
+	for _, method := range []string{"/accelerator.v1.AcceleratorAdminService/AdminGetCapacity", "/accelerator.v1.AcceleratorAdminService/AdminListBindings", "/accelerator.v1.AcceleratorCatalogService/GetCapacity", "/accelerator.v1.AcceleratorCatalogService/CheckGpuFit", "/accelerator.v1.AcceleratorUsageService/SyncGpuUsage", "/accelerator.v1.AcceleratorUsageService/GetGpuUsage", "/accelerator.v1.AcceleratorUsageService/ListBindings"} {
+		if _, err := acceleratorMetadata(method, &acc.GetProfileCapacityRequest{Context: read}); err == nil {
+			t.Fatalf("retired RPC still delegated: %s", method)
 		}
 	}
 }

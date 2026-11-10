@@ -56,7 +56,7 @@ func (r *QuotaAdapterRegistry) GPUExecutionEnabled(owner string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	for _, b := range adapterGpuBindings(r.byOwner[owner]) {
-		if supportedGpuOwner(owner) && b.CreateAction() != "" && b.DeleteAction() != "" && b.CreateAction() != b.DeleteAction() && r.gpuActionsOwnedBy(b) {
+		if owner == InstanceOwner && b.CreateAction() != "" && b.DeleteAction() != "" && b.CreateAction() != b.DeleteAction() && r.gpuActionsOwnedBy(b) {
 			return true
 		}
 	}
@@ -88,7 +88,7 @@ func (r *QuotaAdapterRegistry) EnforcesQuota(code string) bool {
 	defer r.mu.RUnlock()
 	for owner, adapter := range r.byOwner {
 		for _, b := range adapterGpuBindings(adapter) {
-			if !supportedGpuOwner(owner) || b.CreateAction() == "" || b.DeleteAction() == "" || b.CreateAction() == b.DeleteAction() || !r.gpuActionsOwnedBy(b) {
+			if owner != InstanceOwner || b.CreateAction() == "" || b.DeleteAction() == "" || b.CreateAction() == b.DeleteAction() || !r.gpuActionsOwnedBy(b) {
 				continue
 			}
 			for _, supported := range b.GpuQuotaCodes() {
@@ -197,7 +197,7 @@ func (s *GpuAcceptance) AcceptGpuCreate(ctx context.Context, key string, gpu *ac
 		}
 		return nil, kratoserrors.ServiceUnavailable(reason, "new resource admission is disabled")
 	}
-	if !s.registry.GPUExecutionEnabled(s.binding.OwnerService()) || s.registry.Lookup(s.binding.OwnerService(), s.binding.CreateAction()) == nil {
+	if s.registry.Lookup(s.binding.OwnerService(), s.binding.CreateAction()) == nil || s.registry.Lookup(s.binding.OwnerService(), s.binding.DeleteAction()) == nil {
 		return nil, quotapb.ErrorQuotaAdapterUnavailable("%s", "GPU business owner is not enabled")
 	}
 	binding, ok := s.binding.(managedBusinessPreparer)
@@ -374,10 +374,10 @@ func (s *GpuAcceptance) acceptGpuDeleteWithReplay(ctx context.Context, key, reso
 }
 
 // ResolveGpuUsageRef always starts with this tenant's immutable original row.
-func (s *GpuAcceptance) ResolveGpuUsageRef(ctx context.Context, tenant uint32, owner, resource string) (*acc.GpuUsageRef, error) {
+func (s *GpuAcceptance) ResolveGpuUsageRef(ctx context.Context, tenant uint32, owner, resource string) (*GpuUsageRef, error) {
 	return resolveGpuUsageRef(ctx, s.ledger, tenant, owner, resource)
 }
-func resolveGpuUsageRef(ctx context.Context, ledger *data.QuotaLedgerRepo, tenant uint32, owner, resource string) (*acc.GpuUsageRef, error) {
+func resolveGpuUsageRef(ctx context.Context, ledger *data.QuotaLedgerRepo, tenant uint32, owner, resource string) (*GpuUsageRef, error) {
 	if tenant == 0 || !supportedGpuOwner(owner) {
 		return nil, quotapb.ErrorQuotaNotFound("%s", "resource not found")
 	}
@@ -400,7 +400,7 @@ func resolveGpuUsageRef(ctx context.Context, ledger *data.QuotaLedgerRepo, tenan
 		return nil, quotapb.ErrorQuotaNotFound("%s", "GPU usage not found")
 	}
 
-	return &acc.GpuUsageRef{TenantId: op.ResourceTenantID, OwnerService: op.OwnerService, ResourceId: op.ResourceID, CreateOperationId: op.OperationID}, nil
+	return &GpuUsageRef{TenantId: op.ResourceTenantID, OwnerService: op.OwnerService, ResourceId: op.ResourceID, CreateOperationId: op.OperationID}, nil
 }
 
 // Terminal original accounting is read by reference and receipt. It never

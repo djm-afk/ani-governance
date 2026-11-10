@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
-	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	modeldevcontractv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
 	"github.com/zhangzhe-ctrl/ani-modeldev-service/contract/cpup01"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
@@ -46,14 +45,8 @@ type ModelDevService struct {
 	acceptances       *data.ModelDevAcceptanceRepo
 	compute           ModelDevComputeResolver
 	resolver          *data.ModelDevClient
-	gpu               ModelDevGPUAdmission
 	monitoring        ModelDevMonitoringClient
 	metricGate        *modelDevMetricGate
-}
-
-type ModelDevGPUAdmission struct {
-	Plans       GpuPlanResolver
-	Eligibility GpuUseEligibility
 }
 
 func NewModelDevService(
@@ -62,7 +55,6 @@ func NewModelDevService(
 	acceptances *data.ModelDevAcceptanceRepo,
 	resolver *data.ModelDevClient,
 	computeResolver ModelDevComputeResolver,
-	gpu ...ModelDevGPUAdmission,
 ) *ModelDevService {
 	s := &ModelDevService{
 		authorization: authorization,
@@ -72,9 +64,7 @@ func NewModelDevService(
 		compute:       computeResolver,
 		metricGate:    &modelDevMetricGate{},
 	}
-	if len(gpu) == 1 {
-		s.gpu = gpu[0]
-	}
+
 	return s
 }
 
@@ -120,7 +110,7 @@ func (s *ModelDevService) CreateExecution(ctx context.Context, in ModelDevCreate
 	defer cancelPreflight()
 	// A still-valid JWT or historical acceptance never substitutes for the
 	// current database grant, including on original-key replay.
-	grant, err := authorizeGpuBusiness(preflight, principal, compute.Usage_TRAINING, data.ModelDevCreateAction, func() error {
+	_, err = authorizeGpuBusiness(preflight, principal, compute.Usage_TRAINING, data.ModelDevCreateAction, func() error {
 		return s.authorization.AuthorizeCreate(preflight, principal.TenantID, principal.ID)
 	})
 	if err != nil {
@@ -201,13 +191,9 @@ func (s *ModelDevService) CreateExecution(ctx context.Context, in ModelDevCreate
 		return nil, modelDevCreateUnavailable()
 	}
 	if selection.Gpu != nil {
-		if s.gpu.Plans == nil || s.gpu.Eligibility == nil {
-			return nil, errors.ServiceUnavailable("MODELDEV_GPU_NOT_READY", "managed GPU admission is not yet available")
-		}
-		if err := authorizeNewGpuUse(preflight, grant, s.gpu.Eligibility); err != nil {
-			return nil, err
-		}
+		return nil, errors.ServiceUnavailable("MODELDEV_GPU_NOT_READY", "managed GPU admission is not yet available")
 	}
+
 	if err := preflight.Err(); err != nil {
 		return nil, modelDevCreateFailure(err)
 	}
@@ -219,22 +205,13 @@ func (s *ModelDevService) CreateExecution(ctx context.Context, in ModelDevCreate
 	if err != nil {
 		return nil, modelDevCreateInvalid()
 	}
-	var resolveGPU func(context.Context, *cpup01.GPURequest) (*acc.ResolvedGpuRequest, error)
-	if selection.Gpu != nil {
-		resolveGPU = func(call context.Context, frozen *cpup01.GPURequest) (*acc.ResolvedGpuRequest, error) {
-			return s.gpu.Plans.ResolveGpuRequest(call, &acc.ResolveGpuRequestRequest{
-				Context: &acc.TenantContext{RequestId: uuid.NewString(), TenantId: tenant, Actor: &acc.Actor{Type: string(principal.Type), Id: strconv.FormatUint(uint64(principal.ID), 10)}},
-				Gpu:     &acc.GpuRequest{ClusterId: frozen.ClusterID, PoolId: frozen.PoolID, ProfileId: frozen.ProfileID, ProfileVersion: frozen.ProfileVersion, Replicas: frozen.Replicas, DevicesPerReplica: frozen.DevicesPerReplica, ContainerName: frozen.ContainerName},
-			})
-		}
-	}
-	resolved, err := s.resolver.ResolvePreparedWithGPU(ctx, data.ModelDevResolveScope{ResourceTenantID: tenant, Actor: actor}, normalized,
-		cpup01.IdentityRef{TenantID: tenant, Actor: actor, OperationID: candidate.OperationID, ExecutionID: candidate.ExecutionID, IntentHash: intentHash}, selection, candidate.AcceptedAt, resolveGPU)
+
+	resolved, err := s.resolver.ResolvePrepared(ctx, data.ModelDevResolveScope{ResourceTenantID: tenant, Actor: actor}, normalized,
+		cpup01.IdentityRef{TenantID: tenant, Actor: actor, OperationID: candidate.OperationID, ExecutionID: candidate.ExecutionID, IntentHash: intentHash}, selection, candidate.AcceptedAt)
 	if err != nil {
 		return nil, modelDevCreateResolutionFailure(err)
 	}
 	candidate.Snapshot = resolved.Snapshot
-	candidate.ResolvedGPU = resolved.ResolvedGPU
 	executionCtx, cancelExecution := context.WithDeadline(ctx, candidate.Snapshot.Timing.ExecutionDeadlineAt)
 	defer cancelExecution()
 	acceptCtx, cancelAccept := context.WithTimeout(executionCtx, s.resolver.OperationTimeout())

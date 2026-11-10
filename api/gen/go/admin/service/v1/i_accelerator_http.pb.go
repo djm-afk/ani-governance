@@ -21,8 +21,6 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
-const OperationAcceleratorAdminServiceAdminGetCapacity = "/admin.service.v1.AcceleratorAdminService/AdminGetCapacity"
-const OperationAcceleratorAdminServiceAdminListBindings = "/admin.service.v1.AcceleratorAdminService/AdminListBindings"
 const OperationAcceleratorAdminServiceAdminListProfiles = "/admin.service.v1.AcceleratorAdminService/AdminListProfiles"
 const OperationAcceleratorAdminServiceAdoptSupplyGroup = "/admin.service.v1.AcceleratorAdminService/AdoptSupplyGroup"
 const OperationAcceleratorAdminServiceCreateInitialization = "/admin.service.v1.AcceleratorAdminService/CreateInitialization"
@@ -43,15 +41,13 @@ const OperationAcceleratorAdminServiceSetAdmission = "/admin.service.v1.Accelera
 const OperationAcceleratorAdminServiceSetProfileState = "/admin.service.v1.AcceleratorAdminService/SetProfileState"
 
 type AcceleratorAdminServiceHTTPServer interface {
-	AdminGetCapacity(context.Context, *v1.AcceleratorVersionRequest) (*v1.AcceleratorCapacity, error)
-	AdminListBindings(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorAdminBindings, error)
 	AdminListProfiles(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorProfiles, error)
 	AdoptSupplyGroup(context.Context, *v1.AdoptAcceleratorSupplyRequest) (*v1.AcceleratorSupply, error)
 	CreateInitialization(context.Context, *v1.CreateAcceleratorInitializationRequest) (*v1.AcceleratorInitializationOperation, error)
 	CreatePool(context.Context, *v1.CreateAcceleratorPoolRequest) (*v1.AcceleratorPool, error)
 	CreateProfile(context.Context, *v1.CreateAcceleratorProfileRequest) (*v1.AcceleratorProfile, error)
 	DeleteProfile(context.Context, *v1.DeleteAcceleratorProfileRequest) (*v1.AcceleratorProfile, error)
-	GetInitialization(context.Context, *emptypb.Empty) (*v1.AcceleratorInitialization, error)
+	GetInitialization(context.Context, *v1.GetAcceleratorInitializationRequest) (*v1.AcceleratorInitialization, error)
 	GetInitializationOperation(context.Context, *v1.GetAcceleratorInitializationOperationRequest) (*v1.AcceleratorInitializationOperation, error)
 	ListClusters(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorClusters, error)
 	ListDevices(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorDevices, error)
@@ -85,19 +81,17 @@ func RegisterAcceleratorAdminServiceHTTPServer(s *http.Server, srv AcceleratorAd
 	r.POST("/api/v1/admin/accelerator/profiles/{profile_id}:set-state", _AcceleratorAdminService_SetProfileState0_HTTP_Handler(srv))
 	r.POST("/api/v1/admin/accelerator/profiles/{profile_id}:delete", _AcceleratorAdminService_DeleteProfile0_HTTP_Handler(srv))
 	r.GET("/api/v1/admin/accelerator/devices", _AcceleratorAdminService_ListDevices0_HTTP_Handler(srv))
-	r.GET("/api/v1/admin/accelerator/bindings", _AcceleratorAdminService_AdminListBindings0_HTTP_Handler(srv))
-	r.GET("/api/v1/admin/accelerator/capacity", _AcceleratorAdminService_AdminGetCapacity0_HTTP_Handler(srv))
 }
 
 func _AcceleratorAdminService_GetInitialization0_HTTP_Handler(srv AcceleratorAdminServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in emptypb.Empty
+		var in v1.GetAcceleratorInitializationRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationAcceleratorAdminServiceGetInitialization)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetInitialization(ctx, req.(*emptypb.Empty))
+			return srv.GetInitialization(ctx, req.(*v1.GetAcceleratorInitializationRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -473,54 +467,14 @@ func _AcceleratorAdminService_ListDevices0_HTTP_Handler(srv AcceleratorAdminServ
 	}
 }
 
-func _AcceleratorAdminService_AdminListBindings0_HTTP_Handler(srv AcceleratorAdminServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorPageRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorAdminServiceAdminListBindings)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.AdminListBindings(ctx, req.(*v1.AcceleratorPageRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorAdminBindings)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AcceleratorAdminService_AdminGetCapacity0_HTTP_Handler(srv AcceleratorAdminServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorVersionRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorAdminServiceAdminGetCapacity)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.AdminGetCapacity(ctx, req.(*v1.AcceleratorVersionRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorCapacity)
-		return ctx.Result(200, reply)
-	}
-}
-
 type AcceleratorAdminServiceHTTPClient interface {
-	AdminGetCapacity(ctx context.Context, req *v1.AcceleratorVersionRequest, opts ...http.CallOption) (rsp *v1.AcceleratorCapacity, err error)
-	AdminListBindings(ctx context.Context, req *v1.AcceleratorPageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorAdminBindings, err error)
 	AdminListProfiles(ctx context.Context, req *v1.AcceleratorPageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorProfiles, err error)
 	AdoptSupplyGroup(ctx context.Context, req *v1.AdoptAcceleratorSupplyRequest, opts ...http.CallOption) (rsp *v1.AcceleratorSupply, err error)
 	CreateInitialization(ctx context.Context, req *v1.CreateAcceleratorInitializationRequest, opts ...http.CallOption) (rsp *v1.AcceleratorInitializationOperation, err error)
 	CreatePool(ctx context.Context, req *v1.CreateAcceleratorPoolRequest, opts ...http.CallOption) (rsp *v1.AcceleratorPool, err error)
 	CreateProfile(ctx context.Context, req *v1.CreateAcceleratorProfileRequest, opts ...http.CallOption) (rsp *v1.AcceleratorProfile, err error)
 	DeleteProfile(ctx context.Context, req *v1.DeleteAcceleratorProfileRequest, opts ...http.CallOption) (rsp *v1.AcceleratorProfile, err error)
-	GetInitialization(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *v1.AcceleratorInitialization, err error)
+	GetInitialization(ctx context.Context, req *v1.GetAcceleratorInitializationRequest, opts ...http.CallOption) (rsp *v1.AcceleratorInitialization, err error)
 	GetInitializationOperation(ctx context.Context, req *v1.GetAcceleratorInitializationOperationRequest, opts ...http.CallOption) (rsp *v1.AcceleratorInitializationOperation, err error)
 	ListClusters(ctx context.Context, req *v1.AcceleratorPageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorClusters, err error)
 	ListDevices(ctx context.Context, req *v1.AcceleratorPageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorDevices, err error)
@@ -540,32 +494,6 @@ type AcceleratorAdminServiceHTTPClientImpl struct {
 
 func NewAcceleratorAdminServiceHTTPClient(client *http.Client) AcceleratorAdminServiceHTTPClient {
 	return &AcceleratorAdminServiceHTTPClientImpl{client}
-}
-
-func (c *AcceleratorAdminServiceHTTPClientImpl) AdminGetCapacity(ctx context.Context, in *v1.AcceleratorVersionRequest, opts ...http.CallOption) (*v1.AcceleratorCapacity, error) {
-	var out v1.AcceleratorCapacity
-	pattern := "/api/v1/admin/accelerator/capacity"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAcceleratorAdminServiceAdminGetCapacity))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AcceleratorAdminServiceHTTPClientImpl) AdminListBindings(ctx context.Context, in *v1.AcceleratorPageRequest, opts ...http.CallOption) (*v1.AcceleratorAdminBindings, error) {
-	var out v1.AcceleratorAdminBindings
-	pattern := "/api/v1/admin/accelerator/bindings"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAcceleratorAdminServiceAdminListBindings))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
 }
 
 func (c *AcceleratorAdminServiceHTTPClientImpl) AdminListProfiles(ctx context.Context, in *v1.AcceleratorPageRequest, opts ...http.CallOption) (*v1.AcceleratorProfiles, error) {
@@ -646,7 +574,7 @@ func (c *AcceleratorAdminServiceHTTPClientImpl) DeleteProfile(ctx context.Contex
 	return &out, nil
 }
 
-func (c *AcceleratorAdminServiceHTTPClientImpl) GetInitialization(ctx context.Context, in *emptypb.Empty, opts ...http.CallOption) (*v1.AcceleratorInitialization, error) {
+func (c *AcceleratorAdminServiceHTTPClientImpl) GetInitialization(ctx context.Context, in *v1.GetAcceleratorInitializationRequest, opts ...http.CallOption) (*v1.AcceleratorInitialization, error) {
 	var out v1.AcceleratorInitialization
 	pattern := "/api/v1/admin/accelerator/initialization"
 	path := binding.EncodeURL(pattern, in, true)
@@ -802,21 +730,11 @@ func (c *AcceleratorAdminServiceHTTPClientImpl) SetProfileState(ctx context.Cont
 	return &out, nil
 }
 
-const OperationAcceleratorServiceAdmissionPreview = "/admin.service.v1.AcceleratorService/AdmissionPreview"
-const OperationAcceleratorServiceGetCapacity = "/admin.service.v1.AcceleratorService/GetCapacity"
-const OperationAcceleratorServiceGetGpuUsage = "/admin.service.v1.AcceleratorService/GetGpuUsage"
 const OperationAcceleratorServiceGetProfile = "/admin.service.v1.AcceleratorService/GetProfile"
-const OperationAcceleratorServiceListBindings = "/admin.service.v1.AcceleratorService/ListBindings"
-const OperationAcceleratorServiceListGpuUsages = "/admin.service.v1.AcceleratorService/ListGpuUsages"
 const OperationAcceleratorServiceListProfiles = "/admin.service.v1.AcceleratorService/ListProfiles"
 
 type AcceleratorServiceHTTPServer interface {
-	AdmissionPreview(context.Context, *v1.AcceleratorPreviewRequest) (*v1.AcceleratorPreview, error)
-	GetCapacity(context.Context, *v1.AcceleratorTenantVersionRequest) (*v1.AcceleratorCapacity, error)
-	GetGpuUsage(context.Context, *v1.AcceleratorUsageRequest) (*v1.AcceleratorUsage, error)
 	GetProfile(context.Context, *v1.AcceleratorTenantVersionRequest) (*v1.AcceleratorProfile, error)
-	ListBindings(context.Context, *v1.AcceleratorUsageRequest) (*v1.AcceleratorBindings, error)
-	ListGpuUsages(context.Context, *v1.AcceleratorTenantPageRequest) (*v1.AcceleratorUsages, error)
 	ListProfiles(context.Context, *v1.AcceleratorTenantPageRequest) (*v1.AcceleratorProfiles, error)
 }
 
@@ -824,11 +742,6 @@ func RegisterAcceleratorServiceHTTPServer(s *http.Server, srv AcceleratorService
 	r := s.Route("/")
 	r.GET("/api/v1/accelerator/profiles", _AcceleratorService_ListProfiles0_HTTP_Handler(srv))
 	r.GET("/api/v1/accelerator/profiles/{profile_id}", _AcceleratorService_GetProfile0_HTTP_Handler(srv))
-	r.GET("/api/v1/accelerator/capacity", _AcceleratorService_GetCapacity0_HTTP_Handler(srv))
-	r.POST("/api/v1/accelerator/admission-preview", _AcceleratorService_AdmissionPreview0_HTTP_Handler(srv))
-	r.GET("/api/v1/accelerator/usages", _AcceleratorService_ListGpuUsages0_HTTP_Handler(srv))
-	r.GET("/api/v1/accelerator/usages/{owner_service}/{resource_id}", _AcceleratorService_GetGpuUsage0_HTTP_Handler(srv))
-	r.GET("/api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings", _AcceleratorService_ListBindings0_HTTP_Handler(srv))
 }
 
 func _AcceleratorService_ListProfiles0_HTTP_Handler(srv AcceleratorServiceHTTPServer) func(ctx http.Context) error {
@@ -872,117 +785,8 @@ func _AcceleratorService_GetProfile0_HTTP_Handler(srv AcceleratorServiceHTTPServ
 	}
 }
 
-func _AcceleratorService_GetCapacity0_HTTP_Handler(srv AcceleratorServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorTenantVersionRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorServiceGetCapacity)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetCapacity(ctx, req.(*v1.AcceleratorTenantVersionRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorCapacity)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AcceleratorService_AdmissionPreview0_HTTP_Handler(srv AcceleratorServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorPreviewRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorServiceAdmissionPreview)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.AdmissionPreview(ctx, req.(*v1.AcceleratorPreviewRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorPreview)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AcceleratorService_ListGpuUsages0_HTTP_Handler(srv AcceleratorServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorTenantPageRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorServiceListGpuUsages)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListGpuUsages(ctx, req.(*v1.AcceleratorTenantPageRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorUsages)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AcceleratorService_GetGpuUsage0_HTTP_Handler(srv AcceleratorServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorUsageRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorServiceGetGpuUsage)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetGpuUsage(ctx, req.(*v1.AcceleratorUsageRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorUsage)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AcceleratorService_ListBindings0_HTTP_Handler(srv AcceleratorServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in v1.AcceleratorUsageRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAcceleratorServiceListBindings)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListBindings(ctx, req.(*v1.AcceleratorUsageRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*v1.AcceleratorBindings)
-		return ctx.Result(200, reply)
-	}
-}
-
 type AcceleratorServiceHTTPClient interface {
-	AdmissionPreview(ctx context.Context, req *v1.AcceleratorPreviewRequest, opts ...http.CallOption) (rsp *v1.AcceleratorPreview, err error)
-	GetCapacity(ctx context.Context, req *v1.AcceleratorTenantVersionRequest, opts ...http.CallOption) (rsp *v1.AcceleratorCapacity, err error)
-	GetGpuUsage(ctx context.Context, req *v1.AcceleratorUsageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorUsage, err error)
 	GetProfile(ctx context.Context, req *v1.AcceleratorTenantVersionRequest, opts ...http.CallOption) (rsp *v1.AcceleratorProfile, err error)
-	ListBindings(ctx context.Context, req *v1.AcceleratorUsageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorBindings, err error)
-	ListGpuUsages(ctx context.Context, req *v1.AcceleratorTenantPageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorUsages, err error)
 	ListProfiles(ctx context.Context, req *v1.AcceleratorTenantPageRequest, opts ...http.CallOption) (rsp *v1.AcceleratorProfiles, err error)
 }
 
@@ -994,76 +798,11 @@ func NewAcceleratorServiceHTTPClient(client *http.Client) AcceleratorServiceHTTP
 	return &AcceleratorServiceHTTPClientImpl{client}
 }
 
-func (c *AcceleratorServiceHTTPClientImpl) AdmissionPreview(ctx context.Context, in *v1.AcceleratorPreviewRequest, opts ...http.CallOption) (*v1.AcceleratorPreview, error) {
-	var out v1.AcceleratorPreview
-	pattern := "/api/v1/accelerator/admission-preview"
-	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationAcceleratorServiceAdmissionPreview))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AcceleratorServiceHTTPClientImpl) GetCapacity(ctx context.Context, in *v1.AcceleratorTenantVersionRequest, opts ...http.CallOption) (*v1.AcceleratorCapacity, error) {
-	var out v1.AcceleratorCapacity
-	pattern := "/api/v1/accelerator/capacity"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAcceleratorServiceGetCapacity))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AcceleratorServiceHTTPClientImpl) GetGpuUsage(ctx context.Context, in *v1.AcceleratorUsageRequest, opts ...http.CallOption) (*v1.AcceleratorUsage, error) {
-	var out v1.AcceleratorUsage
-	pattern := "/api/v1/accelerator/usages/{owner_service}/{resource_id}"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAcceleratorServiceGetGpuUsage))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
 func (c *AcceleratorServiceHTTPClientImpl) GetProfile(ctx context.Context, in *v1.AcceleratorTenantVersionRequest, opts ...http.CallOption) (*v1.AcceleratorProfile, error) {
 	var out v1.AcceleratorProfile
 	pattern := "/api/v1/accelerator/profiles/{profile_id}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationAcceleratorServiceGetProfile))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AcceleratorServiceHTTPClientImpl) ListBindings(ctx context.Context, in *v1.AcceleratorUsageRequest, opts ...http.CallOption) (*v1.AcceleratorBindings, error) {
-	var out v1.AcceleratorBindings
-	pattern := "/api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAcceleratorServiceListBindings))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AcceleratorServiceHTTPClientImpl) ListGpuUsages(ctx context.Context, in *v1.AcceleratorTenantPageRequest, opts ...http.CallOption) (*v1.AcceleratorUsages, error) {
-	var out v1.AcceleratorUsages
-	pattern := "/api/v1/accelerator/usages"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAcceleratorServiceListGpuUsages))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
@@ -1132,6 +871,103 @@ func (c *QuotaSelfServiceHTTPClientImpl) GetMyQuotaAccounts(ctx context.Context,
 	pattern := "/api/v1/me/quota-accounts"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationQuotaSelfServiceGetMyQuotaAccounts))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+const OperationAcceleratorCapacityAdminServiceGetProfileCapacity = "/admin.service.v1.AcceleratorCapacityAdminService/GetProfileCapacity"
+const OperationAcceleratorCapacityAdminServiceGetSupplyGroupCapacity = "/admin.service.v1.AcceleratorCapacityAdminService/GetSupplyGroupCapacity"
+
+type AcceleratorCapacityAdminServiceHTTPServer interface {
+	GetProfileCapacity(context.Context, *v1.GetAcceleratorProfileCapacityRequest) (*v1.AcceleratorProfileCapacity, error)
+	GetSupplyGroupCapacity(context.Context, *v1.GetAcceleratorSupplyGroupCapacityRequest) (*v1.AcceleratorSupplyGroupCapacity, error)
+}
+
+func RegisterAcceleratorCapacityAdminServiceHTTPServer(s *http.Server, srv AcceleratorCapacityAdminServiceHTTPServer) {
+	r := s.Route("/")
+	r.GET("/api/v1/admin/accelerator/profiles/{profile_id}/capacity", _AcceleratorCapacityAdminService_GetProfileCapacity0_HTTP_Handler(srv))
+	r.GET("/api/v1/admin/accelerator/supply-groups/{group_id}/capacity", _AcceleratorCapacityAdminService_GetSupplyGroupCapacity0_HTTP_Handler(srv))
+}
+
+func _AcceleratorCapacityAdminService_GetProfileCapacity0_HTTP_Handler(srv AcceleratorCapacityAdminServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetAcceleratorProfileCapacityRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAcceleratorCapacityAdminServiceGetProfileCapacity)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetProfileCapacity(ctx, req.(*v1.GetAcceleratorProfileCapacityRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.AcceleratorProfileCapacity)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AcceleratorCapacityAdminService_GetSupplyGroupCapacity0_HTTP_Handler(srv AcceleratorCapacityAdminServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in v1.GetAcceleratorSupplyGroupCapacityRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAcceleratorCapacityAdminServiceGetSupplyGroupCapacity)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetSupplyGroupCapacity(ctx, req.(*v1.GetAcceleratorSupplyGroupCapacityRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*v1.AcceleratorSupplyGroupCapacity)
+		return ctx.Result(200, reply)
+	}
+}
+
+type AcceleratorCapacityAdminServiceHTTPClient interface {
+	GetProfileCapacity(ctx context.Context, req *v1.GetAcceleratorProfileCapacityRequest, opts ...http.CallOption) (rsp *v1.AcceleratorProfileCapacity, err error)
+	GetSupplyGroupCapacity(ctx context.Context, req *v1.GetAcceleratorSupplyGroupCapacityRequest, opts ...http.CallOption) (rsp *v1.AcceleratorSupplyGroupCapacity, err error)
+}
+
+type AcceleratorCapacityAdminServiceHTTPClientImpl struct {
+	cc *http.Client
+}
+
+func NewAcceleratorCapacityAdminServiceHTTPClient(client *http.Client) AcceleratorCapacityAdminServiceHTTPClient {
+	return &AcceleratorCapacityAdminServiceHTTPClientImpl{client}
+}
+
+func (c *AcceleratorCapacityAdminServiceHTTPClientImpl) GetProfileCapacity(ctx context.Context, in *v1.GetAcceleratorProfileCapacityRequest, opts ...http.CallOption) (*v1.AcceleratorProfileCapacity, error) {
+	var out v1.AcceleratorProfileCapacity
+	pattern := "/api/v1/admin/accelerator/profiles/{profile_id}/capacity"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationAcceleratorCapacityAdminServiceGetProfileCapacity))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AcceleratorCapacityAdminServiceHTTPClientImpl) GetSupplyGroupCapacity(ctx context.Context, in *v1.GetAcceleratorSupplyGroupCapacityRequest, opts ...http.CallOption) (*v1.AcceleratorSupplyGroupCapacity, error) {
+	var out v1.AcceleratorSupplyGroupCapacity
+	pattern := "/api/v1/admin/accelerator/supply-groups/{group_id}/capacity"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationAcceleratorCapacityAdminServiceGetSupplyGroupCapacity))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

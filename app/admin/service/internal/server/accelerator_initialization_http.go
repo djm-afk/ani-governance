@@ -22,7 +22,7 @@ func acceleratorInitializationHTTPFilter(next http.Handler) http.Handler {
 			return
 		}
 		writer.Header().Set("Cache-Control", "no-store")
-		if !validAcceleratorInitializationQuery(request, list) {
+		if !validAcceleratorInitializationQuery(request, list, read) {
 			khttp.DefaultErrorEncoder(writer, request, errors.BadRequest("INVALID_ACCELERATOR_REQUEST", "invalid initialization query"))
 			return
 		}
@@ -30,11 +30,11 @@ func acceleratorInitializationHTTPFilter(next http.Handler) http.Handler {
 	})
 }
 
-func validAcceleratorInitializationQuery(request *http.Request, list bool) bool {
+func validAcceleratorInitializationQuery(request *http.Request, list bool, read ...bool) bool {
 	if request.URL.ForceQuery || len(request.URL.RawQuery) > 4096 {
 		return false
 	}
-	if !list {
+	if !list && (len(read) == 0 || !read[0]) {
 		return request.URL.RawQuery == ""
 	}
 	query, err := url.ParseQuery(request.URL.RawQuery)
@@ -42,7 +42,16 @@ func validAcceleratorInitializationQuery(request *http.Request, list bool) bool 
 		return false
 	}
 	for key, values := range query {
-		if key != "page" && key != "pageSize" || len(values) != 1 {
+		if len(values) != 1 {
+			return false
+		}
+		if key == "connection_ref" {
+			if values[0] == "" || len(values[0]) > 128 {
+				return false
+			}
+			continue
+		}
+		if !list || key != "page" && key != "pageSize" {
 			return false
 		}
 		value, err := strconv.ParseUint(values[0], 10, 32)
