@@ -439,6 +439,11 @@ func modelDevValidDatasetImportTask(task *modeldevv1.DatasetImportTaskView) bool
 	if task.Source != nil && (task.Source.Selection == nil || !modelDevValidTimestamp(task.Source.ResolvedAt) || !modelDevDigest(task.Source.SnapshotSha256)) {
 		return false
 	}
+	// The failure carrier exists only for a FAILED task, and it must name a code:
+	// an empty code would leave the page with nothing to branch on.
+	if task.Failure != nil && (task.State != modeldevv1.DatasetImportTaskState_DATASET_IMPORT_TASK_STATE_FAILED || task.Failure.Code == "") {
+		return false
+	}
 	if task.State == modeldevv1.DatasetImportTaskState_DATASET_IMPORT_TASK_STATE_SUCCEEDED {
 		return task.InputVersionId == task.ReservedInputVersionId
 	}
