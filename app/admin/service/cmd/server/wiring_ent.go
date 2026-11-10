@@ -631,7 +631,6 @@ func initApp(ctx *bootstrap.Context) (*kratos.App, func(), error) {
 		publisher.SetCreateMaintenance(modeldevMaintenance)
 		extraServers = append(extraServers, publisher)
 	}
-
 	if quotaInternalServer != nil {
 		extraServers = append(extraServers, quotaInternalServer)
 	}
