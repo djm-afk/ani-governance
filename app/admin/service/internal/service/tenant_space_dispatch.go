@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go-wind-admin/app/admin/service/internal/data"
+	bLogger "go-wind-admin/pkg/localdeps/kratos-bootstrap/logger"
 )
 
 type tenantSpaceDispatchRepository interface {
@@ -25,19 +26,31 @@ type tenantSpaceDispatcher struct {
 	repository tenantSpaceDispatchRepository
 	remote     tenantSpaceRemote
 	owner      string
+	log        bLogger.Logger
 }
 
 func (d *tenantSpaceDispatcher) step(ctx context.Context) (bool, error) {
 	claim, err := d.repository.ClaimTenantSpace(ctx, d.owner, 90*time.Second)
-	if err != nil || claim == nil {
+	if err != nil {
+		dependencyFailed(ctx, d.log, "postgresql", "tenant_space.open", []any{"worker", "tenant_space", "step", "claim"}, err)
 		return false, err
 	}
+	if claim == nil {
+		return false, nil
+	}
+	identity := backgroundIdentity(claim.OperationID, "tenant_space", claim.ResourceTenantID, "", "tenant_space.open")
+	saved, telemetryErr := decodeClaimTelemetry(claim.TelemetryJSON)
+	ctx = restoreBackgroundTrace(ctx, saved, telemetryErr, identity, d.log)
 	call, cancel := context.WithTimeout(ctx, 30*time.Second)
+	if d.log != nil {
+		d.log.Info(ctx, "tenant space open dispatch", append(append([]any{"event", "operation.dispatch_started"}, identity...), "peer.service", "ani-resource-service")...)
+	}
 	result, callErr := d.remote.OpenTenantSpace(call, claim.ResourceTenantID, claim.OperationID)
 	cancel()
 	if callErr == nil && result.TenantID == claim.ResourceTenantID && result.OperationID == claim.OperationID && result.Phase == "ready" {
 		done, err := d.repository.CompleteTenantSpace(ctx, claim)
 		if err != nil {
+			statePersistFailed(ctx, d.log, "tenant_space.open", "persist_tenant_space", identity, err)
 			return true, err
 		}
 		if !done {
@@ -51,12 +64,14 @@ func (d *tenantSpaceDispatcher) step(ctx context.Context) (bool, error) {
 	deferred, deferErr := d.repository.DeferTenantSpace(cleanup, claim, 5*time.Second)
 	cleanupCancel()
 	if deferErr != nil {
+		statePersistFailed(ctx, d.log, "tenant_space.open", "defer_tenant_space", identity, deferErr)
 		return true, deferErr
 	}
 	if !deferred {
 		return true, fmt.Errorf("tenant space lease lost before retry")
 	}
 	if callErr != nil {
+		stepFailed(ctx, d.log, "dispatch", "TENANT_SPACE_DISPATCH_FAILED", identity, callErr)
 		return true, callErr
 	}
 	if result.TenantID != claim.ResourceTenantID || result.OperationID != claim.OperationID {

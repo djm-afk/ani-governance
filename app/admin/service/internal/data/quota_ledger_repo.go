@@ -30,6 +30,7 @@ import (
 	appViewer "go-wind-admin/pkg/entgo/viewer"
 
 	"go-wind-admin/pkg/telemetry"
+	"strconv"
 )
 
 type QuotaLedgerRepo struct {
@@ -906,13 +907,22 @@ func (r *QuotaLedgerRepo) ClaimDispatchable(ctx context.Context, worker string, 
 				// without recording an attempt and could starve healthy operations.
 				// A repaired original vector is retried without changing accounting.
 				code := "ORIGINAL_CHARGES_INVALID"
+				reason := code
+				validationErr := validateOperationCharges(op, charges)
+				// Record the real validation failure on the record's own trace
+				// before the op becomes UNKNOWN and this path returns no claimed
+				// object to the worker.
+				recordCtx := r.restoreClaimTrace(ctx, op, validationErr)
+				r.logClaimFailure(recordCtx, op, "validate_original_charges", reason, validationErr)
 				delay := min(30*time.Second, time.Second<<min(max(op.AttemptCount-1, 0), 5))
 				next := time.Now().Add(delay)
 				n, e := tx.QuotaOperation.Update().SetUpdatedAt(databaseNow).Where(quotaoperation.TenantIDEQ(*op.TenantID), quotaoperation.OperationIDEQ(op.OperationID), quotaoperation.LeaseGenerationEQ(op.LeaseGeneration), quotaoperation.DispatchStateEQ(quotaoperation.DispatchStateDispatching)).SetDispatchState(quotaoperation.DispatchStateUnknown).SetNillableNextAttemptAt(&next).SetNillableLastErrorCode(&code).SetRetryBlocked(false).Save(ctx)
 				if e != nil {
+					r.logClaimPersistFailure(recordCtx, op, e)
 					return e
 				}
 				if n != 1 {
+					r.logClaimPersistFailure(recordCtx, op, quotapb.ErrorInvalidQuotaRequest("%s", "failed to retain invalid original charge claim"))
 					return quotapb.ErrorInvalidQuotaRequest("%s", "failed to retain invalid original charge claim")
 				}
 				return nil
@@ -983,4 +993,62 @@ func (r *QuotaLedgerRepo) ResumeDispatch(ctx context.Context, tid uint32, id str
 		}
 		return nil
 	})
+}
+
+// restoreClaimTrace rebuilds the claimed record's trace for the branches that
+// never return a claimed object. It decodes the raw telemetry independently.
+func (r *QuotaLedgerRepo) restoreClaimTrace(ctx context.Context, op *ent.QuotaOperation, cause error) context.Context {
+	if r.log == nil {
+		return ctx
+	}
+	saved, e := telemetry.Decode([]byte(telemetryValue(op.TelemetryContext)))
+	identity := r.claimIdentity(op)
+	if e != nil {
+		r.log.Error(ctx, "telemetry context invalid", append(append([]any{"event", "telemetry.context_invalid", "reason", "TELEMETRY_CONTEXT_INVALID"}, identity...), telemetry.ErrorFields(e)...)...)
+		return telemetry.WithBusiness(ctx, r.claimBusiness(op))
+	}
+	if !saved.Valid() {
+		r.log.Error(ctx, "telemetry context missing", append([]any{"event", "telemetry.context_missing", "reason", "TELEMETRY_CONTEXT_MISSING"}, identity...)...)
+		return telemetry.WithBusiness(ctx, r.claimBusiness(op))
+	}
+	restored, re := telemetry.Restore(ctx, saved)
+	if re != nil {
+		r.log.Error(ctx, "telemetry context invalid", append(append([]any{"event", "telemetry.context_invalid", "reason", "TELEMETRY_CONTEXT_INVALID"}, identity...), telemetry.ErrorFields(re)...)...)
+		return telemetry.WithBusiness(ctx, r.claimBusiness(op))
+	}
+	return telemetry.WithBusiness(restored, r.claimBusiness(op))
+}
+
+func (r *QuotaLedgerRepo) claimBusiness(op *ent.QuotaOperation) telemetry.BusinessContext {
+	b := telemetry.BusinessContext{OperationID: op.OperationID, ResourceType: "quota", ResourceID: op.ResourceID, Action: op.Action}
+	if op.TenantID != nil {
+		b.TenantID = strconv.FormatUint(uint64(*op.TenantID), 10)
+	}
+	return b
+}
+
+func (r *QuotaLedgerRepo) claimIdentity(op *ent.QuotaOperation) []any {
+	out := []any{"operation_id", op.OperationID, "resource_type", "quota", "resource_id", op.ResourceID, "action", op.Action}
+	if op.TenantID != nil {
+		out = append(out, "tenant_id", strconv.FormatUint(uint64(*op.TenantID), 10))
+	}
+	return out
+}
+
+func (r *QuotaLedgerRepo) logClaimFailure(ctx context.Context, op *ent.QuotaOperation, step, reason string, err error) {
+	if r.log == nil || err == nil {
+		return
+	}
+	kv := append([]any{"event", "step.failed", "step", step, "result", "failed", "reason", reason, "worker", "quota_dispatch"}, r.claimIdentity(op)...)
+	kv = append(kv, telemetry.ErrorFields(err)...)
+	r.log.Error(ctx, "quota claim validation failed", kv...)
+}
+
+func (r *QuotaLedgerRepo) logClaimPersistFailure(ctx context.Context, op *ent.QuotaOperation, err error) {
+	if r.log == nil || err == nil {
+		return
+	}
+	kv := append([]any{"event", "state.persist_failed", "action", op.Action, "step", "mark_unknown"}, r.claimIdentity(op)...)
+	kv = append(kv, telemetry.ErrorFields(err)...)
+	r.log.Error(ctx, "quota claim state save failed", kv...)
 }
