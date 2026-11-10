@@ -178,3 +178,40 @@ func TestParseRuntimeLevel(t *testing.T) {
 		}
 	}
 }
+
+// LG02: switching to debug must add DEBUG records without dropping or
+// downgrading the INFO/WARN/ERROR levels.
+func TestDebugLevelShowsDebugAndKeepsInfo(t *testing.T) {
+	var buf bytes.Buffer
+	l, _ := newJSON(&buf, slog.LevelDebug)
+	ctx := context.Background()
+	l.Debug(ctx, "debug detail", "event", "runtime.log")
+	l.Info(ctx, "info record", "event", "process.ready")
+	l.Warn(ctx, "warn record", "event", "operation.conflict", "reason", "X")
+	l.Error(ctx, "error record", "event", "step.failed", "step", "s",
+		"error", "boom", "error_type", "local", "error_source", "local")
+
+	levels := map[string]bool{}
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		m := decodeLine(t, []byte(line))
+		levels[m["level"].(string)] = true
+	}
+	for _, want := range []string{"DEBUG", "INFO", "WARN", "ERROR"} {
+		if !levels[want] {
+			t.Errorf("debug mode is missing %s records: %v", want, levels)
+		}
+	}
+}
+
+// LG03: an unsupported threshold must be reported, never silently applied.
+func TestUnsupportedLevelReportsAndFallsBackToInfo(t *testing.T) {
+	for _, raw := range []string{"warn", "error", "off", "verbose", "  WARN  "} {
+		lv, err := ParseRuntimeLevel(raw)
+		if err == nil {
+			t.Errorf("ANI_LOG_LEVEL=%q must be rejected", raw)
+		}
+		if lv != slog.LevelInfo {
+			t.Errorf("ANI_LOG_LEVEL=%q fell back to %v, want INFO (never a higher threshold)", raw, lv)
+		}
+	}
+}
