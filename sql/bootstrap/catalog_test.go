@@ -115,3 +115,31 @@ func TestVMCatalogUsesRuntimePathVariables(t *testing.T) {
 	// SetVMSecurityGroups and two explicit network-interface owner routes.
 	require.Equal(t, 31, count)
 }
+
+// Exercise the released OpenAPI through the normal admin CLI catalog parser:
+// a missing service-tag mapping must fail before any deployment DB write.
+func TestAcceleratorCapacityCatalogFromReleasedOpenAPI(t *testing.T) {
+	document, err := os.ReadFile("../../app/admin/service/cmd/server/assets/openapi.yaml")
+	require.NoError(t, err)
+	catalog, err := Catalog(document)
+	require.NoError(t, err)
+	expected := map[string]string{
+		"/api/v1/admin/accelerator/profiles/{profile_id}/capacity":    "accelerator:profile:capacity-read",
+		"/api/v1/admin/accelerator/supply-groups/{group_id}/capacity": "accelerator:supply-group:capacity-read",
+	}
+	count := 0
+	for _, route := range catalog {
+		code, ok := expected[route.Path]
+		if !ok {
+			continue
+		}
+		count++
+		require.Equal(t, "GET", route.Method)
+		require.Equal(t, "AcceleratorCapacityAdminService", route.Module)
+		require.Equal(t, "ACCELERATOR", route.BusinessModule)
+		grant, err := permcode.Resolve(route.Method, route.Path)
+		require.NoError(t, err)
+		require.Equal(t, code, grant.Code)
+	}
+	require.Equal(t, len(expected), count)
+}
