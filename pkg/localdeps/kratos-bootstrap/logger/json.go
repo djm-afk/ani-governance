@@ -208,16 +208,38 @@ func addIfMissingAttr(out *[]slog.Attr, seen map[string]struct{}, a slog.Attr) {
 }
 
 // sourceString renders a PC as the short file:line form used by `source`.
-func sourceString(pc uintptr) string {
-	if pc == 0 {
+// sourceString renders the first caller frame that is not part of the logging
+// implementation, so `source` points at the business call site instead of the
+// handler's own PC (which is what slog.Record.PC holds here).
+func sourceString(_ uintptr) string {
+	pcs := make([]uintptr, 24)
+	n := runtime.Callers(3, pcs)
+	if n == 0 {
 		return ""
 	}
-	frames := runtime.CallersFrames([]uintptr{pc})
-	frame, _ := frames.Next()
-	if frame.File == "" {
-		return ""
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		frame, more := frames.Next()
+		if frame.File != "" && !isLoggingFrame(frame.Function) {
+			return filepath.Base(frame.File) + ":" + itoa(frame.Line)
+		}
+		if !more {
+			return ""
+		}
 	}
-	return filepath.Base(frame.File) + ":" + itoa(frame.Line)
+}
+
+// isLoggingFrame reports frames that belong to the logging plumbing.
+func isLoggingFrame(function string) bool {
+	for _, marker := range []string{
+		"log/slog.", "runtime.", "kratos-bootstrap/logger.",
+		"github.com/go-kratos/kratos/v2/log.",
+	} {
+		if strings.Contains(function, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func itoa(v int) string {

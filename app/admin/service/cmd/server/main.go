@@ -75,18 +75,24 @@ func newApp(
 	return bootstrap.NewApp(ctx, servers...)
 }
 
+// appInfo returns the single AppInfo used by both the early logger and the
+// bootstrap context, so process.starting and process.ready report the same
+// instance identity. The id is generated locally; it never queries Kubernetes.
 func appInfo() *conf.AppInfo {
-	return &conf.AppInfo{
+	ai := &conf.AppInfo{
 		Project: serviceid.ProjectName,
 		AppId:   "ani-governance", // Runtime name; retain upstream role codes and Redis key namespace.
 		Version: version,
 	}
+	bootstrap.AdjustAppInfo(ai)
+	return ai
 }
 
 func runApp() error {
 	// 日志必须在读取配置、数据库、证书与业务组件之前可用。
+	info := appInfo()
 	level, levelErr := bLogger.ParseRuntimeLevel(os.Getenv("ANI_LOG_LEVEL"))
-	logger, stdLogger := bLogger.NewRuntimeLogger(appInfo(), level)
+	logger, stdLogger := bLogger.NewRuntimeLogger(info, level)
 	bLogger.InstallGlobals(logger, stdLogger)
 
 	if levelErr != nil {
@@ -107,7 +113,7 @@ func runApp() error {
 	// 时 payload 以明文存储且不会被误判为已加密——调用方无需额外处理。
 	initGlobalEncryptorFromEnv(logger)
 
-	ctx := bootstrap.NewContext(context.Background(), appInfo())
+	ctx := bootstrap.NewContext(context.Background(), info)
 	return bootstrap.RunApp(ctx, initApp)
 }
 
