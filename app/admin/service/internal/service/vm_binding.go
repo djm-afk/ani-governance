@@ -82,13 +82,20 @@ func vmAuthorizationError(err error) error {
 }
 
 // vmCloneOwnerError keeps the resource owner's stable clone reason visible as a
-// dedicated Governance code instead of a generic dependency failure.
+// dedicated Governance code instead of a generic dependency failure. A busy
+// source is answered before acceptance so a second clone never becomes an
+// accepted target that dispatch later drops.
 func vmCloneOwnerError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if status.Code(err) == codes.FailedPrecondition && strings.Contains(err.Error(), "VM_CLONE_SOURCE_UNAVAILABLE") {
-		return kratoserrors.New(412, "VM_CLONE_SOURCE_UNAVAILABLE", err.Error())
+	if status.Code(err) == codes.FailedPrecondition {
+		switch {
+		case strings.Contains(err.Error(), "VM_CLONE_SOURCE_UNAVAILABLE"):
+			return kratoserrors.New(412, "VM_CLONE_SOURCE_UNAVAILABLE", err.Error())
+		case strings.Contains(err.Error(), "VM_OPERATION_CONFLICT"):
+			return kratoserrors.New(409, "VM_OPERATION_CONFLICT", err.Error())
+		}
 	}
 	return err
 }
