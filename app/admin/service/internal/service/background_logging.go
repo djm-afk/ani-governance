@@ -121,3 +121,15 @@ func decodeClaimTelemetry(raw []byte) (telemetry.TelemetryContext, error) {
 	}
 	return telemetry.Decode(raw)
 }
+
+// decodeAcceptanceTelemetry parses the modeldev create-side raw telemetry.
+func decodeAcceptanceTelemetry(raw []byte) telemetry.TelemetryContext {
+	if len(raw) == 0 {
+		return telemetry.TelemetryContext{}
+	}
+	tc, err := telemetry.Decode(raw)
+	if err != nil {
+		return telemetry.TelemetryContext{}
+	}
+	return tc
+}
