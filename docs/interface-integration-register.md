@@ -2423,6 +2423,6 @@ ModelDev 专属 IAM 或第二条直连 REST。
 镜像构建、Governance 部署、真实租户环境下的 202 受理、真实 Hub 来源与 importer 执行
 均未验收，不能由本登记推出可用结论。
 
-**Gov pin**：当前 `go.mod` 仍是 `replace` 指向 `github.com/djm-afk/ani-modeldev-service`
-的固定提交，正式 pin 形态待确认（见 ModelDev 实施进度 §3.1b）。
-
+**Gov pin**：`go.mod` 已指向上游正式伪版本
+`github.com/zhangzhe-ctrl/ani-modeldev-service v1.6.1-0.20261111043846-7a21b2d01ec9`
+（对应 ani-modeldev-service#19 合入 main 的 squash 提交），不再使用 `replace` 指向个人 fork。
