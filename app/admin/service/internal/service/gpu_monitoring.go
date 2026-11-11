@@ -211,6 +211,12 @@ func (s *GpuMonitoringService) physicalTarget(ctx context.Context, cluster, mode
 		if id != "" && id != d.DeviceId {
 			continue
 		}
+		if d.DeviceKind != acc.DeviceKind_PHYSICAL_DEVICE {
+			if id != "" {
+				return nil, "", errors.BadRequest("GPU_PHYSICAL_DEVICE_REQUIRED", "physical GPU metrics require a parent physical device")
+			}
+			continue
+		}
 		models[d.ModelKey] = true
 		t.Scopes = append(t.Scopes, &gpu.GpuSourceScope{ClusterId: d.ClusterId, NodeName: d.Node.Name, NodeUid: d.Node.Uid, DeviceId: d.DeviceId, AdapterId: d.AdapterId, DeviceUid: d.DeviceUid, ParentDeviceUid: d.ParentDeviceUid, DeviceKind: d.DeviceKind.String()})
 	}
