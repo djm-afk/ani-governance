@@ -215,3 +215,59 @@ func TestUnsupportedLevelReportsAndFallsBackToInfo(t *testing.T) {
 		}
 	}
 }
+
+// Kratos' request-logging middleware logs with an empty message and always
+// writes reason/stack, leaving them empty when the request succeeded. The
+// contract requires a readable message on every record and forbids empty
+// strings, so the handler must fill the message and drop the empty values.
+func TestRuntimeLogFillsEmptyMessageAndDropsEmptyStrings(t *testing.T) {
+	var buf bytes.Buffer
+	l, _ := newJSON(&buf, slog.LevelInfo)
+
+	l.Error(context.Background(), "",
+		"event", RuntimeEvent, "kind", "server", "component", "http",
+		"operation", "/admin.service.v1.InstanceService/QueryResourceTrend",
+		"code", 401, "reason", "", "stack", "")
+
+	m := decodeLine(t, buf.Bytes())
+	if m["msg"] == "" || m["msg"] == nil {
+		t.Fatalf("empty framework message was not filled: %v", m)
+	}
+	if got, _ := m["msg"].(string); !strings.Contains(got, "http") || !strings.Contains(got, "QueryResourceTrend") || !strings.Contains(got, "401") {
+		t.Errorf("synthesized message lost the known facts: %q", got)
+	}
+	for _, key := range []string{"reason", "stack"} {
+		if v, present := m[key]; present && v == "" {
+			t.Errorf("%s must be omitted when empty, got empty string", key)
+		}
+	}
+}
+
+// A business event keeps its own message untouched.
+func TestBusinessMessageIsPreserved(t *testing.T) {
+	var buf bytes.Buffer
+	l, _ := newJSON(&buf, slog.LevelInfo)
+
+	l.Info(context.Background(), "HTTP request completed",
+		"event", "http.request.completed", "http.method", "GET",
+		"http.path", "/api/v1/vms", "http.status_code", 200,
+		"result", "succeeded", "duration_ms", 1.5)
+
+	m := decodeLine(t, buf.Bytes())
+	if m["msg"] != "HTTP request completed" {
+		t.Errorf("business message changed: %v", m["msg"])
+	}
+}
+
+// With no operation facts the event name is the only honest message.
+func TestFrameworkMessageFallsBackToEvent(t *testing.T) {
+	var buf bytes.Buffer
+	l, _ := newJSON(&buf, slog.LevelInfo)
+
+	l.Info(context.Background(), "", "event", RuntimeEvent, "module", "bootstrap")
+
+	m := decodeLine(t, buf.Bytes())
+	if m["msg"] != RuntimeEvent {
+		t.Errorf("fallback message = %v, want %s", m["msg"], RuntimeEvent)
+	}
+}

@@ -145,9 +145,64 @@ func (h *contractHandler) Handle(ctx context.Context, r slog.Record) error {
 		}
 	}
 
-	nr := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
+	// The contract gives every string field a minimum length of one, so an
+	// empty value is never valid. Kratos' request-logging middleware always
+	// writes reason/stack, leaving them empty on success; drop those here
+	// instead of emitting a record that fails validation.
+	out = dropEmptyStrings(out)
+
+	// The same middleware logs with an empty message. A record without a
+	// readable message cannot be triaged, so compose one from the attributes
+	// the framework did provide.
+	message := r.Message
+	if message == "" {
+		message = fallbackMessage(event, out)
+	}
+
+	nr := slog.NewRecord(r.Time, r.Level, message, r.PC)
 	nr.AddAttrs(out...)
 	return h.base.Handle(ctx, nr)
+}
+
+// dropEmptyStrings removes attributes whose value is an empty string. Schema
+// fields all require at least one character, so keeping them would only produce
+// records the contract rejects.
+func dropEmptyStrings(attrs []slog.Attr) []slog.Attr {
+	kept := attrs[:0]
+	for _, a := range attrs {
+		if a.Value.Kind() == slog.KindString && a.Value.String() == "" {
+			continue
+		}
+		kept = append(kept, a)
+	}
+	return kept
+}
+
+// fallbackMessage builds a readable message for a framework record that carried
+// none. Component, operation and code are the stable facts a request log holds;
+// when none exist the event name is the only honest description.
+func fallbackMessage(event string, attrs []slog.Attr) string {
+	value := func(key string) string {
+		for _, a := range attrs {
+			if a.Key == key {
+				return a.Value.String()
+			}
+		}
+		return ""
+	}
+	parts := make([]string, 0, 3)
+	for _, key := range []string{"component", "operation", "code"} {
+		if v := value(key); v != "" {
+			parts = append(parts, v)
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, " ")
+	}
+	if event != "" {
+		return event
+	}
+	return "framework log"
 }
 
 func (h *contractHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
