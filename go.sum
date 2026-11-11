@@ -230,8 +230,6 @@ github.com/jackc/pgx/v5 v5.11.0 h1:IzBBtyK9AHqf98cctWFifYSci2hgQR/cd56wB4p+ogg=
 github.com/jackc/pgx/v5 v5.11.0/go.mod h1:mal1tBGAFfLHvZzaYh77YS/eC6IX9OWbRV1QIIM0Jn4=
 github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo=
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
-github.com/java559/ani-resource-service v0.0.0-20261110071948-1831997e2a8c h1:NDEvsuRSHJ8oyAoKiTKdsYsxOhitrJ85E05NwHSftdY=
-github.com/java559/ani-resource-service v0.0.0-20261110071948-1831997e2a8c/go.mod h1:VUx4k2JMEz0+vnNp0CudyjQiBARvcZmBiIkjnA8aMsc=
 github.com/jinzhu/copier v0.4.0 h1:w3ciUoD19shMCRargcpm0cm91ytaBhDvuRpz1ODO/U8=
 github.com/jinzhu/copier v0.4.0/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
@@ -400,6 +398,8 @@ github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c79
 github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88/go.mod h1:OmpTNUUTOEMzeXx5cOUdOYqNxrmA+KBthlt44mfZ4s8=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261104060620-47ceb0edf98e h1:2ZIZR0CliGHAGfKU42k/VWVja8dXpBD/HmR3VWbaZP8=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261104060620-47ceb0edf98e/go.mod h1:c3uFbGO68hYjL5I8N2VbCTf15Sqzu4oqVTsBUrUHl90=
+github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261111013743-fd4c5660b661 h1:B6RO0fejNEa+N7U6c8ydetfnlaZO2w2iMoh2SjrJ0zY=
+github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261111013743-fd4c5660b661/go.mod h1:VUx4k2JMEz0+vnNp0CudyjQiBARvcZmBiIkjnA8aMsc=
 github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c h1:+Z/R4AX9U0RpY+smnrCO9cVFTxLqjjp0r7NbUWdchNE=
 github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c/go.mod h1:8N+MSiQHH8SrwQ6HOvEunPq37KNHiTr2/78mhzraFSw=
 github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f h1:dC5v8SPszcnt5W0pl5rBOSCL85nDJnQJkjy1YcWFZLs=
