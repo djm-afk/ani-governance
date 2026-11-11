@@ -258,8 +258,6 @@ func NewRestServer(
 		[]http.FilterFunc{imageWriteTimeoutFilter(ordinaryTimeout, imageWriteBudget, modeldevConfig.Timeout, modelConfig.Timeout, modeldevConfig.ModelResolutionTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, clusterOpsHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter, storageQueryHTTPFilter},
 		middlewares...,
 	)
-		middlewares...,
-	)
 	if err != nil {
 		return nil, err
 	}
