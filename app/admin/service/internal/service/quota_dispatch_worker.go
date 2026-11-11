@@ -165,7 +165,8 @@ func (w *QuotaDispatchWorker) dispatchOne(ctx context.Context, op *data.ClaimedO
 	// Restore the accepted request's trace for this dispatch pass.
 	identity := backgroundIdentity(op.OperationID, "quota", op.ResourceID, "", op.Action)
 	saved, telemetryErr := decodeClaimTelemetry(op.TelemetryJSON)
-	ctx = restoreBackgroundTrace(ctx, saved, telemetryErr, identity, w.log.Logger)
+	ctx, runSpan := restoreBackgroundTrace(ctx, saved, telemetryErr, identity, w.log.Logger, "quota."+op.Action)
+	defer runSpan.End()
 	adapter := w.registry.Lookup(op.OwnerService, op.Action)
 	if adapter == nil {
 		// 恢复遇到缺失 adapter：保留账本并报错，不退额、不改余额（§8.2）。

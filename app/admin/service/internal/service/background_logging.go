@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/trace"
+
 	bLogger "go-wind-admin/pkg/localdeps/kratos-bootstrap/logger"
 	"go-wind-admin/pkg/telemetry"
 )
@@ -93,24 +95,31 @@ func telemetryUnavailable(ctx context.Context, log bLogger.Logger, event string,
 	log.Error(ctx, "background telemetry context unavailable", kv...)
 }
 
-// restoreBackgroundTrace restores a persisted trace into a fresh worker context.
-// A missing/invalid value is recorded once and base+identity is returned so the
-// lane keeps a valid run trace.
-func restoreBackgroundTrace(base context.Context, saved telemetry.TelemetryContext, decodeErr error, attrs []any, log bLogger.Logger) context.Context {
-	if decodeErr != nil {
-		telemetryUnavailable(base, log, "telemetry.context_invalid", attrs, decodeErr)
-		return base
+// restoreBackgroundTrace restores a persisted trace into a fresh worker context
+// and opens this pass's own span on it. A missing/invalid value is recorded once
+// on that new span, so the ERROR still carries a valid trace_id/span_id, and the
+// pass continues on a fresh trace. The caller must End the returned span.
+func restoreBackgroundTrace(base context.Context, saved telemetry.TelemetryContext, decodeErr error, attrs []any, log bLogger.Logger, name string) (context.Context, trace.Span) {
+	restored := base
+	event, cause := "", error(nil)
+	switch {
+	case decodeErr != nil:
+		event, cause = "telemetry.context_invalid", decodeErr
+	case !saved.Valid():
+		event = "telemetry.context_missing"
+	default:
+		next, e := telemetry.Restore(base, saved)
+		if e != nil {
+			event, cause = "telemetry.context_invalid", e
+		} else {
+			restored = next
+		}
 	}
-	if !saved.Valid() {
-		telemetryUnavailable(base, log, "telemetry.context_missing", attrs, nil)
-		return base
+	ctx, span := telemetry.StartRun(restored, name)
+	if event != "" {
+		telemetryUnavailable(ctx, log, event, attrs, cause)
 	}
-	restored, e := telemetry.Restore(base, saved)
-	if e != nil {
-		telemetryUnavailable(base, log, "telemetry.context_invalid", attrs, e)
-		return base
-	}
-	return restored
+	return ctx, span
 }
 
 // decodeClaimTelemetry parses the raw persisted telemetry carried by a claimed

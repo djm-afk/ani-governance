@@ -40,7 +40,8 @@ func (d *tenantSpaceDispatcher) step(ctx context.Context) (bool, error) {
 	}
 	identity := backgroundIdentity(claim.OperationID, "tenant_space", claim.ResourceTenantID, "", "tenant_space.open")
 	saved, telemetryErr := decodeClaimTelemetry(claim.TelemetryJSON)
-	ctx = restoreBackgroundTrace(ctx, saved, telemetryErr, identity, d.log)
+	ctx, runSpan := restoreBackgroundTrace(ctx, saved, telemetryErr, identity, d.log, "tenant_space.open")
+	defer runSpan.End()
 	call, cancel := context.WithTimeout(ctx, 30*time.Second)
 	if d.log != nil {
 		d.log.Info(ctx, "tenant space open dispatch", append(append([]any{"event", "operation.dispatch_started"}, identity...), "peer.service", "ani-resource-service")...)

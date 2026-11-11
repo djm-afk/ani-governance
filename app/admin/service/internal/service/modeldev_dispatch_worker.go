@@ -147,7 +147,8 @@ func (w *ModelDevDispatchWorker) deliverNext(ctx context.Context) bool {
 	}
 	// Restore the accepted request's trace for this delivery pass.
 	identity := backgroundIdentity(claim.Acceptance.OperationID, "modeldev", claim.Acceptance.ExecutionID, "", "modeldev.create")
-	ctx = restoreBackgroundTrace(ctx, decodeAcceptanceTelemetry(claim.Acceptance.TelemetryJSON), nil, identity, w.log.Logger)
+	ctx, runSpan := restoreBackgroundTrace(ctx, decodeAcceptanceTelemetry(claim.Acceptance.TelemetryJSON), nil, identity, w.log.Logger, "modeldev.create")
+	defer runSpan.End()
 	if w.log.Logger != nil {
 		w.log.Logger.Info(ctx, "modeldev delivery dispatch", append(append([]any{"event", "operation.dispatch_started"}, identity...), "peer.service", "ani-modeldev-service")...)
 	}

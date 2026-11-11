@@ -32,7 +32,8 @@ func (w *ModelDevDispatchWorker) deliverNextClose(ctx context.Context) (worked, 
 	}
 	// Restore the close-side trace captured on first entry into CLOSING.
 	identity := backgroundIdentity(claim.Intent.OperationID, "modeldev", claim.Intent.ExecutionID, "", "modeldev.stop")
-	ctx = restoreBackgroundTrace(ctx, decodeAcceptanceTelemetry(claim.Intent.TelemetryJSON), nil, identity, w.log.Logger)
+	ctx, runSpan := restoreBackgroundTrace(ctx, decodeAcceptanceTelemetry(claim.Intent.TelemetryJSON), nil, identity, w.log.Logger, "modeldev.close")
+	defer runSpan.End()
 	call, cancel = context.WithTimeout(ctx, 3*time.Second)
 	receipt, deliveryErr := w.client.ApplyCloseIntent(call, *claim.Intent)
 	cancel()

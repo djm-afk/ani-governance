@@ -69,7 +69,7 @@ func (w *SandboxDispatchWorker) loop(ctx context.Context, done chan struct{}) {
 		if err == nil && intent != nil {
 			identity := backgroundIdentity(intent.OperationID, "sandbox", intent.SandboxID, "", "sandbox.create")
 			saved, telemetryErr := decodeClaimTelemetry(intent.TelemetryJSON)
-			runCtx := restoreBackgroundTrace(callCtx, saved, telemetryErr, identity, w.log)
+			runCtx, runSpan := restoreBackgroundTrace(callCtx, saved, telemetryErr, identity, w.log, "sandbox.create")
 			_, err = w.sandbox.deliverSandboxCreate(runCtx, intent, true)
 			if err != nil {
 				code := status.Code(err).String()
@@ -85,6 +85,8 @@ func (w *SandboxDispatchWorker) loop(ctx context.Context, done chan struct{}) {
 				w.log.Warn(runCtx, "sandbox create delivery not confirmed",
 					append(append([]any{"event", "step.waiting", "reason", code}, identity...))...)
 			}
+			// One span per tick: End it here rather than defer inside the loop.
+			runSpan.End()
 		} else if err != nil && ctx.Err() == nil {
 			dependencyFailed(ctx, w.log, "postgresql", "sandbox.claim", []any{"worker", "sandbox", "step", "claim"}, err)
 		}

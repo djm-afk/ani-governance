@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	sdkTrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -169,5 +170,50 @@ func TestBusinessAttrsOmitEmpty(t *testing.T) {
 	attrs := BusinessAttrs(ctx)
 	if len(attrs) != 1 || attrs[0].Key != "operation_id" {
 		t.Fatalf("expected only operation_id, got %v", attrs)
+	}
+}
+
+// A worker pass must keep the accepted request's trace_id but report its own
+// span_id: the persisted traceparent belongs to a request span that already
+// ended. This is the LG13/LG14 requirement, asserted at the helper.
+func TestStartRunKeepsTraceAndOpensNewSpan(t *testing.T) {
+	previous := otel.GetTracerProvider()
+	otel.SetTracerProvider(sdkTrace.NewTracerProvider())
+	defer otel.SetTracerProvider(previous)
+
+	traceID, _ := trace.TraceIDFromHex("0af7651916cd43dd8448eb211c80319c")
+	requestSpanID, _ := trace.SpanIDFromHex("b7ad6b7169203331")
+	request := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceID, SpanID: requestSpanID, TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), request)
+	restored, err := Restore(context.Background(), Capture(ctx))
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+
+	runCtx, span := StartRun(restored, "quota.dispatch")
+	defer span.End()
+	got := trace.SpanContextFromContext(runCtx)
+	if got.TraceID() != traceID {
+		t.Errorf("worker trace_id = %s, want the accepted trace %s", got.TraceID(), traceID)
+	}
+	if got.SpanID() == requestSpanID || !got.SpanID().IsValid() {
+		t.Errorf("worker span_id = %s, want a new valid span distinct from the request span", got.SpanID())
+	}
+}
+
+// A record without a usable persisted trace still gets a valid run span, so the
+// required worker events keep trace_id/span_id.
+func TestStartRunWithoutParentStillHasIdentity(t *testing.T) {
+	previous := otel.GetTracerProvider()
+	otel.SetTracerProvider(sdkTrace.NewTracerProvider())
+	defer otel.SetTracerProvider(previous)
+
+	runCtx, span := StartRun(context.Background(), "quota.dispatch")
+	defer span.End()
+	sc := trace.SpanContextFromContext(runCtx)
+	if !sc.IsValid() || !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
+		t.Fatalf("run span without a parent must still be valid, got %+v", sc)
 	}
 }
