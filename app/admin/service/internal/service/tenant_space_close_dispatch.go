@@ -33,7 +33,8 @@ func (d *tenantSpaceCloseDispatcher) step(ctx context.Context) (bool, error) {
 	}
 	identity := backgroundIdentity(intent.OperationID, "tenant_space", intent.ResourceTenantID, "", "tenant_space.close")
 	saved, telemetryErr := decodeClaimTelemetry(intent.TelemetryJSON)
-	ctx = restoreBackgroundTrace(ctx, saved, telemetryErr, identity, d.log)
+	ctx, runSpan := restoreBackgroundTrace(ctx, saved, telemetryErr, identity, d.log, "tenant_space.close")
+	defer runSpan.End()
 	call, cancel := context.WithTimeout(ctx, 20*time.Second)
 	result, err := d.remote.CloseTenantSpace(call, intent.ResourceTenantID, intent.OperationID)
 	cancel()

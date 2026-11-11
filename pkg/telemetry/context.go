@@ -98,6 +98,16 @@ func Restore(base context.Context, saved TelemetryContext) (context.Context, err
 	return ctx, nil
 }
 
+// StartRun opens the span for one background pass on top of base. The persisted
+// trace was captured from a request span that has already ended, so reusing it
+// would attribute every later pass to that request span; a child span keeps the
+// same trace_id and gives this pass its own span_id. Without a parent the
+// provider assigns a new trace, which keeps trace_id/span_id present for the
+// required worker events.
+func StartRun(base context.Context, name string) (context.Context, trace.Span) {
+	return otel.Tracer("ani-governance/worker").Start(base, name)
+}
+
 // BusinessContext is the small, fixed set of business attributes bound once an
 // operation has been accepted or claimed. Empty fields are omitted.
 type BusinessContext struct {
