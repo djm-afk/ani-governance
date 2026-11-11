@@ -75,9 +75,13 @@ func imageManagementCall[T any](c *ImageManagementClient, ctx context.Context, t
 	if c == nil || c.platform == nil || c.managed == nil || c.timeout <= 0 {
 		return zero, status.Error(codes.Unavailable, "Image management unavailable")
 	}
-	scope, identity, ok := platformImageIdentity(actor)
+	_, identity, ok := platformImageIdentity(actor)
 	if tenant != "" {
-		scope, identity, ok = managedImageIdentity(tenant, actor)
+		// 代管调用仍以平台作用域出站：目标租户只写进请求体的
+		// target_tenant_id，并且这里先校验它确实是规范 UUID。Res 的
+		// 治理解析器把 x-ani-scope=platform 与 x-ani-tenant-id 视为互斥，
+		// 代管方法本身落在平台作用域白名单里，由服务门面校验目标租户。
+		_, identity, ok = managedImageIdentity(tenant, actor)
 	}
 	if !ok {
 		return zero, status.Error(codes.Unauthenticated, "invalid trusted Image management identity")
@@ -87,10 +91,7 @@ func imageManagementCall[T any](c *ImageManagementClient, ctx context.Context, t
 	}
 	callCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	pairs := []string{"x-ani-scope", scope, "x-ani-actor", identity, "x-ani-request-id", uuid.NewString()}
-	if scope != "platform" {
-		pairs = append(pairs, "x-ani-tenant-id", tenant)
-	}
+	pairs := []string{"x-ani-scope", "platform", "x-ani-actor", identity, "x-ani-request-id", uuid.NewString()}
 	// NewOutgoingContext replaces every inherited value, so no Authorization,
 	// cookie or public user identity can cross this hop.
 	callCtx = metadata.NewOutgoingContext(callCtx, metadata.Pairs(pairs...))
