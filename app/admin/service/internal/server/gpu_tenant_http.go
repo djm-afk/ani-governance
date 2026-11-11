@@ -97,21 +97,7 @@ func gpuTenantHTTPJSON(message *view.ListGpuTenantsResponse) ([]byte, error) {
 			}
 		}
 		row["usage"] = usage
-		if item.Allocation != nil {
-			var allocation map[string]json.RawMessage
-			if err = json.Unmarshal(row["allocation"], &allocation); err != nil {
-				return nil, err
-			}
-			for _, key := range []string{"memoryMiB", "bindingCount", "knownMemoryMiB", "knownBindingCount"} {
-				if _, present := allocation[key]; !present {
-					allocation[key] = json.RawMessage("null")
-				}
-			}
-			row["allocation"], err = json.Marshal(allocation)
-			if err != nil {
-				return nil, err
-			}
-		}
+
 		raw, err = json.Marshal(row)
 		if err != nil {
 			return nil, err

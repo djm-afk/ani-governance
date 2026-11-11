@@ -21,34 +21,31 @@ type gpuPlanFixture struct {
 	Resolved *acc.ResolvedGpuRequest
 }
 
-func gpuVector(t *testing.T) (*gpuPlanFixture, *acc.GpuUsageProjection, *acc.ProviderBaseline) {
+func gpuVector(t *testing.T) (*gpuPlanFixture, *GpuUsageRef, *acc.ProviderBaseline) {
 	t.Helper()
 	request := &acc.GpuRequest{ClusterId: "10000000-0000-4000-8000-000000000001", PoolId: "10000000-0000-4000-8000-000000000002", ProfileId: "10000000-0000-4000-8000-000000000003", ProfileVersion: 1, Replicas: 1, DevicesPerReplica: 1, ContainerName: "workspace"}
-	baseline := &acc.ProviderBaseline{BaselineId: "10000000-0000-4000-8000-000000000004", MemoryBlockMib: 1, RuntimeClassName: "nvidia"}
-	profile := &acc.GpuProfile{ProfileId: request.ProfileId, ProfileVersion: 1, DisplayName: "T4 shared 8GiB", BaselineId: baseline.BaselineId, State: acc.ProfileState_PROFILE_ACTIVE, Revision: 1, Spec: &acc.ProfileSpec{GroupId: "10000000-0000-4000-8000-000000000005", Mode: acc.SupplyMode_SHARED_FIXED, ModelKey: "nvidia-tesla-t4", MemoryMibPerDevice: 8192, CoreLimitPercent: 25, MaxDevicesPerReplica: 1, IsolationClass: "SOFTWARE_COOPERATIVE"}}
-	profile.SpecDigest, _ = gpuSpecDigest(profile)
+	baseline := &acc.ProviderBaseline{BaselineId: "10000000-0000-4000-8000-000000000004", AdapterId: "volcano-hami-mib-v1", MemoryBlockMib: 1, SplitCount: 10, RuntimeClassName: "nvidia"}
+	profile := &acc.GpuProfile{ProfileId: request.ProfileId, ProfileVersion: 1, DisplayName: "T4 shared 8GiB", BaselineId: baseline.BaselineId, State: acc.ProfileState_PROFILE_ACTIVE, Revision: 1, Spec: &acc.ProfileSpec{GroupId: "10000000-0000-4000-8000-000000000005", Mode: acc.SupplyMode_SHARED_FIXED, ModelKey: "nvidia-tesla-t4", MemoryMibPerDevice: 8192, CoreLimitPercent: 25, MaxDevicesPerReplica: 1, IsolationClass: "SOFTWARE_COOPERATIVE", AllocationType: acc.AllocationType_DYNAMIC_SHARED, ResourceKey: "volcano.sh/vgpu-number"}}
 	execution := &acc.GpuExecution{SchedulerName: "volcano", QueueName: "gpu", RuntimeClassName: "nvidia", NodeSelector: map[string]string{"accelerator.ani.io/supply-group": profile.Spec.GroupId, "accelerator.ani.io/model-key": profile.Spec.ModelKey, "accelerator.ani.io/baseline-id": profile.BaselineId}, PodAnnotations: map[string]string{"volcano.sh/vgpu-mode": "hami-core"}, Resources: map[string]string{"volcano.sh/vgpu-number": "1", "volcano.sh/vgpu-memory": "8192", "volcano.sh/vgpu-cores": "25"}}
-	execution.ExecutionDigest, _ = protocol.GpuExecutionDigest(execution)
-	resolved := &acc.ResolvedGpuRequest{Execution: execution, Selection: &acc.GpuDisplay{ProfileId: profile.ProfileId, ProfileVersion: 1, ProfileName: profile.DisplayName, ModelKey: profile.Spec.ModelKey, Mode: profile.Spec.Mode}, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: GpuSharedQuotaCode, Units: 8192}}}
-	projection := &acc.GpuUsageProjection{Ref: &acc.GpuUsageRef{TenantId: "10000000-0000-4000-8000-000000000006", OwnerService: InstanceOwner, ResourceId: "10000000-0000-4000-8000-000000000007", CreateOperationId: "10000000-0000-4000-8000-000000000008"}, Revision: 1, State: acc.UsageState_DECLARED, ProfileId: profile.ProfileId, ProfileVersion: 1, GroupId: profile.Spec.GroupId, BaselineId: profile.BaselineId, ClusterId: request.ClusterId, ContainerName: request.ContainerName, ExecutionDigest: execution.ExecutionDigest, SourceOperationCreatedAt: "2026-10-18T00:00:00Z", SourceFactRef: "accepted"}
-	projection.PayloadDigest, _ = GpuProjectionDigest(projection)
-	return &gpuPlanFixture{request, profile, resolved}, projection, baseline
+	fixture := &gpuPlanFixture{Request: request, Profile: profile, Resolved: &acc.ResolvedGpuRequest{Execution: execution, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: GpuSharedQuotaCode, Units: 8192}}}}
+	refreshGPUFixture(t, fixture)
+	return fixture, &GpuUsageRef{TenantId: "10000000-0000-4000-8000-000000000006", OwnerService: InstanceOwner, ResourceId: "10000000-0000-4000-8000-000000000007", CreateOperationId: "10000000-0000-4000-8000-000000000008"}, baseline
+}
+func refreshGPUFixture(t *testing.T, p *gpuPlanFixture) {
+	t.Helper()
+	var err error
+	p.Profile.SpecDigest, err = gpuSpecDigest(p.Profile)
+	require.NoError(t, err)
+	p.Resolved.Execution.ExecutionDigest, err = protocol.GpuExecutionDigest(p.Resolved.Execution)
+	require.NoError(t, err)
+	g := p.Profile.Spec
+	p.Resolved.BusinessSpec = &acc.GpuBusinessSpec{ProfileId: p.Profile.ProfileId, ProfileVersion: p.Profile.ProfileVersion, ProfileName: p.Profile.DisplayName, ModelKey: g.ModelKey, Mode: g.Mode, AllocationType: g.AllocationType, DevicesPerReplica: p.Request.DevicesPerReplica, MemoryMibPerDevice: g.MemoryMibPerDevice, CoreLimitPercent: g.CoreLimitPercent, ComputeUnitsPerDevice: g.ComputeUnitsPerDevice, ResourceKey: g.ResourceKey, AdapterId: "volcano-hami-mib-v1", SpecDigest: p.Profile.SpecDigest}
 }
 func TestGpuFrozenCanonicalVectors(t *testing.T) {
-	p, projection, _ := gpuVector(t)
+	p, _, _ := gpuVector(t)
 	q, e := GpuResolvedQuota(p.Resolved, p.Request)
-	if e != nil || q.Units != 8192 {
-		t.Fatal(q, e)
-	}
-	d, e := GpuProjectionDigest(projection)
-	if e != nil || d != projection.PayloadDigest {
-		t.Fatal(d, e)
-	}
-	for _, key := range []string{"volcano.sh/vgpu-memory-percentage", "gpu_plan", "verification_ref"} {
-		if strings.Contains(projection.String(), key) {
-			t.Fatal(key)
-		}
-	}
+	require.NoError(t, e)
+	require.EqualValues(t, 8192, q.Units)
 }
 func TestGpuCanonicalRejectsSemanticMutations(t *testing.T) {
 	p, _, _ := gpuVector(t)
@@ -75,7 +72,7 @@ func TestGpuCanonicalUnicodeNullInteger(t *testing.T) {
 		t.Fatal(e)
 	}
 	b, _ = gpuCanonicalJSON(o)
-	if !strings.Contains(string(b), `"selection":null`) {
+	if !strings.Contains(string(b), `"business_spec":null`) {
 		t.Fatal(string(b))
 	}
 	r := &acc.GpuRequest{ProfileVersion: ^uint64(0)}
@@ -96,7 +93,11 @@ func TestGpuQuantityBuilderVectorsAndOriginalCharges(t *testing.T) {
 		r := proto.Clone(p.Request).(*acc.GpuRequest)
 		r.DevicesPerReplica = devices
 		resolved := proto.Clone(p.Resolved).(*acc.ResolvedGpuRequest)
-		resolved.Selection.Mode = acc.SupplyMode_WHOLE_EXCLUSIVE
+		resolved.BusinessSpec.Mode = acc.SupplyMode_WHOLE_EXCLUSIVE
+		resolved.BusinessSpec.AllocationType = acc.AllocationType_PHYSICAL
+		resolved.BusinessSpec.DevicesPerReplica = devices
+		resolved.BusinessSpec.MemoryMibPerDevice = 15360
+		resolved.BusinessSpec.CoreLimitPercent = 100
 		resolved.Execution.Resources["volcano.sh/vgpu-number"] = strconv.FormatUint(uint64(devices), 10)
 		resolved.Execution.Resources["volcano.sh/vgpu-memory"] = "15360"
 		resolved.Execution.Resources["volcano.sh/vgpu-cores"] = "100"
@@ -137,7 +138,7 @@ func TestGpuCurrentInstanceContractRejectsRetiredEnvelope(t *testing.T) {
 	plan, _, _ := gpuVector(t)
 	business := instanceSettingsBusiness(t)
 	business.ComputeType = "gpu"
-	business.GpuExecution, business.GpuDisplay = plan.Resolved.Execution, plan.Resolved.Selection
+	business.GpuExecution, business.GpuBusinessSpec = plan.Resolved.Execution, plan.Resolved.BusinessSpec
 	payload, err := res.CanonicalBusinessPayload(business)
 	require.NoError(t, err)
 	sum := sha256.Sum256(payload)

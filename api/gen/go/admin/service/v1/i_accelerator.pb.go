@@ -27,9 +27,9 @@ var File_admin_service_v1_i_accelerator_proto protoreflect.FileDescriptor
 
 const file_admin_service_v1_i_accelerator_proto_rawDesc = "" +
 	"\n" +
-	"$admin/service/v1/i_accelerator.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$catalog/service/v1/accelerator.proto\x1a\"admin/service/v1/quota_types.proto\x1a\x1bgoogle/protobuf/empty.proto2\xc1\x1a\n" +
-	"\x17AcceleratorAdminService\x12\x8c\x01\n" +
-	"\x11GetInitialization\x12\x16.google.protobuf.Empty\x1a-.catalog.service.v1.AcceleratorInitialization\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/admin/accelerator/initialization\x12\xb4\x01\n" +
+	"$admin/service/v1/i_accelerator.proto\x12\x10admin.service.v1\x1a\x1cgoogle/api/annotations.proto\x1a$catalog/service/v1/accelerator.proto\x1a\"admin/service/v1/quota_types.proto\x1a\x1bgoogle/protobuf/empty.proto2\xad\x18\n" +
+	"\x17AcceleratorAdminService\x12\xad\x01\n" +
+	"\x11GetInitialization\x127.catalog.service.v1.GetAcceleratorInitializationRequest\x1a-.catalog.service.v1.AcceleratorInitialization\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/admin/accelerator/initialization\x12\xb4\x01\n" +
 	"\x13ListDiscoveredNodes\x129.catalog.service.v1.ListAcceleratorDiscoveredNodesRequest\x1a..catalog.service.v1.AcceleratorDiscoveredNodes\"2\x82\xd3\xe4\x93\x02,\x12*/api/v1/admin/accelerator/discovered-nodes\x12\xc0\x01\n" +
 	"\x14CreateInitialization\x12:.catalog.service.v1.CreateAcceleratorInitializationRequest\x1a6.catalog.service.v1.AcceleratorInitializationOperation\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/admin/accelerator/initializations\x12\xd8\x01\n" +
 	"\x1aGetInitializationOperation\x12@.catalog.service.v1.GetAcceleratorInitializationOperationRequest\x1a6.catalog.service.v1.AcceleratorInitializationOperation\"@\x82\xd3\xe4\x93\x02:\x128/api/v1/admin/accelerator/initializations/{operation_id}\x12\xe5\x01\n" +
@@ -47,24 +47,20 @@ const file_admin_service_v1_i_accelerator_proto_rawDesc = "" +
 	"\x0ePreviewProfile\x124.catalog.service.v1.PreviewAcceleratorProfileRequest\x1a-.catalog.service.v1.AcceleratorProfilePreview\"2\x82\xd3\xe4\x93\x02,\x12*/api/v1/admin/accelerator/profiles:preview\x12\xb6\x01\n" +
 	"\x0fSetProfileState\x125.catalog.service.v1.SetAcceleratorProfileStateRequest\x1a&.catalog.service.v1.AcceleratorProfile\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/admin/accelerator/profiles/{profile_id}:set-state\x12\xaf\x01\n" +
 	"\rDeleteProfile\x123.catalog.service.v1.DeleteAcceleratorProfileRequest\x1a&.catalog.service.v1.AcceleratorProfile\"A\x82\xd3\xe4\x93\x02;:\x01*\"6/api/v1/admin/accelerator/profiles/{profile_id}:delete\x12\x8c\x01\n" +
-	"\vListDevices\x12*.catalog.service.v1.AcceleratorPageRequest\x1a&.catalog.service.v1.AcceleratorDevices\")\x82\xd3\xe4\x93\x02#\x12!/api/v1/admin/accelerator/devices\x12\x99\x01\n" +
-	"\x11AdminListBindings\x12*.catalog.service.v1.AcceleratorPageRequest\x1a,.catalog.service.v1.AcceleratorAdminBindings\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/admin/accelerator/bindings\x12\x96\x01\n" +
-	"\x10AdminGetCapacity\x12-.catalog.service.v1.AcceleratorVersionRequest\x1a'.catalog.service.v1.AcceleratorCapacity\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/admin/accelerator/capacity2\xdd\b\n" +
+	"\vListDevices\x12*.catalog.service.v1.AcceleratorPageRequest\x1a&.catalog.service.v1.AcceleratorDevices\")\x82\xd3\xe4\x93\x02#\x12!/api/v1/admin/accelerator/devices2\xc5\x02\n" +
 	"\x12AcceleratorService\x12\x8f\x01\n" +
 	"\fListProfiles\x120.catalog.service.v1.AcceleratorTenantPageRequest\x1a'.catalog.service.v1.AcceleratorProfiles\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/accelerator/profiles\x12\x9c\x01\n" +
 	"\n" +
-	"GetProfile\x123.catalog.service.v1.AcceleratorTenantVersionRequest\x1a&.catalog.service.v1.AcceleratorProfile\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/accelerator/profiles/{profile_id}\x12\x91\x01\n" +
-	"\vGetCapacity\x123.catalog.service.v1.AcceleratorTenantVersionRequest\x1a'.catalog.service.v1.AcceleratorCapacity\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/accelerator/capacity\x12\x9b\x01\n" +
-	"\x10AdmissionPreview\x12-.catalog.service.v1.AcceleratorPreviewRequest\x1a&.catalog.service.v1.AcceleratorPreview\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/v1/accelerator/admission-preview\x12\x8c\x01\n" +
-	"\rListGpuUsages\x120.catalog.service.v1.AcceleratorTenantPageRequest\x1a%.catalog.service.v1.AcceleratorUsages\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/v1/accelerator/usages\x12\xa2\x01\n" +
-	"\vGetGpuUsage\x12+.catalog.service.v1.AcceleratorUsageRequest\x1a$.catalog.service.v1.AcceleratorUsage\"@\x82\xd3\xe4\x93\x02:\x128/api/v1/accelerator/usages/{owner_service}/{resource_id}\x12\xaf\x01\n" +
-	"\fListBindings\x12+.catalog.service.v1.AcceleratorUsageRequest\x1a'.catalog.service.v1.AcceleratorBindings\"I\x82\xd3\xe4\x93\x02C\x12A/api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings2\x97\x01\n" +
+	"GetProfile\x123.catalog.service.v1.AcceleratorTenantVersionRequest\x1a&.catalog.service.v1.AcceleratorProfile\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/accelerator/profiles/{profile_id}2\x97\x01\n" +
 	"\x10QuotaSelfService\x12\x82\x01\n" +
-	"\x12GetMyQuotaAccounts\x12\x16.google.protobuf.Empty\x1a1.admin.service.v1.ListTenantQuotaAccountsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/me/quota-accountsB\xbe\x01\n" +
+	"\x12GetMyQuotaAccounts\x12\x16.google.protobuf.Empty\x1a1.admin.service.v1.ListTenantQuotaAccountsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/me/quota-accounts2\xb6\x03\n" +
+	"\x1fAcceleratorCapacityAdminService\x12\xc0\x01\n" +
+	"\x12GetProfileCapacity\x128.catalog.service.v1.GetAcceleratorProfileCapacityRequest\x1a..catalog.service.v1.AcceleratorProfileCapacity\"@\x82\xd3\xe4\x93\x02:\x128/api/v1/admin/accelerator/profiles/{profile_id}/capacity\x12\xcf\x01\n" +
+	"\x16GetSupplyGroupCapacity\x12<.catalog.service.v1.GetAcceleratorSupplyGroupCapacityRequest\x1a2.catalog.service.v1.AcceleratorSupplyGroupCapacity\"C\x82\xd3\xe4\x93\x02=\x12;/api/v1/admin/accelerator/supply-groups/{group_id}/capacityB\xbe\x01\n" +
 	"\x14com.admin.service.v1B\x11IAcceleratorProtoP\x01Z1go-wind-admin/api/gen/go/admin/service/v1;adminpb\xa2\x02\x03ASX\xaa\x02\x10Admin.Service.V1\xca\x02\x10Admin\\Service\\V1\xe2\x02\x1cAdmin\\Service\\V1\\GPBMetadata\xea\x02\x12Admin::Service::V1b\x06proto3"
 
 var file_admin_service_v1_i_accelerator_proto_goTypes = []any{
-	(*emptypb.Empty)(nil),                                     // 0: google.protobuf.Empty
+	(*v1.GetAcceleratorInitializationRequest)(nil),            // 0: catalog.service.v1.GetAcceleratorInitializationRequest
 	(*v1.ListAcceleratorDiscoveredNodesRequest)(nil),          // 1: catalog.service.v1.ListAcceleratorDiscoveredNodesRequest
 	(*v1.CreateAcceleratorInitializationRequest)(nil),         // 2: catalog.service.v1.CreateAcceleratorInitializationRequest
 	(*v1.GetAcceleratorInitializationOperationRequest)(nil),   // 3: catalog.service.v1.GetAcceleratorInitializationOperationRequest
@@ -78,11 +74,11 @@ var file_admin_service_v1_i_accelerator_proto_goTypes = []any{
 	(*v1.PreviewAcceleratorProfileRequest)(nil),               // 11: catalog.service.v1.PreviewAcceleratorProfileRequest
 	(*v1.SetAcceleratorProfileStateRequest)(nil),              // 12: catalog.service.v1.SetAcceleratorProfileStateRequest
 	(*v1.DeleteAcceleratorProfileRequest)(nil),                // 13: catalog.service.v1.DeleteAcceleratorProfileRequest
-	(*v1.AcceleratorVersionRequest)(nil),                      // 14: catalog.service.v1.AcceleratorVersionRequest
-	(*v1.AcceleratorTenantPageRequest)(nil),                   // 15: catalog.service.v1.AcceleratorTenantPageRequest
-	(*v1.AcceleratorTenantVersionRequest)(nil),                // 16: catalog.service.v1.AcceleratorTenantVersionRequest
-	(*v1.AcceleratorPreviewRequest)(nil),                      // 17: catalog.service.v1.AcceleratorPreviewRequest
-	(*v1.AcceleratorUsageRequest)(nil),                        // 18: catalog.service.v1.AcceleratorUsageRequest
+	(*v1.AcceleratorTenantPageRequest)(nil),                   // 14: catalog.service.v1.AcceleratorTenantPageRequest
+	(*v1.AcceleratorTenantVersionRequest)(nil),                // 15: catalog.service.v1.AcceleratorTenantVersionRequest
+	(*emptypb.Empty)(nil),                                     // 16: google.protobuf.Empty
+	(*v1.GetAcceleratorProfileCapacityRequest)(nil),           // 17: catalog.service.v1.GetAcceleratorProfileCapacityRequest
+	(*v1.GetAcceleratorSupplyGroupCapacityRequest)(nil),       // 18: catalog.service.v1.GetAcceleratorSupplyGroupCapacityRequest
 	(*v1.AcceleratorInitialization)(nil),                      // 19: catalog.service.v1.AcceleratorInitialization
 	(*v1.AcceleratorDiscoveredNodes)(nil),                     // 20: catalog.service.v1.AcceleratorDiscoveredNodes
 	(*v1.AcceleratorInitializationOperation)(nil),             // 21: catalog.service.v1.AcceleratorInitializationOperation
@@ -96,16 +92,12 @@ var file_admin_service_v1_i_accelerator_proto_goTypes = []any{
 	(*v1.AcceleratorProfile)(nil),                             // 29: catalog.service.v1.AcceleratorProfile
 	(*v1.AcceleratorProfilePreview)(nil),                      // 30: catalog.service.v1.AcceleratorProfilePreview
 	(*v1.AcceleratorDevices)(nil),                             // 31: catalog.service.v1.AcceleratorDevices
-	(*v1.AcceleratorAdminBindings)(nil),                       // 32: catalog.service.v1.AcceleratorAdminBindings
-	(*v1.AcceleratorCapacity)(nil),                            // 33: catalog.service.v1.AcceleratorCapacity
-	(*v1.AcceleratorPreview)(nil),                             // 34: catalog.service.v1.AcceleratorPreview
-	(*v1.AcceleratorUsages)(nil),                              // 35: catalog.service.v1.AcceleratorUsages
-	(*v1.AcceleratorUsage)(nil),                               // 36: catalog.service.v1.AcceleratorUsage
-	(*v1.AcceleratorBindings)(nil),                            // 37: catalog.service.v1.AcceleratorBindings
-	(*ListTenantQuotaAccountsResponse)(nil),                   // 38: admin.service.v1.ListTenantQuotaAccountsResponse
+	(*ListTenantQuotaAccountsResponse)(nil),                   // 32: admin.service.v1.ListTenantQuotaAccountsResponse
+	(*v1.AcceleratorProfileCapacity)(nil),                     // 33: catalog.service.v1.AcceleratorProfileCapacity
+	(*v1.AcceleratorSupplyGroupCapacity)(nil),                 // 34: catalog.service.v1.AcceleratorSupplyGroupCapacity
 }
 var file_admin_service_v1_i_accelerator_proto_depIdxs = []int32{
-	0,  // 0: admin.service.v1.AcceleratorAdminService.GetInitialization:input_type -> google.protobuf.Empty
+	0,  // 0: admin.service.v1.AcceleratorAdminService.GetInitialization:input_type -> catalog.service.v1.GetAcceleratorInitializationRequest
 	1,  // 1: admin.service.v1.AcceleratorAdminService.ListDiscoveredNodes:input_type -> catalog.service.v1.ListAcceleratorDiscoveredNodesRequest
 	2,  // 2: admin.service.v1.AcceleratorAdminService.CreateInitialization:input_type -> catalog.service.v1.CreateAcceleratorInitializationRequest
 	3,  // 3: admin.service.v1.AcceleratorAdminService.GetInitializationOperation:input_type -> catalog.service.v1.GetAcceleratorInitializationOperationRequest
@@ -123,46 +115,36 @@ var file_admin_service_v1_i_accelerator_proto_depIdxs = []int32{
 	12, // 15: admin.service.v1.AcceleratorAdminService.SetProfileState:input_type -> catalog.service.v1.SetAcceleratorProfileStateRequest
 	13, // 16: admin.service.v1.AcceleratorAdminService.DeleteProfile:input_type -> catalog.service.v1.DeleteAcceleratorProfileRequest
 	5,  // 17: admin.service.v1.AcceleratorAdminService.ListDevices:input_type -> catalog.service.v1.AcceleratorPageRequest
-	5,  // 18: admin.service.v1.AcceleratorAdminService.AdminListBindings:input_type -> catalog.service.v1.AcceleratorPageRequest
-	14, // 19: admin.service.v1.AcceleratorAdminService.AdminGetCapacity:input_type -> catalog.service.v1.AcceleratorVersionRequest
-	15, // 20: admin.service.v1.AcceleratorService.ListProfiles:input_type -> catalog.service.v1.AcceleratorTenantPageRequest
-	16, // 21: admin.service.v1.AcceleratorService.GetProfile:input_type -> catalog.service.v1.AcceleratorTenantVersionRequest
-	16, // 22: admin.service.v1.AcceleratorService.GetCapacity:input_type -> catalog.service.v1.AcceleratorTenantVersionRequest
-	17, // 23: admin.service.v1.AcceleratorService.AdmissionPreview:input_type -> catalog.service.v1.AcceleratorPreviewRequest
-	15, // 24: admin.service.v1.AcceleratorService.ListGpuUsages:input_type -> catalog.service.v1.AcceleratorTenantPageRequest
-	18, // 25: admin.service.v1.AcceleratorService.GetGpuUsage:input_type -> catalog.service.v1.AcceleratorUsageRequest
-	18, // 26: admin.service.v1.AcceleratorService.ListBindings:input_type -> catalog.service.v1.AcceleratorUsageRequest
-	0,  // 27: admin.service.v1.QuotaSelfService.GetMyQuotaAccounts:input_type -> google.protobuf.Empty
-	19, // 28: admin.service.v1.AcceleratorAdminService.GetInitialization:output_type -> catalog.service.v1.AcceleratorInitialization
-	20, // 29: admin.service.v1.AcceleratorAdminService.ListDiscoveredNodes:output_type -> catalog.service.v1.AcceleratorDiscoveredNodes
-	21, // 30: admin.service.v1.AcceleratorAdminService.CreateInitialization:output_type -> catalog.service.v1.AcceleratorInitializationOperation
-	21, // 31: admin.service.v1.AcceleratorAdminService.GetInitializationOperation:output_type -> catalog.service.v1.AcceleratorInitializationOperation
-	21, // 32: admin.service.v1.AcceleratorAdminService.RetryInitializationOperation:output_type -> catalog.service.v1.AcceleratorInitializationOperation
-	22, // 33: admin.service.v1.AcceleratorAdminService.ListClusters:output_type -> catalog.service.v1.AcceleratorClusters
-	23, // 34: admin.service.v1.AcceleratorAdminService.RegisterCluster:output_type -> catalog.service.v1.AcceleratorCluster
-	24, // 35: admin.service.v1.AcceleratorAdminService.ListPools:output_type -> catalog.service.v1.AcceleratorPools
-	25, // 36: admin.service.v1.AcceleratorAdminService.CreatePool:output_type -> catalog.service.v1.AcceleratorPool
-	26, // 37: admin.service.v1.AcceleratorAdminService.ListSupplyGroups:output_type -> catalog.service.v1.AcceleratorSupplies
-	27, // 38: admin.service.v1.AcceleratorAdminService.AdoptSupplyGroup:output_type -> catalog.service.v1.AcceleratorSupply
-	27, // 39: admin.service.v1.AcceleratorAdminService.SetAdmission:output_type -> catalog.service.v1.AcceleratorSupply
-	28, // 40: admin.service.v1.AcceleratorAdminService.AdminListProfiles:output_type -> catalog.service.v1.AcceleratorProfiles
-	29, // 41: admin.service.v1.AcceleratorAdminService.CreateProfile:output_type -> catalog.service.v1.AcceleratorProfile
-	30, // 42: admin.service.v1.AcceleratorAdminService.PreviewProfile:output_type -> catalog.service.v1.AcceleratorProfilePreview
-	29, // 43: admin.service.v1.AcceleratorAdminService.SetProfileState:output_type -> catalog.service.v1.AcceleratorProfile
-	29, // 44: admin.service.v1.AcceleratorAdminService.DeleteProfile:output_type -> catalog.service.v1.AcceleratorProfile
-	31, // 45: admin.service.v1.AcceleratorAdminService.ListDevices:output_type -> catalog.service.v1.AcceleratorDevices
-	32, // 46: admin.service.v1.AcceleratorAdminService.AdminListBindings:output_type -> catalog.service.v1.AcceleratorAdminBindings
-	33, // 47: admin.service.v1.AcceleratorAdminService.AdminGetCapacity:output_type -> catalog.service.v1.AcceleratorCapacity
-	28, // 48: admin.service.v1.AcceleratorService.ListProfiles:output_type -> catalog.service.v1.AcceleratorProfiles
-	29, // 49: admin.service.v1.AcceleratorService.GetProfile:output_type -> catalog.service.v1.AcceleratorProfile
-	33, // 50: admin.service.v1.AcceleratorService.GetCapacity:output_type -> catalog.service.v1.AcceleratorCapacity
-	34, // 51: admin.service.v1.AcceleratorService.AdmissionPreview:output_type -> catalog.service.v1.AcceleratorPreview
-	35, // 52: admin.service.v1.AcceleratorService.ListGpuUsages:output_type -> catalog.service.v1.AcceleratorUsages
-	36, // 53: admin.service.v1.AcceleratorService.GetGpuUsage:output_type -> catalog.service.v1.AcceleratorUsage
-	37, // 54: admin.service.v1.AcceleratorService.ListBindings:output_type -> catalog.service.v1.AcceleratorBindings
-	38, // 55: admin.service.v1.QuotaSelfService.GetMyQuotaAccounts:output_type -> admin.service.v1.ListTenantQuotaAccountsResponse
-	28, // [28:56] is the sub-list for method output_type
-	0,  // [0:28] is the sub-list for method input_type
+	14, // 18: admin.service.v1.AcceleratorService.ListProfiles:input_type -> catalog.service.v1.AcceleratorTenantPageRequest
+	15, // 19: admin.service.v1.AcceleratorService.GetProfile:input_type -> catalog.service.v1.AcceleratorTenantVersionRequest
+	16, // 20: admin.service.v1.QuotaSelfService.GetMyQuotaAccounts:input_type -> google.protobuf.Empty
+	17, // 21: admin.service.v1.AcceleratorCapacityAdminService.GetProfileCapacity:input_type -> catalog.service.v1.GetAcceleratorProfileCapacityRequest
+	18, // 22: admin.service.v1.AcceleratorCapacityAdminService.GetSupplyGroupCapacity:input_type -> catalog.service.v1.GetAcceleratorSupplyGroupCapacityRequest
+	19, // 23: admin.service.v1.AcceleratorAdminService.GetInitialization:output_type -> catalog.service.v1.AcceleratorInitialization
+	20, // 24: admin.service.v1.AcceleratorAdminService.ListDiscoveredNodes:output_type -> catalog.service.v1.AcceleratorDiscoveredNodes
+	21, // 25: admin.service.v1.AcceleratorAdminService.CreateInitialization:output_type -> catalog.service.v1.AcceleratorInitializationOperation
+	21, // 26: admin.service.v1.AcceleratorAdminService.GetInitializationOperation:output_type -> catalog.service.v1.AcceleratorInitializationOperation
+	21, // 27: admin.service.v1.AcceleratorAdminService.RetryInitializationOperation:output_type -> catalog.service.v1.AcceleratorInitializationOperation
+	22, // 28: admin.service.v1.AcceleratorAdminService.ListClusters:output_type -> catalog.service.v1.AcceleratorClusters
+	23, // 29: admin.service.v1.AcceleratorAdminService.RegisterCluster:output_type -> catalog.service.v1.AcceleratorCluster
+	24, // 30: admin.service.v1.AcceleratorAdminService.ListPools:output_type -> catalog.service.v1.AcceleratorPools
+	25, // 31: admin.service.v1.AcceleratorAdminService.CreatePool:output_type -> catalog.service.v1.AcceleratorPool
+	26, // 32: admin.service.v1.AcceleratorAdminService.ListSupplyGroups:output_type -> catalog.service.v1.AcceleratorSupplies
+	27, // 33: admin.service.v1.AcceleratorAdminService.AdoptSupplyGroup:output_type -> catalog.service.v1.AcceleratorSupply
+	27, // 34: admin.service.v1.AcceleratorAdminService.SetAdmission:output_type -> catalog.service.v1.AcceleratorSupply
+	28, // 35: admin.service.v1.AcceleratorAdminService.AdminListProfiles:output_type -> catalog.service.v1.AcceleratorProfiles
+	29, // 36: admin.service.v1.AcceleratorAdminService.CreateProfile:output_type -> catalog.service.v1.AcceleratorProfile
+	30, // 37: admin.service.v1.AcceleratorAdminService.PreviewProfile:output_type -> catalog.service.v1.AcceleratorProfilePreview
+	29, // 38: admin.service.v1.AcceleratorAdminService.SetProfileState:output_type -> catalog.service.v1.AcceleratorProfile
+	29, // 39: admin.service.v1.AcceleratorAdminService.DeleteProfile:output_type -> catalog.service.v1.AcceleratorProfile
+	31, // 40: admin.service.v1.AcceleratorAdminService.ListDevices:output_type -> catalog.service.v1.AcceleratorDevices
+	28, // 41: admin.service.v1.AcceleratorService.ListProfiles:output_type -> catalog.service.v1.AcceleratorProfiles
+	29, // 42: admin.service.v1.AcceleratorService.GetProfile:output_type -> catalog.service.v1.AcceleratorProfile
+	32, // 43: admin.service.v1.QuotaSelfService.GetMyQuotaAccounts:output_type -> admin.service.v1.ListTenantQuotaAccountsResponse
+	33, // 44: admin.service.v1.AcceleratorCapacityAdminService.GetProfileCapacity:output_type -> catalog.service.v1.AcceleratorProfileCapacity
+	34, // 45: admin.service.v1.AcceleratorCapacityAdminService.GetSupplyGroupCapacity:output_type -> catalog.service.v1.AcceleratorSupplyGroupCapacity
+	23, // [23:46] is the sub-list for method output_type
+	0,  // [0:23] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -182,7 +164,7 @@ func file_admin_service_v1_i_accelerator_proto_init() {
 			NumEnums:      0,
 			NumMessages:   0,
 			NumExtensions: 0,
-			NumServices:   3,
+			NumServices:   4,
 		},
 		GoTypes:           file_admin_service_v1_i_accelerator_proto_goTypes,
 		DependencyIndexes: file_admin_service_v1_i_accelerator_proto_depIdxs,

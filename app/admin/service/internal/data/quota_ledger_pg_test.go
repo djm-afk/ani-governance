@@ -796,7 +796,4 @@ func TestQuotaPostgresInstanceCPUCommands(t *testing.T) {
 	require.NoError(t, e)
 	require.True(t, out.LocalCanceled)
 	require.Empty(t, out.ChargeIDs)
-	candidates, e := repo.ScanGpuCreatePage(context.Background(), 0, 100)
-	require.NoError(t, e)
-	require.Empty(t, candidates)
 }

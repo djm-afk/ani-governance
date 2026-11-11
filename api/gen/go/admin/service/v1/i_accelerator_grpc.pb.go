@@ -39,8 +39,6 @@ const (
 	AcceleratorAdminService_SetProfileState_FullMethodName              = "/admin.service.v1.AcceleratorAdminService/SetProfileState"
 	AcceleratorAdminService_DeleteProfile_FullMethodName                = "/admin.service.v1.AcceleratorAdminService/DeleteProfile"
 	AcceleratorAdminService_ListDevices_FullMethodName                  = "/admin.service.v1.AcceleratorAdminService/ListDevices"
-	AcceleratorAdminService_AdminListBindings_FullMethodName            = "/admin.service.v1.AcceleratorAdminService/AdminListBindings"
-	AcceleratorAdminService_AdminGetCapacity_FullMethodName             = "/admin.service.v1.AcceleratorAdminService/AdminGetCapacity"
 )
 
 // AcceleratorAdminServiceClient is the client API for AcceleratorAdminService service.
@@ -50,7 +48,7 @@ const (
 // Governance requires a JWT platform user and current role permission.
 // Accelerator validates the service RPC and its provider-managed cluster scope.
 type AcceleratorAdminServiceClient interface {
-	GetInitialization(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v1.AcceleratorInitialization, error)
+	GetInitialization(ctx context.Context, in *v1.GetAcceleratorInitializationRequest, opts ...grpc.CallOption) (*v1.AcceleratorInitialization, error)
 	ListDiscoveredNodes(ctx context.Context, in *v1.ListAcceleratorDiscoveredNodesRequest, opts ...grpc.CallOption) (*v1.AcceleratorDiscoveredNodes, error)
 	CreateInitialization(ctx context.Context, in *v1.CreateAcceleratorInitializationRequest, opts ...grpc.CallOption) (*v1.AcceleratorInitializationOperation, error)
 	GetInitializationOperation(ctx context.Context, in *v1.GetAcceleratorInitializationOperationRequest, opts ...grpc.CallOption) (*v1.AcceleratorInitializationOperation, error)
@@ -68,8 +66,6 @@ type AcceleratorAdminServiceClient interface {
 	SetProfileState(ctx context.Context, in *v1.SetAcceleratorProfileStateRequest, opts ...grpc.CallOption) (*v1.AcceleratorProfile, error)
 	DeleteProfile(ctx context.Context, in *v1.DeleteAcceleratorProfileRequest, opts ...grpc.CallOption) (*v1.AcceleratorProfile, error)
 	ListDevices(ctx context.Context, in *v1.AcceleratorPageRequest, opts ...grpc.CallOption) (*v1.AcceleratorDevices, error)
-	AdminListBindings(ctx context.Context, in *v1.AcceleratorPageRequest, opts ...grpc.CallOption) (*v1.AcceleratorAdminBindings, error)
-	AdminGetCapacity(ctx context.Context, in *v1.AcceleratorVersionRequest, opts ...grpc.CallOption) (*v1.AcceleratorCapacity, error)
 }
 
 type acceleratorAdminServiceClient struct {
@@ -80,7 +76,7 @@ func NewAcceleratorAdminServiceClient(cc grpc.ClientConnInterface) AcceleratorAd
 	return &acceleratorAdminServiceClient{cc}
 }
 
-func (c *acceleratorAdminServiceClient) GetInitialization(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v1.AcceleratorInitialization, error) {
+func (c *acceleratorAdminServiceClient) GetInitialization(ctx context.Context, in *v1.GetAcceleratorInitializationRequest, opts ...grpc.CallOption) (*v1.AcceleratorInitialization, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.AcceleratorInitialization)
 	err := c.cc.Invoke(ctx, AcceleratorAdminService_GetInitialization_FullMethodName, in, out, cOpts...)
@@ -260,26 +256,6 @@ func (c *acceleratorAdminServiceClient) ListDevices(ctx context.Context, in *v1.
 	return out, nil
 }
 
-func (c *acceleratorAdminServiceClient) AdminListBindings(ctx context.Context, in *v1.AcceleratorPageRequest, opts ...grpc.CallOption) (*v1.AcceleratorAdminBindings, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorAdminBindings)
-	err := c.cc.Invoke(ctx, AcceleratorAdminService_AdminListBindings_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *acceleratorAdminServiceClient) AdminGetCapacity(ctx context.Context, in *v1.AcceleratorVersionRequest, opts ...grpc.CallOption) (*v1.AcceleratorCapacity, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorCapacity)
-	err := c.cc.Invoke(ctx, AcceleratorAdminService_AdminGetCapacity_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AcceleratorAdminServiceServer is the server API for AcceleratorAdminService service.
 // All implementations must embed UnimplementedAcceleratorAdminServiceServer
 // for forward compatibility.
@@ -287,7 +263,7 @@ func (c *acceleratorAdminServiceClient) AdminGetCapacity(ctx context.Context, in
 // Governance requires a JWT platform user and current role permission.
 // Accelerator validates the service RPC and its provider-managed cluster scope.
 type AcceleratorAdminServiceServer interface {
-	GetInitialization(context.Context, *emptypb.Empty) (*v1.AcceleratorInitialization, error)
+	GetInitialization(context.Context, *v1.GetAcceleratorInitializationRequest) (*v1.AcceleratorInitialization, error)
 	ListDiscoveredNodes(context.Context, *v1.ListAcceleratorDiscoveredNodesRequest) (*v1.AcceleratorDiscoveredNodes, error)
 	CreateInitialization(context.Context, *v1.CreateAcceleratorInitializationRequest) (*v1.AcceleratorInitializationOperation, error)
 	GetInitializationOperation(context.Context, *v1.GetAcceleratorInitializationOperationRequest) (*v1.AcceleratorInitializationOperation, error)
@@ -305,8 +281,6 @@ type AcceleratorAdminServiceServer interface {
 	SetProfileState(context.Context, *v1.SetAcceleratorProfileStateRequest) (*v1.AcceleratorProfile, error)
 	DeleteProfile(context.Context, *v1.DeleteAcceleratorProfileRequest) (*v1.AcceleratorProfile, error)
 	ListDevices(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorDevices, error)
-	AdminListBindings(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorAdminBindings, error)
-	AdminGetCapacity(context.Context, *v1.AcceleratorVersionRequest) (*v1.AcceleratorCapacity, error)
 	mustEmbedUnimplementedAcceleratorAdminServiceServer()
 }
 
@@ -317,7 +291,7 @@ type AcceleratorAdminServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAcceleratorAdminServiceServer struct{}
 
-func (UnimplementedAcceleratorAdminServiceServer) GetInitialization(context.Context, *emptypb.Empty) (*v1.AcceleratorInitialization, error) {
+func (UnimplementedAcceleratorAdminServiceServer) GetInitialization(context.Context, *v1.GetAcceleratorInitializationRequest) (*v1.AcceleratorInitialization, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInitialization not implemented")
 }
 func (UnimplementedAcceleratorAdminServiceServer) ListDiscoveredNodes(context.Context, *v1.ListAcceleratorDiscoveredNodesRequest) (*v1.AcceleratorDiscoveredNodes, error) {
@@ -371,12 +345,6 @@ func (UnimplementedAcceleratorAdminServiceServer) DeleteProfile(context.Context,
 func (UnimplementedAcceleratorAdminServiceServer) ListDevices(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorDevices, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListDevices not implemented")
 }
-func (UnimplementedAcceleratorAdminServiceServer) AdminListBindings(context.Context, *v1.AcceleratorPageRequest) (*v1.AcceleratorAdminBindings, error) {
-	return nil, status.Error(codes.Unimplemented, "method AdminListBindings not implemented")
-}
-func (UnimplementedAcceleratorAdminServiceServer) AdminGetCapacity(context.Context, *v1.AcceleratorVersionRequest) (*v1.AcceleratorCapacity, error) {
-	return nil, status.Error(codes.Unimplemented, "method AdminGetCapacity not implemented")
-}
 func (UnimplementedAcceleratorAdminServiceServer) mustEmbedUnimplementedAcceleratorAdminServiceServer() {
 }
 func (UnimplementedAcceleratorAdminServiceServer) testEmbeddedByValue() {}
@@ -400,7 +368,7 @@ func RegisterAcceleratorAdminServiceServer(s grpc.ServiceRegistrar, srv Accelera
 }
 
 func _AcceleratorAdminService_GetInitialization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(v1.GetAcceleratorInitializationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -412,7 +380,7 @@ func _AcceleratorAdminService_GetInitialization_Handler(srv interface{}, ctx con
 		FullMethod: AcceleratorAdminService_GetInitialization_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorAdminServiceServer).GetInitialization(ctx, req.(*emptypb.Empty))
+		return srv.(AcceleratorAdminServiceServer).GetInitialization(ctx, req.(*v1.GetAcceleratorInitializationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -723,42 +691,6 @@ func _AcceleratorAdminService_ListDevices_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AcceleratorAdminService_AdminListBindings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorPageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorAdminServiceServer).AdminListBindings(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorAdminService_AdminListBindings_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorAdminServiceServer).AdminListBindings(ctx, req.(*v1.AcceleratorPageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AcceleratorAdminService_AdminGetCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorAdminServiceServer).AdminGetCapacity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorAdminService_AdminGetCapacity_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorAdminServiceServer).AdminGetCapacity(ctx, req.(*v1.AcceleratorVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // AcceleratorAdminService_ServiceDesc is the grpc.ServiceDesc for AcceleratorAdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -838,27 +770,14 @@ var AcceleratorAdminService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ListDevices",
 			Handler:    _AcceleratorAdminService_ListDevices_Handler,
 		},
-		{
-			MethodName: "AdminListBindings",
-			Handler:    _AcceleratorAdminService_AdminListBindings_Handler,
-		},
-		{
-			MethodName: "AdminGetCapacity",
-			Handler:    _AcceleratorAdminService_AdminGetCapacity_Handler,
-		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "admin/service/v1/i_accelerator.proto",
 }
 
 const (
-	AcceleratorService_ListProfiles_FullMethodName     = "/admin.service.v1.AcceleratorService/ListProfiles"
-	AcceleratorService_GetProfile_FullMethodName       = "/admin.service.v1.AcceleratorService/GetProfile"
-	AcceleratorService_GetCapacity_FullMethodName      = "/admin.service.v1.AcceleratorService/GetCapacity"
-	AcceleratorService_AdmissionPreview_FullMethodName = "/admin.service.v1.AcceleratorService/AdmissionPreview"
-	AcceleratorService_ListGpuUsages_FullMethodName    = "/admin.service.v1.AcceleratorService/ListGpuUsages"
-	AcceleratorService_GetGpuUsage_FullMethodName      = "/admin.service.v1.AcceleratorService/GetGpuUsage"
-	AcceleratorService_ListBindings_FullMethodName     = "/admin.service.v1.AcceleratorService/ListBindings"
+	AcceleratorService_ListProfiles_FullMethodName = "/admin.service.v1.AcceleratorService/ListProfiles"
+	AcceleratorService_GetProfile_FullMethodName   = "/admin.service.v1.AcceleratorService/GetProfile"
 )
 
 // AcceleratorServiceClient is the client API for AcceleratorService service.
@@ -870,11 +789,6 @@ const (
 type AcceleratorServiceClient interface {
 	ListProfiles(ctx context.Context, in *v1.AcceleratorTenantPageRequest, opts ...grpc.CallOption) (*v1.AcceleratorProfiles, error)
 	GetProfile(ctx context.Context, in *v1.AcceleratorTenantVersionRequest, opts ...grpc.CallOption) (*v1.AcceleratorProfile, error)
-	GetCapacity(ctx context.Context, in *v1.AcceleratorTenantVersionRequest, opts ...grpc.CallOption) (*v1.AcceleratorCapacity, error)
-	AdmissionPreview(ctx context.Context, in *v1.AcceleratorPreviewRequest, opts ...grpc.CallOption) (*v1.AcceleratorPreview, error)
-	ListGpuUsages(ctx context.Context, in *v1.AcceleratorTenantPageRequest, opts ...grpc.CallOption) (*v1.AcceleratorUsages, error)
-	GetGpuUsage(ctx context.Context, in *v1.AcceleratorUsageRequest, opts ...grpc.CallOption) (*v1.AcceleratorUsage, error)
-	ListBindings(ctx context.Context, in *v1.AcceleratorUsageRequest, opts ...grpc.CallOption) (*v1.AcceleratorBindings, error)
 }
 
 type acceleratorServiceClient struct {
@@ -905,56 +819,6 @@ func (c *acceleratorServiceClient) GetProfile(ctx context.Context, in *v1.Accele
 	return out, nil
 }
 
-func (c *acceleratorServiceClient) GetCapacity(ctx context.Context, in *v1.AcceleratorTenantVersionRequest, opts ...grpc.CallOption) (*v1.AcceleratorCapacity, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorCapacity)
-	err := c.cc.Invoke(ctx, AcceleratorService_GetCapacity_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *acceleratorServiceClient) AdmissionPreview(ctx context.Context, in *v1.AcceleratorPreviewRequest, opts ...grpc.CallOption) (*v1.AcceleratorPreview, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorPreview)
-	err := c.cc.Invoke(ctx, AcceleratorService_AdmissionPreview_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *acceleratorServiceClient) ListGpuUsages(ctx context.Context, in *v1.AcceleratorTenantPageRequest, opts ...grpc.CallOption) (*v1.AcceleratorUsages, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorUsages)
-	err := c.cc.Invoke(ctx, AcceleratorService_ListGpuUsages_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *acceleratorServiceClient) GetGpuUsage(ctx context.Context, in *v1.AcceleratorUsageRequest, opts ...grpc.CallOption) (*v1.AcceleratorUsage, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorUsage)
-	err := c.cc.Invoke(ctx, AcceleratorService_GetGpuUsage_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *acceleratorServiceClient) ListBindings(ctx context.Context, in *v1.AcceleratorUsageRequest, opts ...grpc.CallOption) (*v1.AcceleratorBindings, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.AcceleratorBindings)
-	err := c.cc.Invoke(ctx, AcceleratorService_ListBindings_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AcceleratorServiceServer is the server API for AcceleratorService service.
 // All implementations must embed UnimplementedAcceleratorServiceServer
 // for forward compatibility.
@@ -964,11 +828,6 @@ func (c *acceleratorServiceClient) ListBindings(ctx context.Context, in *v1.Acce
 type AcceleratorServiceServer interface {
 	ListProfiles(context.Context, *v1.AcceleratorTenantPageRequest) (*v1.AcceleratorProfiles, error)
 	GetProfile(context.Context, *v1.AcceleratorTenantVersionRequest) (*v1.AcceleratorProfile, error)
-	GetCapacity(context.Context, *v1.AcceleratorTenantVersionRequest) (*v1.AcceleratorCapacity, error)
-	AdmissionPreview(context.Context, *v1.AcceleratorPreviewRequest) (*v1.AcceleratorPreview, error)
-	ListGpuUsages(context.Context, *v1.AcceleratorTenantPageRequest) (*v1.AcceleratorUsages, error)
-	GetGpuUsage(context.Context, *v1.AcceleratorUsageRequest) (*v1.AcceleratorUsage, error)
-	ListBindings(context.Context, *v1.AcceleratorUsageRequest) (*v1.AcceleratorBindings, error)
 	mustEmbedUnimplementedAcceleratorServiceServer()
 }
 
@@ -984,21 +843,6 @@ func (UnimplementedAcceleratorServiceServer) ListProfiles(context.Context, *v1.A
 }
 func (UnimplementedAcceleratorServiceServer) GetProfile(context.Context, *v1.AcceleratorTenantVersionRequest) (*v1.AcceleratorProfile, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProfile not implemented")
-}
-func (UnimplementedAcceleratorServiceServer) GetCapacity(context.Context, *v1.AcceleratorTenantVersionRequest) (*v1.AcceleratorCapacity, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetCapacity not implemented")
-}
-func (UnimplementedAcceleratorServiceServer) AdmissionPreview(context.Context, *v1.AcceleratorPreviewRequest) (*v1.AcceleratorPreview, error) {
-	return nil, status.Error(codes.Unimplemented, "method AdmissionPreview not implemented")
-}
-func (UnimplementedAcceleratorServiceServer) ListGpuUsages(context.Context, *v1.AcceleratorTenantPageRequest) (*v1.AcceleratorUsages, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListGpuUsages not implemented")
-}
-func (UnimplementedAcceleratorServiceServer) GetGpuUsage(context.Context, *v1.AcceleratorUsageRequest) (*v1.AcceleratorUsage, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetGpuUsage not implemented")
-}
-func (UnimplementedAcceleratorServiceServer) ListBindings(context.Context, *v1.AcceleratorUsageRequest) (*v1.AcceleratorBindings, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListBindings not implemented")
 }
 func (UnimplementedAcceleratorServiceServer) mustEmbedUnimplementedAcceleratorServiceServer() {}
 func (UnimplementedAcceleratorServiceServer) testEmbeddedByValue()                            {}
@@ -1057,96 +901,6 @@ func _AcceleratorService_GetProfile_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AcceleratorService_GetCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorTenantVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorServiceServer).GetCapacity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorService_GetCapacity_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorServiceServer).GetCapacity(ctx, req.(*v1.AcceleratorTenantVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AcceleratorService_AdmissionPreview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorPreviewRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorServiceServer).AdmissionPreview(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorService_AdmissionPreview_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorServiceServer).AdmissionPreview(ctx, req.(*v1.AcceleratorPreviewRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AcceleratorService_ListGpuUsages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorTenantPageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorServiceServer).ListGpuUsages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorService_ListGpuUsages_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorServiceServer).ListGpuUsages(ctx, req.(*v1.AcceleratorTenantPageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AcceleratorService_GetGpuUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorUsageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorServiceServer).GetGpuUsage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorService_GetGpuUsage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorServiceServer).GetGpuUsage(ctx, req.(*v1.AcceleratorUsageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AcceleratorService_ListBindings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.AcceleratorUsageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AcceleratorServiceServer).ListBindings(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AcceleratorService_ListBindings_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AcceleratorServiceServer).ListBindings(ctx, req.(*v1.AcceleratorUsageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // AcceleratorService_ServiceDesc is the grpc.ServiceDesc for AcceleratorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1161,26 +915,6 @@ var AcceleratorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetProfile",
 			Handler:    _AcceleratorService_GetProfile_Handler,
-		},
-		{
-			MethodName: "GetCapacity",
-			Handler:    _AcceleratorService_GetCapacity_Handler,
-		},
-		{
-			MethodName: "AdmissionPreview",
-			Handler:    _AcceleratorService_AdmissionPreview_Handler,
-		},
-		{
-			MethodName: "ListGpuUsages",
-			Handler:    _AcceleratorService_ListGpuUsages_Handler,
-		},
-		{
-			MethodName: "GetGpuUsage",
-			Handler:    _AcceleratorService_GetGpuUsage_Handler,
-		},
-		{
-			MethodName: "ListBindings",
-			Handler:    _AcceleratorService_ListBindings_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1283,6 +1017,151 @@ var QuotaSelfService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMyQuotaAccounts",
 			Handler:    _QuotaSelfService_GetMyQuotaAccounts_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "admin/service/v1/i_accelerator.proto",
+}
+
+const (
+	AcceleratorCapacityAdminService_GetProfileCapacity_FullMethodName     = "/admin.service.v1.AcceleratorCapacityAdminService/GetProfileCapacity"
+	AcceleratorCapacityAdminService_GetSupplyGroupCapacity_FullMethodName = "/admin.service.v1.AcceleratorCapacityAdminService/GetSupplyGroupCapacity"
+)
+
+// AcceleratorCapacityAdminServiceClient is the client API for AcceleratorCapacityAdminService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Custom HTTP registration preserves optional integer presence as explicit null.
+type AcceleratorCapacityAdminServiceClient interface {
+	GetProfileCapacity(ctx context.Context, in *v1.GetAcceleratorProfileCapacityRequest, opts ...grpc.CallOption) (*v1.AcceleratorProfileCapacity, error)
+	GetSupplyGroupCapacity(ctx context.Context, in *v1.GetAcceleratorSupplyGroupCapacityRequest, opts ...grpc.CallOption) (*v1.AcceleratorSupplyGroupCapacity, error)
+}
+
+type acceleratorCapacityAdminServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAcceleratorCapacityAdminServiceClient(cc grpc.ClientConnInterface) AcceleratorCapacityAdminServiceClient {
+	return &acceleratorCapacityAdminServiceClient{cc}
+}
+
+func (c *acceleratorCapacityAdminServiceClient) GetProfileCapacity(ctx context.Context, in *v1.GetAcceleratorProfileCapacityRequest, opts ...grpc.CallOption) (*v1.AcceleratorProfileCapacity, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AcceleratorProfileCapacity)
+	err := c.cc.Invoke(ctx, AcceleratorCapacityAdminService_GetProfileCapacity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *acceleratorCapacityAdminServiceClient) GetSupplyGroupCapacity(ctx context.Context, in *v1.GetAcceleratorSupplyGroupCapacityRequest, opts ...grpc.CallOption) (*v1.AcceleratorSupplyGroupCapacity, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AcceleratorSupplyGroupCapacity)
+	err := c.cc.Invoke(ctx, AcceleratorCapacityAdminService_GetSupplyGroupCapacity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AcceleratorCapacityAdminServiceServer is the server API for AcceleratorCapacityAdminService service.
+// All implementations must embed UnimplementedAcceleratorCapacityAdminServiceServer
+// for forward compatibility.
+//
+// Custom HTTP registration preserves optional integer presence as explicit null.
+type AcceleratorCapacityAdminServiceServer interface {
+	GetProfileCapacity(context.Context, *v1.GetAcceleratorProfileCapacityRequest) (*v1.AcceleratorProfileCapacity, error)
+	GetSupplyGroupCapacity(context.Context, *v1.GetAcceleratorSupplyGroupCapacityRequest) (*v1.AcceleratorSupplyGroupCapacity, error)
+	mustEmbedUnimplementedAcceleratorCapacityAdminServiceServer()
+}
+
+// UnimplementedAcceleratorCapacityAdminServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAcceleratorCapacityAdminServiceServer struct{}
+
+func (UnimplementedAcceleratorCapacityAdminServiceServer) GetProfileCapacity(context.Context, *v1.GetAcceleratorProfileCapacityRequest) (*v1.AcceleratorProfileCapacity, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetProfileCapacity not implemented")
+}
+func (UnimplementedAcceleratorCapacityAdminServiceServer) GetSupplyGroupCapacity(context.Context, *v1.GetAcceleratorSupplyGroupCapacityRequest) (*v1.AcceleratorSupplyGroupCapacity, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSupplyGroupCapacity not implemented")
+}
+func (UnimplementedAcceleratorCapacityAdminServiceServer) mustEmbedUnimplementedAcceleratorCapacityAdminServiceServer() {
+}
+func (UnimplementedAcceleratorCapacityAdminServiceServer) testEmbeddedByValue() {}
+
+// UnsafeAcceleratorCapacityAdminServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AcceleratorCapacityAdminServiceServer will
+// result in compilation errors.
+type UnsafeAcceleratorCapacityAdminServiceServer interface {
+	mustEmbedUnimplementedAcceleratorCapacityAdminServiceServer()
+}
+
+func RegisterAcceleratorCapacityAdminServiceServer(s grpc.ServiceRegistrar, srv AcceleratorCapacityAdminServiceServer) {
+	// If the following call panics, it indicates UnimplementedAcceleratorCapacityAdminServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AcceleratorCapacityAdminService_ServiceDesc, srv)
+}
+
+func _AcceleratorCapacityAdminService_GetProfileCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetAcceleratorProfileCapacityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AcceleratorCapacityAdminServiceServer).GetProfileCapacity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AcceleratorCapacityAdminService_GetProfileCapacity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AcceleratorCapacityAdminServiceServer).GetProfileCapacity(ctx, req.(*v1.GetAcceleratorProfileCapacityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AcceleratorCapacityAdminService_GetSupplyGroupCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetAcceleratorSupplyGroupCapacityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AcceleratorCapacityAdminServiceServer).GetSupplyGroupCapacity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AcceleratorCapacityAdminService_GetSupplyGroupCapacity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AcceleratorCapacityAdminServiceServer).GetSupplyGroupCapacity(ctx, req.(*v1.GetAcceleratorSupplyGroupCapacityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// AcceleratorCapacityAdminService_ServiceDesc is the grpc.ServiceDesc for AcceleratorCapacityAdminService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AcceleratorCapacityAdminService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "admin.service.v1.AcceleratorCapacityAdminService",
+	HandlerType: (*AcceleratorCapacityAdminServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetProfileCapacity",
+			Handler:    _AcceleratorCapacityAdminService_GetProfileCapacity_Handler,
+		},
+		{
+			MethodName: "GetSupplyGroupCapacity",
+			Handler:    _AcceleratorCapacityAdminService_GetSupplyGroupCapacity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

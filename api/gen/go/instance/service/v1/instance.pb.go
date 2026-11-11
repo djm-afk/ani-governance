@@ -3155,17 +3155,23 @@ func (x *Operation) GetFailureReason() string {
 }
 
 type GpuSummary struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	ProfileId          string                 `protobuf:"bytes,1,opt,name=profile_id,proto3" json:"profile_id,omitempty"`
-	ProfileVersion     uint64                 `protobuf:"varint,2,opt,name=profile_version,proto3" json:"profile_version,omitempty"`
-	Mode               string                 `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
-	ModelKey           string                 `protobuf:"bytes,4,opt,name=model_key,proto3" json:"model_key,omitempty"`
-	DevicesPerInstance uint32                 `protobuf:"varint,5,opt,name=devices_per_instance,proto3" json:"devices_per_instance,omitempty"`
-	MemoryMibPerDevice int64                  `protobuf:"varint,9,opt,name=memory_mib_per_device,proto3" json:"memory_mib_per_device,omitempty"`
-	MemoryMibTotal     int64                  `protobuf:"varint,10,opt,name=memory_mib_total,proto3" json:"memory_mib_total,omitempty"`
-	CoreLimitPercent   uint32                 `protobuf:"varint,8,opt,name=core_limit_percent,proto3" json:"core_limit_percent,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	ProfileId             string                 `protobuf:"bytes,1,opt,name=profile_id,proto3" json:"profile_id,omitempty"`
+	ProfileVersion        uint64                 `protobuf:"varint,2,opt,name=profile_version,proto3" json:"profile_version,omitempty"`
+	Mode                  string                 `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
+	ModelKey              string                 `protobuf:"bytes,4,opt,name=model_key,proto3" json:"model_key,omitempty"`
+	DevicesPerInstance    uint32                 `protobuf:"varint,5,opt,name=devices_per_instance,proto3" json:"devices_per_instance,omitempty"`
+	MemoryMibPerDevice    int64                  `protobuf:"varint,9,opt,name=memory_mib_per_device,proto3" json:"memory_mib_per_device,omitempty"`
+	MemoryMibTotal        int64                  `protobuf:"varint,10,opt,name=memory_mib_total,proto3" json:"memory_mib_total,omitempty"`
+	CoreLimitPercent      uint32                 `protobuf:"varint,8,opt,name=core_limit_percent,proto3" json:"core_limit_percent,omitempty"`
+	AllocationType        string                 `protobuf:"bytes,11,opt,name=allocation_type,proto3" json:"allocation_type,omitempty"`
+	ResourceKey           string                 `protobuf:"bytes,12,opt,name=resource_key,proto3" json:"resource_key,omitempty"`
+	ComputeUnitsPerDevice uint32                 `protobuf:"varint,13,opt,name=compute_units_per_device,proto3" json:"compute_units_per_device,omitempty"`
+	AdapterId             string                 `protobuf:"bytes,14,opt,name=adapter_id,proto3" json:"adapter_id,omitempty"`
+	ProfileName           string                 `protobuf:"bytes,15,opt,name=profile_name,proto3" json:"profile_name,omitempty"`
+	SpecDigest            string                 `protobuf:"bytes,16,opt,name=spec_digest,proto3" json:"spec_digest,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *GpuSummary) Reset() {
@@ -3252,6 +3258,48 @@ func (x *GpuSummary) GetCoreLimitPercent() uint32 {
 		return x.CoreLimitPercent
 	}
 	return 0
+}
+
+func (x *GpuSummary) GetAllocationType() string {
+	if x != nil {
+		return x.AllocationType
+	}
+	return ""
+}
+
+func (x *GpuSummary) GetResourceKey() string {
+	if x != nil {
+		return x.ResourceKey
+	}
+	return ""
+}
+
+func (x *GpuSummary) GetComputeUnitsPerDevice() uint32 {
+	if x != nil {
+		return x.ComputeUnitsPerDevice
+	}
+	return 0
+}
+
+func (x *GpuSummary) GetAdapterId() string {
+	if x != nil {
+		return x.AdapterId
+	}
+	return ""
+}
+
+func (x *GpuSummary) GetProfileName() string {
+	if x != nil {
+		return x.ProfileName
+	}
+	return ""
+}
+
+func (x *GpuSummary) GetSpecDigest() string {
+	if x != nil {
+		return x.SpecDigest
+	}
+	return ""
 }
 
 type EnvironmentSource struct {
@@ -4606,7 +4654,7 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x15applied_mount_version\x18\n" +
 	" \x01(\x03R\x15applied_mount_version\x12*\n" +
 	"\x10completion_scope\x18\v \x01(\tR\x10completion_scope\x12&\n" +
-	"\x0efailure_reason\x18\f \x01(\tR\x0efailure_reason\"\x91\x03\n" +
+	"\x0efailure_reason\x18\f \x01(\tR\x0efailure_reason\"\x81\x05\n" +
 	"\n" +
 	"GpuSummary\x12\x1e\n" +
 	"\n" +
@@ -4619,7 +4667,15 @@ const file_instance_service_v1_instance_proto_rawDesc = "" +
 	"\x15memory_mib_per_device\x18\t \x01(\x03R\x15memory_mib_per_device\x12*\n" +
 	"\x10memory_mib_total\x18\n" +
 	" \x01(\x03R\x10memory_mib_total\x12.\n" +
-	"\x12core_limit_percent\x18\b \x01(\rR\x12core_limit_percentJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x1cshared_memory_mib_per_deviceR\x17shared_memory_mib_total\"H\n" +
+	"\x12core_limit_percent\x18\b \x01(\rR\x12core_limit_percent\x12(\n" +
+	"\x0fallocation_type\x18\v \x01(\tR\x0fallocation_type\x12\"\n" +
+	"\fresource_key\x18\f \x01(\tR\fresource_key\x12:\n" +
+	"\x18compute_units_per_device\x18\r \x01(\rR\x18compute_units_per_device\x12\x1e\n" +
+	"\n" +
+	"adapter_id\x18\x0e \x01(\tR\n" +
+	"adapter_id\x12\"\n" +
+	"\fprofile_name\x18\x0f \x01(\tR\fprofile_name\x12 \n" +
+	"\vspec_digest\x18\x10 \x01(\tR\vspec_digestJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x1cshared_memory_mib_per_deviceR\x17shared_memory_mib_total\"H\n" +
 	"\x11EnvironmentSource\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vsource_type\x18\x02 \x01(\tR\n" +

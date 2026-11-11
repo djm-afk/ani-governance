@@ -24,15 +24,10 @@ BEGIN
   ('POST','/api/v1/admin/accelerator/profiles/{profile_id}:set-state','accelerator:profile:set-state','ACCELERATOR'),
   ('POST','/api/v1/admin/accelerator/profiles/{profile_id}:delete','accelerator:profile:delete','ACCELERATOR'),
   ('GET','/api/v1/admin/accelerator/devices','accelerator:device:list','ACCELERATOR'),
-  ('GET','/api/v1/admin/accelerator/bindings','accelerator:binding:admin-list','ACCELERATOR'),
-  ('GET','/api/v1/admin/accelerator/capacity','accelerator:capacity:admin-get','ACCELERATOR'),
+  ('GET','/api/v1/admin/accelerator/profiles/{profile_id}/capacity','accelerator:profile:capacity-read','ACCELERATOR'),
+  ('GET','/api/v1/admin/accelerator/supply-groups/{group_id}/capacity','accelerator:supply-group:capacity-read','ACCELERATOR'),
   ('GET','/api/v1/accelerator/profiles','accelerator:profile:list','ACCELERATOR'),
   ('GET','/api/v1/accelerator/profiles/{profile_id}','accelerator:profile:get','ACCELERATOR'),
-  ('GET','/api/v1/accelerator/capacity','accelerator:capacity:get','ACCELERATOR'),
-  ('POST','/api/v1/accelerator/admission-preview','accelerator:admission:preview','ACCELERATOR'),
-  ('GET','/api/v1/accelerator/usages','accelerator:usage:list','ACCELERATOR'),
-  ('GET','/api/v1/accelerator/usages/{owner_service}/{resource_id}','accelerator:usage:get','ACCELERATOR'),
-  ('GET','/api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings','accelerator:binding:list','ACCELERATOR'),
   ('GET','/api/v1/me/quota-accounts','quota:account:self-read','TENANT')
  ) AS routes(method,path,permission,business_module) LOOP
   SELECT id INTO STRICT aid FROM sys_apis

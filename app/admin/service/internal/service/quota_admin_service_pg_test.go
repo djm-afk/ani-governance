@@ -12,7 +12,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
-	view "go-wind-admin/api/gen/go/catalog/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/tests/testutil"
 	appViewer "go-wind-admin/pkg/entgo/viewer"
@@ -43,7 +42,7 @@ func TestQuotaAdminAndSelfDomainViews(t *testing.T) {
 	require.Equal(t, tenant.ID, platformAccounts.TenantId)
 	require.Len(t, platformAccounts.Items, len(definitions.Items))
 
-	selfService := NewAcceleratorService(nil, nil, nil, nil, repo, NewQuotaAdapterRegistry(), nil)
+	selfService := NewAcceleratorService(nil, nil, nil, repo, nil)
 	selfAccounts, err := selfService.GetMyQuotaAccounts(self, &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, tenant.ID, selfAccounts.TenantId)
@@ -52,10 +51,4 @@ func TestQuotaAdminAndSelfDomainViews(t *testing.T) {
 	_, err = adminService.ListTenantQuotaAccounts(self, &admin.GetTenantQuotaAccountsRequest{Id: tenant.ID})
 	require.Equal(t, "QUOTA_NOT_FOUND", kratoserrors.FromError(err).Reason)
 
-	bridge := NewGpuBffLedgerBridge(nil, repo)
-	checks, err := bridge.GPUPreviewQuota(self, tenant.ID, []*view.GpuPreviewQuotaItem{{QuotaCode: GpuPhysicalQuotaCode, Units: 2}})
-	require.NoError(t, err)
-	require.Len(t, checks, 1)
-	require.True(t, checks[0].Sufficient)
-	require.EqualValues(t, 4, checks[0].Available)
 }

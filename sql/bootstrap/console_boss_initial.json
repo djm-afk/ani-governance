@@ -9,7 +9,9 @@
     "baseline_governance": "fe5c9b7c78c75d5e07c64c915c2cd25736be09f2",
     "cluster_ops_governance": "61b7b6c74bd16d32f327aef42182566a87fe024f",
     "cluster_ops_boss": "4f4024049a9f848138702bb93c9ffee719aad2b3",
-    "cluster_ops_contract": "docs/contracts/cluster-operations-http.md"
+    "cluster_ops_contract": "docs/contracts/cluster-operations-http.md",
+    "accelerator_governance": "ecc1f7363a563d61fedb04de068fa1ada5aa9f48",
+    "accelerator_note": "加速器 v1.1：移除退役 Binding/Usage/预览路由及专属权限，加入仅平台可读的 Profile/Group 容量；保留原生 GPU 监控权限。"
   },
   "groups": [
     {
@@ -239,46 +241,6 @@
   ],
   "permissions": [
     {
-      "code": "accelerator:admission:preview",
-      "name": "预览GPU申请可用容量",
-      "group": "console.container",
-      "roles": [
-        "tenant"
-      ]
-    },
-    {
-      "code": "accelerator:binding:admin-list",
-      "name": "查询平台GPU绑定列表",
-      "group": "boss.gpu",
-      "roles": [
-        "platform"
-      ]
-    },
-    {
-      "code": "accelerator:binding:list",
-      "name": "查询租户GPU绑定列表",
-      "group": "console.container",
-      "roles": [
-        "tenant"
-      ]
-    },
-    {
-      "code": "accelerator:capacity:admin-get",
-      "name": "查询平台GPU容量",
-      "group": "boss.gpu",
-      "roles": [
-        "platform"
-      ]
-    },
-    {
-      "code": "accelerator:capacity:get",
-      "name": "查询租户GPU可用容量",
-      "group": "console.container",
-      "roles": [
-        "tenant"
-      ]
-    },
-    {
       "code": "accelerator:cluster:list",
       "name": "查询算力集群列表",
       "group": "boss.gpu",
@@ -359,6 +321,14 @@
       ]
     },
     {
+      "code": "accelerator:profile:capacity-read",
+      "name": "查询算力规格容量",
+      "group": "boss.gpu",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
       "code": "accelerator:profile:delete",
       "name": "删除算力规格",
       "group": "boss.gpu",
@@ -409,6 +379,14 @@
     {
       "code": "accelerator:supply-group:adopt",
       "name": "接管GPU供给组",
+      "group": "boss.gpu",
+      "roles": [
+        "platform"
+      ]
+    },
+    {
+      "code": "accelerator:supply-group:capacity-read",
+      "name": "查询GPU供给组容量",
       "group": "boss.gpu",
       "roles": [
         "platform"
@@ -3328,24 +3306,6 @@
   ],
   "routes": [
     {
-      "method": "POST",
-      "path": "/api/v1/accelerator/admission-preview",
-      "operation": "AcceleratorService_AdmissionPreview",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:admission:preview"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/accelerator/capacity",
-      "operation": "AcceleratorService_GetCapacity",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:capacity:get"
-      ]
-    },
-    {
       "method": "GET",
       "path": "/api/v1/accelerator/profiles",
       "operation": "AcceleratorService_ListProfiles",
@@ -3361,51 +3321,6 @@
       "module": "ACCELERATOR",
       "permissions": [
         "accelerator:profile:get"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/accelerator/usages",
-      "operation": "AcceleratorService_ListGpuUsages",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:usage:list"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/accelerator/usages/{owner_service}/{resource_id}",
-      "operation": "AcceleratorService_GetGpuUsage",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:usage:get"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings",
-      "operation": "AcceleratorService_ListBindings",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:binding:list"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/admin/accelerator/bindings",
-      "operation": "AcceleratorAdminService_AdminListBindings",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:binding:admin-list"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/admin/accelerator/capacity",
-      "operation": "AcceleratorAdminService_AdminGetCapacity",
-      "module": "ACCELERATOR",
-      "permissions": [
-        "accelerator:capacity:admin-get"
       ]
     },
     {
@@ -3517,6 +3432,15 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/accelerator/profiles/{profile_id}/capacity",
+      "operation": "AcceleratorCapacityAdminService_GetProfileCapacity",
+      "module": "ACCELERATOR",
+      "permissions": [
+        "accelerator:profile:capacity-read"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/accelerator/profiles/{profile_id}:delete",
       "operation": "AcceleratorAdminService_DeleteProfile",
@@ -3550,6 +3474,15 @@
       "module": "ACCELERATOR",
       "permissions": [
         "accelerator:supply-group:list"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/accelerator/supply-groups/{group_id}/capacity",
+      "operation": "AcceleratorCapacityAdminService_GetSupplyGroupCapacity",
+      "module": "ACCELERATOR",
+      "permissions": [
+        "accelerator:supply-group:capacity-read"
       ]
     },
     {
@@ -7979,9 +7912,6 @@
       "path": "/containers",
       "module": "INSTANCE",
       "permissions": [
-        "accelerator:admission:preview",
-        "accelerator:binding:list",
-        "accelerator:capacity:get",
         "accelerator:profile:get",
         "accelerator:profile:list",
         "accelerator:usage:get",
@@ -8011,9 +7941,6 @@
       "path": "/gpu-containers",
       "module": "INSTANCE",
       "permissions": [
-        "accelerator:admission:preview",
-        "accelerator:binding:list",
-        "accelerator:capacity:get",
         "accelerator:profile:get",
         "accelerator:profile:list",
         "accelerator:usage:get",
@@ -8356,8 +8283,6 @@
       "path": "/",
       "module": "ACCELERATOR",
       "permissions": [
-        "accelerator:binding:admin-list",
-        "accelerator:capacity:admin-get",
         "accelerator:cluster:list",
         "accelerator:cluster:register",
         "accelerator:device:list",
@@ -8374,7 +8299,9 @@
         "accelerator:profile:set-state",
         "accelerator:supply-group:adopt",
         "accelerator:supply-group:list",
-        "accelerator:supply-group:set-admission"
+        "accelerator:supply-group:set-admission",
+        "accelerator:profile:capacity-read",
+        "accelerator:supply-group:capacity-read"
       ],
       "client": "boss",
       "parent": "Boss"
@@ -8385,8 +8312,6 @@
       "path": "/gpu-clusters",
       "module": "ACCELERATOR",
       "permissions": [
-        "accelerator:binding:admin-list",
-        "accelerator:capacity:admin-get",
         "accelerator:cluster:list",
         "accelerator:cluster:register",
         "accelerator:device:list",
@@ -8403,7 +8328,9 @@
         "accelerator:profile:set-state",
         "accelerator:supply-group:adopt",
         "accelerator:supply-group:list",
-        "accelerator:supply-group:set-admission"
+        "accelerator:supply-group:set-admission",
+        "accelerator:profile:capacity-read",
+        "accelerator:supply-group:capacity-read"
       ],
       "client": "boss",
       "parent": "Boss"
@@ -8414,8 +8341,6 @@
       "path": "/gpu",
       "module": "ACCELERATOR",
       "permissions": [
-        "accelerator:binding:admin-list",
-        "accelerator:capacity:admin-get",
         "accelerator:cluster:list",
         "accelerator:cluster:register",
         "accelerator:device:list",
@@ -8432,7 +8357,9 @@
         "accelerator:profile:set-state",
         "accelerator:supply-group:adopt",
         "accelerator:supply-group:list",
-        "accelerator:supply-group:set-admission"
+        "accelerator:supply-group:set-admission",
+        "accelerator:profile:capacity-read",
+        "accelerator:supply-group:capacity-read"
       ],
       "client": "boss",
       "parent": "Boss"
@@ -9157,8 +9084,6 @@
       "template_for": "platform:operator",
       "description": "管理算力与平台网络，查看监控、日志和用量；不管理账号、角色、权限或套餐。",
       "permissions": [
-        "accelerator:binding:admin-list",
-        "accelerator:capacity:admin-get",
         "accelerator:cluster:list",
         "accelerator:cluster:register",
         "accelerator:device:list",
@@ -9262,7 +9187,9 @@
         "sys:access_backend",
         "tenant:quota-read",
         "tenant:usage-read",
-        "tenant:view"
+        "tenant:view",
+        "accelerator:profile:capacity-read",
+        "accelerator:supply-group:capacity-read"
       ]
     },
     {
@@ -9272,9 +9199,6 @@
       "template_for": "tenant:developer",
       "description": "在租户内开发并管理业务资源；不管理成员、角色、权限、套餐或配额。",
       "permissions": [
-        "accelerator:admission:preview",
-        "accelerator:binding:list",
-        "accelerator:capacity:get",
         "accelerator:profile:get",
         "accelerator:profile:list",
         "accelerator:usage:get",
@@ -9463,8 +9387,6 @@
       "template_for": "tenant:viewer",
       "description": "查看租户业务资源、日志和用量；不修改业务资源、不访问终端或密钥，保留个人账户安全操作。",
       "permissions": [
-        "accelerator:binding:list",
-        "accelerator:capacity:get",
         "accelerator:profile:get",
         "accelerator:profile:list",
         "accelerator:usage:get",

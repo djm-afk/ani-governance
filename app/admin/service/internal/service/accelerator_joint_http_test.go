@@ -8,7 +8,6 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -248,8 +247,8 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 	defer closeDownstream()
 	ledger := data.NewQuotaLedgerRepo(bctx, ec)
 	quotaAccounts := data.NewQuotaAdminRepo(bctx, ec)
-	bridge := NewGpuBffLedgerBridge(ledger, quotaAccounts)
-	service := NewAcceleratorService(downstream, data.NewTenantRepo(bctx, ec), bridge, bridge, quotaAccounts, NewQuotaAdapterRegistry(), policy.Engine())
+	bridge := NewGpuBffLedgerBridge(ledger)
+	service := NewAcceleratorService(downstream, data.NewTenantRepo(bctx, ec), bridge, quotaAccounts, policy.Engine())
 	server := khttp.NewServer(khttp.Middleware(auth.CredentialHeaders(), auth.Server(auth.WithAccessTokenChecker(checker), auth.WithTenantAccessChecker(tenantChecker), auth.WithInjectMetadata(false)), authzMiddleware.Server(policy.Engine())))
 	admin.RegisterAcceleratorAdminServiceHTTPServer(server, service)
 	admin.RegisterAcceleratorServiceHTTPServer(server, service)
@@ -323,7 +322,14 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 		payload["idempotency_key"] = mutation["idempotency_key"]
 		delete(payload, "mutation")
 		if baseline, ok := payload["baseline"].(map[string]any); ok {
-			delete(baseline, "verification")
+			if types, ok := baseline["resource_types"].([]any); ok {
+				for _, raw := range types {
+					kind := raw.(map[string]any)
+					if n, ok := kind["allocation_type"].(float64); ok {
+						kind["allocation_type"] = acc.AllocationType(int32(n)).String()
+					}
+				}
+			}
 		}
 		if call.rpc == "SetAdmission" {
 			delete(payload, "group_id")
@@ -333,6 +339,9 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 			payload["mode"] = acc.SupplyMode(int32(mode)).String()
 		}
 		if spec, ok := payload["spec"].(map[string]any); ok {
+			if n, ok := spec["allocation_type"].(float64); ok {
+				spec["allocation_type"] = acc.AllocationType(int32(n)).String()
+			}
 			if mode, ok := spec["mode"].(float64); ok {
 				spec["mode"] = acc.SupplyMode(int32(mode)).String()
 			}
@@ -362,7 +371,7 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 		case "CreateProfile":
 			require.Equal(t, seed.Profile.ProfileId, response["profile_id"])
 			require.Equal(t, "1", response["profile_version"])
-			require.Equal(t, true, response["published"])
+			require.Equal(t, "PROFILE_ACTIVE", response["state"])
 		}
 	}
 	query := func(path string, kv ...string) string {
@@ -378,15 +387,8 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 		query("/api/v1/admin/accelerator/supply-groups", "pool_id", seed.Pool.PoolId),
 		query("/api/v1/admin/accelerator/profiles", "cluster_id", seed.Cluster.ClusterId),
 		query("/api/v1/admin/accelerator/devices", "cluster_id", seed.Cluster.ClusterId),
-		query("/api/v1/admin/accelerator/bindings", "cluster_id", seed.Cluster.ClusterId),
-		query("/api/v1/admin/accelerator/capacity", "profile_id", seed.Profile.ProfileId, "profile_version", "1", "include_devices", "true"),
 	} {
 		response := request("GET", path, platformToken, nil, 200)
-		if strings.Contains(path, "/capacity?") {
-			require.Equal(t, seed.Profile.ProfileId, response["profile_id"])
-			require.NotEmpty(t, response["devices"])
-			continue
-		}
 		items := listItems(response)
 		first := items[0].(map[string]any)
 		switch {
@@ -403,10 +405,7 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 		case strings.Contains(path, "/devices?"):
 			require.NotEmpty(t, first["device_id"])
 			require.NotEmpty(t, first["node"])
-		case strings.Contains(path, "/bindings?"):
-			require.NotEmpty(t, first["physical_device_id"])
-			require.NotEmpty(t, first["pod_uid"])
-			require.NotEmpty(t, first["evidence_ref"])
+
 		}
 	}
 	tenantProfiles := query("/api/v1/accelerator/profiles", "cluster_id", seed.Cluster.ClusterId)
@@ -415,60 +414,19 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 	profileView := request("GET", "/api/v1/accelerator/profiles/"+seed.Profile.ProfileId+"?profile_version=1", tenantToken, nil, 200)
 	require.Equal(t, seed.Profile.ProfileId, profileView["profile_id"])
 	require.Equal(t, "1", profileView["profile_version"])
-	capacity := request("GET", query("/api/v1/accelerator/capacity", "profile_id", seed.Profile.ProfileId, "profile_version", "1"), tenantToken, nil, 200)
-	if v, ok := capacity["devices"].([]any); ok {
-		require.Empty(t, v)
+	// The former preview, usage, binding and capacity surfaces are retired.
+	// Authentication and active catalog tests below remain on the real stack.
+	for _, call := range []struct{ method, path string }{{"GET", "/api/v1/admin/accelerator/bindings"}, {"GET", "/api/v1/admin/accelerator/capacity"}, {"GET", "/api/v1/accelerator/capacity"}, {"POST", "/api/v1/accelerator/admission-preview"}, {"GET", "/api/v1/accelerator/usages"}, {"GET", "/api/v1/accelerator/usages/ani-resource-service/" + uuid.NewString()}, {"GET", "/api/v1/accelerator/usages/ani-resource-service/" + uuid.NewString() + "/bindings"}} {
+		req, e := http.NewRequest(call.method, host.URL+call.path, nil)
+		require.NoError(t, e)
+		req.Header.Set("Authorization", "Bearer "+tenantToken)
+		response, e := host.Client().Do(req)
+		require.NoError(t, e)
+		_, e = io.Copy(io.Discard, response.Body)
+		require.NoError(t, e)
+		require.NoError(t, response.Body.Close())
+		require.Equal(t, 404, response.StatusCode, call.path)
 	}
-	ledgerSnapshot := func() []string {
-		t.Helper()
-		out := make([]string, 3)
-		require.NoError(t, db.QueryRowContext(ctx, acceleratorLedgerSnapshotSQL, tenantID).Scan(&out[0], &out[1], &out[2]))
-		return out
-	}
-	beforePreview := ledgerSnapshot()
-	preview := request("POST", "/api/v1/accelerator/admission-preview", tenantToken, map[string]any{"data": &seed.Request}, 200)
-	require.Equal(t, beforePreview, ledgerSnapshot(), "preview cannot change operations, charges or account rows")
-	quotaItems := preview["requested_quota_items"].([]any)
-	require.Len(t, quotaItems, 1)
-	require.Equal(t, "12288", quotaItems[0].(map[string]any)["units"])
-	require.NotEmpty(t, preview["quota_checks"])
-	if expectedFit := os.Getenv("GOV_ACC_BFF_EXPECT_FIT"); expectedFit != "" {
-		require.Equal(t, expectedFit, preview["gpu_fit"])
-		for _, check := range preview["quota_checks"].([]any) {
-			require.Equal(t, true, check.(map[string]any)["sufficient"], "capacity is independent from sufficient quota")
-		}
-		t.Logf("preview expected gpu_fit=%s with sufficient quota; ledger unchanged", expectedFit)
-	}
-	invalidRequest := proto.Clone(&seed.Request).(*acc.GpuRequest)
-	invalidRequest.Replicas = 17
-	request("POST", "/api/v1/accelerator/admission-preview", tenantToken, map[string]any{"data": invalidRequest}, 400)
-	require.Equal(t, beforePreview, ledgerSnapshot(), "invalid preview cannot change ledger state")
-	require.Equal(t, "NOT_ENABLED", preview["owner_execution_readiness"])
-	require.Equal(t, "NOT_CHECKED", preview["cpu"])
-	require.Equal(t, "NOT_CHECKED", preview["network"])
-	require.Equal(t, "NOT_CHECKED", preview["storage"])
-	require.NotContains(t, preview, "plan")
-	require.NotContains(t, preview, "runtime")
-	listItems(request("GET", "/api/v1/accelerator/usages", tenantToken, nil, 200))
-	request("GET", "/api/v1/accelerator/usages?owner_service=unknown-owner", tenantToken, nil, 400)
-	request("GET", "/api/v1/accelerator/usages/unknown-owner/"+uuid.NewString(), tenantToken, nil, 404)
-	firstPage := request("GET", "/api/v1/accelerator/usages?page_size=1", tenantToken, nil, 200)
-	firstUsage := listItems(firstPage)[0].(map[string]any)
-	cursor, ok := firstPage["next_page_token"].(string)
-	require.True(t, ok)
-	require.NotEmpty(t, cursor, "multi-page real usages required")
-	require.Equal(t, firstPage, request("GET", "/api/v1/accelerator/usages?page_size=1", tenantToken, nil, 200))
-	nextPath := query("/api/v1/accelerator/usages", "page_size", "1", "page_token", cursor)
-	nextUsage := listItems(request("GET", nextPath, tenantToken, nil, 200))[0].(map[string]any)
-	require.NotEqual(t, firstUsage["create_operation_id"], nextUsage["create_operation_id"])
-	request("GET", nextPath, otherToken, nil, 403)
-	otherActorToken, _, e := authenticator.CreateUserToken(ctx, authv1.ClientType_admin, &authv1.UserTokenPayload{UserId: 2, TenantId: trans.Ptr(tenantID), Roles: []string{*tenantRole.Code}})
-	require.NoError(t, e)
-	request("GET", nextPath, otherActorToken, nil, 403)
-	request("GET", nextPath+"&state=ENDED", tenantToken, nil, 400)
-	request("GET", query("/api/v1/accelerator/usages", "page_token", "tampered-token"), tenantToken, nil, 400)
-	request("GET", query("/api/v1/accelerator/profiles", "page_token", cursor), tenantToken, nil, 400)
-	request("GET", "/api/v1/accelerator/usages?page_size=200", tenantToken, nil, 200)
 	accounts := request("GET", "/api/v1/me/quota-accounts?tenant_id=9102", tenantToken, nil, 200)
 	require.Equal(t, float64(1), accounts["tenantId"])
 	require.NotEmpty(t, accounts["items"])
@@ -531,34 +489,6 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 	request("GET", "/api/v1/me/quota-accounts", tenantToken, nil, 200)
 	_, e = client.PlanModule.Create().SetPlanID(1).SetModule(planmodule.ModuleAccelerator).Save(sys)
 	require.NoError(t, e)
-	// Mandatory nonempty binding created by the independent owner/ledger chain.
-	refPath := os.Getenv("GOV_ACC_JOINT_USAGE_REF_FILE")
-	require.NotEmpty(t, refPath, "nonempty ledger/binding fixture is mandatory")
-	refBytes, e := os.ReadFile(refPath)
-	require.NoError(t, e)
-	var fixture struct {
-		Ref acc.GpuUsageRef `json:"ref"`
-	}
-	require.NoError(t, json.Unmarshal(refBytes, &fixture))
-	ref := &fixture.Ref
-	require.NotEmpty(t, ref.CreateOperationId)
-	usagePath := fmt.Sprintf("/api/v1/accelerator/usages/%s/%s", ref.OwnerService, ref.ResourceId)
-	usage := request("GET", usagePath, tenantToken, nil, 200)
-	require.Equal(t, "ENDED", usage["state"])
-	request("GET", usagePath, otherToken, nil, 404)
-	request("GET", usagePath+"/bindings", otherToken, nil, 404)
-	require.NotContains(t, usage, "source_fact_ref")
-	require.NotContains(t, usage, "plan")
-	bindings := request("GET", usagePath+"/bindings", tenantToken, nil, 200)
-	items, ok := bindings["items"].([]any)
-	require.True(t, ok)
-	require.NotEmpty(t, items, "empty list cannot prove redaction")
-	body, e := json.Marshal(bindings)
-	require.NoError(t, e)
-	for _, sensitive := range []string{"physical_device_id", "pod_uid", "pod_namespace", "evidence_ref", "source_baseline_digest", "snapshot_ref", "tenant_id"} {
-		require.NotContains(t, string(body), sensitive)
-	}
-	request("GET", "/api/v1/accelerator/usages/ani-inference/"+uuid.NewString(), tenantToken, nil, 404)
 	if output := os.Getenv("GOV_ACC_BFF_SESSION_OUTPUT"); output != "" {
 		// Explicit private test session handoff for the separate ordinary-binary
 		// process gate. Never print or commit signing material or bearer tokens.
@@ -567,7 +497,7 @@ func TestAcceleratorJointHTTP(t *testing.T) {
 		require.NoError(t, os.WriteFile(output, material, 0600))
 		require.NoError(t, os.Chmod(output, 0600))
 	}
-	t.Log("PASS: twenty HTTP BFFs, production JWT/cache + tenant/module/Casbin gates, exact downstream mTLS delegation, nonempty binding redaction; isolated software fixture, hardware_observed=false")
+	t.Log("PASS: active catalog/quota HTTP BFFs, production JWT/cache + tenant/module/Casbin gates, exact downstream mTLS delegation, retired route absence; isolated software fixture, hardware_observed=false")
 }
 
 // Refresh only the explicitly issued test sessions used by the ordinary-binary

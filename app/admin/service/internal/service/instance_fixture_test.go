@@ -17,7 +17,11 @@ func instanceResourceProcess(t *testing.T, plan *gpuPlanFixture) (*data.Instance
 		request = plan.Request
 		profile = plan.Profile
 	}
-	peer := testutil.StartInstanceResourcePeer(t, request, profile)
+	var business []*acc.GpuBusinessSpec
+	if plan != nil {
+		business = append(business, plan.Resolved.BusinessSpec)
+	}
+	peer := testutil.StartInstanceResourcePeer(t, request, profile, business...)
 	client, compute, _, closeClient, e := data.NewResourceClientsFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeClient)

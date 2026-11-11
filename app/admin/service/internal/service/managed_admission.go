@@ -31,6 +31,9 @@ func (s *GpuAcceptance) acceptPreparedCreate(ctx context.Context, p *auth.Princi
 	var plan *acc.ResolvedGpuRequest
 	items := []data.QuotaOccupyItem{}
 	if prepared.gpu != nil {
+		if !s.registry.GPUExecutionEnabled(s.binding.OwnerService()) {
+			return nil, commandcontract.GPUOwnerUnavailable()
+		}
 		eligibility, ok := s.binding.(GpuUseEligibility)
 		if !ok {
 			return nil, gpuUseUnavailable()

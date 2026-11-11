@@ -1,31 +1,22 @@
 # GPU owner 集成合同
 
-当前合同使用每卡具体显存 MiB，供给 F=1。管理员目录与执行快照分开：停用或软删除规格阻止新解析，已受理的新合同仍按原快照恢复和删除。没有测试报告、人工资格或有效期准入。
-
-本期实际接入 owner 包括 Resource 容器实例和 Inference 推理服务。Governance 通过受信 mTLS 客户端调用 Inference 管理 API；普通和 GPU 推理 BFF 路由由 Governance 提供。真实 CUDA、物理释放与退额的结果以任务验收回执为准，软件测试不能代替硬件验证。
+当前活动合同为加速器整改 v1.1：本期新 GPU Owner 仅 Resource 容器实例。ModelDev/Inference 新 GPU 在占额前明确未接入，CPU 保留原受理和原 canonical 重放。静态业务、执行与一致性校验使用 ACC `pkg/gpuprotocol` 的唯一普通 Go 内核及边界 protobuf wrapper，不复制厂商换算。
 
 ## 1. 主链与写入职责
 
-管理员创建 ACC Profile → Resource Preset 组合 CPU/主机内存 → 用户选择 Preset → Gov 当前用户权限与套餐检查 → Res 受管镜像/规格解析 → ACC 最终执行参数与计量 → Gov 原子占额及持久命令 → Res 持久受理 → worker 写 Kubernetes → Volcano 分配 → CUDA → 完整删除和创建封闭 → Res 释放 outbox → Gov 按原账全退 → ACC 观测容量恢复。
+ACC Profile → Res Preset → Gov 当前权限与套餐 → 原键重放查找 → 新键 Res 解析静态引用 → ACC Resolve → 完整引用逐项核对 → Gov 同事务真实占额与持久命令 → Res owner 接纳 → Kubernetes/Volcano → owner 清理并封闭迟到 CREATE → 原释放事件 → Gov 原 charge 全退。
 
-ACC 只维护供给、目录、最终 GPU 执行参数、Usage 投影与物理绑定；Gov 拥有唯一额度账本与可靠投递；Res 拥有实例、工作区、Kubernetes 副作用及完整释放事实。任何一方不得直接写其他业务服务的库。
+ACC 维护静态供给/目录、设备事实和只读容量；Gov 拥有真实配额、幂等与可靠投递；Res 拥有业务、运行副作用、清理和退款 outbox。容量、库存、监控或 exporter 可用性不授权创建，不阻止删除与退款。不再存在平台 Binding、UsageSync、签名绑定、平台设备账本或释放证明。
 
 ## 2. 公共协议与发布顺序
 
-- GPU 公共类型来自正式 ACC 模块的 `accelerator.v1`；公共 durable ACK 位于 `accelerator.command.v1`。
-- 释放协议位于独立 `github.com/zhangzhe-ctrl/ani-governance/api/quota`，权威源为 `api/protos/quota/service/v1/quota_release.proto`。固定入口 `make api-quota-release`；生成产物在 `api/quota/gen/go`。
-- ACC 与 Gov quota 提供方先发布，Res 消费精确版本后发布，Gov 最后消费正式可下载版本。Inference API 不在当前依赖链中。使用 `GOWORK=off`，记录 `Origin.Hash` 与校验和，不使用本地 `replace` 或复制生成代码。
-- Gov BFF 使用本仓 `make api` 的固定插件与暂存保护流程；生成代码不得手改。
+公共协议按 Obs API → ACC → Res → Gov 锁定正式精确模块。使用 `GOWORK=off`，不提交本地 replace。Gov API 使用固定 `make api`，Ent 使用 `make ent`；不手改生成代码。独立 `api/quota` 的 `QuotaReleaseService/ReportResourceReleased` 合同保持。
 
 ## 3. 创建合同
 
-`AcceptCreate` 仅包含 `context` 和扁平的 `spec`。Context 是可信租户、资源 ID、操作 ID 和整个命令摘要；actor 审计信息从 Gov 已认证并持久保存的上下文重建到内部 metadata。Res 验证调用证书、方法、租户和资源归属。
+`AcceptCreate` 仅包含可信 context 和冻结 spec。CPU 保持原 canonical 字节/摘要，`gpu_display:null` 的历史规范不变。GPU 冻结唯一 `GpuBusinessSpec` 和 `GpuExecution`，清除只用于解析响应的临时 `gpu_selection`；Res 不接收原账或完整 Plan。
 
-Spec 保存真实实例业务参数、展示信息及一份 GPU 执行快照。镜像使用不可变 digest reference；CPU、主机内存、受管集群、namespace、ServiceAccount、UID/GID、shell、存储和 scheduling 继续属于真实业务参数。临时 `gpu_selection` 只用于 Res 解析响应，Gov 获得 ACC 结果后清除，Res 拒绝把它持久化为第二份 GPU 权威。
-
-`GpuExecution` 的固定字段仅为 scheduler、queue、RuntimeClass、node selector、annotations、resources、execution digest。资源白名单仅为 `volcano.sh/vgpu-number`、`volcano.sh/vgpu-memory`、`volcano.sh/vgpu-cores`；显存数值就是 MiB。共享以具体显存与 1..99 核心申请，整卡以该组单卡全部可用显存及 100 核心申请。RuntimeClass 只来自 ACC 受管配置。
-
-Res 不接收或持久保存原账、charge ID/code/units、完整 Plan、Encoding/Totals 或第二份执行参数。Gov 的原始公共请求、原计量与原账留在 Gov。执行摘要由 ACC 公开 `pkg/gpuprotocol` 固定六字段规范化计算；未知执行字段和额外资源键均拒绝。
+BusinessSpec 包括 profile/version/name/spec_digest、mode/model、卡数、每卡 memory/core/CU、allocation_type/resource_key 和 adapter_id。Gov 将其与 Res 原静态引用逐项核对，调用公共内核验证规格、执行及配额。NVIDIA F/K 编码来自登记配置；海光整卡及预配置固定片按登记资源键执行，不反推 NVIDIA 显存、不做动态切卡。实际 F/K 读取可用于展示或配置核对，不建立安装认证门槛。
 
 ## 4. 删除与完整释放
 
@@ -55,18 +46,14 @@ Inference 接入通过 `ANI_QUOTA_INFERENCE_ENABLED=true` 显式注册唯一 DNS
 
 旧 `ReportQuotaRelease` 仅保留非 GPU 的独立累计释放语义，新的 GPU code 不能走该入口。本期不新增 CPU、主机内存或 GPU 核心 quota。
 
-## 5. Usage 与容量
+## 5. 监控与容量
 
-Gov→ACC 异步 Usage 只有 ref、revision/state/end reason/source fact/time、Profile ID/version、group/baseline/cluster/container 及 execution digest。它不带完整 Plan，不重新加载当前目录重算历史实例；Res 无需等待 Usage 才创建。
+Gov→ACC UsageSync 和 Binding 投影已退役。Gov 从不可变原 CREATE/charge 读取完整业务身份并直接查询 Obs；当前资源读授权仍必需，实时 owner 对象、Pod 或未退 charge 不是历史查询前置。
 
-用户 Preset 先由 Res 在同一租户授权快照内分页过滤，再显示目录状态及当前容量提示：`GPU_PROFILE_DISABLED`、`GPU_PROFILE_DELETED`、`GPU_SUPPLY_PAUSED`、`GPU_CAPACITY_UNKNOWN`、`GPU_TEMPORARILY_FULL` 或 `GPU_CATALOG_UNAVAILABLE`。CPU 查询不依赖 ACC。容量提示不预留设备，也不成为受理快照的重放或生命周期条件。
-
-绑定身份签名绑定真实 cluster/namespace/Pod UID/container、tenant/owner/resource/create operation 和新 execution digest。Usage ENDED 不清除活绑定；ACC 只按真实物理释放恢复容量。多规格共用逐卡物理总账，视图不能相加；未知占用保留，证据缺失不能宣告空闲。
+新 Profile/Group 容量为平台管理只读诊断，区分实际 Node/Pod 请求与 exporter 观测，不用于创建筛选。普通租户目录只以静态合同与权限形成候选；TRAINING/INFERENCE GPU 标为未接入，不调用容量。64 位 optional 字段经 HTTP 保持未知 `null` 与已知 `"0"` 的区别。
 
 ## 6. 切换与验证边界
 
-旧活动实例、在途投递、未知写、释放 outbox 和原账必须在切换前实际盘点。终态资料只读操作引用、请求摘要和回执；服务不把旧 raw Plan 送入新执行解码器。协议和 F1 切换后不回退旧合同、旧百分比或 F256。
+按[切换步骤](../operations/gpu-contract-v11-cutover.md)盘点并闭合旧 owner、命令和原 charge。原 operation/canonical/hash/ACK、charge/receipt 和必要 outbox 保留，旧终态快照由 Res 清单归档。旧 GPU canonical 不转换、不重新派发；CPU 原键继续重放。部署必须核对目标真实 Atlas revisions 与现存列，不能假定已应用源码 main 全部迁移。
 
-回归入口为 `internal/service/instance_pg_test.go`、`internal/server/instance_joint_test.go` 与现有账本/内部 mTLS 测试。前者验证真实 Gov/Resource 业务和 PostgreSQL，ACC 在该模块回归中是显式协议边界替身，不能算完整主链；后者连接真实 ACC 与 Resource subprocess，并明确区分外部 Kubernetes 替身和实际集群。旧独立 fake owner 实验已退役，历史在 Git 中保留。
-
-提交前执行 Fedora 上 `make verify-ci`（本仓无 `make verify` 目标）。真实验收另需首条 4 CPU/8192 MiB 主机内存/8192 MiB GPU、共享混用、整卡、真实 CUDA、删除封闭、物理释放、ACC 容量及 Gov 原额归零。官方正式版 Volcano 通过之前保留当前修复版；相关 PR 暂不合并。
+只执行本次受影响的生成、包/二进制定向编译、静态合同/授权/幂等及 owner/原 charge 数据库测试；用户明确排除完整 make verify 与全仓测试。真实设备计算、部署版本和闭环验收另行记录，不能用 fixture 或 HTTP 200 代替。

@@ -5,12 +5,11 @@ import (
 
 	"github.com/google/uuid"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	view "go-wind-admin/api/gen/go/catalog/service/v1"
 )
 
-func (s *AcceleratorService) GetInitialization(ctx context.Context, _ *emptypb.Empty) (*view.AcceleratorInitialization, error) {
+func (s *AcceleratorService) GetInitialization(ctx context.Context, request *view.GetAcceleratorInitializationRequest) (*view.AcceleratorInitialization, error) {
 	if err := s.authorizeInitializationActions(ctx, "accelerator:initialization:read"); err != nil {
 		return nil, err
 	}
@@ -18,7 +17,7 @@ func (s *AcceleratorService) GetInitialization(ctx context.Context, _ *emptypb.E
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.client.Admin.GetInitialization(ctx, &acc.GetInitializationRequest{Context: trusted})
+	result, err := s.client.Admin.GetInitialization(ctx, &acc.GetInitializationRequest{Context: trusted, ConnectionRef: request.GetConnectionRef()})
 	if err != nil {
 		return nil, mapAcceleratorError(err)
 	}
@@ -43,7 +42,7 @@ func (s *AcceleratorService) ListDiscoveredNodes(ctx context.Context, request *v
 	if page == 0 || size == 0 || size > 200 {
 		return nil, acceleratorInvalid()
 	}
-	result, err := s.client.Admin.ListDiscoveredNodes(ctx, &acc.ListDiscoveredNodesRequest{Context: trusted, Page: page, PageSize: size})
+	result, err := s.client.Admin.ListDiscoveredNodes(ctx, &acc.ListDiscoveredNodesRequest{Context: trusted, Page: page, PageSize: size, ConnectionRef: request.GetConnectionRef()})
 	if err != nil {
 		return nil, mapAcceleratorError(err)
 	}
@@ -69,7 +68,7 @@ func (s *AcceleratorService) CreateInitialization(ctx context.Context, request *
 	if err := s.authorizeInitializationActions(ctx, actions...); err != nil {
 		return nil, err
 	}
-	initialization, err := s.client.Admin.GetInitialization(ctx, &acc.GetInitializationRequest{Context: trusted})
+	initialization, err := s.client.Admin.GetInitialization(ctx, &acc.GetInitializationRequest{Context: trusted, ConnectionRef: input.ConnectionRef})
 	if err != nil {
 		return nil, mapAcceleratorError(err)
 	}

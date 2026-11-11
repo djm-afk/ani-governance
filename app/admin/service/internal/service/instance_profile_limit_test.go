@@ -23,11 +23,12 @@ func (p *instanceProfileLimitAdmin) ListPools(context.Context, *acc.ListPoolsReq
 }
 func (p *instanceProfileLimitAdmin) ListSupplyGroups(context.Context, *acc.ListSupplyGroupsRequest, ...grpc.CallOption) (*acc.ListSupplyGroupsResponse, error) {
 	s := p.plan.Profile.Spec
-	return &acc.ListSupplyGroupsResponse{Items: []*acc.SupplyGroup{{GroupId: s.GroupId, PoolId: p.plan.Request.PoolId, ClusterId: p.plan.Request.ClusterId, Mode: s.Mode, ModelKey: s.ModelKey, Baseline: &acc.ProviderBaseline{BaselineId: p.plan.Profile.BaselineId}}}}, nil
+	return &acc.ListSupplyGroupsResponse{Items: []*acc.SupplyGroup{{GroupId: s.GroupId, PoolId: p.plan.Request.PoolId, ClusterId: p.plan.Request.ClusterId, ModelKey: s.ModelKey, Baseline: &acc.ProviderBaseline{BaselineId: p.plan.Profile.BaselineId, AdapterId: "volcano-hami-mib-v1"}}}}, nil
 }
 func TestInstancePresetUsesProfileLimit(t *testing.T) {
 	plan, _, _ := gpuVector(t)
 	plan.Profile.Spec.Mode = acc.SupplyMode_WHOLE_EXCLUSIVE
+	plan.Profile.Spec.AllocationType = acc.AllocationType_PHYSICAL
 	plan.Profile.Spec.MemoryMibPerDevice = 15360
 	plan.Profile.Spec.CoreLimitPercent = 100
 	plan.Profile.Spec.MaxDevicesPerReplica = 4

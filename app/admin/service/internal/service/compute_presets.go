@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	gp "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
+	"math"
 	"strconv"
 	"time"
 
@@ -66,9 +68,9 @@ func resolveComputePage(p, s *uint32) (uint32, uint32, error) {
 	}
 	return page, size, nil
 }
-func wireComputePreset(p *res.Preset) *view.Preset {
+func wireComputePreset(p *res.Preset) (*view.Preset, error) {
 	if p == nil {
-		return nil
+		return nil, errors.ServiceUnavailable("COMPUTE_INVALID_RESPONSE", "missing owner preset")
 	}
 	out := &view.Preset{Id: p.Id, Code: p.Code, Name: p.Name, Description: p.Description, ComputeType: p.ComputeType, CpuMillis: p.CpuMillis, MemoryMib: p.MemoryMib, Enabled: p.Enabled, Selectable: p.Selectable, UnavailableReason: p.UnavailableReason}
 	if p.CreatedAt != nil {
@@ -78,12 +80,15 @@ func wireComputePreset(p *res.Preset) *view.Preset {
 		out.UpdatedAt = p.UpdatedAt.AsTime().UTC().Format(time.RFC3339Nano)
 	}
 	if g := p.Gpu; g != nil {
-		out.Gpu = &view.GpuSummary{ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion, Mode: g.Mode.String(), ModelKey: g.ModelKey, DevicesPerInstance: g.DevicesPerInstance, CoreLimitPercent: g.CoreLimitPercent}
+		out.Gpu = &view.GpuSummary{ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion, Mode: g.Mode.String(), ModelKey: g.ModelKey, DevicesPerInstance: g.DevicesPerInstance, CoreLimitPercent: g.CoreLimitPercent, AllocationType: g.AllocationType.String(), ResourceKey: g.ResourceKey, ComputeUnitsPerDevice: g.ComputeUnitsPerDevice, AdapterId: g.AdapterId, SpecDigest: g.SpecDigest}
 		out.Gpu.MemoryMibPerDevice = g.MemoryMibPerDevice
+		if g.MemoryMibPerDevice < 0 || (g.MemoryMibPerDevice > 0 && int64(g.DevicesPerInstance) > math.MaxInt64/g.MemoryMibPerDevice) {
+			return nil, errors.ServiceUnavailable("COMPUTE_INVALID_RESPONSE", "GPU memory total overflows")
+		}
 		out.Gpu.MemoryMibTotal = g.MemoryMibPerDevice * int64(g.DevicesPerInstance)
 
 	}
-	return out
+	return out, nil
 }
 func (s *ComputePresetService) presetAdmin(ctx context.Context, permission string) (ComputePresetOwner, string, error) {
 	p, err := computePlatformPrincipal(ctx, permission)
@@ -116,7 +121,11 @@ func (s *ComputePresetService) AdminListPresets(ctx context.Context, r *view.Adm
 	}
 	out := &view.AdminListPresetsResponse{Items: []*view.Preset{}, Total: reply.Total}
 	for _, p := range reply.Items {
-		out.Items = append(out.Items, wireComputePreset(p))
+		item, err := wireComputePreset(p)
+		if err != nil {
+			return nil, err
+		}
+		out.Items = append(out.Items, item)
 	}
 	return out, nil
 }
@@ -132,7 +141,7 @@ func (s *ComputePresetService) AdminGetPreset(ctx context.Context, r *view.Prese
 	if err != nil {
 		return nil, err
 	}
-	return wireComputePreset(reply), nil
+	return wireComputePreset(reply)
 }
 func (s *ComputePresetService) presetData(ctx context.Context, actor string, in *view.PresetData, replaceGPU bool) (*res.PresetData, error) {
 	if in == nil {
@@ -167,7 +176,7 @@ func (s *ComputePresetService) AdminCreatePreset(ctx context.Context, r *view.Cr
 	if err != nil {
 		return nil, err
 	}
-	return wireComputePreset(reply), nil
+	return wireComputePreset(reply)
 }
 func (s *ComputePresetService) AdminUpdatePreset(ctx context.Context, r *view.UpdatePresetRequest) (*view.Preset, error) {
 	owner, actor, err := s.presetAdmin(ctx, "compute:preset:admin:update")
@@ -206,7 +215,7 @@ func (s *ComputePresetService) AdminUpdatePreset(ctx context.Context, r *view.Up
 	if err != nil {
 		return nil, err
 	}
-	return wireComputePreset(reply), nil
+	return wireComputePreset(reply)
 }
 func (s *ComputePresetService) AdminSetPresetEnabled(ctx context.Context, r *view.SetPresetEnabledRequest) (*view.Preset, error) {
 	owner, actor, err := s.presetAdmin(ctx, "compute:preset:admin:update")
@@ -220,7 +229,7 @@ func (s *ComputePresetService) AdminSetPresetEnabled(ctx context.Context, r *vie
 	if err != nil {
 		return nil, err
 	}
-	return wireComputePreset(reply), nil
+	return wireComputePreset(reply)
 }
 func (s *ComputePresetService) AdminDeletePreset(ctx context.Context, r *view.PresetRequest) (*view.Empty, error) {
 	owner, actor, err := s.presetAdmin(ctx, "compute:preset:admin:delete")
@@ -288,12 +297,7 @@ func (s *ComputePresetService) resolvePresetGPU(ctx context.Context, actor strin
 		return nil, invalid
 	}
 	spec := profile.Spec
-	if spec.Mode != acc.SupplyMode_WHOLE_EXCLUSIVE && spec.Mode != acc.SupplyMode_SHARED_FIXED || spec.Mode == acc.SupplyMode_SHARED_FIXED && (in.DevicesPerInstance != 1 || spec.MaxDevicesPerReplica != 1) {
-		return nil, invalid
-	}
-	if spec.Mode == acc.SupplyMode_WHOLE_EXCLUSIVE && (spec.MemoryMibPerDevice <= 0 || spec.CoreLimitPercent != 100) || spec.Mode == acc.SupplyMode_SHARED_FIXED && (spec.MemoryMibPerDevice <= 0 || spec.CoreLimitPercent < 1 || spec.CoreLimitPercent > 99) {
-		return nil, invalid
-	}
+
 	pools, err := s.computePools(ctx, admin)
 	if err != nil {
 		return nil, err
@@ -312,7 +316,7 @@ func (s *ComputePresetService) resolvePresetGPU(ctx context.Context, actor strin
 			}
 			for _, g := range reply.Items {
 				if g != nil && g.GroupId == spec.GroupId {
-					if group != nil || g.ClusterId != c.ClusterID || g.PoolId != pool.PoolId || g.Baseline == nil || g.Baseline.BaselineId != profile.BaselineId || g.Mode != spec.Mode || g.ModelKey != spec.ModelKey {
+					if group != nil || g.ClusterId != c.ClusterID || g.PoolId != pool.PoolId || g.Baseline == nil || g.Baseline.BaselineId != profile.BaselineId || g.ModelKey != spec.ModelKey {
 						return nil, invalid
 					}
 					group = g
@@ -331,9 +335,12 @@ func (s *ComputePresetService) resolvePresetGPU(ctx context.Context, actor strin
 	if group == nil {
 		return nil, invalid
 	}
-	out := &res.GpuPresetReference{ProfileId: profile.ProfileId, ProfileVersion: in.ProfileVersion, SpecDigest: profile.SpecDigest, DevicesPerInstance: in.DevicesPerInstance, ClusterId: group.ClusterId, PoolId: group.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, CoreLimitPercent: spec.CoreLimitPercent}
+	out := &res.GpuPresetReference{ProfileId: profile.ProfileId, ProfileVersion: in.ProfileVersion, SpecDigest: profile.SpecDigest, DevicesPerInstance: in.DevicesPerInstance, ClusterId: group.ClusterId, PoolId: group.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, CoreLimitPercent: spec.CoreLimitPercent, AllocationType: spec.AllocationType, ResourceKey: spec.ResourceKey, ComputeUnitsPerDevice: spec.ComputeUnitsPerDevice, AdapterId: group.Baseline.AdapterId}
 	out.MemoryMibPerDevice = spec.MemoryMibPerDevice
 
+	if err := gp.ValidateGpuBusinessSpec(&acc.GpuBusinessSpec{ProfileId: out.ProfileId, ProfileVersion: out.ProfileVersion, SpecDigest: out.SpecDigest, DevicesPerReplica: out.DevicesPerInstance, Mode: out.Mode, ModelKey: out.ModelKey, MemoryMibPerDevice: out.MemoryMibPerDevice, CoreLimitPercent: out.CoreLimitPercent, AllocationType: out.AllocationType, ResourceKey: out.ResourceKey, ComputeUnitsPerDevice: out.ComputeUnitsPerDevice, AdapterId: out.AdapterId}); err != nil {
+		return nil, invalid
+	}
 	return out, nil
 }
 func (s *ComputePresetService) computePools(ctx context.Context, admin *acc.AdminRead) ([]*acc.Pool, error) {

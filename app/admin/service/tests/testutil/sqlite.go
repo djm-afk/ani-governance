@@ -71,7 +71,7 @@ func CreateUnrelatedSQLiteSchema(ctx context.Context, client *ent.Client) error 
 	// their SQLite fixture without manufacturing a weaker GPU schema.
 	tables := make([]*schema.Table, 0, len(migrate.Tables))
 	for _, table := range migrate.Tables {
-		if table.Name == "sys_gpu_usage_sync" || table.Name == "sys_gpu_delete_acceptances" {
+		if table.Name == "sys_gpu_delete_acceptances" {
 			continue
 		}
 		tables = append(tables, table)
