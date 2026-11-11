@@ -27,7 +27,7 @@ require (
 	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261104060553-30420850c4bd
 	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261104021256-2571d89b2dc4
 	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261104060620-47ceb0edf98e
-	github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261110011435-20f33f0e711f
+	github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261111013743-fd4c5660b661
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
 	github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f
 	github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261024051540-811cc3839244

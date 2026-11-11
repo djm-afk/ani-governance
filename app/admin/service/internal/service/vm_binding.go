@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type VMOwnerClient interface {
@@ -79,6 +80,25 @@ func vmAuthorizationError(err error) error {
 	}
 	return err
 }
+
+// vmCloneOwnerError keeps the resource owner's stable clone reason visible as a
+// dedicated Governance code instead of a generic dependency failure. A busy
+// source is answered before acceptance so a second clone never becomes an
+// accepted target that dispatch later drops.
+func vmCloneOwnerError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if status.Code(err) == codes.FailedPrecondition {
+		switch {
+		case strings.Contains(err.Error(), "VM_CLONE_SOURCE_UNAVAILABLE"):
+			return kratoserrors.New(412, "VM_CLONE_SOURCE_UNAVAILABLE", err.Error())
+		case strings.Contains(err.Error(), "VM_OPERATION_CONFLICT"):
+			return kratoserrors.New(409, "VM_OPERATION_CONFLICT", err.Error())
+		}
+	}
+	return err
+}
 func (*VMBinding) ValidateGpuBusiness(_ context.Context, m proto.Message) ([]data.QuotaOccupyItem, error) {
 	spec, ok := m.(*vm.CreateSpec)
 	if !ok || vm.ValidateCreateSpec(spec) != nil {
@@ -107,7 +127,7 @@ func (b *VMBinding) PrepareManagedBusiness(ctx context.Context, p *auth.Principa
 	}
 	resolved, err := b.client.Resolve(ctx, tenant, "governance:user:"+strconv.FormatUint(uint64(p.ID), 10), intent)
 	if err != nil {
-		return nil, err
+		return nil, vmCloneOwnerError(err)
 	}
 	if resolved == nil || resolved.VmContractVersion != vm.ContractVersion || resolved.CreateSpec == nil || resolved.CreateSpec.ClusterId != b.cluster || !proto.Equal(resolved.CreateSpec.Intent, intent) {
 		return nil, commandcontract.Invalid("invalid VM resolution")
@@ -233,7 +253,7 @@ func (b *VMBinding) Dispatch(ctx context.Context, c *QuotaDispatchCommand) ([]by
 		return nil, commandcontract.Invalid("unsupported VM action")
 	}
 	if err != nil {
-		return nil, err
+		return nil, vmCloneOwnerError(err)
 	}
 	if reply == nil || !reply.Accepted || reply.OperationId != c.OperationID || reply.ResourceId != c.ResourceID {
 		return nil, commandcontract.Invalid("invalid VM durable ACK")
