@@ -48,9 +48,6 @@ type ModelDevFrozenCandidate struct {
 	Intent      cpup01.Intent
 	Snapshot    cpup01.Snapshot
 	AcceptedAt  time.Time
-	// ResolvedGPU is the original ACC observation used by FinalizeAdmission.
-	// It is accounted in the same transaction as the immutable acceptance.
-	ResolvedGPU *acc.ResolvedGpuRequest
 	// TelemetryContext is captured at acceptance and never enters the intent/
 	// spec hashes.
 	TelemetryContext telemetry.TelemetryContext
