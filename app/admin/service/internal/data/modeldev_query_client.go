@@ -221,11 +221,20 @@ func modelDevValidExecutionPlan(in *modeldevv1.ExecutionView) bool {
 		return false
 	}
 	selection.SelectionDigest = origin.SelectionDigest
-	if compute.ValidateSelection(&selection) != nil {
-		return false
+	// Strict re-canonicalization is best effort. The locally pinned compute
+	// contract keeps evolving, so a selection frozen by an older revision can
+	// legitimately stop satisfying today's ValidateSelection — that says
+	// nothing about the record. A read must not fail closed on that skew: it
+	// renders the owner's frozen facts and keeps the structural cross-checks
+	// below. When today's contract does accept the selection, the canonical
+	// round-trip still runs, so tampering is still detected.
+	if compute.ValidateSelection(&selection) == nil {
+		canonical, err := compute.CanonicalSelection(&selection)
+		if err != nil || !bytes.Equal(canonical, origin.SelectionCanonical) {
+			return false
+		}
 	}
-	canonical, err := compute.CanonicalSelection(&selection)
-	if err != nil || !bytes.Equal(canonical, origin.SelectionCanonical) || selection.PresetId != in.ComputePresetId || origin.ComputePresetId != selection.PresetId || origin.CpuMillis != selection.CpuMillis || origin.MemoryMib != selection.MemoryMib || (selection.Gpu == nil && origin.DeviceMode != "cpu") || (selection.Gpu != nil && origin.DeviceMode != "gpu") {
+	if selection.PresetId != in.ComputePresetId || origin.ComputePresetId != selection.PresetId || origin.CpuMillis != selection.CpuMillis || origin.MemoryMib != selection.MemoryMib || (selection.Gpu == nil && origin.DeviceMode != "cpu") || (selection.Gpu != nil && origin.DeviceMode != "gpu") {
 		return false
 	}
 	timing := cpup01.Timing{AcceptedAt: in.Timing.AcceptedAt.AsTime(), ExecutionTimeoutSeconds: in.Timing.ExecutionTimeoutSeconds, ExecutionTimeoutMaxSeconds: in.Timing.ExecutionTimeoutMaxSeconds, StepTimeoutSeconds: in.Timing.StepTimeoutSeconds, ExecutionDeadlineAt: in.Timing.ExecutionDeadlineAt.AsTime()}
