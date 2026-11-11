@@ -37,6 +37,21 @@ const (
 	ModelDevService_ListExecutionArtifacts_FullMethodName           = "/admin.service.v1.ModelDevService/ListExecutionArtifacts"
 	ModelDevService_AuthorizeArtifactDownload_FullMethodName        = "/admin.service.v1.ModelDevService/AuthorizeArtifactDownload"
 	ModelDevService_CreateExecution_FullMethodName                  = "/admin.service.v1.ModelDevService/CreateExecution"
+	ModelDevService_CreateDataset_FullMethodName                    = "/admin.service.v1.ModelDevService/CreateDataset"
+	ModelDevService_GetDataset_FullMethodName                       = "/admin.service.v1.ModelDevService/GetDataset"
+	ModelDevService_ListDatasets_FullMethodName                     = "/admin.service.v1.ModelDevService/ListDatasets"
+	ModelDevService_UpdateDataset_FullMethodName                    = "/admin.service.v1.ModelDevService/UpdateDataset"
+	ModelDevService_ArchiveDataset_FullMethodName                   = "/admin.service.v1.ModelDevService/ArchiveDataset"
+	ModelDevService_RestoreDataset_FullMethodName                   = "/admin.service.v1.ModelDevService/RestoreDataset"
+	ModelDevService_InspectDatasetSource_FullMethodName             = "/admin.service.v1.ModelDevService/InspectDatasetSource"
+	ModelDevService_ImportDatasetVersion_FullMethodName             = "/admin.service.v1.ModelDevService/ImportDatasetVersion"
+	ModelDevService_ListDatasetVersions_FullMethodName              = "/admin.service.v1.ModelDevService/ListDatasetVersions"
+	ModelDevService_GetInputVersionPreview_FullMethodName           = "/admin.service.v1.ModelDevService/GetInputVersionPreview"
+	ModelDevService_ListDatasetImportTasks_FullMethodName           = "/admin.service.v1.ModelDevService/ListDatasetImportTasks"
+	ModelDevService_GetDatasetImportTask_FullMethodName             = "/admin.service.v1.ModelDevService/GetDatasetImportTask"
+	ModelDevService_CancelDatasetImport_FullMethodName              = "/admin.service.v1.ModelDevService/CancelDatasetImport"
+	ModelDevService_RetryDatasetImport_FullMethodName               = "/admin.service.v1.ModelDevService/RetryDatasetImport"
+	ModelDevService_ListDatasetOperations_FullMethodName            = "/admin.service.v1.ModelDevService/ListDatasetOperations"
 )
 
 // ModelDevServiceClient is the client API for ModelDevService service.
@@ -62,6 +77,22 @@ type ModelDevServiceClient interface {
 	ListExecutionArtifacts(ctx context.Context, in *v1.ListExecutionArtifactsRequest, opts ...grpc.CallOption) (*v1.ListExecutionArtifactsResponse, error)
 	AuthorizeArtifactDownload(ctx context.Context, in *v1.AuthorizeArtifactDownloadRequest, opts ...grpc.CallOption) (*v1.AuthorizeArtifactDownloadResponse, error)
 	CreateExecution(ctx context.Context, in *v1.CreateExecutionRequest, opts ...grpc.CallOption) (*v1.CreateExecutionResponse, error)
+	// ---- dataset management ----
+	CreateDataset(ctx context.Context, in *v1.CreateDatasetRequest, opts ...grpc.CallOption) (*v1.CreateDatasetResponse, error)
+	GetDataset(ctx context.Context, in *v1.GetDatasetRequest, opts ...grpc.CallOption) (*v1.GetDatasetResponse, error)
+	ListDatasets(ctx context.Context, in *v1.ListDatasetsRequest, opts ...grpc.CallOption) (*v1.ListDatasetsResponse, error)
+	UpdateDataset(ctx context.Context, in *v1.UpdateDatasetRequest, opts ...grpc.CallOption) (*v1.UpdateDatasetResponse, error)
+	ArchiveDataset(ctx context.Context, in *v1.ArchiveDatasetRequest, opts ...grpc.CallOption) (*v1.ArchiveDatasetResponse, error)
+	RestoreDataset(ctx context.Context, in *v1.RestoreDatasetRequest, opts ...grpc.CallOption) (*v1.RestoreDatasetResponse, error)
+	InspectDatasetSource(ctx context.Context, in *v1.InspectDatasetSourceRequest, opts ...grpc.CallOption) (*v1.InspectDatasetSourceResponse, error)
+	ImportDatasetVersion(ctx context.Context, in *v1.ImportDatasetVersionRequest, opts ...grpc.CallOption) (*v1.ImportDatasetVersionResponse, error)
+	ListDatasetVersions(ctx context.Context, in *v1.ListDatasetVersionsRequest, opts ...grpc.CallOption) (*v1.ListDatasetVersionsResponse, error)
+	GetInputVersionPreview(ctx context.Context, in *v1.GetInputVersionPreviewRequest, opts ...grpc.CallOption) (*v1.GetInputVersionPreviewResponse, error)
+	ListDatasetImportTasks(ctx context.Context, in *v1.ListDatasetImportTasksRequest, opts ...grpc.CallOption) (*v1.ListDatasetImportTasksResponse, error)
+	GetDatasetImportTask(ctx context.Context, in *v1.GetDatasetImportTaskRequest, opts ...grpc.CallOption) (*v1.GetDatasetImportTaskResponse, error)
+	CancelDatasetImport(ctx context.Context, in *v1.CancelDatasetImportRequest, opts ...grpc.CallOption) (*v1.CancelDatasetImportResponse, error)
+	RetryDatasetImport(ctx context.Context, in *v1.RetryDatasetImportRequest, opts ...grpc.CallOption) (*v1.RetryDatasetImportResponse, error)
+	ListDatasetOperations(ctx context.Context, in *v1.ListDatasetOperationsRequest, opts ...grpc.CallOption) (*v1.ListDatasetOperationsResponse, error)
 }
 
 type modelDevServiceClient struct {
@@ -242,6 +273,156 @@ func (c *modelDevServiceClient) CreateExecution(ctx context.Context, in *v1.Crea
 	return out, nil
 }
 
+func (c *modelDevServiceClient) CreateDataset(ctx context.Context, in *v1.CreateDatasetRequest, opts ...grpc.CallOption) (*v1.CreateDatasetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CreateDatasetResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_CreateDataset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) GetDataset(ctx context.Context, in *v1.GetDatasetRequest, opts ...grpc.CallOption) (*v1.GetDatasetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetDatasetResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_GetDataset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ListDatasets(ctx context.Context, in *v1.ListDatasetsRequest, opts ...grpc.CallOption) (*v1.ListDatasetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListDatasetsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ListDatasets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) UpdateDataset(ctx context.Context, in *v1.UpdateDatasetRequest, opts ...grpc.CallOption) (*v1.UpdateDatasetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.UpdateDatasetResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_UpdateDataset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ArchiveDataset(ctx context.Context, in *v1.ArchiveDatasetRequest, opts ...grpc.CallOption) (*v1.ArchiveDatasetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ArchiveDatasetResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ArchiveDataset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) RestoreDataset(ctx context.Context, in *v1.RestoreDatasetRequest, opts ...grpc.CallOption) (*v1.RestoreDatasetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.RestoreDatasetResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_RestoreDataset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) InspectDatasetSource(ctx context.Context, in *v1.InspectDatasetSourceRequest, opts ...grpc.CallOption) (*v1.InspectDatasetSourceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.InspectDatasetSourceResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_InspectDatasetSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ImportDatasetVersion(ctx context.Context, in *v1.ImportDatasetVersionRequest, opts ...grpc.CallOption) (*v1.ImportDatasetVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ImportDatasetVersionResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ImportDatasetVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ListDatasetVersions(ctx context.Context, in *v1.ListDatasetVersionsRequest, opts ...grpc.CallOption) (*v1.ListDatasetVersionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListDatasetVersionsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ListDatasetVersions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) GetInputVersionPreview(ctx context.Context, in *v1.GetInputVersionPreviewRequest, opts ...grpc.CallOption) (*v1.GetInputVersionPreviewResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetInputVersionPreviewResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_GetInputVersionPreview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ListDatasetImportTasks(ctx context.Context, in *v1.ListDatasetImportTasksRequest, opts ...grpc.CallOption) (*v1.ListDatasetImportTasksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListDatasetImportTasksResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ListDatasetImportTasks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) GetDatasetImportTask(ctx context.Context, in *v1.GetDatasetImportTaskRequest, opts ...grpc.CallOption) (*v1.GetDatasetImportTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetDatasetImportTaskResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_GetDatasetImportTask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) CancelDatasetImport(ctx context.Context, in *v1.CancelDatasetImportRequest, opts ...grpc.CallOption) (*v1.CancelDatasetImportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CancelDatasetImportResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_CancelDatasetImport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) RetryDatasetImport(ctx context.Context, in *v1.RetryDatasetImportRequest, opts ...grpc.CallOption) (*v1.RetryDatasetImportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.RetryDatasetImportResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_RetryDatasetImport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modelDevServiceClient) ListDatasetOperations(ctx context.Context, in *v1.ListDatasetOperationsRequest, opts ...grpc.CallOption) (*v1.ListDatasetOperationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListDatasetOperationsResponse)
+	err := c.cc.Invoke(ctx, ModelDevService_ListDatasetOperations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ModelDevServiceServer is the server API for ModelDevService service.
 // All implementations must embed UnimplementedModelDevServiceServer
 // for forward compatibility.
@@ -265,6 +446,22 @@ type ModelDevServiceServer interface {
 	ListExecutionArtifacts(context.Context, *v1.ListExecutionArtifactsRequest) (*v1.ListExecutionArtifactsResponse, error)
 	AuthorizeArtifactDownload(context.Context, *v1.AuthorizeArtifactDownloadRequest) (*v1.AuthorizeArtifactDownloadResponse, error)
 	CreateExecution(context.Context, *v1.CreateExecutionRequest) (*v1.CreateExecutionResponse, error)
+	// ---- dataset management ----
+	CreateDataset(context.Context, *v1.CreateDatasetRequest) (*v1.CreateDatasetResponse, error)
+	GetDataset(context.Context, *v1.GetDatasetRequest) (*v1.GetDatasetResponse, error)
+	ListDatasets(context.Context, *v1.ListDatasetsRequest) (*v1.ListDatasetsResponse, error)
+	UpdateDataset(context.Context, *v1.UpdateDatasetRequest) (*v1.UpdateDatasetResponse, error)
+	ArchiveDataset(context.Context, *v1.ArchiveDatasetRequest) (*v1.ArchiveDatasetResponse, error)
+	RestoreDataset(context.Context, *v1.RestoreDatasetRequest) (*v1.RestoreDatasetResponse, error)
+	InspectDatasetSource(context.Context, *v1.InspectDatasetSourceRequest) (*v1.InspectDatasetSourceResponse, error)
+	ImportDatasetVersion(context.Context, *v1.ImportDatasetVersionRequest) (*v1.ImportDatasetVersionResponse, error)
+	ListDatasetVersions(context.Context, *v1.ListDatasetVersionsRequest) (*v1.ListDatasetVersionsResponse, error)
+	GetInputVersionPreview(context.Context, *v1.GetInputVersionPreviewRequest) (*v1.GetInputVersionPreviewResponse, error)
+	ListDatasetImportTasks(context.Context, *v1.ListDatasetImportTasksRequest) (*v1.ListDatasetImportTasksResponse, error)
+	GetDatasetImportTask(context.Context, *v1.GetDatasetImportTaskRequest) (*v1.GetDatasetImportTaskResponse, error)
+	CancelDatasetImport(context.Context, *v1.CancelDatasetImportRequest) (*v1.CancelDatasetImportResponse, error)
+	RetryDatasetImport(context.Context, *v1.RetryDatasetImportRequest) (*v1.RetryDatasetImportResponse, error)
+	ListDatasetOperations(context.Context, *v1.ListDatasetOperationsRequest) (*v1.ListDatasetOperationsResponse, error)
 	mustEmbedUnimplementedModelDevServiceServer()
 }
 
@@ -325,6 +522,51 @@ func (UnimplementedModelDevServiceServer) AuthorizeArtifactDownload(context.Cont
 }
 func (UnimplementedModelDevServiceServer) CreateExecution(context.Context, *v1.CreateExecutionRequest) (*v1.CreateExecutionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateExecution not implemented")
+}
+func (UnimplementedModelDevServiceServer) CreateDataset(context.Context, *v1.CreateDatasetRequest) (*v1.CreateDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDataset not implemented")
+}
+func (UnimplementedModelDevServiceServer) GetDataset(context.Context, *v1.GetDatasetRequest) (*v1.GetDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDataset not implemented")
+}
+func (UnimplementedModelDevServiceServer) ListDatasets(context.Context, *v1.ListDatasetsRequest) (*v1.ListDatasetsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDatasets not implemented")
+}
+func (UnimplementedModelDevServiceServer) UpdateDataset(context.Context, *v1.UpdateDatasetRequest) (*v1.UpdateDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDataset not implemented")
+}
+func (UnimplementedModelDevServiceServer) ArchiveDataset(context.Context, *v1.ArchiveDatasetRequest) (*v1.ArchiveDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ArchiveDataset not implemented")
+}
+func (UnimplementedModelDevServiceServer) RestoreDataset(context.Context, *v1.RestoreDatasetRequest) (*v1.RestoreDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestoreDataset not implemented")
+}
+func (UnimplementedModelDevServiceServer) InspectDatasetSource(context.Context, *v1.InspectDatasetSourceRequest) (*v1.InspectDatasetSourceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InspectDatasetSource not implemented")
+}
+func (UnimplementedModelDevServiceServer) ImportDatasetVersion(context.Context, *v1.ImportDatasetVersionRequest) (*v1.ImportDatasetVersionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportDatasetVersion not implemented")
+}
+func (UnimplementedModelDevServiceServer) ListDatasetVersions(context.Context, *v1.ListDatasetVersionsRequest) (*v1.ListDatasetVersionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDatasetVersions not implemented")
+}
+func (UnimplementedModelDevServiceServer) GetInputVersionPreview(context.Context, *v1.GetInputVersionPreviewRequest) (*v1.GetInputVersionPreviewResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInputVersionPreview not implemented")
+}
+func (UnimplementedModelDevServiceServer) ListDatasetImportTasks(context.Context, *v1.ListDatasetImportTasksRequest) (*v1.ListDatasetImportTasksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDatasetImportTasks not implemented")
+}
+func (UnimplementedModelDevServiceServer) GetDatasetImportTask(context.Context, *v1.GetDatasetImportTaskRequest) (*v1.GetDatasetImportTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDatasetImportTask not implemented")
+}
+func (UnimplementedModelDevServiceServer) CancelDatasetImport(context.Context, *v1.CancelDatasetImportRequest) (*v1.CancelDatasetImportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelDatasetImport not implemented")
+}
+func (UnimplementedModelDevServiceServer) RetryDatasetImport(context.Context, *v1.RetryDatasetImportRequest) (*v1.RetryDatasetImportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetryDatasetImport not implemented")
+}
+func (UnimplementedModelDevServiceServer) ListDatasetOperations(context.Context, *v1.ListDatasetOperationsRequest) (*v1.ListDatasetOperationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDatasetOperations not implemented")
 }
 func (UnimplementedModelDevServiceServer) mustEmbedUnimplementedModelDevServiceServer() {}
 func (UnimplementedModelDevServiceServer) testEmbeddedByValue()                         {}
@@ -653,6 +895,276 @@ func _ModelDevService_CreateExecution_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ModelDevService_CreateDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).CreateDataset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_CreateDataset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).CreateDataset(ctx, req.(*v1.CreateDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_GetDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).GetDataset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_GetDataset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).GetDataset(ctx, req.(*v1.GetDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ListDatasets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListDatasetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ListDatasets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ListDatasets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ListDatasets(ctx, req.(*v1.ListDatasetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_UpdateDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.UpdateDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).UpdateDataset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_UpdateDataset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).UpdateDataset(ctx, req.(*v1.UpdateDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ArchiveDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ArchiveDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ArchiveDataset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ArchiveDataset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ArchiveDataset(ctx, req.(*v1.ArchiveDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_RestoreDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.RestoreDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).RestoreDataset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_RestoreDataset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).RestoreDataset(ctx, req.(*v1.RestoreDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_InspectDatasetSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.InspectDatasetSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).InspectDatasetSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_InspectDatasetSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).InspectDatasetSource(ctx, req.(*v1.InspectDatasetSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ImportDatasetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ImportDatasetVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ImportDatasetVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ImportDatasetVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ImportDatasetVersion(ctx, req.(*v1.ImportDatasetVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ListDatasetVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListDatasetVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ListDatasetVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ListDatasetVersions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ListDatasetVersions(ctx, req.(*v1.ListDatasetVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_GetInputVersionPreview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetInputVersionPreviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).GetInputVersionPreview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_GetInputVersionPreview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).GetInputVersionPreview(ctx, req.(*v1.GetInputVersionPreviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ListDatasetImportTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListDatasetImportTasksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ListDatasetImportTasks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ListDatasetImportTasks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ListDatasetImportTasks(ctx, req.(*v1.ListDatasetImportTasksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_GetDatasetImportTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetDatasetImportTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).GetDatasetImportTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_GetDatasetImportTask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).GetDatasetImportTask(ctx, req.(*v1.GetDatasetImportTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_CancelDatasetImport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CancelDatasetImportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).CancelDatasetImport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_CancelDatasetImport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).CancelDatasetImport(ctx, req.(*v1.CancelDatasetImportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_RetryDatasetImport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.RetryDatasetImportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).RetryDatasetImport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_RetryDatasetImport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).RetryDatasetImport(ctx, req.(*v1.RetryDatasetImportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModelDevService_ListDatasetOperations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListDatasetOperationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelDevServiceServer).ListDatasetOperations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelDevService_ListDatasetOperations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelDevServiceServer).ListDatasetOperations(ctx, req.(*v1.ListDatasetOperationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ModelDevService_ServiceDesc is the grpc.ServiceDesc for ModelDevService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -727,6 +1239,66 @@ var ModelDevService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateExecution",
 			Handler:    _ModelDevService_CreateExecution_Handler,
+		},
+		{
+			MethodName: "CreateDataset",
+			Handler:    _ModelDevService_CreateDataset_Handler,
+		},
+		{
+			MethodName: "GetDataset",
+			Handler:    _ModelDevService_GetDataset_Handler,
+		},
+		{
+			MethodName: "ListDatasets",
+			Handler:    _ModelDevService_ListDatasets_Handler,
+		},
+		{
+			MethodName: "UpdateDataset",
+			Handler:    _ModelDevService_UpdateDataset_Handler,
+		},
+		{
+			MethodName: "ArchiveDataset",
+			Handler:    _ModelDevService_ArchiveDataset_Handler,
+		},
+		{
+			MethodName: "RestoreDataset",
+			Handler:    _ModelDevService_RestoreDataset_Handler,
+		},
+		{
+			MethodName: "InspectDatasetSource",
+			Handler:    _ModelDevService_InspectDatasetSource_Handler,
+		},
+		{
+			MethodName: "ImportDatasetVersion",
+			Handler:    _ModelDevService_ImportDatasetVersion_Handler,
+		},
+		{
+			MethodName: "ListDatasetVersions",
+			Handler:    _ModelDevService_ListDatasetVersions_Handler,
+		},
+		{
+			MethodName: "GetInputVersionPreview",
+			Handler:    _ModelDevService_GetInputVersionPreview_Handler,
+		},
+		{
+			MethodName: "ListDatasetImportTasks",
+			Handler:    _ModelDevService_ListDatasetImportTasks_Handler,
+		},
+		{
+			MethodName: "GetDatasetImportTask",
+			Handler:    _ModelDevService_GetDatasetImportTask_Handler,
+		},
+		{
+			MethodName: "CancelDatasetImport",
+			Handler:    _ModelDevService_CancelDatasetImport_Handler,
+		},
+		{
+			MethodName: "RetryDatasetImport",
+			Handler:    _ModelDevService_RetryDatasetImport_Handler,
+		},
+		{
+			MethodName: "ListDatasetOperations",
+			Handler:    _ModelDevService_ListDatasetOperations_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

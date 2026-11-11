@@ -64,7 +64,7 @@ func loadInitialSeed(catalog []API) (*initialSeed, error) {
 
 func (s *initialSeed) validate(catalog []API) error {
 	fail := func(format string, args ...any) error { return fmt.Errorf("initial seed: "+format, args...) }
-	if s.Version != "console-boss-v1" || len(s.Routes) != 489 {
+	if s.Version != "console-boss-v1" || len(s.Routes) != 504 {
 		return fail("invalid release manifest")
 	}
 	groups := map[string]bool{}

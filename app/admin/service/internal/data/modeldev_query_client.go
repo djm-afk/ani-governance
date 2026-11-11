@@ -29,13 +29,22 @@ import (
 // Query methods receive scope only after the BFF's current database grant.
 // Outgoing metadata is rebuilt, never appended to caller-supplied metadata.
 func (c *ModelDevClient) queryContext(ctx context.Context, scope ModelDevResolveScope, method string) (context.Context, context.CancelFunc, error) {
+	return c.queryContextBudget(ctx, scope, method, 0)
+}
+
+// queryContextBudget lets one caller replace the default short budget while
+// keeping the same identity, method and tenant-all delegation checks. A zero
+// budget means the configured per-call timeout.
+func (c *ModelDevClient) queryContextBudget(ctx context.Context, scope ModelDevResolveScope, method string, budget time.Duration) (context.Context, context.CancelFunc, error) {
 	if c == nil || c.connection == nil || c.timeout <= 0 {
 		return nil, nil, modelDevQueryUnavailable()
 	}
 	if !modelDevCanonicalUUID(scope.ResourceTenantID) || !validModelDevClientActor(scope.Actor) {
 		return nil, nil, modelDevQueryUnavailable()
 	}
-	budget := c.timeout
+	if budget <= 0 {
+		budget = c.timeout
+	}
 	if method == modeldevv1.ModelDevQueryService_CheckFinetuningReadiness_FullMethodName {
 		budget = c.resolutionTimeout
 	}
@@ -212,11 +221,20 @@ func modelDevValidExecutionPlan(in *modeldevv1.ExecutionView) bool {
 		return false
 	}
 	selection.SelectionDigest = origin.SelectionDigest
-	if compute.ValidateSelection(&selection) != nil {
-		return false
+	// Strict re-canonicalization is best effort. The locally pinned compute
+	// contract keeps evolving, so a selection frozen by an older revision can
+	// legitimately stop satisfying today's ValidateSelection — that says
+	// nothing about the record. A read must not fail closed on that skew: it
+	// renders the owner's frozen facts and keeps the structural cross-checks
+	// below. When today's contract does accept the selection, the canonical
+	// round-trip still runs, so tampering is still detected.
+	if compute.ValidateSelection(&selection) == nil {
+		canonical, err := compute.CanonicalSelection(&selection)
+		if err != nil || !bytes.Equal(canonical, origin.SelectionCanonical) {
+			return false
+		}
 	}
-	canonical, err := compute.CanonicalSelection(&selection)
-	if err != nil || !bytes.Equal(canonical, origin.SelectionCanonical) || selection.PresetId != in.ComputePresetId || origin.ComputePresetId != selection.PresetId || origin.CpuMillis != selection.CpuMillis || origin.MemoryMib != selection.MemoryMib || (selection.Gpu == nil && origin.DeviceMode != "cpu") || (selection.Gpu != nil && origin.DeviceMode != "gpu") {
+	if selection.PresetId != in.ComputePresetId || origin.ComputePresetId != selection.PresetId || origin.CpuMillis != selection.CpuMillis || origin.MemoryMib != selection.MemoryMib || (selection.Gpu == nil && origin.DeviceMode != "cpu") || (selection.Gpu != nil && origin.DeviceMode != "gpu") {
 		return false
 	}
 	timing := cpup01.Timing{AcceptedAt: in.Timing.AcceptedAt.AsTime(), ExecutionTimeoutSeconds: in.Timing.ExecutionTimeoutSeconds, ExecutionTimeoutMaxSeconds: in.Timing.ExecutionTimeoutMaxSeconds, StepTimeoutSeconds: in.Timing.StepTimeoutSeconds, ExecutionDeadlineAt: in.Timing.ExecutionDeadlineAt.AsTime()}

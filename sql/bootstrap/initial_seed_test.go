@@ -22,14 +22,14 @@ func releaseSeed(t *testing.T) (*initialSeed, []API) {
 
 func TestInitialSeedReleaseCoverage(t *testing.T) {
 	seed, catalog := releaseSeed(t)
-	require.Len(t, seed.Routes, 489)
+	require.Len(t, seed.Routes, 504)
 	require.Len(t, seed.ExcludedRoutes, 6)
 	selected := seed.catalogForInit(catalog)
-	require.Len(t, selected, 489)
+	require.Len(t, selected, 504)
 	for _, api := range selected {
 		require.NotEqual(t, "VMImageService", api.Module, api.Path)
 	}
-	require.Len(t, seed.Permissions, 374)
+	require.Len(t, seed.Permissions, 379)
 	require.Len(t, seed.Menus, 51) // 21 Console pages, 28 BOSS pages and two containers.
 	require.Len(t, seed.FullPlanModules, 19)
 	routes := map[string]initialRoute{}
@@ -56,7 +56,7 @@ func TestInitialSeedReleaseCoverage(t *testing.T) {
 		require.Equal(t, []string{op.Permission}, r.Permissions, r.Path)
 	}
 	require.ElementsMatch(t, []string{"instance:preset:read", "modeldev:compute-preset:read", "vm:compute-preset:read", "inference:compute-preset:read", "sandbox:preset:read"}, routes["GET /api/v1/compute-presets"].Permissions)
-	require.Equal(t, []string{"modeldev:input:list"}, routes["GET /api/v1/modeldev/input-versions"].Permissions, "retain the main handler's input grant")
+	require.Equal(t, []string{"modeldev:dataset:read"}, routes["GET /api/v1/modeldev/input-versions"].Permissions, "dataset migration supersedes the legacy input grant")
 	require.Equal(t, "MODELDEV", routes["GET /api/v1/modeldev/input-versions"].Module)
 	require.Equal(t, "SANDBOX", routes["GET /api/v1/sandbox"].Module)
 	require.Equal(t, []string{"network:vpc:get"}, routes["GET /api/v1/networks/vpcs/{vpc_id}/associated-instances"].Permissions)
@@ -89,7 +89,7 @@ func TestInitialSeedRejectsIncompleteOrExpandedRelease(t *testing.T) {
 	require.ErrorContains(t, err, "API catalog is incomplete")
 	expanded := append(append([]API{}, catalog...), API{Method: "GET", Path: "/api/v1/extra", Operation: "Extra_Get", BusinessModule: "SYSTEM"})
 	_, err = loadInitialSeed(expanded)
-	require.ErrorContains(t, err, "expected exactly 495")
+	require.ErrorContains(t, err, "expected exactly 510")
 	changed := append([]API{}, catalog...)
 	changed[0].BusinessModule = "SYSTEM"
 	if changed[0].BusinessModule == catalog[0].BusinessModule {
@@ -172,10 +172,10 @@ func TestInitialSeedAdministratorAPICoverage(t *testing.T) {
 			shared++
 		}
 	}
-	require.Equal(t, map[string]int{"platform": 268, "tenant": 254}, coverage)
+	require.Equal(t, map[string]int{"platform": 268, "tenant": 269}, coverage)
 	require.Equal(t, 43, shared)
 	require.Equal(t, 10, independent)
-	require.Equal(t, 489, coverage["platform"]+coverage["tenant"]-shared+independent)
+	require.Equal(t, 504, coverage["platform"]+coverage["tenant"]-shared+independent)
 }
 
 func TestInitialSeedAdditionalRoleTemplateBoundaries(t *testing.T) {

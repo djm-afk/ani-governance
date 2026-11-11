@@ -394,8 +394,8 @@ github.com/zhangzhe-ctrl/ani-accelerator-service v1.6.1-0.20261110145729-1825dde
 github.com/zhangzhe-ctrl/ani-accelerator-service v1.6.1-0.20261110145729-1825ddeb2a79/go.mod h1:PdWn/4ikefPLQkkC9L8EtkUbBOdbyDdqTYR9zbtDg4A=
 github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88 h1:U+d42xSPXbOP8hssY4GNoKhoSUe2RiI3sMuz3JxmBq0=
 github.com/zhangzhe-ctrl/ani-governance/api/quota v0.0.0-20261017184327-1c605c793b88/go.mod h1:OmpTNUUTOEMzeXx5cOUdOYqNxrmA+KBthlt44mfZ4s8=
-github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261031195825-d807cbdbd5dd h1:0jeG0Ho1/Zi3TR4QEG8DUmKj92u4I2WdiyxDfWTY7tw=
-github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261031195825-d807cbdbd5dd/go.mod h1:JGjMrjOUIMKuokNfgeImeAo4kqduf7lp9J5WtwVTqlM=
+github.com/zhangzhe-ctrl/ani-modeldev-service v1.6.1-0.20261111043846-7a21b2d01ec9 h1:vME9mYhAfN611Jkq1AgN+/0wEztFS9uiTySr4a+Z4mc=
+github.com/zhangzhe-ctrl/ani-modeldev-service v1.6.1-0.20261111043846-7a21b2d01ec9/go.mod h1:pi3Xo50wUJu46CY45aQv1OQA/hjHT+1n1mkkuHkdUIw=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261110143719-1b95e58fa6e1 h1:Rri16zP4O3THqh7FB5fcM4EV1jJdoxUh5G7ryrnxoM4=
 github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261110143719-1b95e58fa6e1/go.mod h1:c3uFbGO68hYjL5I8N2VbCTf15Sqzu4oqVTsBUrUHl90=
 github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261111055916-8c2f4b6a6436 h1:1iO4fD679XbuoxjeSNgxOWgibnQ8dGyWrqlG2Dsu+lc=

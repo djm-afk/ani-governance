@@ -33,3 +33,13 @@ roles, plans and quotas unchanged.
   manage/view permissions and default exact tenant-manager/template grants.
   Existing OFF/denied rows are preserved; no module/plan is enabled. MODEL
   entitlement remains checked by the existing tenant access middleware.
+
+`20261104010000_modeldev_dataset_permissions.sql` is the explicit ModelDev
+Dataset capability import. It binds seventeen routes: the fifteen new dataset
+routes plus the two `GET /api/v1/modeldev/input-versions` reads that move from
+exempt to `modeldev:dataset:read`. There is no older capability for either
+InputVersion route, so nothing is renamed or migrated. The two InputVersion
+catalog rows must already exist from the reviewed OpenAPI sync; this script
+creates no API row, module, plan or account, and grants only the exact
+tenant-manager template and tenant roles. Apply it with
+`psql -v ON_ERROR_STOP=1 -1 -f` after the catalog sync.

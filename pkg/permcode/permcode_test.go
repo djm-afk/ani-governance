@@ -300,13 +300,16 @@ func TestCountsAndKeys(t *testing.T) {
 	const platformBaseNetworkEntry = 1
 	// vmRuntimeCapabilities 补记 GET /api/v1/virtual-machines/{vm_id}/runtime（vm:read）。
 	const vmRuntimeCapabilities = 1
+	// Fifteen dataset routes plus the two InputVersion reads that move onto
+	// modeldev:dataset:read. The count is routes, not distinct codes.
+	const modelDevDatasetCapabilities = 17
 	// Seven retired accelerator routes and two new admin capacity routes.
 	const acceleratorV11Delta = -5
-	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageCapabilities + vmRuntimeCapabilities + len(clusterOpsCapabilities) + acceleratorV11Delta; CapabilityCount() != want {
+	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageCapabilities + vmRuntimeCapabilities + modelDevDatasetCapabilities + len(clusterOpsCapabilities) + acceleratorV11Delta; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageKeysPerRoute + vmRuntimeCapabilities + len(clusterOpsCapabilities) + acceleratorV11Delta; len(keys) != want {
+	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageKeysPerRoute + vmRuntimeCapabilities + modelDevDatasetCapabilities + len(clusterOpsCapabilities) + acceleratorV11Delta; len(keys) != want {
 		t.Errorf("AllKeys() = %d, want %d", len(keys), want)
 	}
 	keySet := make(map[string]bool, len(keys))

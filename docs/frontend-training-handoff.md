@@ -322,7 +322,16 @@ GET /api/v1/modeldev/input-versions/{input_version_id}
 - `format` 可选，只接受 `CSV` / `JSON`（大写）；其他值（含小写 `csv`、空值、`PARQUET`）一律 `400`，不会静默返回空页。
 - `state` 与 `format` 可同时使用，两个条件取交集。
 - 筛选在分页前生效，`total` 是筛选后的条数，翻页仍以 `total` 为准。
-- 格式与任务的匹配是硬约束：`CSV` 只能用于普通训练，`JSON` 只能用于微调。选数据集时按当前任务类型带对应的 `format`，比在返回里再过滤更可靠。
+- **格式与任务的匹配（2026-11-04 变更）**：
+
+  | 账号格式 | 普通训练 `GENERAL_TRAINING` / `builtin.mlp` | 微调 `FINETUNING` / `builtin.sft_lora` |
+  | --- | --- | --- |
+  | `CSV` | 可以 | **不可以** |
+  | `JSON` | **可以**（Alpaca JSONL） | 可以 |
+
+  旧版本文档写的是「JSON 只能用于微调」，**已不再成立**：训练侧新增了 JSON 分支，同一份 READY Alpaca JSON 版本既能用于微调，也能用于普通训练。`CSV` 仍然只能用于普通训练。
+
+  选数据集时按当前任务类型带对应的 `format` 更可靠；但不要假设「带 `format=JSON` 就一定能用于当前任务」，`CSV` + 微调的组合仍会在创建时被拒（见下面的 `INPUT_KIND_FORMAT_MISMATCH`）。
 - 详情接口不接受任何 query（包括裸 `?`），且直接返回对象本体。
 
 ```json
@@ -338,7 +347,49 @@ GET /api/v1/modeldev/input-versions/{input_version_id}
 }
 ```
 
-**当前没有可用的数据集上传/导入接口**，数据集由运维侧通过 CLI 登记（`admin modeldev-import-csv`、`admin modeldev-import-finetuning-dataset`）。只能选择 `state=READY` 的版本；`FIXING` / `VALIDATING` / `FAILED` 均不可用于创建。
+**数据集（Dataset）管理接口已上线**（2026-11-04，Gov 侧 15 条路由 + 2 条既有 InputVersion 读路由）。生产是否可用取决于部署与权限种子；未开放时这些路由返回 `503 MODELDEV_DATASET_UNAVAILABLE` 或按权限返回 `403`。
+
+运维侧 CLI 登记（`admin modeldev-import-csv`、`admin modeldev-import-finetuning-dataset`）仍然可用，不是唯一入口。只能选择 `state=READY` 的版本；`FIXING` / `VALIDATING` / `FAILED` 均不可用于创建。
+
+### 6.1 数据集管理路由
+
+权限统一为 `modeldev:dataset:read|create|update|archive|import`（MODEL 模块），全部要求当前有效角色的 tenant-all 数据范围。
+
+| 操作 | HTTP | 权限 |
+| --- | --- | --- |
+| 创建集合 | `POST /api/v1/modeldev/datasets` | create |
+| 列表 | `GET /api/v1/modeldev/datasets?page=&pageSize=&state=&name=` | read |
+| 详情 | `GET /api/v1/modeldev/datasets/{dataset_id}` | read |
+| 编辑 | `PATCH /api/v1/modeldev/datasets/{dataset_id}` | update |
+| 归档 / 恢复 | `POST /api/v1/modeldev/datasets/{dataset_id}:archive` / `:restore` | archive |
+| 来源检查 | `POST /api/v1/modeldev/dataset-sources:inspect` | import |
+| 提交导入 | `POST /api/v1/modeldev/datasets/{dataset_id}:import` | import |
+| 版本列表 | `GET /api/v1/modeldev/datasets/{dataset_id}/versions` | read |
+| 版本详情 | `GET /api/v1/modeldev/input-versions/{input_version_id}` | read |
+| 预览 | `GET /api/v1/modeldev/input-versions/{input_version_id}/preview` | read |
+| 任务列表 | `GET /api/v1/modeldev/datasets/{dataset_id}/import-tasks` | read |
+| 任务详情 | `GET /api/v1/modeldev/dataset-import-tasks/{import_task_id}` | read |
+| 取消 / 重试 | `POST /api/v1/modeldev/dataset-import-tasks/{import_task_id}:cancel` / `:retry` | import |
+| 操作历史 | `GET /api/v1/modeldev/datasets/{dataset_id}/operations` | read |
+
+**请求形状**（与既有约定一致，不要混用）：
+
+- 写请求外层 `{ "idempotency_key": "...", "data": { ... } }`；`PATCH` 额外带 `update_mask`，只接受 `name`/`description`。
+- **取消 / 重试是例外**：只接受 `{ "idempotency_key": "..." }`，**不要包 `data`**；多带 `data` 会返回 `400 INVALID_DATASET_REQUEST`。
+- `expected_revision` 放在 `data` 内，必须是十进制字符串（如 `"3"`），不能是数字。
+- **幂等键是消息字段，不是 HTTP header**，不要发 `Idempotency-Key`（只有环境 Ensure 那条路由用 header）。
+- 未知键、重复键、尾随内容、错误的 `Content-Type` 一律 `400 INVALID_DATASET_REQUEST`。
+- 列表请求的未知 query 参数一律 `400`，不会静默忽略。
+
+**状态码**：创建 `201`；编辑/归档/恢复/查询 `200`；导入/取消/重试 `202`。
+
+**`expected_revision` 过期返回 `409 COMMAND_CONFLICT`**（与重名同码）。前端收到 409 后应重新 GET 详情取最新 `revision` 再重试，不要盲目重放。
+
+**导入返回 202 只表示已受理**，不代表版本已 READY；用任务详情或版本列表确认最终状态。
+
+**Task 失败载体**：`failure.code` 是失败原因枚举名（不带 `ERROR_REASON_` 前缀），`failure.stage` 是阶段，`failure.retryable` 由后端判定。后端不返回自由文本，前端按 `code` 分支。
+
+**维护窗口**：部署维护期间，创建/导入/重试/环境 Ensure 返回 `503 MODELDEV_MAINTENANCE`；查询与取消仍然可用，以便收敛在途任务。
 
 ## 7. 创建训练任务
 
