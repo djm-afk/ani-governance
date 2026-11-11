@@ -298,7 +298,7 @@ func TestInferencePublicBusinessRejectsAttachmentAndGPUBypass(t *testing.T) {
 	r, _ := inferenceBusiness(t)
 	binding := NewInferenceGpuBinding(nil, nil)
 	_, err := binding.ValidateGpuBusiness(context.Background(), r)
-	require.NoError(t, err)
+	require.Error(t, err)
 	r.Resource.Limits["nvidia.com/gpu"] = "1"
 	_, err = binding.ValidateGpuBusiness(context.Background(), r)
 	require.Error(t, err)

@@ -7,7 +7,6 @@
 package servicev1
 
 import (
-	_ "github.com/google/gnostic/openapiv3"
 	v1 "go-wind-admin/api/gen/go/quota/service/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -95,10 +94,11 @@ type GpuTenantCurrentSummary struct {
 	// AVAILABLE, PARTIAL, NO_DATA or UNAVAILABLE. Inspect each metric's quality.
 	UsageStatus string `protobuf:"bytes,3,opt,name=usage_status,json=usageStatus,proto3" json:"usage_status,omitempty"`
 	// Stable public code only; never a dependency error message or runtime ID.
-	UsageReason   string                      `protobuf:"bytes,4,opt,name=usage_reason,json=usageReason,proto3" json:"usage_reason,omitempty"`
-	Allocation    *GpuTenantCurrentAllocation `protobuf:"bytes,5,opt,name=allocation,proto3" json:"allocation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UsageReason      string `protobuf:"bytes,4,opt,name=usage_reason,json=usageReason,proto3" json:"usage_reason,omitempty"`
+	ObservationBasis string `protobuf:"bytes,6,opt,name=observation_basis,proto3" json:"observation_basis,omitempty"`
+	OwnerScope       string `protobuf:"bytes,7,opt,name=owner_scope,proto3" json:"owner_scope,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GpuTenantCurrentSummary) Reset() {
@@ -159,96 +159,16 @@ func (x *GpuTenantCurrentSummary) GetUsageReason() string {
 	return ""
 }
 
-func (x *GpuTenantCurrentSummary) GetAllocation() *GpuTenantCurrentAllocation {
+func (x *GpuTenantCurrentSummary) GetObservationBasis() string {
 	if x != nil {
-		return x.Allocation
-	}
-	return nil
-}
-
-type GpuTenantCurrentAllocation struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Trusted ACTIVE binding commitments from ACC; never actual usage or quota.
-	// Exact decimal MiB. Absent unless the allocation scan is complete.
-	MemoryMib    *string `protobuf:"bytes,1,opt,name=memory_mib,json=memoryMiB,proto3,oneof" json:"memory_mib,omitempty"`
-	BindingCount *uint64 `protobuf:"varint,2,opt,name=binding_count,json=bindingCount,proto3,oneof" json:"binding_count,omitempty"`
-	// Known verified part, including when unknown ownership prevents a total.
-	KnownMemoryMib    *string `protobuf:"bytes,3,opt,name=known_memory_mib,json=knownMemoryMiB,proto3,oneof" json:"known_memory_mib,omitempty"`
-	KnownBindingCount *uint64 `protobuf:"varint,4,opt,name=known_binding_count,json=knownBindingCount,proto3,oneof" json:"known_binding_count,omitempty"`
-	Status            string  `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Reason            string  `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *GpuTenantCurrentAllocation) Reset() {
-	*x = GpuTenantCurrentAllocation{}
-	mi := &file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GpuTenantCurrentAllocation) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GpuTenantCurrentAllocation) ProtoMessage() {}
-
-func (x *GpuTenantCurrentAllocation) ProtoReflect() protoreflect.Message {
-	mi := &file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GpuTenantCurrentAllocation.ProtoReflect.Descriptor instead.
-func (*GpuTenantCurrentAllocation) Descriptor() ([]byte, []int) {
-	return file_gpu_service_v1_gpu_tenant_list_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GpuTenantCurrentAllocation) GetMemoryMib() string {
-	if x != nil && x.MemoryMib != nil {
-		return *x.MemoryMib
+		return x.ObservationBasis
 	}
 	return ""
 }
 
-func (x *GpuTenantCurrentAllocation) GetBindingCount() uint64 {
-	if x != nil && x.BindingCount != nil {
-		return *x.BindingCount
-	}
-	return 0
-}
-
-func (x *GpuTenantCurrentAllocation) GetKnownMemoryMib() string {
-	if x != nil && x.KnownMemoryMib != nil {
-		return *x.KnownMemoryMib
-	}
-	return ""
-}
-
-func (x *GpuTenantCurrentAllocation) GetKnownBindingCount() uint64 {
-	if x != nil && x.KnownBindingCount != nil {
-		return *x.KnownBindingCount
-	}
-	return 0
-}
-
-func (x *GpuTenantCurrentAllocation) GetStatus() string {
+func (x *GpuTenantCurrentSummary) GetOwnerScope() string {
 	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-func (x *GpuTenantCurrentAllocation) GetReason() string {
-	if x != nil {
-		return x.Reason
+		return x.OwnerScope
 	}
 	return ""
 }
@@ -264,7 +184,7 @@ type ListGpuTenantsResponse struct {
 
 func (x *ListGpuTenantsResponse) Reset() {
 	*x = ListGpuTenantsResponse{}
-	mi := &file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[3]
+	mi := &file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -276,7 +196,7 @@ func (x *ListGpuTenantsResponse) String() string {
 func (*ListGpuTenantsResponse) ProtoMessage() {}
 
 func (x *ListGpuTenantsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[3]
+	mi := &file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -289,7 +209,7 @@ func (x *ListGpuTenantsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGpuTenantsResponse.ProtoReflect.Descriptor instead.
 func (*ListGpuTenantsResponse) Descriptor() ([]byte, []int) {
-	return file_gpu_service_v1_gpu_tenant_list_proto_rawDescGZIP(), []int{3}
+	return file_gpu_service_v1_gpu_tenant_list_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListGpuTenantsResponse) GetItems() []*GpuTenantCurrentSummary {
@@ -310,7 +230,7 @@ var File_gpu_service_v1_gpu_tenant_list_proto protoreflect.FileDescriptor
 
 const file_gpu_service_v1_gpu_tenant_list_proto_rawDesc = "" +
 	"\n" +
-	"$gpu/service/v1/gpu_tenant_list.proto\x12\x0egpu.service.v1\x1a\x18gpu/service/v1/gpu.proto\x1a$quota/service/v1/quota_catalog.proto\x1a$gnostic/openapi/v3/annotations.proto\"\x99\x01\n" +
+	"$gpu/service/v1/gpu_tenant_list.proto\x12\x0egpu.service.v1\x1a\x18gpu/service/v1/gpu.proto\x1a$quota/service/v1/quota_catalog.proto\"\x99\x01\n" +
 	"\x15ListGpuTenantsRequest\x12\x17\n" +
 	"\x04page\x18\x01 \x01(\rH\x00R\x04page\x88\x01\x01\x12 \n" +
 	"\tpage_size\x18\x02 \x01(\rH\x01R\bpageSize\x88\x01\x01\x12 \n" +
@@ -319,27 +239,15 @@ const file_gpu_service_v1_gpu_tenant_list_proto_rawDesc = "" +
 	"\n" +
 	"_page_sizeB\f\n" +
 	"\n" +
-	"_tenant_id\"\xa6\x02\n" +
+	"_tenant_id\"\xbc\x02\n" +
 	"\x17GpuTenantCurrentSummary\x12A\n" +
 	"\x05quota\x18\x01 \x01(\v2+.quota.service.v1.TenantQuotaAccountSummaryR\x05quota\x126\n" +
 	"\x05usage\x18\x02 \x01(\v2 .gpu.service.v1.GpuQueryResponseR\x05usage\x12!\n" +
 	"\fusage_status\x18\x03 \x01(\tR\vusageStatus\x12!\n" +
-	"\fusage_reason\x18\x04 \x01(\tR\vusageReason\x12J\n" +
-	"\n" +
-	"allocation\x18\x05 \x01(\v2*.gpu.service.v1.GpuTenantCurrentAllocationR\n" +
-	"allocation\"\xe8\x02\n" +
-	"\x1aGpuTenantCurrentAllocation\x12)\n" +
-	"\n" +
-	"memory_mib\x18\x01 \x01(\tB\x05\xbaG\x02\b\x01H\x00R\tmemoryMiB\x88\x01\x01\x12/\n" +
-	"\rbinding_count\x18\x02 \x01(\x04B\x05\xbaG\x02\b\x01H\x01R\fbindingCount\x88\x01\x01\x124\n" +
-	"\x10known_memory_mib\x18\x03 \x01(\tB\x05\xbaG\x02\b\x01H\x02R\x0eknownMemoryMiB\x88\x01\x01\x12:\n" +
-	"\x13known_binding_count\x18\x04 \x01(\x04B\x05\xbaG\x02\b\x01H\x03R\x11knownBindingCount\x88\x01\x01\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reasonB\r\n" +
-	"\v_memory_mibB\x10\n" +
-	"\x0e_binding_countB\x13\n" +
-	"\x11_known_memory_mibB\x16\n" +
-	"\x14_known_binding_count\"m\n" +
+	"\fusage_reason\x18\x04 \x01(\tR\vusageReason\x12,\n" +
+	"\x11observation_basis\x18\x06 \x01(\tR\x11observation_basis\x12 \n" +
+	"\vowner_scope\x18\a \x01(\tR\vowner_scopeJ\x04\b\x05\x10\x06R\n" +
+	"allocation\"m\n" +
 	"\x16ListGpuTenantsResponse\x12=\n" +
 	"\x05items\x18\x01 \x03(\v2'.gpu.service.v1.GpuTenantCurrentSummaryR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x04R\x05totalB\xb5\x01\n" +
@@ -357,25 +265,23 @@ func file_gpu_service_v1_gpu_tenant_list_proto_rawDescGZIP() []byte {
 	return file_gpu_service_v1_gpu_tenant_list_proto_rawDescData
 }
 
-var file_gpu_service_v1_gpu_tenant_list_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_gpu_service_v1_gpu_tenant_list_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gpu_service_v1_gpu_tenant_list_proto_goTypes = []any{
 	(*ListGpuTenantsRequest)(nil),        // 0: gpu.service.v1.ListGpuTenantsRequest
 	(*GpuTenantCurrentSummary)(nil),      // 1: gpu.service.v1.GpuTenantCurrentSummary
-	(*GpuTenantCurrentAllocation)(nil),   // 2: gpu.service.v1.GpuTenantCurrentAllocation
-	(*ListGpuTenantsResponse)(nil),       // 3: gpu.service.v1.ListGpuTenantsResponse
-	(*v1.TenantQuotaAccountSummary)(nil), // 4: quota.service.v1.TenantQuotaAccountSummary
-	(*GpuQueryResponse)(nil),             // 5: gpu.service.v1.GpuQueryResponse
+	(*ListGpuTenantsResponse)(nil),       // 2: gpu.service.v1.ListGpuTenantsResponse
+	(*v1.TenantQuotaAccountSummary)(nil), // 3: quota.service.v1.TenantQuotaAccountSummary
+	(*GpuQueryResponse)(nil),             // 4: gpu.service.v1.GpuQueryResponse
 }
 var file_gpu_service_v1_gpu_tenant_list_proto_depIdxs = []int32{
-	4, // 0: gpu.service.v1.GpuTenantCurrentSummary.quota:type_name -> quota.service.v1.TenantQuotaAccountSummary
-	5, // 1: gpu.service.v1.GpuTenantCurrentSummary.usage:type_name -> gpu.service.v1.GpuQueryResponse
-	2, // 2: gpu.service.v1.GpuTenantCurrentSummary.allocation:type_name -> gpu.service.v1.GpuTenantCurrentAllocation
-	1, // 3: gpu.service.v1.ListGpuTenantsResponse.items:type_name -> gpu.service.v1.GpuTenantCurrentSummary
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	3, // 0: gpu.service.v1.GpuTenantCurrentSummary.quota:type_name -> quota.service.v1.TenantQuotaAccountSummary
+	4, // 1: gpu.service.v1.GpuTenantCurrentSummary.usage:type_name -> gpu.service.v1.GpuQueryResponse
+	1, // 2: gpu.service.v1.ListGpuTenantsResponse.items:type_name -> gpu.service.v1.GpuTenantCurrentSummary
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_gpu_service_v1_gpu_tenant_list_proto_init() }
@@ -385,14 +291,13 @@ func file_gpu_service_v1_gpu_tenant_list_proto_init() {
 	}
 	file_gpu_service_v1_gpu_proto_init()
 	file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[0].OneofWrappers = []any{}
-	file_gpu_service_v1_gpu_tenant_list_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gpu_service_v1_gpu_tenant_list_proto_rawDesc), len(file_gpu_service_v1_gpu_tenant_list_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

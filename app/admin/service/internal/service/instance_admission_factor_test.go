@@ -42,7 +42,7 @@ func TestInstanceAdmissionFactor10FreezesLogicalQuotaAndExecution(t *testing.T) 
 				plan.Profile.Spec.CoreLimitPercent = 100
 				plan.Profile.Spec.MaxDevicesPerReplica = scenario.devices
 				plan.Profile.Spec.IsolationClass = "WHOLE_DEVICE_EXCLUSIVE"
-				plan.Resolved.Selection.Mode = acc.SupplyMode_WHOLE_EXCLUSIVE
+				plan.Profile.Spec.AllocationType = acc.AllocationType_PHYSICAL
 				plan.Resolved.Execution.Resources["volcano.sh/vgpu-cores"] = "100"
 				plan.Resolved.QuotaItems[0].QuotaCode = GpuPhysicalQuotaCode
 			}
@@ -55,10 +55,11 @@ func TestInstanceAdmissionFactor10FreezesLogicalQuotaAndExecution(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
+			refreshGPUFixture(t, plan)
 			execution := proto.Clone(plan.Resolved.Execution).(*acc.GpuExecution)
 			business := instanceSettingsBusiness(t)
 			business.ComputeType = "gpu"
-			business.GpuSelection = &res.GpuPresetReference{ProfileId: plan.Profile.ProfileId, ProfileVersion: plan.Profile.ProfileVersion, SpecDigest: plan.Profile.SpecDigest, DevicesPerInstance: scenario.devices, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId, Mode: plan.Profile.Spec.Mode, ModelKey: plan.Profile.Spec.ModelKey, MemoryMibPerDevice: scenario.memoryMiB, CoreLimitPercent: plan.Profile.Spec.CoreLimitPercent}
+			business.GpuSelection = &res.GpuPresetReference{ProfileId: plan.Profile.ProfileId, ProfileVersion: plan.Profile.ProfileVersion, SpecDigest: plan.Profile.SpecDigest, DevicesPerInstance: scenario.devices, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId, Mode: plan.Profile.Spec.Mode, ModelKey: plan.Profile.Spec.ModelKey, MemoryMibPerDevice: scenario.memoryMiB, CoreLimitPercent: plan.Profile.Spec.CoreLimitPercent, AllocationType: plan.Profile.Spec.AllocationType, ResourceKey: plan.Profile.Spec.ResourceKey, AdapterId: plan.Resolved.BusinessSpec.AdapterId}
 			owner := &instanceSettingsResolveProbe{template: business}
 			binding := NewInstanceGpuBinding(owner, nil, business.ClusterId)
 			principal := &auth.Principal{Type: auth.SubjectUser, ID: 9, TenantID: 7}
@@ -134,7 +135,7 @@ func TestInstanceAdmissionCPUStillFreezesWithoutGPUQuota(t *testing.T) {
 		t.Fatal("CPU command gained GPU metering")
 	}
 	frozen, err := res.DecodeBusinessPayload(command.BusinessPayload)
-	if err != nil || frozen.ComputeType != "cpu" || frozen.GpuExecution != nil || frozen.GpuDisplay != nil {
+	if err != nil || frozen.ComputeType != "cpu" || frozen.GpuExecution != nil || frozen.GpuBusinessSpec != nil {
 		t.Fatalf("CPU command changed: %+v error=%v", frozen, err)
 	}
 	if _, err = prepared.freeze(presetTenant, "user", "9", "operation", "resource", &acc.ResolvedGpuRequest{}); err == nil {

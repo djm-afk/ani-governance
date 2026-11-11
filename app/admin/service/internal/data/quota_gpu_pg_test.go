@@ -141,7 +141,7 @@ func gpuLedgerInput(t *testing.T, c *ent.Client, tid, pid uint32) *QuotaOccupyIn
 	execution.ExecutionDigest, e = protocol.GpuExecutionDigest(execution)
 	require.NoError(t, e)
 	business.GpuExecution = execution
-	business.GpuDisplay = &acc.GpuDisplay{ProfileId: request.ProfileId, ProfileVersion: request.ProfileVersion, ProfileName: "ledger whole GPU", Mode: acc.SupplyMode_WHOLE_EXCLUSIVE, ModelKey: "nvidia-tesla-t4"}
+	business.GpuBusinessSpec = &acc.GpuBusinessSpec{ProfileId: request.ProfileId, ProfileVersion: request.ProfileVersion, ProfileName: "ledger whole GPU", Mode: acc.SupplyMode_WHOLE_EXCLUSIVE, ModelKey: "nvidia-tesla-t4", AllocationType: acc.AllocationType_PHYSICAL, DevicesPerReplica: 2, MemoryMibPerDevice: 15360, CoreLimitPercent: 100, ResourceKey: "volcano.sh/vgpu-number", AdapterId: "volcano-hami-mib-v1", SpecDigest: strings.Repeat("a", 64)}
 	payload, e := res.CanonicalBusinessPayload(business)
 	require.NoError(t, e)
 	digest := sha256.Sum256(payload)
@@ -215,7 +215,7 @@ func TestQuotaGpuRestrictedRoleAndExplicitIsolation(t *testing.T) {
 	// The explicit tenant clause in GetOperation is also the mutation target.
 }
 
-func TestQuotaGpuDeleteReleaseAndProjectionRecovery(t *testing.T) {
+func TestQuotaGpuDeleteReleaseAndOriginalReceiptRecovery(t *testing.T) {
 	c := newLedgerPGClient(t)
 	cleanLedger(t, c)
 	r := newTestRepo(c)
@@ -252,31 +252,10 @@ func TestQuotaGpuDeleteReleaseAndProjectionRecovery(t *testing.T) {
 			require.Zero(t, row.OccupiedUnits)
 		}
 	}
-	op, all, hasDelete, e := r.LoadGpuProjectionSource(ctx, tid, accepted.OperationID)
-	require.NoError(t, e)
-	require.True(t, hasDelete)
-	require.Len(t, all, 2)
-	require.Equal(t, 1, op.AttemptCount)
-	// Rebuild a missing row directly at terminal revision; no business attempt changes.
-	payload := gpuProjectionPayload(in, accepted.OperationID, 2, "terminal")
-	require.NoError(t, r.UpsertGpuUsageProjection(ctx, tid, accepted.OperationID, 2, "ENDED", payload, "terminal"))
-	syncs, e := r.ClaimGpuUsageSync(ctx, "sync-a", time.Minute, 1)
-	require.NoError(t, e)
-	require.Len(t, syncs, 1)
-	ok, e := r.AckGpuUsageSync(ctx, tid, accepted.OperationID, 1, syncs[0].LeaseGeneration)
-	require.NoError(t, e)
-	require.False(t, ok)
-	ok, e = r.AckGpuUsageSync(ctx, tid, accepted.OperationID, 2, syncs[0].LeaseGeneration)
-	require.NoError(t, e)
-	require.True(t, ok)
-	require.NoError(t, r.UpsertGpuUsageProjection(ctx, tid, accepted.OperationID, 1, "DECLARED", gpuProjectionPayload(in, accepted.OperationID, 1, "declared"), "declared"))
-	syncs, e = r.ClaimGpuUsageSync(ctx, "sync-b", time.Minute, 1)
-	require.NoError(t, e)
-	require.Empty(t, syncs)
-	require.Error(t, r.UpsertGpuUsageProjection(ctx, tid, accepted.OperationID, 2, "ENDED", `{"ref":null}`, "terminal"))
 	again, e := r.GetOperationForUser(ctx, tid, accepted.OperationID)
 	require.NoError(t, e)
-	require.Equal(t, op.AttemptCount, again.AttemptCount)
+	require.Equal(t, 1, again.AttemptCount)
+
 	// A separate non-GPU resource retains its independent partial-release API.
 	storage := *in
 	storage.IdempotencyKey = uuid.NewString()
@@ -355,61 +334,8 @@ func TestQuotaGpuAtomicCancelAndSameKey(t *testing.T) {
 	require.NoError(t, e)
 	require.True(t, repeated.Replayed)
 	require.Equal(t, id, repeated.OperationID, fmt.Sprintf("original operation %s", id))
-	// A missing sole GPU charge still appears in recovery scanning because the
-	// immutable canonical marks GPU; source validation must report corruption.
-	all, e := r.GetChargesForOperation(ctx, tid, id)
-	require.NoError(t, e)
-	for _, charge := range all {
-		if isGPUCode(charge.QuotaCode) {
-			require.NoError(t, c.Client().QuotaCharge.DeleteOneID(charge.ID).Exec(sys))
-		}
-	}
-	candidates, e := r.ScanGpuCreatePage(ctx, 0, 100)
-	require.NoError(t, e)
-	require.NotEmpty(t, candidates)
-	_, _, _, e = r.LoadGpuProjectionSource(ctx, tid, id)
-	require.Error(t, e)
 }
 
-func TestQuotaGpuProjectionNullAndForeignRefConstraints(t *testing.T) {
-	c := newLedgerPGClient(t)
-	cleanLedger(t, c)
-	r := newTestRepo(c)
-	ctx := context.Background()
-	tid, pid := seedTenantPlan(t, c, "gpu-json-constraints", 20)
-	in := gpuLedgerInput(t, c.Client(), tid, pid)
-	created, e := r.Occupy(ctx, in)
-	require.NoError(t, e)
-	params := ent.GpuUsageSync{TenantID: &tid, OperationID: created.OperationID, Revision: 1, State: "DECLARED", PayloadHash: "digest", ResourceTenantID: in.ResourceTenantID, OwnerService: in.OwnerService, ResourceID: in.ResourceID}
-	for _, payload := range []string{`null`, `{}`, `{"revision":1,"state":1,"payload_digest":"digest","ref":null}`, `{"revision":null,"state":1,"payload_digest":"digest","ref":{}}`} {
-		params.PayloadJSON = payload
-		e = r.transaction(ctx, func(tx *ent.Tx) error {
-			ctx := appViewer.NewSystemViewerContext(context.Background())
-			e := upsertGpuUsageSync(ctx, tx, &params)
-			return e
-		})
-		require.Error(t, e, "JSON NULL may not bypass a CHECK")
-	}
-	params.PayloadJSON = gpuProjectionPayload(in, created.OperationID, 1, "digest")
-	params.ResourceTenantID = uuid.NewString()
-	e = r.transaction(ctx, func(tx *ent.Tx) error {
-		ctx := appViewer.NewSystemViewerContext(context.Background())
-		e := upsertGpuUsageSync(ctx, tx, &params)
-		return e
-	})
-	require.Error(t, e, "JSON ref must match relational columns")
-	params.ResourceTenantID = in.ResourceTenantID
-	params.TenantID = ptr(tid + 100000)
-	e = r.transaction(ctx, func(tx *ent.Tx) error {
-		ctx := appViewer.NewSystemViewerContext(context.Background())
-		e := upsertGpuUsageSync(ctx, tx, &params)
-		return e
-	})
-	require.Error(t, e, "original ref FK must retain tenant")
-}
-
-// Complete release derives quantities under the ledger locks and fences event
-// reuse across tenant ledgers using the existing globally unique receipt ID.
 func TestQuotaResourceReleasedOriginalLedgerAndEventFence(t *testing.T) {
 	c := newLedgerPGClient(t)
 	cleanLedger(t, c)

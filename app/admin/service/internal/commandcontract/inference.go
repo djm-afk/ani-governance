@@ -10,9 +10,7 @@ import (
 	contractv1 "github.com/liangzai006/ani-inference-service/api/inference/contract/v1"
 	runtimev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
-	protocol "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
-	"google.golang.org/protobuf/proto"
 )
 
 const InferenceSchema = "inference-managed-v2"
@@ -45,7 +43,13 @@ func DecodeInferenceCanonical(raw []byte) (*InferenceCanonical, error) {
 	var c InferenceCanonical
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()
-	if d.Decode(&c) != nil || c.Schema != InferenceSchema || c.Usage != "INFERENCE" || c.DeleteExpectedGeneration < 0 || compute.ValidateSelection(c.Selection) != nil || c.CreateCommandDigest == "" {
+	if d.Decode(&c) != nil {
+		return nil, Invalid("invalid frozen inference command")
+	}
+	if c.ResourceClass == InferenceGPUClass || (c.Selection != nil && c.Selection.Gpu != nil) || c.GpuRequest != nil {
+		return nil, GPUOwnerUnavailable()
+	}
+	if c.Schema != InferenceSchema || c.Usage != "INFERENCE" || c.DeleteExpectedGeneration < 0 || compute.ValidateSelection(c.Selection) != nil || c.CreateCommandDigest == "" {
 		return nil, Invalid("invalid frozen inference command")
 	}
 	encoded, e := CanonicalJSON(c)
@@ -79,33 +83,9 @@ func DecodeInferenceCanonical(raw []byte) (*InferenceCanonical, error) {
 			return nil, Invalid("CPU inference contains GPU accounting")
 		}
 	} else {
-		g := c.Selection.Gpu
-		if c.Selection.ComputeType != "gpu" || g == nil || c.GpuRequest == nil || len(c.QuotaItems) != 1 || c.ClusterID != g.ClusterId || business.ClusterId != g.ClusterId || business.GpuDisplay == nil || business.GpuDisplay.ProfileId != g.ProfileId || business.GpuDisplay.ProfileVersion != g.ProfileVersion || business.GpuDisplay.Mode != g.Mode || business.GpuDisplay.ModelKey != g.ModelKey {
-			return nil, Invalid("inference GPU selection mismatch")
-		}
-		topology, e := contractv1.NormalizeTopology(business.Runtime, business.Replicas, g.DevicesPerUnit)
-		if e != nil {
-			return nil, e
-		}
-		r := c.GpuRequest
-		if r.ClusterId != g.ClusterId || r.PoolId != g.PoolId || r.ProfileId != g.ProfileId || r.ProfileVersion != g.ProfileVersion || r.Replicas != topology.ExecutionReplicas || r.DevicesPerReplica != topology.DevicesPerReplica || r.ContainerName != topology.ContainerName {
-			return nil, Invalid("inference GPU topology mismatch")
-		}
-		if !proto.Equal(r, &acc.GpuRequest{ClusterId: business.Resource.Gpu.ClusterId, PoolId: business.Resource.Gpu.PoolId, ProfileId: business.Resource.Gpu.ProfileId, ProfileVersion: business.Resource.Gpu.ProfileVersion, Replicas: business.Resource.Gpu.Replicas, DevicesPerReplica: business.Resource.Gpu.DevicesPerReplica, ContainerName: business.Resource.Gpu.ContainerName}) {
-			return nil, Invalid("inference GPU request mismatch")
-		}
-		q := c.QuotaItems[0]
-		if _, e = GpuResolvedQuota(&acc.ResolvedGpuRequest{Execution: business.GpuExecution, Selection: business.GpuDisplay, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: q.QuotaCode, Units: q.Units}}}, r); e != nil {
-			return nil, e
-		}
-		memory, e := protocol.GpuMemoryMiBPerDevice(business.GpuExecution)
-		if business.GpuExecution.Resources["volcano.sh/vgpu-cores"] != strconv.FormatUint(uint64(g.CoreLimitPercent), 10) {
-			return nil, Invalid("inference GPU core limit mismatch")
-		}
-		if e != nil || memory != g.MemoryMibPerDevice {
-			return nil, Invalid("inference GPU memory mismatch")
-		}
+		return nil, GPUOwnerUnavailable()
 	}
+
 	return &c, nil
 }
 func validateInferenceStored(in StoredCommand) (*Facts, error) {
@@ -164,5 +144,5 @@ func validateInferenceStored(in StoredCommand) (*Facts, error) {
 	for _, q := range c.QuotaItems {
 		items = append(items, QuotaItem{q.QuotaCode, q.Units})
 	}
-	return &Facts{CPU: c.ResourceClass == runtimev1.ManagedResourceClass_MANAGED_RESOURCE_CLASS_CPU, BusinessPayload: c.BusinessPayload, GpuRequest: c.GpuRequest, Execution: business.GpuExecution, Display: business.GpuDisplay, QuotaItems: items, Inference: c}, nil
+	return &Facts{CPU: c.ResourceClass == runtimev1.ManagedResourceClass_MANAGED_RESOURCE_CLASS_CPU, BusinessPayload: c.BusinessPayload, GpuRequest: c.GpuRequest, Execution: business.GpuExecution, QuotaItems: items, Inference: c}, nil
 }

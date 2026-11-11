@@ -520,43 +520,6 @@ var (
 			},
 		},
 	}
-	// SysGpuUsageSyncColumns holds the columns for the "sys_gpu_usage_sync" table.
-	SysGpuUsageSyncColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "created_at", Type: field.TypeTime, Nullable: true},
-		{Name: "updated_at", Type: field.TypeTime, Nullable: true},
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
-		{Name: "tenant_id", Type: field.TypeUint32, Nullable: true, Default: 0},
-		{Name: "operation_id", Type: field.TypeString},
-		{Name: "resource_tenant_id", Type: field.TypeString},
-		{Name: "owner_service", Type: field.TypeString},
-		{Name: "resource_id", Type: field.TypeString},
-		{Name: "revision", Type: field.TypeInt64, Default: 1},
-		{Name: "state", Type: field.TypeString},
-		{Name: "payload_json", Type: field.TypeString, Size: 2147483647},
-		{Name: "payload_hash", Type: field.TypeString},
-		{Name: "acked_revision", Type: field.TypeInt64, Default: 0},
-		{Name: "lease_generation", Type: field.TypeInt64, Default: 0},
-		{Name: "lease_owner", Type: field.TypeString, Nullable: true},
-		{Name: "lease_until", Type: field.TypeTime, Nullable: true},
-		{Name: "attempt_count", Type: field.TypeInt, Default: 0},
-		{Name: "retry_blocked", Type: field.TypeBool, Default: false},
-		{Name: "next_attempt_at", Type: field.TypeTime, Nullable: true},
-		{Name: "last_error_code", Type: field.TypeString, Nullable: true},
-	}
-	// SysGpuUsageSyncTable holds the schema information for the "sys_gpu_usage_sync" table.
-	SysGpuUsageSyncTable = &schema.Table{
-		Name:       "sys_gpu_usage_sync",
-		Columns:    SysGpuUsageSyncColumns,
-		PrimaryKey: []*schema.Column{SysGpuUsageSyncColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "uix_sys_gpu_usage_sync_tenant_operation",
-				Unique:  true,
-				Columns: []*schema.Column{SysGpuUsageSyncColumns[4], SysGpuUsageSyncColumns[5]},
-			},
-		},
-	}
 	// InternalMessagesColumns holds the columns for the "internal_messages" table.
 	InternalMessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true, Comment: "id"},
@@ -3422,7 +3385,6 @@ var (
 		SysDictEntryI18nTable,
 		SysDictTypesTable,
 		SysGpuDeleteAcceptancesTable,
-		SysGpuUsageSyncTable,
 		InternalMessagesTable,
 		InternalMessageCategoriesTable,
 		InternalMessageRecipientsTable,
@@ -3528,14 +3490,6 @@ func init() {
 	SysGpuDeleteAcceptancesTable.Annotation.Checks = map[string]string{
 		"sys_gpu_delete_acceptances_result_ck":          "result IN ('LOCAL_CANCELED','OWNER_DELETE')",
 		"sys_gpu_delete_acceptances_tenant_positive_ck": "tenant_id > 0",
-	}
-	SysGpuUsageSyncTable.Annotation = &entsql.Annotation{
-		Table: "sys_gpu_usage_sync",
-	}
-	SysGpuUsageSyncTable.Annotation.Checks = map[string]string{
-		"sys_gpu_usage_sync_payload_ref_ck":       "(jsonb_typeof(payload_json::jsonb) = 'object' AND payload_json::jsonb->'ref' IS NOT NULL AND jsonb_typeof(payload_json::jsonb->'ref') = 'object' AND (payload_json::jsonb->'ref'->>'tenant_id') IS NOT NULL AND payload_json::jsonb->'ref'->>'tenant_id' = resource_tenant_id AND (payload_json::jsonb->'ref'->>'owner_service') IS NOT NULL AND payload_json::jsonb->'ref'->>'owner_service' = owner_service AND (payload_json::jsonb->'ref'->>'resource_id') IS NOT NULL AND payload_json::jsonb->'ref'->>'resource_id' = resource_id AND (payload_json::jsonb->'ref'->>'create_operation_id') IS NOT NULL AND payload_json::jsonb->'ref'->>'create_operation_id' = operation_id AND (payload_json::jsonb->>'payload_digest') IS NOT NULL AND payload_json::jsonb->>'payload_digest' = payload_hash) IS TRUE",
-		"sys_gpu_usage_sync_revision_positive_ck": "revision IN (1,2) AND acked_revision >= 0 AND acked_revision <= revision AND ((revision=1 AND state='DECLARED') OR (revision=2 AND state='ENDED')) AND ((payload_json::jsonb->>'revision')::bigint=revision AND (payload_json::jsonb->>'state')::bigint=revision) IS TRUE",
-		"sys_gpu_usage_sync_tenant_positive_ck":   "tenant_id > 0",
 	}
 	InternalMessagesTable.Annotation = &entsql.Annotation{
 		Table:     "internal_messages",

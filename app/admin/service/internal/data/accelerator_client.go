@@ -32,7 +32,6 @@ type AcceleratorClientConfig struct {
 type AcceleratorClient struct {
 	Admin   acc.AcceleratorAdminServiceClient
 	Catalog acc.AcceleratorCatalogServiceClient
-	Usage   acc.AcceleratorUsageServiceClient
 }
 
 func AcceleratorConfigFromEnv() (AcceleratorClientConfig, error) {
@@ -89,13 +88,7 @@ func NewAcceleratorClient(c AcceleratorClientConfig) (*AcceleratorClient, func()
 	if err != nil {
 		return nil, nil, err
 	}
-	return &AcceleratorClient{Admin: acc.NewAcceleratorAdminServiceClient(conn), Catalog: acc.NewAcceleratorCatalogServiceClient(conn), Usage: acc.NewAcceleratorUsageServiceClient(conn)}, func() { _ = conn.Close() }, nil
-}
-
-// SyncGpuUsage intentionally has no delegated actor/action/tenant metadata.
-// Its authority is the exact service certificate plus persisted ledger facts.
-func (c *AcceleratorClient) SyncGpuUsage(ctx context.Context, r *acc.SyncGpuUsageRequest) (*acc.SyncGpuUsageResponse, error) {
-	return c.Usage.SyncGpuUsage(ctx, r)
+	return &AcceleratorClient{Admin: acc.NewAcceleratorAdminServiceClient(conn), Catalog: acc.NewAcceleratorCatalogServiceClient(conn)}, func() { _ = conn.Close() }, nil
 }
 
 func acceleratorMetadata(method string, request any) (metadata.MD, error) {
@@ -107,13 +100,7 @@ func acceleratorMetadata(method string, request any) (metadata.MD, error) {
 		return invalid()
 	}
 	action := method[strings.LastIndexByte(method, '/')+1:]
-	if method == acc.AcceleratorUsageService_SyncGpuUsage_FullMethodName {
-		r, ok := request.(*acc.SyncGpuUsageRequest)
-		if !ok || r == nil || r.RequestId == "" || r.Projection == nil {
-			return invalid()
-		}
-		return metadata.MD{}, nil
-	}
+
 	var actor *acc.Actor
 	var tenant, requestID string
 	switch r := request.(type) {
@@ -186,21 +173,14 @@ func acceleratorMethodKind(method string) string {
 		acc.AcceleratorAdminService_SetProfileState_FullMethodName,
 		acc.AcceleratorAdminService_DeleteProfile_FullMethodName,
 		acc.AcceleratorAdminService_AdminListProfiles_FullMethodName,
-		acc.AcceleratorAdminService_AdminListBindings_FullMethodName,
 		acc.AcceleratorAdminService_ListDevices_FullMethodName,
-		acc.AcceleratorAdminService_AdminGetCapacity_FullMethodName:
+		acc.AcceleratorAdminService_GetProfileCapacity_FullMethodName,
+		acc.AcceleratorAdminService_GetSupplyGroupCapacity_FullMethodName:
 		return "admin"
 	case acc.AcceleratorCatalogService_ListProfiles_FullMethodName,
 		acc.AcceleratorCatalogService_GetProfile_FullMethodName,
-		acc.AcceleratorCatalogService_ResolveGpuRequest_FullMethodName,
-		acc.AcceleratorCatalogService_GetCapacity_FullMethodName,
-		acc.AcceleratorCatalogService_CheckGpuFit_FullMethodName,
-		acc.AcceleratorUsageService_GetGpuUsage_FullMethodName,
-		acc.AcceleratorUsageService_ListGpuUsages_FullMethodName,
-		acc.AcceleratorUsageService_ListBindings_FullMethodName:
+		acc.AcceleratorCatalogService_ResolveGpuRequest_FullMethodName:
 		return "tenant"
-	case acc.AcceleratorUsageService_SyncGpuUsage_FullMethodName:
-		return "fact"
 	default:
 		return ""
 	}

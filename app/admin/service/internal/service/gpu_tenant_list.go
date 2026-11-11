@@ -3,13 +3,10 @@ package service
 import (
 	"context"
 	stderrors "errors"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
-	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	gpu "github.com/zhangzhe-ctrl/ani-observability-service/api/observability/gpu/v1"
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
 	view "go-wind-admin/api/gen/go/gpu/service/v1"
@@ -18,13 +15,12 @@ import (
 
 type GpuTenantAdminService struct {
 	admin.UnimplementedGpuTenantAdminServiceServer
-	quotas      *data.QuotaAdminRepo
-	monitoring  *GpuMonitoringService
-	accelerator *AcceleratorService
+	quotas     *data.QuotaAdminRepo
+	monitoring *GpuMonitoringService
 }
 
-func NewGpuTenantAdminService(quotas *data.QuotaAdminRepo, monitoring *GpuMonitoringService, accelerator *AcceleratorService) *GpuTenantAdminService {
-	return &GpuTenantAdminService{quotas: quotas, monitoring: monitoring, accelerator: accelerator}
+func NewGpuTenantAdminService(quotas *data.QuotaAdminRepo, monitoring *GpuMonitoringService) *GpuTenantAdminService {
+	return &GpuTenantAdminService{quotas: quotas, monitoring: monitoring}
 }
 
 type gpuTenantListBudgetKey struct{}
@@ -94,22 +90,10 @@ func (s *GpuTenantAdminService) ListGpuTenants(ctx context.Context, req *view.Li
 	if len(quotas) == 0 {
 		return out, nil
 	}
-	allocations, err := s.currentAllocations(batch, quotaPage.ResourceTenantIDs)
-	if err != nil {
-		if errors.Code(err) == 429 {
-			return nil, gpuBudget()
-		}
-		if errors.Code(err) == 504 || batch.Err() != nil {
-			return nil, errors.GatewayTimeout("GPU_QUERY_TIMEOUT", "GPU tenant page deadline exceeded")
-		}
-		allocations = map[uint32]*view.GpuTenantCurrentAllocation{}
-		for _, quota := range quotas {
-			allocations[quota.TenantId] = &view.GpuTenantCurrentAllocation{Status: "UNAVAILABLE", Reason: "GPU_ALLOCATION_UNAVAILABLE"}
-		}
-	}
 	for i, quota := range quotas {
-		out.Items[i] = &view.GpuTenantCurrentSummary{Quota: quota, Allocation: allocations[quota.TenantId]}
+		out.Items[i] = &view.GpuTenantCurrentSummary{Quota: quota, ObservationBasis: "EXPORTER_OBSERVED", OwnerScope: "ani-resource-service"}
 	}
+
 	jobs := make(chan int, len(quotas))
 	for i := range quotas {
 		jobs <- i
@@ -155,142 +139,6 @@ func (s *GpuTenantAdminService) ListGpuTenants(ctx context.Context, req *view.Li
 	}
 	if err := batch.Err(); err != nil {
 		return nil, errors.GatewayTimeout("GPU_QUERY_TIMEOUT", "GPU tenant page deadline exceeded")
-	}
-	return out, nil
-}
-
-// currentAllocations scans the platform inventory once, independently of the
-// tenant page size. Unknown or unassociated allocations invalidate a complete
-// per-tenant total, while verified commitments remain available as known parts.
-func (s *GpuTenantAdminService) currentAllocations(ctx context.Context, tenantIDs map[uint32]string) (map[uint32]*view.GpuTenantCurrentAllocation, error) {
-	if s.accelerator == nil || s.accelerator.client == nil || s.accelerator.client.Admin == nil {
-		return nil, acceleratorUnavailable()
-	}
-	adminContext, err := s.accelerator.adminContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	byResource := map[string]uint32{}
-	for id, resource := range tenantIDs {
-		if metricUUID(resource) {
-			byResource[resource] = id
-		}
-	}
-	memory, count, incomplete := map[uint32]uint64{}, map[uint32]uint64{}, map[uint32]bool{}
-	allComplete := true
-	clusters, clusterTokens := map[string]bool{}, map[string]bool{"": true}
-	bindings := map[string]bool{}
-	sources := map[string]bool{}
-	token := ""
-	for page := 0; ; page++ {
-		if page >= 64 {
-			return nil, gpuBudget()
-		}
-		reply, err := s.accelerator.client.Admin.ListClusters(ctx, &acc.ListClustersRequest{Context: adminContext, Page: &acc.Page{Size: 100, Token: token}})
-		if err != nil {
-			return nil, mapAcceleratorError(err)
-		}
-		if reply == nil {
-			return nil, acceleratorInvalidResponse()
-		}
-		for _, cluster := range reply.Items {
-			if cluster == nil || !metricUUID(cluster.ClusterId) || clusters[cluster.ClusterId] {
-				return nil, acceleratorInvalidResponse()
-			}
-			clusters[cluster.ClusterId] = true
-			if len(clusters) > 16 {
-				return nil, gpuBudget()
-			}
-			bindingToken, snapshot := "", ""
-			bindingTokens := map[string]bool{"": true}
-			for bindingPage := 0; ; bindingPage++ {
-				if bindingPage >= 64 {
-					return nil, gpuBudget()
-				}
-				r, err := s.accelerator.client.Admin.AdminListBindings(ctx, &acc.AdminListBindingsRequest{Context: adminContext, ClusterId: cluster.ClusterId, Page: &acc.Page{Size: 200, Token: bindingToken}})
-				if err != nil {
-					return nil, mapAcceleratorError(err)
-				}
-				if r == nil || r.Observation == nil {
-					return nil, acceleratorInvalidResponse()
-				}
-				if !r.Observation.Complete {
-					allComplete = false
-				}
-				if snapshot != "" && r.Observation.SnapshotRef != snapshot {
-					return nil, errors.Conflict("GPU_SCOPE_CHANGED", "GPU allocation snapshot changed")
-				}
-				snapshot = r.Observation.SnapshotRef
-				for _, binding := range r.Items {
-					if binding == nil || binding.BindingId == "" || bindings[binding.BindingId] {
-						return nil, acceleratorInvalidResponse()
-					}
-					bindings[binding.BindingId] = true
-					if len(bindings) > 4096 {
-						return nil, gpuBudget()
-					}
-					if binding.State == acc.AllocationState_RELEASE_CONFIRMED {
-						continue
-					}
-					if binding.Pod == nil || binding.Pod.ClusterId != cluster.ClusterId || binding.MemoryMib < 0 || !metricUUID(binding.PhysicalDeviceId) || binding.Pod.Uid == "" || binding.Pod.ContainerName == "" {
-						return nil, acceleratorInvalidResponse()
-					}
-					source := strings.Join([]string{cluster.ClusterId, binding.PhysicalDeviceId, binding.Pod.Uid, binding.Pod.ContainerName}, "\x00")
-					if sources[source] {
-						return nil, acceleratorInvalidResponse()
-					}
-					sources[source] = true
-					if len(sources) > 128 {
-						return nil, gpuBudget()
-					}
-					if binding.VerifiedUsageRef == nil || !metricUUID(binding.VerifiedUsageRef.TenantId) {
-						allComplete = false
-						continue
-					}
-					id, belongs := byResource[binding.VerifiedUsageRef.TenantId]
-					if !belongs {
-						continue
-					}
-					if binding.State != acc.AllocationState_ACTIVE || binding.Observation == nil || !binding.Observation.Complete {
-						incomplete[id] = true
-						continue
-					}
-					if ^uint64(0)-memory[id] < uint64(binding.MemoryMib) {
-						return nil, acceleratorInvalidResponse()
-					}
-					memory[id] += uint64(binding.MemoryMib)
-					count[id]++
-				}
-				if r.NextToken == "" {
-					break
-				}
-				if bindingTokens[r.NextToken] {
-					return nil, acceleratorInvalidResponse()
-				}
-				bindingTokens[r.NextToken], bindingToken = true, r.NextToken
-			}
-		}
-		if reply.NextToken == "" {
-			break
-		}
-		if clusterTokens[reply.NextToken] {
-			return nil, acceleratorInvalidResponse()
-		}
-		clusterTokens[reply.NextToken], token = true, reply.NextToken
-	}
-	out := map[uint32]*view.GpuTenantCurrentAllocation{}
-	for id, resource := range tenantIDs {
-		value, number := strconv.FormatUint(memory[id], 10), count[id]
-		row := &view.GpuTenantCurrentAllocation{KnownMemoryMib: &value, KnownBindingCount: &number, Status: "PARTIAL", Reason: "GPU_ALLOCATION_INCOMPLETE"}
-		if count[id] == 0 && (!allComplete || incomplete[id]) {
-			row.KnownMemoryMib, row.KnownBindingCount = nil, nil
-		}
-		if !metricUUID(resource) {
-			row.Status, row.Reason, row.KnownMemoryMib, row.KnownBindingCount = "UNAVAILABLE", "GPU_TENANT_MAPPING_UNAVAILABLE", nil, nil
-		} else if allComplete && !incomplete[id] {
-			row.MemoryMib, row.BindingCount, row.Status, row.Reason = &value, &number, "AVAILABLE", ""
-		}
-		out[id] = row
 	}
 	return out, nil
 }

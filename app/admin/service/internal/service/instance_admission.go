@@ -32,7 +32,7 @@ func (b *InstanceGpuBinding) PrepareManagedBusiness(ctx context.Context, p *auth
 	return &preparedManagedBusiness{gpu: gpu, freeze: func(_, _, _, _, _ string, plan *acc.ResolvedGpuRequest) ([]byte, error) {
 		frozen := proto.Clone(business).(*res.CreateSpec)
 		if gpu == nil {
-			if plan != nil || frozen.ComputeType != "cpu" || frozen.GpuSelection != nil || frozen.GpuExecution != nil || frozen.GpuDisplay != nil {
+			if plan != nil || frozen.ComputeType != "cpu" || frozen.GpuSelection != nil || frozen.GpuExecution != nil || frozen.GpuBusinessSpec != nil {
 				return nil, commandcontract.Invalid("invalid CPU instance resolution")
 			}
 			raw, e := res.CanonicalBusinessPayload(frozen)
@@ -53,7 +53,10 @@ func (b *InstanceGpuBinding) PrepareManagedBusiness(ctx context.Context, p *auth
 			return nil, e
 		}
 		frozen.GpuExecution = proto.Clone(plan.Execution).(*acc.GpuExecution)
-		frozen.GpuDisplay = proto.Clone(plan.Selection).(*acc.GpuDisplay)
+		if e = validateResolvedInstanceReference(frozen.GpuSelection, plan.BusinessSpec); e != nil {
+			return nil, e
+		}
+		frozen.GpuBusinessSpec = proto.Clone(plan.BusinessSpec).(*acc.GpuBusinessSpec)
 		frozen.GpuSelection = nil
 		if e = res.ValidateCreateSpec(frozen, true); e != nil {
 			return nil, instanceBusinessError(e)
@@ -83,4 +86,11 @@ func (b *InstanceGpuBinding) instanceIntentHash(tenant, actorType, actorID strin
 		}
 	}
 	return commandcontract.Hash(map[string]any{"schema": "gov-instance-create", "tenant_id": tenant, "actor_type": actorType, "actor_id": actorID, "owner": b.OwnerService(), "action": b.CreateAction(), "gpu_request": gpuObject, "business_type": string(business.ProtoReflect().Descriptor().FullName()), "business": object})
+}
+
+func validateResolvedInstanceReference(g *res.GpuPresetReference, s *acc.GpuBusinessSpec) error {
+	if g == nil || s == nil || g.ProfileId != s.ProfileId || g.ProfileVersion != s.ProfileVersion || g.SpecDigest != s.SpecDigest || g.DevicesPerInstance != s.DevicesPerReplica || g.Mode != s.Mode || g.ModelKey != s.ModelKey || g.AllocationType != s.AllocationType || g.MemoryMibPerDevice != s.MemoryMibPerDevice || g.CoreLimitPercent != s.CoreLimitPercent || g.ComputeUnitsPerDevice != s.ComputeUnitsPerDevice || g.ResourceKey != s.ResourceKey || g.AdapterId != s.AdapterId {
+		return commandcontract.Invalid("resolved GPU differs from managed preset reference")
+	}
+	return nil
 }

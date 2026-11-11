@@ -96,8 +96,6 @@ func TestQuotaProcessChild(t *testing.T) {
 		out.Delete, e = repo.CreateDeleteOperation(ctx, s.Delete)
 	case "release":
 		out.Release, e = repo.Release(ctx, s.Release)
-	case "sync":
-		out.Ack, e = repo.AckGpuUsageSync(ctx, s.Input.TenantID, s.OperationID, s.Revision, s.Generation)
 	case "claim":
 		out.Claims, e = repo.ClaimDispatchable(ctx, "os-worker-"+uuid.NewString(), time.Minute, 10)
 	default:
@@ -167,7 +165,7 @@ func TestQuotaProcessCommitRecovery(t *testing.T) {
 	var restricted bool
 	require.NoError(t, c.DB().QueryRowContext(ctx, gpuRoleAndRLS).Scan(&restricted))
 	require.True(t, restricted)
-	for _, action := range []string{"occupy", "cancel", "delete", "release", "sync"} {
+	for _, action := range []string{"occupy", "cancel", "delete", "release"} {
 		for _, point := range []string{"before", "after"} {
 			t.Run(action+"/"+point, func(t *testing.T) {
 				cleanLedger(t, c)
@@ -191,14 +189,7 @@ func TestQuotaProcessCommitRecovery(t *testing.T) {
 						s.Release = &QuotaReleaseInput{OwnerService: in.OwnerService, OperationID: s.OperationID, ResourceID: in.ResourceID, Complete: true, ReleaseEventID: uuid.NewString(), Reason: "RESOURCE_RELEASED", PayloadHash: "stable-release", PayloadJSON: `{"source":"controlled process test"}`}
 
 					}
-					if action == "sync" {
-						require.NoError(t, repo.UpsertGpuUsageProjection(ctx, tid, s.OperationID, 1, "DECLARED", gpuProjectionPayload(in, s.OperationID, 1, "stable"), "stable"))
-						rows, e := repo.ClaimGpuUsageSync(ctx, "setup", time.Minute, 1)
-						require.NoError(t, e)
-						require.Len(t, rows, 1)
-						s.Revision = 1
-						s.Generation = rows[0].LeaseGeneration
-					}
+
 				}
 				cmd, result := quotaFaultStart(t, s)
 				quotaWaitFile(t, s.Marker)
@@ -232,15 +223,8 @@ func TestQuotaProcessCommitRecovery(t *testing.T) {
 					} else {
 						require.Equal(t, 1, n)
 					}
-				} else {
-					row, e := c.Client().GpuUsageSync.Query().Only(sys)
-					require.NoError(t, e)
-					if point == "before" {
-						require.Zero(t, row.AckedRevision)
-					} else {
-						require.EqualValues(t, 1, row.AckedRevision)
-					}
 				}
+
 				// Inspect the crash state before recovery can repair anything.
 				wantOperations := 1
 				if action == "occupy" && point == "before" {
@@ -282,10 +266,7 @@ func TestQuotaProcessCommitRecovery(t *testing.T) {
 					require.Equal(t, action == "cancel", replay.Delete.LocalCanceled)
 				case "release":
 					require.Len(t, replay.Release, 2)
-				case "sync": // A previously committed ACK is durable even if same-generation replay is rejected.
-					row, e := c.Client().GpuUsageSync.Query().Only(sys)
-					require.NoError(t, e)
-					require.EqualValues(t, 1, row.AckedRevision)
+
 				}
 				again := quotaFaultRun(t, s)
 				if action == "occupy" {

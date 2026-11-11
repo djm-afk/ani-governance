@@ -293,7 +293,7 @@ func instancePublicHTTPJoint(t *testing.T, newCommands bool) {
 		require.NoError(t, os.WriteFile(path, config, 0600))
 		t.Setenv("INSTANCE_JOINT_QUOTA_FILE", path)
 	}
-	resourcePeer := testutil.StartInstanceResourcePeer(t, gpuRequest, gpuProfile)
+	resourcePeer := testutil.StartInstanceResourcePeer(t, gpuRequest, gpuProfile, gpu.BusinessSpec)
 	owner, computeOwner, _, closeOwner, e := data.NewResourceClientsFromEnv()
 	require.NoError(t, e)
 	t.Cleanup(closeOwner)
@@ -326,11 +326,6 @@ func instancePublicHTTPJoint(t *testing.T, newCommands bool) {
 		sessions = client
 	}
 	handler := service.NewInstanceService(acceptance, binding, tenants, ledger, sessions, service.InstanceCatalogConfig{ClusterID: resourcePeer.ClusterID})
-	if lifecycle {
-		sync := service.NewGpuUsageSyncWorker(ledger, accelerator, func(e error) { t.Log("Acc sync attempt failed", e) })
-		require.NoError(t, sync.Start(ctx))
-		t.Cleanup(func() { require.NoError(t, sync.Stop(ctx)) })
-	}
 	redisServer := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
 	t.Cleanup(func() { _ = rdb.Close() })
@@ -860,11 +855,13 @@ func instancePublicHTTPJoint(t *testing.T, newCommands bool) {
 		}
 	}
 	if lifecycle {
-		require.Eventually(t, func() bool {
-			usage, e := accelerator.Usage.GetGpuUsage(ctx, &acc.GetGpuUsageRequest{Context: &acc.TenantContext{RequestId: uuid.NewString(), TenantId: tenant.ResourceTenantID, Actor: &acc.Actor{Type: "user", Id: actorID}}, Ref: &acc.GpuUsageRef{TenantId: tenant.ResourceTenantID, OwnerService: service.InstanceOwner, ResourceId: accepted.ResourceId, CreateOperationId: accepted.OperationId}})
-			return e == nil && usage.State == acc.UsageState_ENDED
-		}, 15*time.Second, 100*time.Millisecond, "Acc ENDED must be read from its real PG service after original ledger release")
+		original, err := ledger.GetOperationForUser(ctx, tenant.ID, accepted.OperationId)
+		require.NoError(t, err)
+		require.Equal(t, accepted.ResourceId, original.ResourceID)
+		require.Equal(t, service.InstanceOwner, original.OwnerService)
+		require.NotEmpty(t, original.CanonicalRequest, "cleanup retains immutable original identity without ACC Usage projection")
 	}
+
 	require.NoError(t, c.Client().UserRole.UpdateOneID(membership.ID).SetStatus(userrole.StatusDisabled).Exec(sys))
 	request("POST", "/api/v1/instances", public, nil, 403, token)
 }

@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	view "go-wind-admin/api/gen/go/catalog/service/v1"
 	"go-wind-admin/app/admin/service/internal/data"
@@ -69,7 +68,7 @@ func initializationServiceFixture(t *testing.T, actions ...string) (*Accelerator
 	}
 	require.NoError(t, policy.SetPolicies(context.Background(), engine.PolicyMap{"policies": rules, "projects": engine.MakeProjects("0")}, nil))
 	client := &initializationBoundaryClient{registered: true, operation: &acc.InitializationOperation{OperationId: uuid.NewString(), Version: 1, State: "ACCEPTED", RequiredActions: []string{"accelerator:pool:create"}}}
-	service := NewAcceleratorService(&data.AcceleratorClient{Admin: client}, nil, nil, nil, nil, NewQuotaAdapterRegistry(), policy)
+	service := NewAcceleratorService(&data.AcceleratorClient{Admin: client}, nil, nil, nil, policy)
 	ctx := auth.NewPrincipalContext(context.Background(), &auth.Principal{Type: auth.SubjectUser, ID: 42})
 	project := engine.Project("0")
 	subjects := []string{"reader", "writer"}
@@ -78,7 +77,7 @@ func initializationServiceFixture(t *testing.T, actions ...string) (*Accelerator
 }
 
 func initializationPoolRequest() *view.CreateAcceleratorInitializationRequest {
-	return &view.CreateAcceleratorInitializationRequest{Data: &view.CreateAcceleratorInitializationData{IdempotencyKey: uuid.NewString(), DiscoveryRevision: "stable-structure", Pools: []*view.AcceleratorInitializationPoolInput{{ClientKey: "pool-main", Pool: &view.AcceleratorInitializationPoolInput_NewPool{NewPool: &view.AcceleratorInitializationNewPool{DisplayName: "pool"}}}}}}
+	return &view.CreateAcceleratorInitializationRequest{Data: &view.CreateAcceleratorInitializationData{IdempotencyKey: uuid.NewString(), DiscoveryRevision: "stable-structure", ConnectionRef: "managed", Pools: []*view.AcceleratorInitializationPoolInput{{ClientKey: "pool-main", Pool: &view.AcceleratorInitializationPoolInput_NewPool{NewPool: &view.AcceleratorInitializationNewPool{DisplayName: "pool"}}}}}}
 }
 
 func TestAcceleratorInitializationComponentAuthorizationAndTrustedIdentity(t *testing.T) {
@@ -91,6 +90,7 @@ func TestAcceleratorInitializationComponentAuthorizationAndTrustedIdentity(t *te
 	require.Equal(t, "42", client.created.Mutation.Context.Actor.Id)
 	require.Equal(t, "user", client.created.Mutation.Context.Actor.Type)
 	require.Equal(t, request.Data.IdempotencyKey, client.created.Mutation.IdempotencyKey)
+	require.Equal(t, "managed", client.created.ConnectionRef)
 	require.Equal(t, "pool", client.created.Pools[0].GetNewPool().DisplayName)
 	client.created = nil
 	client.registered = false
@@ -106,8 +106,8 @@ func TestAcceleratorInitializationComponentAuthorizationAndTrustedIdentity(t *te
 
 func TestAcceleratorInitializationNewProfileRequiresAutoOpenPermission(t *testing.T) {
 	request := initializationPoolRequest()
-	request.Data.Groups = []*view.AcceleratorInitializationGroupInput{{ClientKey: "group-main", Group: &view.AcceleratorInitializationGroupInput_NewGroup{NewGroup: &view.AcceleratorInitializationNewGroup{PoolKey: "pool-main", DisplayName: "new group", BaselineRef: "managed-baseline", QueueName: "gpu", Nodes: []*view.AcceleratorNode{{Uid: "node-uid", Name: "node"}}}}}}
-	request.Data.Profiles = []*view.AcceleratorInitializationProfileInput{{ClientKey: "profile-main", GroupKey: "group-main", DisplayName: "8GiB", MemoryMibPerDevice: 8192, CoreLimitPercent: 25, MaxDevicesPerReplica: 1}}
+	request.Data.Groups = []*view.AcceleratorInitializationGroupInput{{ClientKey: "group-main", Group: &view.AcceleratorInitializationGroupInput_NewGroup{NewGroup: &view.AcceleratorInitializationNewGroup{PoolKey: "pool-main", DisplayName: "new group", ProviderConfigRef: "managed-baseline", QueueName: "gpu", Nodes: []*view.AcceleratorNode{{Uid: "node-uid", Name: "node"}}}}}}
+	request.Data.Profiles = []*view.AcceleratorInitializationProfileInput{{ClientKey: "profile-main", GroupKey: "group-main", DisplayName: "8GiB", MemoryMibPerDevice: 8192, CoreLimitPercent: 25, MaxDevicesPerReplica: 1, AllocationType: "DYNAMIC_SHARED", ResourceKey: "volcano.sh/vgpu-number"}}
 	actions := []string{"accelerator:initialization:create", "accelerator:pool:create", "accelerator:supply-group:adopt", "accelerator:profile:publish"}
 	service, client, ctx := initializationServiceFixture(t, actions...)
 	_, err := service.CreateInitialization(ctx, request)
@@ -117,6 +117,9 @@ func TestAcceleratorInitializationNewProfileRequiresAutoOpenPermission(t *testin
 	_, err = service.CreateInitialization(ctx, request)
 	require.NoError(t, err)
 	require.EqualValues(t, 8192, client.created.Profiles[0].MemoryMibPerDevice)
+	require.Equal(t, acc.AllocationType_DYNAMIC_SHARED, client.created.Profiles[0].AllocationType)
+	require.Equal(t, "volcano.sh/vgpu-number", client.created.Profiles[0].ResourceKey)
+	require.Equal(t, "managed-baseline", client.created.Groups[0].GetNewGroup().ProviderConfigRef)
 	request.Data.Profiles = nil
 	service, client, ctx = initializationServiceFixture(t, actions...)
 	_, err = service.CreateInitialization(ctx, request)
@@ -163,7 +166,7 @@ func TestAcceleratorInitializationDiscoveryPageAndErrorAttribution(t *testing.T)
 	_, err = service.ListDiscoveredNodes(ctx, &view.ListAcceleratorDiscoveredNodesRequest{Page: &zero, PageSize: &maximum})
 	require.EqualValues(t, 400, errors.FromError(err).Code)
 	client.failure = status.Error(codes.PermissionDenied, "private-downstream-identity")
-	_, err = service.GetInitialization(ctx, &emptypb.Empty{})
+	_, err = service.GetInitialization(ctx, &view.GetAcceleratorInitializationRequest{})
 	require.EqualValues(t, 503, errors.FromError(err).Code)
 	require.Equal(t, "ACCELERATOR_SERVICE_ACCESS_DENIED", errors.FromError(err).Reason)
 	require.NotContains(t, err.Error(), "private-downstream")
@@ -178,7 +181,7 @@ func TestAcceleratorInitializationRejectsUntrustedPlatformClaims(t *testing.T) {
 		auth.NewPrincipalContext(ctx, &auth.Principal{Type: auth.SubjectUser, ID: 42, TenantID: 1}),
 		engine.ContextWithAuthClaims(ctx, &engine.AuthClaims{}),
 	} {
-		_, err := service.GetInitialization(invalid, &emptypb.Empty{})
+		_, err := service.GetInitialization(invalid, &view.GetAcceleratorInitializationRequest{})
 		require.Error(t, err)
 	}
 }

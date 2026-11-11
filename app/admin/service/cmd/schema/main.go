@@ -50,11 +50,10 @@ func main() {
 	planQuotas := mustTable(migrate.Tables, "sys_plan_quotas")
 	definitions := mustTable(migrate.Tables, "sys_quota_definitions")
 	tenants := mustTable(migrate.Tables, "sys_tenants")
-	sync := mustTable(migrate.Tables, "sys_gpu_usage_sync")
 	deletes := mustTable(migrate.Tables, "sys_gpu_delete_acceptances")
 	// The shared TenantID mixin is nullable for unrelated legacy entities.
 	// Ledger tenancy is mandatory; this authoritative exporter owns that override.
-	for _, table := range []*schema.Table{accounts, operations, charges, receipts, sync, deletes} {
+	for _, table := range []*schema.Table{accounts, operations, charges, receipts, deletes} {
 		column(table, "tenant_id").Nullable = false
 	}
 	column(planQuotas, "plan_id").Nullable = false
@@ -73,13 +72,6 @@ func main() {
 		Columns:    []*schema.Column{column(operations, "tenant_id"), column(operations, "resource_tenant_id")},
 		RefTable:   tenants,
 		RefColumns: []*schema.Column{column(tenants, "id"), column(tenants, "resource_tenant_id")},
-		OnDelete:   schema.Restrict,
-	})
-	sync.ForeignKeys = append(sync.ForeignKeys, &schema.ForeignKey{
-		Symbol:     "sys_gpu_usage_sync_tenant_operation_fkey",
-		Columns:    []*schema.Column{column(sync, "tenant_id"), column(sync, "operation_id"), column(sync, "resource_tenant_id"), column(sync, "owner_service"), column(sync, "resource_id")},
-		RefTable:   operations,
-		RefColumns: []*schema.Column{column(operations, "tenant_id"), column(operations, "operation_id"), column(operations, "resource_tenant_id"), column(operations, "owner_service"), column(operations, "resource_id")},
 		OnDelete:   schema.Restrict,
 	})
 

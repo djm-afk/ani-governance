@@ -7,12 +7,10 @@ import (
 	"fmt"
 	quotapb "go-wind-admin/api/gen/go/quota/service/v1"
 	"go-wind-admin/app/admin/service/internal/commandcontract"
-	"strconv"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
 	"go-wind-admin/app/admin/service/internal/data/ent"
-	"go-wind-admin/app/admin/service/internal/data/ent/gpuusagesync"
 	"go-wind-admin/app/admin/service/internal/data/ent/quotaaccount"
 	"go-wind-admin/app/admin/service/internal/data/ent/quotaoperation"
 	"go-wind-admin/app/admin/service/internal/data/ent/tenant"
@@ -121,13 +119,6 @@ func quotaDispatchDue(s *entsql.Selector) {
 		entsql.Or(entsql.In(s.C(quotaoperation.FieldDispatchState), "QUEUED", "UNKNOWN"),
 			entsql.And(entsql.EQ(s.C(quotaoperation.FieldDispatchState), "DISPATCHING"), entsql.LTE(s.C(quotaoperation.FieldLeaseUntil), entsql.Expr("CURRENT_TIMESTAMP"))))))
 }
-func gpuSyncUnacked(s *entsql.Selector) {
-	s.Where(entsql.ColumnsLT(s.C(gpuusagesync.FieldAckedRevision), s.C(gpuusagesync.FieldRevision)))
-}
-func gpuSyncDue(s *entsql.Selector) {
-	gpuSyncUnacked(s)
-	s.Where(entsql.And(entsql.EQ(s.C(gpuusagesync.FieldRetryBlocked), false), databaseDue(s, gpuusagesync.FieldNextAttemptAt), databaseDue(s, gpuusagesync.FieldLeaseUntil)))
-}
 func quotaLeaseUntil(lease time.Duration) entsql.Querier {
 	return entsql.ExprFunc(func(b *entsql.Builder) {
 		b.WriteString("CURRENT_TIMESTAMP + ").Arg(max(1, lease.Microseconds())).WriteString(" * INTERVAL '1 microsecond'")
@@ -145,56 +136,4 @@ func claimQuotaOperation(ctx context.Context, tx *ent.Tx, tid uint32, id, worker
 	return tx.QuotaOperation.UpdateOne(op).SetUpdatedAt(databaseNow).Where(quotaoperation.TenantIDEQ(tid), quotaoperation.OperationIDEQ(id), quotaDispatchDue).
 		SetDispatchState(quotaoperation.DispatchStateDispatching).AddAttemptCount(1).AddLeaseGeneration(1).SetLeaseOwner(worker).
 		Modify(func(u *entsql.UpdateBuilder) { u.Set(quotaoperation.FieldLeaseUntil, quotaLeaseUntil(lease)) }).Save(ctx)
-}
-func claimGpuUsageSync(ctx context.Context, tx *ent.Tx, tid uint32, id, worker string, lease time.Duration) (*ent.GpuUsageSync, error) {
-	databaseNow, clockErr := quotaDatabaseNow(ctx, tx)
-	if clockErr != nil {
-		return nil, clockErr
-	}
-	row, err := tx.GpuUsageSync.Query().Where(gpuusagesync.TenantIDEQ(tid), gpuusagesync.OperationIDEQ(id), gpuSyncDue).ForUpdate().Only(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return tx.GpuUsageSync.UpdateOne(row).SetUpdatedAt(databaseNow).Where(gpuusagesync.TenantIDEQ(tid), gpuusagesync.OperationIDEQ(id), gpuSyncDue).
-		AddAttemptCount(1).AddLeaseGeneration(1).SetLeaseOwner(worker).
-		Modify(func(u *entsql.UpdateBuilder) { u.Set(gpuusagesync.FieldLeaseUntil, quotaLeaseUntil(lease)) }).Save(ctx)
-}
-
-// New revisions invalidate the old lease atomically. Late projections cannot
-// overwrite a newer revision, payload, retry decision or acknowledgement.
-func upsertGpuUsageSync(ctx context.Context, tx *ent.Tx, v *ent.GpuUsageSync) error {
-	databaseNow, clockErr := quotaDatabaseNow(ctx, tx)
-	if clockErr != nil {
-		return clockErr
-	}
-	err := tx.GpuUsageSync.Create().SetCreatedAt(databaseNow).SetUpdatedAt(databaseNow).SetTenantID(*v.TenantID).SetOperationID(v.OperationID).
-		SetRevision(v.Revision).SetState(v.State).SetPayloadJSON(v.PayloadJSON).SetPayloadHash(v.PayloadHash).
-		SetResourceTenantID(v.ResourceTenantID).SetOwnerService(v.OwnerService).SetResourceID(v.ResourceID).
-		OnConflict(entsql.ConflictColumns(gpuusagesync.FieldTenantID, gpuusagesync.FieldOperationID),
-			entsql.UpdateWhere(entsql.LT(gpuusagesync.FieldRevision, entsql.Expr("EXCLUDED.revision")))).
-		Update(func(u *ent.GpuUsageSyncUpsert) {
-			u.SetRevision(v.Revision).SetState(v.State).SetPayloadJSON(v.PayloadJSON).SetPayloadHash(v.PayloadHash).
-				SetRetryBlocked(false).ClearNextAttemptAt().ClearLeaseOwner().ClearLeaseUntil().AddLeaseGeneration(1).SetUpdatedAt(databaseNow)
-		}).Exec(ctx)
-	// Ent upsert requests RETURNING id. A rejected older/equal revision
-	// returns no row, which is the intended conditional no-op.
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-	return err
-}
-
-// Only this bounded worker scan is global. Returned candidates carry a tenant;
-// projection source reads and mutations always use tenant-scoped Ent predicates.
-func scanGpuCreatePage(ctx context.Context, tx *ent.Tx, afterID int64, limit int) ([]*ent.QuotaOperation, error) {
-	return tx.QuotaOperation.Query().Where(quotaoperation.CreateOperationIDIsNil(), func(s *entsql.Selector) {
-		s.Where(entsql.GT(s.C(quotaoperation.FieldID), afterID))
-		// The schema marker selects only accepted new-contract commands. Terminal
-		// audit records from the cutover are never parsed as running payloads.
-		s.Where(entsql.P(func(b *entsql.Builder) {
-			column := s.C(quotaoperation.FieldCanonicalRequest)
-			b.WriteString("(" + column + "::jsonb->>'schema_version' = '3' OR (" + column + "::jsonb->>'schema' = ").Arg(commandcontract.InferenceSchema).WriteString(" AND " + column + "::jsonb->>'resource_class' = ").Arg(strconv.FormatInt(int64(commandcontract.InferenceGPUClass), 10)).WriteString(") OR (" + s.C(quotaoperation.FieldOwnerService) + " = ").Arg(commandcontract.ModelDevOwner).WriteString(" AND " + column + "::jsonb->>'schema' = ").Arg(commandcontract.ModelDevGPUSchema).WriteString("))")
-		}))
-
-	}).Order(ent.Asc(quotaoperation.FieldID)).Limit(limit).All(ctx)
 }

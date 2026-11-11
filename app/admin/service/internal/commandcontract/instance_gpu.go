@@ -122,76 +122,23 @@ func Hash(v any) (string, error) {
 }
 
 func SpecDigest(p *acc.GpuProfile) (string, error) {
-	if p == nil || p.Spec == nil {
+	if p == nil {
 		return "", fmt.Errorf("invalid spec")
 	}
-	v, err := CanonicalMessage(p.Spec.ProtoReflect())
-	if err != nil {
-		return "", err
-	}
-	return Hash(map[string]any{"spec": v, "baseline_id": p.BaselineId})
+	return protocol.ProfileSpecDigest(p.Spec, p.BaselineId)
 }
 
-func GpuProjectionDigest(p *acc.GpuUsageProjection) (string, error) {
-	if p == nil || p.Ref == nil {
-		return "", fmt.Errorf("invalid projection")
-	}
-	ref, err := CanonicalMessage(p.Ref.ProtoReflect())
-	if err != nil {
-		return "", err
-	}
-	return Hash(map[string]any{"ref": ref, "revision": strconv.FormatUint(p.Revision, 10), "state": strconv.FormatInt(int64(p.State), 10), "profile_id": p.ProfileId, "profile_version": strconv.FormatUint(p.ProfileVersion, 10), "group_id": p.GroupId, "baseline_id": p.BaselineId, "cluster_id": p.ClusterId, "container_name": p.ContainerName, "execution_digest": p.ExecutionDigest, "end_reason": strconv.FormatInt(int64(p.EndReason), 10), "source_fact_ref": p.SourceFactRef, "source_operation_created_at": p.SourceOperationCreatedAt})
-}
-
-// GpuResolvedQuota validates the final execution and the one original GPU meter.
 func GpuResolvedQuota(p *acc.ResolvedGpuRequest, request *acc.GpuRequest) (QuotaItem, error) {
-	bad := func() (QuotaItem, error) {
-		return QuotaItem{}, quotapb.ErrorInvalidQuotaRequest("%s", "invalid resolved GPU execution")
+	if err := protocol.ValidateResolvedGpuRequest(request, p); err != nil {
+		return QuotaItem{}, quotapb.ErrorInvalidQuotaRequest("%s", "invalid resolved GPU execution").WithCause(err)
 	}
-	if p == nil || p.Selection == nil || len(p.QuotaItems) != 1 || p.QuotaItems[0] == nil || len(p.ProtoReflect().GetUnknown()) != 0 || len(p.Selection.ProtoReflect().GetUnknown()) != 0 || len(p.QuotaItems[0].ProtoReflect().GetUnknown()) != 0 || protocol.ValidateGpuExecution(p.Execution) != nil {
-		return bad()
-	}
-	q, g := p.QuotaItems[0], p.Execution
-	number, err := strconv.ParseInt(g.Resources["volcano.sh/vgpu-number"], 10, 32)
-	if err != nil {
-		return bad()
-	}
-	memory, err := protocol.GpuMemoryMiBPerDevice(g)
-	if err != nil {
-		return bad()
-	}
-	replicas := int64(1)
-	if request != nil {
-		if request.Replicas < 1 || request.Replicas > 16 || request.DevicesPerReplica < 1 || number != int64(request.DevicesPerReplica) || request.ProfileId != p.Selection.ProfileId || request.ProfileVersion != p.Selection.ProfileVersion || request.ContainerName == "" {
-			return bad()
-		}
-		replicas = int64(request.Replicas)
-	}
-	if p.Selection.ProfileId == "" || p.Selection.ProfileVersion == 0 || p.Selection.ModelKey != g.NodeSelector["accelerator.ani.io/model-key"] || q.Units <= 0 {
-		return bad()
-	}
-	switch p.Selection.Mode {
-	case acc.SupplyMode_SHARED_FIXED:
-		if number != 1 || g.Resources["volcano.sh/vgpu-cores"] == "100" || memory > math.MaxInt64/replicas || q.QuotaCode != GpuSharedQuotaCode || q.Units != memory*replicas {
-			return bad()
-		}
-	case acc.SupplyMode_WHOLE_EXCLUSIVE:
-		if g.Resources["volcano.sh/vgpu-cores"] != "100" || number > math.MaxInt64/replicas || q.QuotaCode != GpuPhysicalQuotaCode || q.Units != number*replicas {
-			return bad()
-		}
-	default:
-		return bad()
-	}
-	return QuotaItem{QuotaCode: q.QuotaCode, Units: q.Units}, nil
+	return QuotaItem{QuotaCode: p.QuotaItems[0].QuotaCode, Units: p.QuotaItems[0].Units}, nil
 }
 
 type GpuQuotaItem struct {
 	QuotaCode string `json:"quota_code"`
 	Units     int64  `json:"units"`
 }
-
-// Only Governance stores the original quota vector. The owner receives the
-// business payload containing its single accepted execution and display snapshot.
 type GpuCanonical struct {
 	SchemaVersion         uint32          `json:"schema_version"`
 	GpuRequest            *acc.GpuRequest `json:"gpu_request"`
@@ -238,7 +185,7 @@ func DecodeGpuCanonical(raw []byte) (*GpuCanonical, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = GpuResolvedQuota(&acc.ResolvedGpuRequest{Execution: business.GpuExecution, Selection: business.GpuDisplay, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: q.QuotaCode, Units: q.Units}}}, c.GpuRequest)
+	_, err = GpuResolvedQuota(&acc.ResolvedGpuRequest{Execution: business.GpuExecution, BusinessSpec: business.GpuBusinessSpec, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: q.QuotaCode, Units: q.Units}}}, c.GpuRequest)
 	if err != nil {
 		return nil, err
 	}

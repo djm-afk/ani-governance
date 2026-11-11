@@ -87,7 +87,7 @@ func TestQuotaEntDatabaseTimestamps(t *testing.T) {
 	r := newTestRepo(c)
 	tid, pid := seedTenantPlan(t, c, "ent-database-clock", 20)
 	in := gpuLedgerInput(t, c.Client(), tid, pid)
-	checked := 0
+	checked := map[string]bool{}
 	check := func(next entgo.Mutator) entgo.Mutator {
 		return entgo.MutateFunc(func(ctx context.Context, m entgo.Mutation) (entgo.Value, error) {
 			client := m.(interface{ Client() *ent.Client }).Client()
@@ -104,7 +104,7 @@ func TestQuotaEntDatabaseTimestamps(t *testing.T) {
 			for _, field := range []string{"created_at", "updated_at"} {
 				if value, ok := m.Field(field); ok {
 					require.True(t, rows[0].Now.Equal(value.(time.Time)), "%s.%s must use transaction time", m.Type(), field)
-					checked++
+					checked[m.Type()+"."+field] = true
 				}
 			}
 			return next.Mutate(ctx, m)
@@ -113,22 +113,17 @@ func TestQuotaEntDatabaseTimestamps(t *testing.T) {
 	c.Client().QuotaAccount.Use(check)
 	c.Client().QuotaOperation.Use(check)
 	c.Client().QuotaCharge.Use(check)
-	c.Client().GpuUsageSync.Use(check)
 	c.Client().GpuDeleteAcceptance.Use(check)
 	c.Client().QuotaReleaseReceipt.Use(check)
 	c.Client().PlanQuota.Use(check)
 	ctx := context.Background()
 	created, err := r.Occupy(ctx, in)
 	require.NoError(t, err)
-	require.NoError(t, r.UpsertGpuUsageProjection(ctx, tid, created.OperationID, 1, "DECLARED", gpuProjectionPayload(in, created.OperationID, 1, "clock"), "clock"))
-	claims, err := r.ClaimGpuUsageSync(ctx, "clock-worker", time.Minute, 10)
-	require.NoError(t, err)
-	require.Len(t, claims, 1)
-	ok, err := r.AckGpuUsageSync(ctx, tid, created.OperationID, 1, claims[0].LeaseGeneration)
-	require.NoError(t, err)
-	require.True(t, ok)
+
 	require.NoError(t, r.CancelUnsent(ctx, tid, created.OperationID))
-	require.Greater(t, checked, 15)
+	for _, field := range []string{"QuotaAccount.created_at", "QuotaAccount.updated_at", "QuotaOperation.created_at", "QuotaOperation.updated_at", "QuotaCharge.created_at", "QuotaCharge.updated_at"} {
+		require.True(t, checked[field], "real ledger admission and cancellation must exercise %s", field)
+	}
 }
 
 func TestQuotaEntTransactionFailures(t *testing.T) {

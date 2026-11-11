@@ -35,14 +35,21 @@ func wireAcceleratorSpec(v *acc.ProfileSpec) *view.AcceleratorProfileSpec {
 	if v == nil {
 		return nil
 	}
-	return &view.AcceleratorProfileSpec{GroupId: v.GroupId, Mode: v.Mode.String(), ModelKey: v.ModelKey, MemoryMibPerDevice: v.MemoryMibPerDevice, CoreLimitPercent: v.CoreLimitPercent, MaxDevicesPerReplica: v.MaxDevicesPerReplica, IsolationClass: v.IsolationClass}
+	return &view.AcceleratorProfileSpec{GroupId: v.GroupId, Mode: v.Mode.String(), ModelKey: v.ModelKey, MemoryMibPerDevice: v.MemoryMibPerDevice, CoreLimitPercent: v.CoreLimitPercent, MaxDevicesPerReplica: v.MaxDevicesPerReplica, IsolationClass: v.IsolationClass, AllocationType: v.AllocationType.String(), ResourceKey: v.ResourceKey, ComputeUnitsPerDevice: v.ComputeUnitsPerDevice}
 }
 func acceleratorSpecInput(v *view.AcceleratorProfileSpec) (*acc.ProfileSpec, error) {
+	if v == nil {
+		return nil, acceleratorInvalid()
+	}
+	allocation, ok := acc.AllocationType_value[v.AllocationType]
+	if !ok || allocation == 0 {
+		return nil, acceleratorInvalid()
+	}
 	mode, ok := acc.SupplyMode_value[v.Mode]
 	if !ok || mode == 0 {
 		return nil, acceleratorInvalid()
 	}
-	return &acc.ProfileSpec{GroupId: v.GroupId, Mode: acc.SupplyMode(mode), ModelKey: v.ModelKey, MemoryMibPerDevice: v.MemoryMibPerDevice, CoreLimitPercent: v.CoreLimitPercent, MaxDevicesPerReplica: v.MaxDevicesPerReplica, IsolationClass: v.IsolationClass}, nil
+	return &acc.ProfileSpec{GroupId: v.GroupId, Mode: acc.SupplyMode(mode), ModelKey: v.ModelKey, MemoryMibPerDevice: v.MemoryMibPerDevice, CoreLimitPercent: v.CoreLimitPercent, MaxDevicesPerReplica: v.MaxDevicesPerReplica, IsolationClass: v.IsolationClass, AllocationType: acc.AllocationType(allocation), ResourceKey: v.ResourceKey, ComputeUnitsPerDevice: v.ComputeUnitsPerDevice}, nil
 }
 func wireAcceleratorProfile(v *acc.GpuProfile) *view.AcceleratorProfile {
 	return &view.AcceleratorProfile{ProfileId: v.ProfileId, ProfileVersion: v.ProfileVersion, DisplayName: v.DisplayName, Spec: wireAcceleratorSpec(v.Spec), State: v.State.String(), Revision: v.Revision}
@@ -64,33 +71,89 @@ func wireAcceleratorBaseline(v *acc.ProviderBaseline) *view.AcceleratorBaseline 
 	if v == nil {
 		return nil
 	}
-	return &view.AcceleratorBaseline{BaselineId: v.BaselineId, AdapterId: v.AdapterId, VolcanoVersion: v.VolcanoVersion, VolcanoImageDigest: v.VolcanoImageDigest, DevicePluginVersion: v.DevicePluginVersion, DevicePluginImageDigest: v.DevicePluginImageDigest, HamiCoreRevision: v.HamiCoreRevision, MemoryBlockMib: v.MemoryBlockMib, MemoryEncoding: v.MemoryEncoding, SplitCount: v.SplitCount, MemoryScalePercent: v.MemoryScalePercent, CoreScalePercent: v.CoreScalePercent, CoreBudgetAdditive: v.CoreBudgetAdditive, NodeConfigDigest: v.NodeConfigDigest, SchedulerConfigDigest: v.SchedulerConfigDigest, RecipeVersion: v.RecipeVersion, BaselineDigest: v.BaselineDigest, RuntimeClassName: v.RuntimeClassName}
+	out := &view.AcceleratorBaseline{BaselineId: v.BaselineId, AdapterId: v.AdapterId, MemoryBlockMib: v.MemoryBlockMib, SplitCount: v.SplitCount, CoreBudgetAdditive: v.CoreBudgetAdditive, RuntimeClassName: v.RuntimeClassName}
+	for _, t := range v.ResourceTypes {
+		if t == nil {
+			continue
+		}
+		out.ResourceTypes = append(out.ResourceTypes, &view.AcceleratorResourceTypeConfig{AllocationType: t.AllocationType.String(), ResourceKey: t.ResourceKey, MemoryCapacityBytes: t.MemoryCapacityBytes, ComputeUnitsPerDevice: t.ComputeUnitsPerDevice, MaxDevicesPerReplica: t.MaxDevicesPerReplica, MaxMemoryMibPerDevice: t.MaxMemoryMibPerDevice})
+	}
+	return out
 }
-func acceleratorBaselineInput(v *view.AcceleratorBaseline) *acc.ProviderBaseline {
-	return &acc.ProviderBaseline{BaselineId: v.BaselineId, AdapterId: v.AdapterId, VolcanoVersion: v.VolcanoVersion, VolcanoImageDigest: v.VolcanoImageDigest, DevicePluginVersion: v.DevicePluginVersion, DevicePluginImageDigest: v.DevicePluginImageDigest, HamiCoreRevision: v.HamiCoreRevision, MemoryBlockMib: v.MemoryBlockMib, MemoryEncoding: v.MemoryEncoding, SplitCount: v.SplitCount, MemoryScalePercent: v.MemoryScalePercent, CoreScalePercent: v.CoreScalePercent, CoreBudgetAdditive: v.CoreBudgetAdditive, NodeConfigDigest: v.NodeConfigDigest, SchedulerConfigDigest: v.SchedulerConfigDigest, RecipeVersion: v.RecipeVersion, BaselineDigest: v.BaselineDigest, RuntimeClassName: v.RuntimeClassName}
+func acceleratorBaselineInput(v *view.AcceleratorBaseline) (*acc.ProviderBaseline, error) {
+	if v == nil {
+		return nil, acceleratorInvalid()
+	}
+	out := &acc.ProviderBaseline{BaselineId: v.BaselineId, AdapterId: v.AdapterId, MemoryBlockMib: v.MemoryBlockMib, SplitCount: v.SplitCount, CoreBudgetAdditive: v.CoreBudgetAdditive, RuntimeClassName: v.RuntimeClassName}
+	for _, t := range v.ResourceTypes {
+		if t == nil {
+			return nil, acceleratorInvalid()
+		}
+		allocation, ok := acc.AllocationType_value[t.AllocationType]
+		if !ok || allocation == 0 {
+			return nil, acceleratorInvalid()
+		}
+		out.ResourceTypes = append(out.ResourceTypes, &acc.ResourceTypeConfig{AllocationType: acc.AllocationType(allocation), ResourceKey: t.ResourceKey, MemoryCapacityBytes: t.MemoryCapacityBytes, ComputeUnitsPerDevice: t.ComputeUnitsPerDevice, MaxDevicesPerReplica: t.MaxDevicesPerReplica, MaxMemoryMibPerDevice: t.MaxMemoryMibPerDevice})
+	}
+	return out, nil
 }
 func wireAcceleratorSupply(v *acc.SupplyGroup) *view.AcceleratorSupply {
-	out := &view.AcceleratorSupply{GroupId: v.GroupId, PoolId: v.PoolId, ClusterId: v.ClusterId, DisplayName: v.DisplayName, Mode: v.Mode.String(), ModelKey: v.ModelKey, Baseline: wireAcceleratorBaseline(v.Baseline), Admission: v.Admission.String(), QueueName: v.QueueName, Version: v.Version, AdoptedAt: v.AdoptedAt}
+	out := &view.AcceleratorSupply{GroupId: v.GroupId, PoolId: v.PoolId, ClusterId: v.ClusterId, DisplayName: v.DisplayName, ModelKey: v.ModelKey, Baseline: wireAcceleratorBaseline(v.Baseline), Admission: v.Admission.String(), QueueName: v.QueueName, Version: v.Version, AdoptedAt: v.AdoptedAt}
 	for _, n := range v.Nodes {
 		out.Nodes = append(out.Nodes, &view.AcceleratorNode{Uid: n.GetUid(), Name: n.GetName()})
 	}
 	return out
 }
-func wireAcceleratorCapacity(v *acc.CapacityView, admin bool) *view.AcceleratorCapacity {
-	out := &view.AcceleratorCapacity{ProfileId: v.ProfileId, ProfileVersion: v.ProfileVersion, Mode: v.Mode.String(), PhysicalDeviceCount: v.PhysicalDeviceCount, NominalUnits: v.NominalUnits, KnownCommittedUnits: v.KnownCommittedUnits, KnownFreeUnits: v.KnownFreeUnits, UnplacedRequestedUnits: v.UnplacedRequestedUnits, Observation: wireAcceleratorObservation(v.Observation)}
-	if admin {
-		for _, d := range v.Devices {
-			if d == nil {
-				continue
-			}
-			out.Devices = append(out.Devices, &view.AcceleratorDeviceCapacity{DeviceId: d.DeviceId, NominalUnits: d.NominalUnits, KnownCommittedUnits: d.KnownCommittedUnits, KnownFreeUnits: d.KnownFreeUnits, SafeMemoryBudgetMib: d.SafeMemoryBudgetMib, CommittedMemoryMib: d.CommittedMemoryMib, Complete: d.Complete, Issues: d.Issues})
-		}
+
+func wireAcceleratorDevice(v *acc.PhysicalDevice) *view.AcceleratorDevice {
+	if v == nil {
+		return nil
+	}
+	out := &view.AcceleratorDevice{DeviceId: v.DeviceId, ClusterId: v.ClusterId, GroupId: v.GroupId, ModelKey: v.ModelKey, Health: v.Health, Observation: wireAcceleratorObservation(v.Observation), DeviceUid: v.DeviceUid, ParentDeviceUid: v.ParentDeviceUid, DeviceKind: v.DeviceKind.String(), MemoryCapacityBytes: v.MemoryCapacityBytes, ComputeUnits: v.ComputeUnits, PciBdf: v.PciBdf, AdapterId: v.AdapterId, ResourceKey: v.ResourceKey}
+	if v.Node != nil {
+		out.Node = &view.AcceleratorNode{Uid: v.Node.Uid, Name: v.Node.Name}
 	}
 	return out
 }
-func wireAcceleratorUsage(v *acc.GpuUsageProjection) *view.AcceleratorUsage {
-	return &view.AcceleratorUsage{OwnerService: v.Ref.GetOwnerService(), ResourceId: v.Ref.GetResourceId(), CreateOperationId: v.Ref.GetCreateOperationId(), Revision: v.Revision, State: v.State.String(), EndReason: v.EndReason.String(), ProfileId: v.ProfileId, ProfileVersion: v.ProfileVersion, SourceOperationCreatedAt: v.SourceOperationCreatedAt}
+func wireAcceleratorCapacityTotals(v *acc.CapacityTotals) *view.AcceleratorCapacityTotals {
+	if v == nil {
+		return &view.AcceleratorCapacityTotals{}
+	}
+	return &view.AcceleratorCapacityTotals{TotalUnits: v.TotalUnits, AllocatedUnits: v.AllocatedUnits, UnallocatedUnits: v.UnallocatedUnits, TotalMemoryMib: v.TotalMemoryMib, AllocatedMemoryMib: v.AllocatedMemoryMib, UnallocatedMemoryMib: v.UnallocatedMemoryMib}
 }
-func wireAcceleratorBinding(v *acc.GpuBinding) *view.AcceleratorBinding {
-	return &view.AcceleratorBinding{BindingId: v.BindingId, ContainerName: v.Pod.GetContainerName(), State: v.State.String(), MemoryMib: v.MemoryMib, CoreLimitPercent: v.CoreLimitPercent, Observation: wireAcceleratorObservation(v.Observation)}
+func wireAcceleratorCapacityDetail(v *acc.CapacityDetail) *view.AcceleratorCapacityDetail {
+	if v == nil {
+		return nil
+	}
+	return &view.AcceleratorCapacityDetail{NodeUid: v.NodeUid, NodeName: v.NodeName, DeviceUid: v.DeviceUid, Totals: wireAcceleratorCapacityTotals(v.Totals), NominalUnits: v.NominalUnits, EstimatedAvailableUnits: v.EstimatedAvailableUnits}
+}
+func wireAcceleratorProfileCapacity(v *acc.ProfileCapacity) *view.AcceleratorProfileCapacity {
+	if v == nil {
+		return nil
+	}
+	out := &view.AcceleratorProfileCapacity{ProfileId: v.ProfileId, ProfileVersion: v.ProfileVersion, AllocationType: v.AllocationType.String(), ResourceKey: v.ResourceKey, Basis: v.Basis.String(), Granularity: v.Granularity.String(), NominalUnits: v.NominalUnits, EstimatedAvailableUnits: v.EstimatedAvailableUnits, Totals: wireAcceleratorCapacityTotals(v.Totals), ObservedAt: v.ObservedAt, MissingFields: v.MissingFields}
+	for _, d := range v.Details {
+		out.Details = append(out.Details, wireAcceleratorCapacityDetail(d))
+	}
+	return out
+}
+func wireAcceleratorResourceTypeCapacity(v *acc.ResourceTypeCapacity) *view.AcceleratorResourceTypeCapacity {
+	if v == nil {
+		return nil
+	}
+	out := &view.AcceleratorResourceTypeCapacity{AllocationType: v.AllocationType.String(), ResourceKey: v.ResourceKey, Basis: v.Basis.String(), Granularity: v.Granularity.String(), Totals: wireAcceleratorCapacityTotals(v.Totals), ObservedAt: v.ObservedAt, MissingFields: v.MissingFields}
+	for _, d := range v.Details {
+		out.Details = append(out.Details, wireAcceleratorCapacityDetail(d))
+	}
+	return out
+}
+func wireAcceleratorSupplyGroupCapacity(v *acc.SupplyGroupCapacity) *view.AcceleratorSupplyGroupCapacity {
+	if v == nil {
+		return nil
+	}
+	out := &view.AcceleratorSupplyGroupCapacity{GroupId: v.GroupId, PhysicalDeviceCount: v.PhysicalDeviceCount, ObservedAt: v.ObservedAt}
+	for _, t := range v.ResourceTypes {
+		out.ResourceTypes = append(out.ResourceTypes, wireAcceleratorResourceTypeCapacity(t))
+	}
+	return out
 }

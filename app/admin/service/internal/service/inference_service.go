@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/google/uuid"
-
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	contractv1 "github.com/liangzai006/ani-inference-service/api/inference/contract/v1"
 	runtimev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
@@ -111,62 +109,8 @@ func (*InferenceGpuBinding) CanonicalGpuBusiness(message proto.Message) ([]byte,
 	return contractv1.CanonicalBusinessPayload(request)
 }
 
-// Model readiness is a new-admission dependency. GpuAcceptance invokes this
-// resolver only after current authorization and the durable replay gate.
-func (b *InferenceGpuBinding) ResolveGpuBusiness(ctx context.Context, p *auth.Principal, tenant string, message proto.Message) (*acc.GpuRequest, proto.Message, error) {
-	request, ok := message.(*runtimev1.CreateInferenceServiceRequest)
-	if !ok || request == nil || request.GetResource().GetGpu() == nil || p == nil {
-		return nil, nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference user business")
-	}
-	actor, err := p.Actor()
-	if err != nil {
-		return nil, nil, status.Error(codes.Unauthenticated, "login required")
-	}
-	if err := checkInferenceModelReady(ctx, b.model, tenant, actor, request.ModelVersionId); err != nil {
-		return nil, nil, err
-	}
-	return inferenceGpuRequest(request.Resource.Gpu), request, nil
-}
-
-func (*InferenceGpuBinding) ValidateGpuBusiness(_ context.Context, message proto.Message) ([]data.QuotaOccupyItem, error) {
-	r, ok := message.(*runtimev1.CreateInferenceServiceRequest)
-	if !ok || r == nil || r.GetResource().GetGpu() == nil || r.GetRequestId() != "" {
-		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference user business")
-	}
-	if err := contractv1.ValidateBusinessPayload(r); err != nil {
-		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference business or GPU topology")
-	}
-	// This slice adds the established GPU meter. Dispatch below preserves all
-	// original mixed charges already present in a frozen business command.
-	return nil, nil
-}
-
-// FinalizeGpuBusiness binds the ACC resolved execution/display snapshot to the
-// immutable Inference business payload. Governance keeps the original quota
-// vector in its ledger; Inference receives only this frozen owner payload.
-func (b *InferenceGpuBinding) FinalizeGpuBusiness(_ context.Context, tenant, actorType, actorID, operationID, resourceID string, message proto.Message, plan *acc.ResolvedGpuRequest) ([]byte, error) {
-	request, ok := proto.Clone(message).(*runtimev1.CreateInferenceServiceRequest)
-	if !ok || request == nil || plan == nil || plan.Execution == nil || plan.Selection == nil {
-		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid resolved inference GPU plan")
-	}
-	for _, identity := range []string{tenant, operationID, resourceID} {
-		if parsed, err := uuid.Parse(identity); err != nil || parsed == uuid.Nil || parsed.String() != identity {
-			return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference command identity")
-		}
-	}
-	request.Context = &runtimev1.CommandContext{TenantId: tenant, ResourceId: resourceID, OperationId: operationID}
-	request.ClusterId = request.GetResource().GetGpu().GetClusterId()
-	request.GpuExecution = proto.Clone(plan.Execution).(*acc.GpuExecution)
-	request.GpuDisplay = proto.Clone(plan.Selection).(*acc.GpuDisplay)
-	digest, err := contractv1.ManagedCreateRequestHash(request, tenant, actorType, actorID)
-	if err != nil {
-		return nil, quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference managed request")
-	}
-	request.Context.RequestDigest = digest
-	if err := contractv1.ValidateBusinessPayload(request); err != nil {
-		return nil, quotapb.ErrorInvalidQuotaRequest("%s", err.Error())
-	}
-	return contractv1.CanonicalBusinessPayload(request)
+func (*InferenceGpuBinding) ValidateGpuBusiness(context.Context, proto.Message) ([]data.QuotaOccupyItem, error) {
+	return nil, commandcontract.GPUOwnerUnavailable()
 }
 
 func (b *InferenceGpuBinding) Dispatch(ctx context.Context, command *QuotaDispatchCommand) ([]byte, error) {
@@ -178,13 +122,6 @@ func validateInferenceDurableAck(command *QuotaDispatchCommand, reply *runtimev1
 		return quotapb.ErrorInvalidQuotaRequest("%s", "invalid inference durable ACK")
 	}
 	return nil
-}
-
-func inferenceGpuRequest(g *runtimev1.GpuRequest) *acc.GpuRequest {
-	if g == nil {
-		return nil
-	}
-	return &acc.GpuRequest{ClusterId: g.ClusterId, PoolId: g.PoolId, ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion, Replicas: g.Replicas, DevicesPerReplica: g.DevicesPerReplica, ContainerName: g.ContainerName}
 }
 
 func quotaActorString(actor QuotaActor) string {

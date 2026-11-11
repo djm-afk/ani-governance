@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -22,7 +23,8 @@ type initializationJointSeed struct {
 	DiscoveryRevision string `json:"discovery_revision"`
 	NodeUID           string `json:"node_uid"`
 	NodeName          string `json:"node_name"`
-	BaselineRef       string `json:"baseline_ref"`
+	ProviderConfigRef string `json:"provider_config_ref"`
+	ConnectionRef     string `json:"connection_ref"`
 }
 
 func initializationJointGrant(method, path string) bool {
@@ -54,18 +56,18 @@ func runAcceleratorInitializationJointHTTP(t *testing.T, request func(string, st
 	t.Helper()
 	seed := initializationJointInput(t)
 	const root = "/api/v1/admin/accelerator/"
-	request("GET", root+"initialization", "", nil, http.StatusUnauthorized)
-	request("GET", root+"initialization", tenantToken, nil, http.StatusForbidden)
-	summary := request("GET", root+"initialization", platformToken, nil, http.StatusOK)
+	request("GET", root+"initialization?connection_ref="+url.QueryEscape(seed.ConnectionRef), "", nil, http.StatusUnauthorized)
+	request("GET", root+"initialization?connection_ref="+url.QueryEscape(seed.ConnectionRef), tenantToken, nil, http.StatusForbidden)
+	summary := request("GET", root+"initialization?connection_ref="+url.QueryEscape(seed.ConnectionRef), platformToken, nil, http.StatusOK)
 	require.Equal(t, true, summary["registered"])
-	discovered := request("GET", root+"discovered-nodes?page=1&pageSize=20", platformToken, nil, http.StatusOK)
+	discovered := request("GET", root+"discovered-nodes?page=1&pageSize=20&connection_ref="+url.QueryEscape(seed.ConnectionRef), platformToken, nil, http.StatusOK)
 	require.Equal(t, "1", discovered["total"])
 	require.Equal(t, seed.DiscoveryRevision, discovered["discovery_revision"])
 	create := map[string]any{"data": map[string]any{
-		"idempotency_key": uuid.NewString(), "discovery_revision": seed.DiscoveryRevision,
+		"idempotency_key": uuid.NewString(), "discovery_revision": seed.DiscoveryRevision, "connection_ref": seed.ConnectionRef,
 		"pools":    []any{map[string]any{"client_key": "pool", "new_pool": map[string]any{"display_name": "joint initialized pool"}}},
-		"groups":   []any{map[string]any{"client_key": "group", "new_group": map[string]any{"pool_key": "pool", "display_name": "joint initialized group", "nodes": []any{map[string]any{"uid": seed.NodeUID, "name": seed.NodeName}}, "baseline_ref": seed.BaselineRef, "queue_name": "default"}}},
-		"profiles": []any{map[string]any{"client_key": "profile", "group_key": "group", "display_name": "joint 8GiB", "memory_mib_per_device": "8192", "core_limit_percent": 25, "max_devices_per_replica": 1}},
+		"groups":   []any{map[string]any{"client_key": "group", "new_group": map[string]any{"pool_key": "pool", "display_name": "joint initialized group", "nodes": []any{map[string]any{"uid": seed.NodeUID, "name": seed.NodeName}}, "provider_config_ref": seed.ProviderConfigRef, "queue_name": "default"}}},
+		"profiles": []any{map[string]any{"client_key": "profile", "group_key": "group", "display_name": "joint 8GiB", "memory_mib_per_device": "8192", "core_limit_percent": 25, "max_devices_per_replica": 1, "allocation_type": "DYNAMIC_SHARED", "resource_key": "volcano.sh/vgpu-number", "compute_units_per_device": 0}},
 	}}
 	accepted := request("POST", root+"initializations", platformToken, create, http.StatusOK)
 	require.Equal(t, "ACCEPTED", accepted["state"])
@@ -103,7 +105,7 @@ func runAcceleratorInitializationJointHTTP(t *testing.T, request func(string, st
 	profiles := completed["profiles"].([]any)
 	require.Len(t, profiles, 1)
 	require.Equal(t, "PROFILE_ACTIVE", profiles[0].(map[string]any)["recorded_state"])
-	summary = request("GET", root+"initialization", platformToken, nil, http.StatusOK)
+	summary = request("GET", root+"initialization?connection_ref="+url.QueryEscape(seed.ConnectionRef), platformToken, nil, http.StatusOK)
 	require.Equal(t, true, summary["configuration_complete"])
 	require.Equal(t, operationID, summary["latest_operation"].(map[string]any)["operation_id"])
 	t.Log("PASS real generated HTTP/JWT/token-cache/DB policy/Casbin/BFF/mTLS/ACC domain/PG/worker; Kubernetes discovery and label writes are external boundary fixtures")

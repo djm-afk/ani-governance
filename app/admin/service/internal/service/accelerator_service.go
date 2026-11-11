@@ -21,10 +21,7 @@ import (
 )
 
 type GpuUsageRefResolver interface {
-	ResolveGpuUsageRef(context.Context, uint32, string, string) (*acc.GpuUsageRef, error)
-}
-type GpuPreviewQuotaReader interface {
-	GPUPreviewQuota(context.Context, uint32, []*view.GpuPreviewQuotaItem) ([]*view.GpuPreviewQuotaCheck, error)
+	ResolveGpuUsageRef(context.Context, uint32, string, string) (*GpuUsageRef, error)
 }
 type AcceleratorQuotaAccounts interface {
 	ListTenantAccounts(context.Context, uint32) ([]*quotapb.QuotaAccountView, error)
@@ -33,18 +30,17 @@ type AcceleratorQuotaAccounts interface {
 type AcceleratorService struct {
 	admin.UnimplementedAcceleratorServiceServer
 	admin.UnimplementedAcceleratorAdminServiceServer
+	admin.UnimplementedAcceleratorCapacityAdminServiceServer
 	admin.UnimplementedQuotaSelfServiceServer
 	client           *data.AcceleratorClient
 	tenants          ResourceTenantResolver
 	refs             GpuUsageRefResolver
-	quotas           GpuPreviewQuotaReader
 	accounts         AcceleratorQuotaAccounts
-	registry         *QuotaAdapterRegistry
 	actionAuthorizer AcceleratorActionAuthorizer
 }
 
-func NewAcceleratorService(client *data.AcceleratorClient, tenants ResourceTenantResolver, refs GpuUsageRefResolver, quotas GpuPreviewQuotaReader, accounts AcceleratorQuotaAccounts, registry *QuotaAdapterRegistry, actionAuthorizer AcceleratorActionAuthorizer) *AcceleratorService {
-	return &AcceleratorService{client: client, tenants: tenants, refs: refs, quotas: quotas, accounts: accounts, registry: registry, actionAuthorizer: actionAuthorizer}
+func NewAcceleratorService(client *data.AcceleratorClient, tenants ResourceTenantResolver, refs GpuUsageRefResolver, accounts AcceleratorQuotaAccounts, actionAuthorizer AcceleratorActionAuthorizer) *AcceleratorService {
+	return &AcceleratorService{client: client, tenants: tenants, refs: refs, accounts: accounts, actionAuthorizer: actionAuthorizer}
 }
 
 func acceleratorPrincipal(ctx context.Context, platform bool) (*auth.Principal, error) {
@@ -286,11 +282,11 @@ func (s *AcceleratorService) AdoptSupplyGroup(ctx context.Context, r *view.Adopt
 	if e != nil {
 		return nil, e
 	}
-	mode, ok := acc.SupplyMode_value[d.Mode]
-	if !ok || mode == 0 {
-		return nil, acceleratorInvalid()
+	baseline, e := acceleratorBaselineInput(d.Baseline)
+	if e != nil {
+		return nil, e
 	}
-	req := &acc.AdoptSupplyGroupRequest{Mutation: m, DisplayName: d.DisplayName, PoolId: d.PoolId, Mode: acc.SupplyMode(mode), ModelKey: d.ModelKey, Baseline: acceleratorBaselineInput(d.Baseline), QueueName: d.QueueName}
+	req := &acc.AdoptSupplyGroupRequest{Mutation: m, DisplayName: d.DisplayName, PoolId: d.PoolId, ModelKey: d.ModelKey, Baseline: baseline, QueueName: d.QueueName}
 	for _, n := range d.Nodes {
 		if n == nil {
 			return nil, acceleratorInvalid()
@@ -394,50 +390,10 @@ func (s *AcceleratorService) ListDevices(ctx context.Context, r *view.Accelerato
 		if x == nil {
 			return nil, acceleratorInvalidResponse()
 		}
-		out.Items = append(out.Items, &view.AcceleratorDevice{DeviceId: x.DeviceId, ClusterId: x.ClusterId, GroupId: x.GroupId, Node: &view.AcceleratorNode{Uid: x.Node.GetUid(), Name: x.Node.GetName()}, VendorDeviceId: x.VendorDeviceId, ModelKey: x.ModelKey, PhysicalMemoryBytes: x.PhysicalMemoryBytes, Health: x.Health, Observation: wireAcceleratorObservation(x.Observation)})
+		out.Items = append(out.Items, wireAcceleratorDevice(x))
 	}
 	return out, nil
 }
-func (s *AcceleratorService) AdminListBindings(ctx context.Context, r *view.AcceleratorPageRequest) (*view.AcceleratorAdminBindings, error) {
-	c, e := s.adminContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	p, e := acceleratorPage(r.GetPageSize(), r.GetPageToken())
-	if e != nil {
-		return nil, e
-	}
-	v, e := s.client.Admin.AdminListBindings(ctx, &acc.AdminListBindingsRequest{Context: c, ClusterId: r.GetClusterId(), PhysicalDeviceId: r.GetPhysicalDeviceId(), Page: p})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if v == nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	out := &view.AcceleratorAdminBindings{NextPageToken: v.NextToken, Observation: wireAcceleratorObservation(v.Observation)}
-	for _, x := range v.Items {
-		if x == nil {
-			return nil, acceleratorInvalidResponse()
-		}
-		out.Items = append(out.Items, &view.AcceleratorAdminBinding{Binding: wireAcceleratorBinding(x), PhysicalDeviceId: x.PhysicalDeviceId, ClusterId: x.Pod.GetClusterId(), PodNamespace: x.Pod.GetNamespace(), PodName: x.Pod.GetName(), PodUid: x.Pod.GetUid(), EvidenceRef: x.EvidenceRef, TenantId: x.VerifiedUsageRef.GetTenantId(), OwnerService: x.VerifiedUsageRef.GetOwnerService(), ResourceId: x.VerifiedUsageRef.GetResourceId()})
-	}
-	return out, nil
-}
-func (s *AcceleratorService) AdminGetCapacity(ctx context.Context, r *view.AcceleratorVersionRequest) (*view.AcceleratorCapacity, error) {
-	c, e := s.adminContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	v, e := s.client.Admin.AdminGetCapacity(ctx, &acc.AdminGetCapacityRequest{Context: c, ProfileId: r.GetProfileId(), ProfileVersion: r.GetProfileVersion(), IncludeDevices: r.GetIncludeDevices()})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if v == nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	return wireAcceleratorCapacity(v, r.GetIncludeDevices()), nil
-}
-
 func (s *AcceleratorService) ListProfiles(ctx context.Context, r *view.AcceleratorTenantPageRequest) (*view.AcceleratorProfiles, error) {
 	c, _, e := s.tenantContext(ctx)
 	if e != nil {
@@ -475,160 +431,6 @@ func (s *AcceleratorService) GetProfile(ctx context.Context, r *view.Accelerator
 	}
 	return wireAcceleratorProfile(v), nil
 }
-func (s *AcceleratorService) GetCapacity(ctx context.Context, r *view.AcceleratorTenantVersionRequest) (*view.AcceleratorCapacity, error) {
-	c, _, e := s.tenantContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	v, e := s.client.Catalog.GetCapacity(ctx, &acc.GetCapacityRequest{Context: c, ProfileId: r.GetProfileId(), ProfileVersion: r.GetProfileVersion()})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if v == nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	return wireAcceleratorCapacity(v, false), nil
-}
-func (s *AcceleratorService) AdmissionPreview(ctx context.Context, r *view.AcceleratorPreviewRequest) (*view.AcceleratorPreview, error) {
-	c, p, e := s.tenantContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	d := r.GetData()
-	if d == nil {
-		return nil, acceleratorInvalid()
-	}
-	gpu := &acc.GpuRequest{ClusterId: d.ClusterId, PoolId: d.PoolId, ProfileId: d.ProfileId, ProfileVersion: d.ProfileVersion, Replicas: d.Replicas, DevicesPerReplica: d.DevicesPerReplica, ContainerName: d.ContainerName}
-	plan, e := s.client.Catalog.ResolveGpuRequest(ctx, &acc.ResolveGpuRequestRequest{Context: c, Gpu: gpu})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	item, e := GpuResolvedQuota(plan, gpu)
-	if e != nil {
-		return nil, e
-	}
-	fit, e := s.client.Catalog.CheckGpuFit(ctx, &acc.CheckGpuFitRequest{Context: c, Gpu: gpu})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if fit == nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	items := []*view.GpuPreviewQuotaItem{{QuotaCode: item.QuotaCode, Units: item.Units}}
-	if s.quotas == nil {
-		return nil, errors.ServiceUnavailable("QUOTA_READ_UNAVAILABLE", "quota diagnostics unavailable")
-	}
-	checks, e := s.quotas.GPUPreviewQuota(ctx, p.TenantID, items)
-	if e != nil {
-		return nil, e
-	}
-	readiness := "NOT_ENABLED"
-	if s.registry != nil && s.registry.GPUExecutionEnabled(InstanceOwner) {
-		readiness = "ENFORCED"
-	}
-	reasons, reasonsValid := acceleratorPublicReasons(fit.Reasons)
-	return &view.AcceleratorPreview{RequestedQuotaItems: items, QuotaChecks: checks, GpuFit: fit.Status.String(), EstimatedReplicas: fit.EstimatedReplicas, EstimateKnown: fit.EstimateKnown && reasonsValid, Observation: wireAcceleratorObservation(fit.Observation), OwnerExecutionReadiness: readiness, Cpu: "NOT_CHECKED", Network: "NOT_CHECKED", Storage: "NOT_CHECKED", Reasons: reasons}, nil
-}
-func (s *AcceleratorService) ListGpuUsages(ctx context.Context, r *view.AcceleratorTenantPageRequest) (*view.AcceleratorUsages, error) {
-	c, _, e := s.tenantContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	p, e := acceleratorPage(r.GetPageSize(), r.GetPageToken())
-	if e != nil {
-		return nil, e
-	}
-	state := int32(0)
-	if r.GetState() != "" {
-		var ok bool
-		state, ok = acc.UsageState_value[r.GetState()]
-		if !ok {
-			return nil, acceleratorInvalid()
-		}
-	}
-	v, e := s.client.Usage.ListGpuUsages(ctx, &acc.ListGpuUsagesRequest{Context: c, OwnerService: r.GetOwnerService(), State: acc.UsageState(state), Page: p})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if v == nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	out := &view.AcceleratorUsages{NextPageToken: v.NextToken}
-	for _, x := range v.Items {
-		if x == nil || x.Ref == nil || x.Ref.TenantId != c.TenantId {
-			return nil, acceleratorInvalidResponse()
-		}
-		out.Items = append(out.Items, wireAcceleratorUsage(x))
-	}
-	return out, nil
-}
-func (s *AcceleratorService) usageRef(ctx context.Context, c *acc.TenantContext, p *auth.Principal, r *view.AcceleratorUsageRequest) (*acc.GpuUsageRef, error) {
-	if r == nil || r.OwnerService != InstanceOwner {
-		return nil, errors.NotFound("GPU_USAGE_NOT_FOUND", "resource not found")
-	}
-	id, e := uuid.Parse(r.ResourceId)
-	if e != nil || id == uuid.Nil || id.String() != r.ResourceId {
-		return nil, acceleratorInvalid()
-	}
-	if s.refs == nil {
-		return nil, errors.ServiceUnavailable("GPU_LEDGER_UNAVAILABLE", "GPU ledger unavailable")
-	}
-	ref, e := s.refs.ResolveGpuUsageRef(ctx, p.TenantID, r.OwnerService, r.ResourceId)
-	if e != nil {
-		return nil, e
-	}
-	if ref == nil || ref.TenantId != c.TenantId || ref.OwnerService != r.OwnerService || ref.ResourceId != r.ResourceId || ref.CreateOperationId == "" {
-		return nil, acceleratorInvalidResponse()
-	}
-	return ref, nil
-}
-func (s *AcceleratorService) GetGpuUsage(ctx context.Context, r *view.AcceleratorUsageRequest) (*view.AcceleratorUsage, error) {
-	c, p, e := s.tenantContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	ref, e := s.usageRef(ctx, c, p, r)
-	if e != nil {
-		return nil, e
-	}
-	v, e := s.client.Usage.GetGpuUsage(ctx, &acc.GetGpuUsageRequest{Context: c, Ref: ref})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if v == nil || !sameAcceleratorRef(v.Ref, ref) {
-		return nil, acceleratorInvalidResponse()
-	}
-	return wireAcceleratorUsage(v), nil
-}
-func (s *AcceleratorService) ListBindings(ctx context.Context, r *view.AcceleratorUsageRequest) (*view.AcceleratorBindings, error) {
-	c, p, e := s.tenantContext(ctx)
-	if e != nil {
-		return nil, e
-	}
-	ref, e := s.usageRef(ctx, c, p, r)
-	if e != nil {
-		return nil, e
-	}
-	page, e := acceleratorPage(r.GetPageSize(), r.GetPageToken())
-	if e != nil {
-		return nil, e
-	}
-	v, e := s.client.Usage.ListBindings(ctx, &acc.ListBindingsRequest{Context: c, Ref: ref, Page: page})
-	if e != nil {
-		return nil, mapAcceleratorError(e)
-	}
-	if v == nil {
-		return nil, acceleratorInvalidResponse()
-	}
-	out := &view.AcceleratorBindings{NextPageToken: v.NextToken, Observation: wireAcceleratorObservation(v.Observation)}
-	for _, x := range v.Items {
-		if x == nil || !sameAcceleratorRef(x.VerifiedUsageRef, ref) {
-			return nil, acceleratorInvalidResponse()
-		}
-		out.Items = append(out.Items, wireAcceleratorBinding(x))
-	}
-	return out, nil
-}
 func (s *AcceleratorService) GetMyQuotaAccounts(ctx context.Context, _ *emptypb.Empty) (*admin.ListTenantQuotaAccountsResponse, error) {
 	p, e := acceleratorPrincipal(ctx, false)
 	if e != nil {
@@ -642,10 +444,6 @@ func (s *AcceleratorService) GetMyQuotaAccounts(ctx context.Context, _ *emptypb.
 		return nil, err
 	}
 	return &admin.ListTenantQuotaAccountsResponse{TenantId: p.TenantID, Items: items}, nil
-}
-
-func sameAcceleratorRef(a, b *acc.GpuUsageRef) bool {
-	return a != nil && b != nil && a.TenantId == b.TenantId && a.OwnerService == b.OwnerService && a.ResourceId == b.ResourceId && a.CreateOperationId == b.CreateOperationId
 }
 
 func (s *AcceleratorService) PreviewProfile(ctx context.Context, r *view.PreviewAcceleratorProfileRequest) (*view.AcceleratorProfilePreview, error) {
@@ -710,4 +508,57 @@ func (s *AcceleratorService) DeleteProfile(ctx context.Context, r *view.DeleteAc
 		return nil, acceleratorInvalidResponse()
 	}
 	return wireAcceleratorProfile(v), nil
+}
+
+func validAcceleratorCapacityKinds(allocation acc.AllocationType, basis acc.CapacityBasis, granularity acc.CapacityGranularity) bool {
+	return allocation >= acc.AllocationType_PHYSICAL && allocation <= acc.AllocationType_FIXED_PARTITION && (basis == acc.CapacityBasis_NATIVE_ALLOCATION || basis == acc.CapacityBasis_BOUND_POD_REQUEST) && (granularity == acc.CapacityGranularity_DEVICE || granularity == acc.CapacityGranularity_NODE_RESOURCE)
+}
+func (s *AcceleratorService) GetProfileCapacity(ctx context.Context, r *view.GetAcceleratorProfileCapacityRequest) (*view.AcceleratorProfileCapacity, error) {
+	c, e := s.adminContext(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if r == nil || !acceleratorInitializationID(r.ProfileId) || r.ProfileVersion == 0 {
+		return nil, acceleratorInvalid()
+	}
+	v, e := s.client.Admin.GetProfileCapacity(ctx, &acc.GetProfileCapacityRequest{Context: c, ProfileId: r.ProfileId, ProfileVersion: r.ProfileVersion, IncludeDetails: r.IncludeDetails})
+	if e != nil {
+		return nil, mapAcceleratorError(e)
+	}
+	if v == nil || v.ProfileId != r.ProfileId || v.ProfileVersion != r.ProfileVersion || !validAcceleratorCapacityKinds(v.AllocationType, v.Basis, v.Granularity) {
+		return nil, acceleratorInvalidResponse()
+	}
+	for _, row := range v.Details {
+		if row == nil {
+			return nil, acceleratorInvalidResponse()
+		}
+	}
+	return wireAcceleratorProfileCapacity(v), nil
+}
+func (s *AcceleratorService) GetSupplyGroupCapacity(ctx context.Context, r *view.GetAcceleratorSupplyGroupCapacityRequest) (*view.AcceleratorSupplyGroupCapacity, error) {
+	c, e := s.adminContext(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if r == nil || !acceleratorInitializationID(r.GroupId) {
+		return nil, acceleratorInvalid()
+	}
+	v, e := s.client.Admin.GetSupplyGroupCapacity(ctx, &acc.GetSupplyGroupCapacityRequest{Context: c, GroupId: r.GroupId, IncludeDetails: r.IncludeDetails})
+	if e != nil {
+		return nil, mapAcceleratorError(e)
+	}
+	if v == nil || v.GroupId != r.GroupId {
+		return nil, acceleratorInvalidResponse()
+	}
+	for _, kind := range v.ResourceTypes {
+		if kind == nil || !validAcceleratorCapacityKinds(kind.AllocationType, kind.Basis, kind.Granularity) {
+			return nil, acceleratorInvalidResponse()
+		}
+		for _, row := range kind.Details {
+			if row == nil {
+				return nil, acceleratorInvalidResponse()
+			}
+		}
+	}
+	return wireAcceleratorSupplyGroupCapacity(v), nil
 }

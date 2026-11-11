@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	view "go-wind-admin/api/gen/go/gpu/service/v1"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestGpuTenantHTTPStrictPage(t *testing.T) {
@@ -34,8 +33,8 @@ func TestGpuTenantHTTPNestedMissingValuesAreNull(t *testing.T) {
 	known := 512.0
 	raw, err := gpuTenantHTTPJSON(&view.ListGpuTenantsResponse{Items: []*view.GpuTenantCurrentSummary{
 		{Usage: &view.GpuQueryResponse{Series: []*view.GpuSeries{{Quality: &view.GpuQuality{Status: "PARTIAL"}, Points: []*view.GpuPoint{{KnownValue: &known, Quality: &view.GpuQuality{Status: "PARTIAL"}}}}}}, UsageStatus: "PARTIAL"},
-		{UsageStatus: "UNAVAILABLE", UsageReason: "GPU_SOURCE_UNAVAILABLE", Allocation: &view.GpuTenantCurrentAllocation{Status: "PARTIAL", KnownMemoryMib: proto.String("8192"), KnownBindingCount: proto.Uint64(1)}},
-		{Allocation: &view.GpuTenantCurrentAllocation{Status: "UNAVAILABLE"}},
+		{UsageStatus: "UNAVAILABLE", UsageReason: "GPU_SOURCE_UNAVAILABLE", ObservationBasis: "EXPORTER_OBSERVED", OwnerScope: "ani-resource-service"},
+		{UsageStatus: "UNAVAILABLE"},
 	}, Total: 3})
 	if err != nil {
 		t.Fatal(err)
@@ -56,23 +55,15 @@ func TestGpuTenantHTTPNestedMissingValuesAreNull(t *testing.T) {
 	if point["knownValue"] != known || items[1].(map[string]any)["usage"] != nil || body["total"] != "3" {
 		t.Fatalf("unexpected current page: %s", raw)
 	}
-	allocation := items[1].(map[string]any)["allocation"].(map[string]any)
-	for _, key := range []string{"memoryMiB", "bindingCount"} {
-		value, present := allocation[key]
-		if !present || value != nil {
-			t.Fatalf("allocation %s must be explicit null: %s", key, raw)
+	for _, item := range items {
+		if _, present := item.(map[string]any)["allocation"]; present {
+			t.Fatalf("retired allocation returned %s", raw)
 		}
 	}
-	if allocation["knownMemoryMiB"] != "8192" || allocation["knownBindingCount"] != "1" {
-		t.Fatalf("known allocation was lost: %s", raw)
+	if items[1].(map[string]any)["observation_basis"] != "EXPORTER_OBSERVED" || items[1].(map[string]any)["owner_scope"] != "ani-resource-service" {
+		t.Fatalf("observation scope lost %s", raw)
 	}
-	unknown := items[2].(map[string]any)["allocation"].(map[string]any)
-	for _, key := range []string{"memoryMiB", "bindingCount", "knownMemoryMiB", "knownBindingCount"} {
-		value, present := unknown[key]
-		if !present || value != nil {
-			t.Fatalf("unavailable allocation %s must be explicit null: %s", key, raw)
-		}
-	}
+
 	raw, err = gpuTenantHTTPJSON(&view.ListGpuTenantsResponse{})
 	if err != nil || !strings.Contains(string(raw), `"items":[]`) || !strings.Contains(string(raw), `"total":"0"`) {
 		t.Fatalf("empty page: %s %v", raw, err)

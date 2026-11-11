@@ -13,12 +13,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
 	modeldevv1 "github.com/zhangzhe-ctrl/ani-modeldev-service/api/ani/modeldev/v1"
 	"github.com/zhangzhe-ctrl/ani-modeldev-service/contract/cpup01"
 	contractpb "github.com/zhangzhe-ctrl/ani-modeldev-service/contract/cpup01/protobuf"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
-	"go-wind-admin/app/admin/service/internal/commandcontract"
 	"go-wind-admin/pkg/middleware/requestid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -26,7 +24,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -59,7 +56,6 @@ type ModelDevResolveScope struct {
 type ModelDevResolution struct {
 	Snapshot          cpup01.Snapshot
 	ExecutionSpecHash string
-	ResolvedGPU       *acc.ResolvedGpuRequest
 }
 
 type ModelDevClient struct {
@@ -149,12 +145,6 @@ func modelDevClientTLS(config ModelDevClientConfig) (*tls.Config, error) {
 // ResolvePrepared performs both read-only calls with the same fixed identity,
 // accepted_at and official compute observation. No command is sent here.
 func (c *ModelDevClient) ResolvePrepared(ctx context.Context, scope ModelDevResolveScope, intent cpup01.Intent, identity cpup01.IdentityRef, selection *compute.ComputeSelection, acceptedAt time.Time) (ModelDevResolution, error) {
-	return c.ResolvePreparedWithGPU(ctx, scope, intent, identity, selection, acceptedAt, nil)
-}
-
-// ResolvePreparedWithGPU freezes one original ACC response between the two
-// ModelDev calls. CPU never calls resolveGPU or creates GPU accounting facts.
-func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope ModelDevResolveScope, intent cpup01.Intent, identity cpup01.IdentityRef, selection *compute.ComputeSelection, acceptedAt time.Time, resolveGPU func(context.Context, *cpup01.GPURequest) (*acc.ResolvedGpuRequest, error)) (ModelDevResolution, error) {
 	if err := ctx.Err(); err != nil {
 		return ModelDevResolution{}, status.FromContextError(err).Err()
 	}
@@ -162,7 +152,7 @@ func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope Model
 	if c == nil || c.connection == nil || c.client == nil || c.timeout <= 0 {
 		return ModelDevResolution{}, modelDevAdmissionUnavailable()
 	}
-	if !validModelDevClientActor(scope.Actor) || identity.TenantID != scope.ResourceTenantID || identity.Actor != scope.Actor || acceptedAt.IsZero() || acceptedAt.Nanosecond()%1000 != 0 || compute.ValidateSelection(selection) != nil || selection.PresetId != intent.ComputePresetID || selection.Gpu != nil && resolveGPU == nil {
+	if !validModelDevClientActor(scope.Actor) || identity.TenantID != scope.ResourceTenantID || identity.Actor != scope.Actor || acceptedAt.IsZero() || acceptedAt.Nanosecond()%1000 != 0 || compute.ValidateSelection(selection) != nil || selection.PresetId != intent.ComputePresetID || selection.Gpu != nil {
 		return ModelDevResolution{}, invalid
 	}
 	intentBytes, intentHash, err := cpup01.CanonicalIntent(intent)
@@ -183,10 +173,7 @@ func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope Model
 	if err != nil {
 		return ModelDevResolution{}, invalid
 	}
-	expectedRequest, err := cpup01.GPURequestFor(expectedOrigin)
-	if err != nil {
-		return ModelDevResolution{}, invalid
-	}
+
 	wireIntent, err := contractpb.EncodeIntent(intent)
 	if err != nil {
 		return ModelDevResolution{}, invalid
@@ -215,7 +202,7 @@ func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope Model
 		return ModelDevResolution{}, modelDevAdmissionUnavailable()
 	}
 	returnedIntent, _, err := cpup01.CanonicalIntent(prepared.Intent)
-	if err != nil || prepared.Snapshot.GPU != nil || selection.MemoryMib > math.MaxInt64/(1024*1024) || prepared.Snapshot.Resources != (cpup01.CPUResources{Nodes: 1, ProcessesPerNode: 1, RequestMillicpu: selection.CpuMillis, LimitMillicpu: selection.CpuMillis, RequestMemoryBytes: selection.MemoryMib * 1024 * 1024, LimitMemoryBytes: selection.MemoryMib * 1024 * 1024}) || !bytes.Equal(intentBytes, returnedIntent) || prepared.Snapshot.IdentityRef != identity || !prepared.Snapshot.Timing.AcceptedAt.Equal(acceptedAt) || prepared.Snapshot.ComputeOrigin != expectedOrigin || (expectedRequest == nil) != (prepared.GPURequest == nil) || expectedRequest != nil && *prepared.GPURequest != *expectedRequest {
+	if err != nil || prepared.Snapshot.GPU != nil || selection.MemoryMib > math.MaxInt64/(1024*1024) || prepared.Snapshot.Resources != (cpup01.CPUResources{Nodes: 1, ProcessesPerNode: 1, RequestMillicpu: selection.CpuMillis, LimitMillicpu: selection.CpuMillis, RequestMemoryBytes: selection.MemoryMib * 1024 * 1024, LimitMemoryBytes: selection.MemoryMib * 1024 * 1024}) || !bytes.Equal(intentBytes, returnedIntent) || prepared.Snapshot.IdentityRef != identity || !prepared.Snapshot.Timing.AcceptedAt.Equal(acceptedAt) || prepared.Snapshot.ComputeOrigin != expectedOrigin || prepared.GPURequest != nil {
 		return ModelDevResolution{}, modelDevAdmissionUnavailable()
 	}
 	ctx, cancelExecution := context.WithDeadline(ctx, prepared.Snapshot.Timing.ExecutionDeadlineAt)
@@ -224,43 +211,7 @@ func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope Model
 		return ModelDevResolution{}, status.FromContextError(err).Err()
 	}
 	finalize := &modeldevv1.FinalizeAdmissionRequest{CandidateCanonical: preparedReply.CandidateCanonical, CandidateHash: preparedReply.CandidateHash}
-	var resolvedGPU *acc.ResolvedGpuRequest
-	var expectedGPU *cpup01.GPUPlan
-	if expectedRequest != nil {
-		// Pass an independent copy so an outbound adapter cannot rewrite the
-		// verified candidate or select another original request for Finalize.
-		request := *prepared.GPURequest
-		gpuCall, cancelGPU := context.WithTimeout(ctx, c.timeout)
-		resolved, resolveErr := resolveGPU(gpuCall, &request)
-		gpuCallErr := gpuCall.Err()
-		cancelGPU()
-		if ctx.Err() != nil {
-			return ModelDevResolution{}, status.FromContextError(ctx.Err()).Err()
-		}
-		if gpuCallErr != nil {
-			return ModelDevResolution{}, status.FromContextError(gpuCallErr).Err()
-		}
-		if resolveErr != nil {
-			return ModelDevResolution{}, resolveErr
-		}
-		if resolved == nil {
-			return ModelDevResolution{}, modelDevAdmissionUnavailable()
-		}
-		resolvedGPU = proto.Clone(resolved).(*acc.ResolvedGpuRequest)
-		original := expectedRequest
-		formalRequest := &acc.GpuRequest{ClusterId: original.ClusterID, PoolId: original.PoolID, ProfileId: original.ProfileID, ProfileVersion: original.ProfileVersion, Replicas: original.Replicas, DevicesPerReplica: original.DevicesPerReplica, ContainerName: original.ContainerName}
-		if _, err := commandcontract.GpuResolvedQuota(resolvedGPU, formalRequest); err != nil {
-			return ModelDevResolution{}, modelDevAdmissionUnavailable()
-		}
-		finalize.GpuExecutionCanonical, finalize.GpuDisplayCanonical, err = contractpb.EncodeGPUPlanCanonical(resolvedGPU.Execution, resolvedGPU.Selection)
-		if err != nil {
-			return ModelDevResolution{}, modelDevAdmissionUnavailable()
-		}
-		expectedGPU, err = contractpb.DecodeGPUPlanCanonical(finalize.GpuExecutionCanonical, finalize.GpuDisplayCanonical)
-		if err != nil || expectedGPU.ValidateFor(expectedOrigin) != nil {
-			return ModelDevResolution{}, modelDevAdmissionUnavailable()
-		}
-	}
+
 	call, cancel, requestID = c.admissionCall(ctx, scope)
 	reply, err := c.client.FinalizeAdmission(call, finalize, grpc.WaitForReady(true))
 	callErr = call.Err()
@@ -277,7 +228,7 @@ func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope Model
 	}
 	expected := prepared.Snapshot
 	expected.RuntimePlan = snapshot.RuntimePlan
-	expected.GPU = expectedGPU
+	expected.GPU = nil
 	expectedBytes, err := expected.Canonical()
 	if err != nil {
 		return ModelDevResolution{}, modelDevAdmissionUnavailable()
@@ -294,7 +245,7 @@ func (c *ModelDevClient) ResolvePreparedWithGPU(ctx context.Context, scope Model
 	if _, _, err := envelope.CanonicalPayloads(); err != nil {
 		return ModelDevResolution{}, modelDevAdmissionUnavailable()
 	}
-	return ModelDevResolution{Snapshot: snapshot, ExecutionSpecHash: digest, ResolvedGPU: resolvedGPU}, nil
+	return ModelDevResolution{Snapshot: snapshot, ExecutionSpecHash: digest}, nil
 }
 
 func (c *ModelDevClient) admissionCall(ctx context.Context, scope ModelDevResolveScope) (context.Context, context.CancelFunc, string) {

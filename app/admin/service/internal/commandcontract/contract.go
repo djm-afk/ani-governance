@@ -41,7 +41,7 @@ type Facts struct {
 	BusinessPayload json.RawMessage
 	GpuRequest      *acc.GpuRequest
 	Execution       *acc.GpuExecution
-	Display         *acc.GpuDisplay
+	BusinessSpec    *acc.GpuBusinessSpec
 	QuotaItems      []QuotaItem
 	Inference       *InferenceCanonical
 	VM              *VMCanonical
@@ -95,7 +95,7 @@ func ValidateStoredCommand(in StoredCommand) (*Facts, error) {
 		for _, q := range c.QuotaItems {
 			items = append(items, QuotaItem{q.QuotaCode, q.Units})
 		}
-		return &Facts{BusinessPayload: c.BusinessPayload, GpuRequest: c.GpuRequest, Execution: business.GpuExecution, Display: business.GpuDisplay, QuotaItems: items}, nil
+		return &Facts{BusinessPayload: c.BusinessPayload, GpuRequest: c.GpuRequest, Execution: business.GpuExecution, BusinessSpec: business.GpuBusinessSpec, QuotaItems: items}, nil
 	case ResourceKindInference:
 		return validateInferenceStored(in)
 	case ResourceKindModelDev:

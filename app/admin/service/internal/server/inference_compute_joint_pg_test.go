@@ -37,7 +37,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	acc "github.com/zhangzhe-ctrl/ani-accelerator-service/api/gen/go/accelerator/v1"
-	"github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	authpb "go-wind-admin/api/gen/go/authentication/service/v1"
 	identity "go-wind-admin/api/gen/go/identity/service/v1"
@@ -74,9 +73,10 @@ import (
 
 // One fixture runs the production Gov JWT/Casbin/module checks, ledger,
 // dispatch, owner mTLS/Model wrappers/PG/runner/close recovery and release RPC.
-// Res/Model/ACC/runtime responses are external software-test boundaries only.
+// Res/Model/runtime responses are external software-test boundaries only.
+// New Inference GPU admission is covered by the pre-quota rejection tests.
 func TestInferenceComputeSoftwareFlow(t *testing.T) {
-	for _, mode := range []string{"cpu", "shared", "whole"} {
+	for _, mode := range []string{"cpu"} {
 		t.Run(mode, func(t *testing.T) {
 			f := newComputeCrossFixture(t, mode)
 			f.gate.dropAck.Store(true)
@@ -125,26 +125,12 @@ func TestInferenceComputeSoftwareFlow(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, originalBytes, unchanged.CanonicalRequest)
 			f.assertAccounting(mode, false)
-			if mode != "cpu" {
-				require.NoError(t, os.WriteFile(filepath.Join(f.control, "cleanup-model-fails"), nil, 0600))
-			}
+
 			deletion := new(view.InferenceAcceptance)
 			f.call("POST", "/api/v1/inference/services/"+accepted.ResourceId+":delete", &view.DeleteInferenceRequest{IdempotencyKey: uuid.NewString(), ResourceId: accepted.ResourceId}, deletion, 202)
-			if mode != "cpu" {
-				require.Eventually(t, func() bool { return f.eventCount("cleanup_model") > 0 }, 10*time.Second, 20*time.Millisecond)
-				require.Zero(t, f.eventCount("observe_release"), "CleanupModel failure must precede release coordination")
-				require.Zero(t, f.eventCount("release_report"))
-				f.assertAccounting(mode, false)
-				require.NoError(t, os.Remove(filepath.Join(f.control, "cleanup-model-fails")))
-				// Absence/Unknown does not authorize a report or a refund.
-				require.Eventually(t, func() bool { return f.eventCount("observe_release") > 0 }, 10*time.Second, 20*time.Millisecond)
-				require.Zero(t, f.eventCount("release_report"))
-				f.assertAccounting(mode, false)
-				f.accReleased()
-			}
+
 			f.waitOwner(deletion.OperationId, "succeeded")
 			f.assertAccounting(mode, true)
-			f.assertUsage(mode)
 			f.assertNoLegacy()
 			require.Equal(t, int64(1), f.providers.computeCalls)
 			require.Equal(t, int64(1), f.providers.modelCalls)
@@ -153,10 +139,10 @@ func TestInferenceComputeSoftwareFlow(t *testing.T) {
 	}
 }
 
-// DELETE-first is parameterized over CPU/GPU and late/never CREATE. A process
+// DELETE-first preserves the CPU late/never CREATE recovery contract. A process
 // restart uses the same database and discovers only-close tenants from PG.
 func TestInferenceComputeDeleteFirstRecovery(t *testing.T) {
-	for _, mode := range []string{"cpu", "shared"} {
+	for _, mode := range []string{"cpu"} {
 		for _, late := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/late=%t", mode, late), func(t *testing.T) {
 				f := newComputeCrossFixture(t, mode)
@@ -178,36 +164,9 @@ func TestInferenceComputeDeleteFirstRecovery(t *testing.T) {
 				f.stopOwner()
 				require.NoError(t, os.Remove(filepath.Join(f.control, "pause")))
 				f.startOwner()
-				if mode != "cpu" {
-					require.Eventually(t, func() bool { return f.eventCount("observe_release") > 0 }, 10*time.Second, 20*time.Millisecond)
-					require.Zero(t, f.eventCount("release_report"))
-					pending, err := f.owner.GetOperationTrusted(context.Background(), f.tenant.ResourceTenantID, f.actor, &runtimev1.GetOperationRequest{OperationId: d.OperationId})
-					require.NoError(t, err)
-					require.Equal(t, "observe_release", pending.Step)
-					f.assertAccounting(mode, false)
-					// Lose the reply after Gov has applied the original event, before owner
-					// marks complete. Restart/retry must send the identical persisted report.
-					require.NoError(t, os.WriteFile(filepath.Join(f.control, "lose-release-ack-once"), nil, 0600))
-					f.accReleased()
-					require.Eventually(t, func() bool { return f.eventCount("release_applied_ack_lost") == 1 }, 10*time.Second, 20*time.Millisecond)
-					waiting := new(iview.Operation)
-					f.call("GET", "/api/v1/inference/operations/"+d.OperationId, &view.GetInferenceOperationRequest{}, waiting, 200)
-					require.Equal(t, "report_resource_released", waiting.Step)
-					require.Equal(t, "APPLIED", waiting.RefundState)
-					require.NotEqual(t, "succeeded", waiting.Phase)
 
-					f.stopOwner()
-					require.NoError(t, os.Remove(filepath.Join(f.control, "pause")))
-					f.startOwner()
-				}
 				f.waitOwner(d.OperationId, "succeeded")
-				if mode != "cpu" {
-					values := f.eventValues("release_report")
-					require.GreaterOrEqual(t, len(values), 2)
-					for _, value := range values[1:] {
-						require.JSONEq(t, string(values[0]), string(value), "retries must reuse persisted original report")
-					}
-				}
+
 				f.assertAccounting(mode, true)
 				if late {
 					// Original Gov dispatch may retry after the close; it must be accepted as
@@ -248,8 +207,6 @@ type computeCrossProviders struct {
 	selection                *compute.ComputeSelection
 	plan                     *acc.ResolvedGpuRequest
 	computeCalls, modelCalls int64
-	usageCalls               int
-	usageRevisions           map[string]int
 	unavailable              bool
 	mu                       sync.Mutex
 }
@@ -280,17 +237,6 @@ func (p *computeCrossProviders) ResolveGpuRequest(_ context.Context, r *acc.Reso
 		return nil, fmt.Errorf("CPU called GPU")
 	}
 	return proto.Clone(p.plan).(*acc.ResolvedGpuRequest), nil
-}
-
-func (p *computeCrossProviders) SyncGpuUsage(_ context.Context, r *acc.SyncGpuUsageRequest) (*acc.SyncGpuUsageResponse, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.usageCalls++
-	if p.usageRevisions == nil {
-		p.usageRevisions = map[string]int{}
-	}
-	p.usageRevisions[fmt.Sprint(r.Projection.Revision)]++
-	return &acc.SyncGpuUsageResponse{Ref: r.Projection.Ref, AppliedRevision: r.Projection.Revision, State: r.Projection.State}, nil
 }
 
 type computeCrossOwnerGate struct {
@@ -411,9 +357,6 @@ func newComputeCrossFixture(t *testing.T, mode string) *computeCrossFixture {
 	f.startOwner()
 	f.gate = &computeCrossOwnerGate{InferenceClient: f.owner, t: t}
 	t.Cleanup(f.stopOwner)
-	usage := service.NewGpuUsageSyncWorker(f.ledger, f.providers, func(err error) { t.Log("GPU Usage retry", err) })
-	require.NoError(t, usage.Start(ctx))
-	t.Cleanup(func() { require.NoError(t, usage.Stop(ctx)) })
 	tenants := data.NewTenantRepo(bctx, c)
 	binding := service.NewInferenceComputeBinding(f.gate, data.NewInferenceAuthorizationRepo(c), f.providers, f.providers)
 	registry := service.NewQuotaAdapterRegistry()
@@ -546,20 +489,6 @@ func (f *computeCrossFixture) assertNoLegacy() {
 	require.NoError(f.t, f.ownerDB.QueryRow(context.Background(), "SELECT count(*) FROM inference_quota_reservations WHERE tenant_id=$1", f.tenant.ResourceTenantID).Scan(&count))
 	require.Zero(f.t, count)
 }
-func (f *computeCrossFixture) assertUsage(mode string) {
-	f.t.Helper()
-	if mode == "cpu" {
-		f.providers.mu.Lock()
-		defer f.providers.mu.Unlock()
-		require.Zero(f.t, f.providers.usageCalls)
-		return
-	}
-	require.Eventually(f.t, func() bool {
-		f.providers.mu.Lock()
-		defer f.providers.mu.Unlock()
-		return f.providers.usageRevisions["1"] == 1 && f.providers.usageRevisions["2"] == 1
-	}, 10*time.Second, 20*time.Millisecond, "Gov must write each frozen GPU Usage revision once")
-}
 func (f *computeCrossFixture) assertAccounting(mode string, released bool) {
 	rows, err := f.ledger.RecomputeInvariants(context.Background(), f.tenant.ID)
 	require.NoError(f.t, err)
@@ -573,9 +502,6 @@ func (f *computeCrossFixture) assertAccounting(mode string, released bool) {
 			require.EqualValues(f.t, 2, r.OccupiedUnits)
 		}
 	}
-}
-func (f *computeCrossFixture) accReleased() {
-	require.NoError(f.t, os.WriteFile(filepath.Join(f.control, "acc-result.json"), []byte(`{"Finding":"ALLOCATION_RELEASED","EvidenceID":"software-isolated-evidence","EvidenceDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`), 0600))
 }
 func (f *computeCrossFixture) startOwner() {
 	f.t.Helper()
@@ -625,25 +551,6 @@ func (f *computeCrossFixture) stopOwner() {
 }
 func computeCrossVector(t *testing.T, mode string) *computeCrossProviders {
 	p := &computeCrossProviders{selection: &compute.ComputeSelection{SchemaVersion: 1, PresetId: uuid.NewString(), Code: "compute-software", Name: "Software compute", ComputeType: "cpu", CpuMillis: 1500, MemoryMib: 2048}}
-	if mode != "cpu" {
-		g := &compute.GpuSelection{ProfileId: uuid.NewString(), ProfileVersion: 1, SpecDigest: strings.Repeat("b", 64), DevicesPerUnit: 1, ClusterId: uuid.NewString(), PoolId: uuid.NewString(), Mode: acc.SupplyMode_SHARED_FIXED, ModelKey: "nvidia-test", MemoryMibPerDevice: 8192, CoreLimitPercent: 25}
-		code := service.GpuSharedQuotaCode
-		units := int64(8192)
-		if mode == "whole" {
-			g.Mode = acc.SupplyMode_WHOLE_EXCLUSIVE
-			g.DevicesPerUnit = 2
-			g.CoreLimitPercent = 100
-			code = service.GpuPhysicalQuotaCode
-			units = 2
-		}
-		p.selection.ComputeType = "gpu"
-		p.selection.Gpu = g
-		execution := &acc.GpuExecution{SchedulerName: "volcano", QueueName: "gpu", RuntimeClassName: "nvidia", NodeSelector: map[string]string{"accelerator.ani.io/supply-group": uuid.NewString(), "accelerator.ani.io/model-key": g.ModelKey, "accelerator.ani.io/baseline-id": uuid.NewString()}, PodAnnotations: map[string]string{"volcano.sh/vgpu-mode": "hami-core"}, Resources: map[string]string{"volcano.sh/vgpu-number": strconv.FormatUint(uint64(g.DevicesPerUnit), 10), "volcano.sh/vgpu-memory": "8192", "volcano.sh/vgpu-cores": strconv.FormatUint(uint64(g.CoreLimitPercent), 10)}}
-		var err error
-		execution.ExecutionDigest, err = gpuprotocol.GpuExecutionDigest(execution)
-		require.NoError(t, err)
-		p.plan = &acc.ResolvedGpuRequest{Execution: execution, Selection: &acc.GpuDisplay{ProfileId: g.ProfileId, ProfileVersion: 1, ProfileName: "software", ModelKey: g.ModelKey, Mode: g.Mode}, QuotaItems: []*acc.GpuQuotaItem{{QuotaCode: code, Units: units}}}
-	}
 	var err error
 	p.selection.SelectionDigest, err = compute.SelectionDigest(p.selection)
 	require.NoError(t, err)

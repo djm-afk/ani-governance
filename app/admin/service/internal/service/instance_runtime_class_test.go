@@ -13,7 +13,7 @@ func TestInstanceGpuRuntimeClassFrozenCanonical(t *testing.T) {
 	b := instanceSettingsBusiness(t)
 	b.ComputeType = "gpu"
 	b.GpuExecution = p.Resolved.Execution
-	b.GpuDisplay = p.Resolved.Selection
+	b.GpuBusinessSpec = p.Resolved.BusinessSpec
 	raw, e := res.CanonicalBusinessPayload(b)
 	if e != nil {
 		t.Fatal(e)

@@ -4,25 +4,20 @@ package service
 
 import (
 	"context"
-	"strconv"
 	"testing"
-	"time"
 
+	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/google/uuid"
 	inferencev1 "github.com/liangzai006/ani-inference-service/api/inference/v1"
 	modelv1 "github.com/liangzai006/ani-model-service/api/model/v1"
 	"github.com/stretchr/testify/require"
-	protocol "github.com/zhangzhe-ctrl/ani-accelerator-service/pkg/gpuprotocol"
 	compute "github.com/zhangzhe-ctrl/ani-resource-service/api/compute/v1"
 	view "go-wind-admin/api/gen/go/inference/service/v1"
-	"go-wind-admin/app/admin/service/internal/commandcontract"
 	"go-wind-admin/app/admin/service/internal/data"
 	"go-wind-admin/app/admin/service/internal/data/ent"
 	"go-wind-admin/app/admin/service/internal/data/ent/api"
 	"go-wind-admin/app/admin/service/internal/data/ent/permission"
-	"go-wind-admin/app/admin/service/internal/data/ent/plan"
 	"go-wind-admin/app/admin/service/internal/data/ent/planmodule"
-	"go-wind-admin/app/admin/service/internal/data/ent/planquota"
 	"go-wind-admin/app/admin/service/internal/data/ent/quotadefinition"
 	"go-wind-admin/app/admin/service/internal/data/ent/role"
 	"go-wind-admin/app/admin/service/internal/data/ent/rolepermission"
@@ -35,77 +30,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-func TestInferenceGPUBlockMemoryReadAndDeleteKeepsOriginalCharge(t *testing.T) {
-	f := newInferenceGPUFixture(t)
-	sys := appViewer.NewSystemViewerContext(context.Background())
-	require.NoError(t, f.client.PlanQuota.Update().Where(planquota.HasPlanWith(plan.IDEQ(f.planID))).SetQuotaValue(30000).Exec(sys))
-	principal, err := auth.PrincipalFromContext(f.ctx)
-	require.NoError(t, err)
-	tenant, actor := f.model.response.Model.TenantId, strconv.FormatUint(uint64(principal.ID), 10)
-	intent := inferencePublicIntent()
-	intent.ModelVersionId = f.model.response.Version.Id
-	fixture, _, _ := gpuVector(t)
-	fixture.Request.ContainerName = "kserve-container"
-	fixture.Resolved.Execution.Resources["volcano.sh/vgpu-memory"] = "2457"
-	fixture.Resolved.Execution.Resources["volcano.sh/vgpu-cores"] = "50"
-	fixture.Resolved.Execution.PodAnnotations["accelerator.ani.io/memory-block-mib"] = "10"
-	fixture.Resolved.Execution.ExecutionDigest, err = protocol.GpuExecutionDigest(fixture.Resolved.Execution)
-	require.NoError(t, err)
-	fixture.Resolved.QuotaItems[0].Units = 24570
-	selection := inferenceCPUSelection(t)
-	selection.ComputeType = "gpu"
-	selection.Gpu = &compute.GpuSelection{ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion, SpecDigest: fixture.Profile.SpecDigest, DevicesPerUnit: 1, ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, Mode: fixture.Resolved.Selection.Mode, ModelKey: fixture.Resolved.Selection.ModelKey, MemoryMibPerDevice: 24570, CoreLimitPercent: 50}
-	selection.SelectionDigest, err = compute.SelectionDigest(selection)
-	require.NoError(t, err)
-	oldBinding := f.service.acceptance.(*GpuAcceptance).binding.(*InferenceGpuBinding)
-	binding := NewInferenceComputeBinding(f.owner, oldBinding.authorization, f.model, &inferenceComputeProbe{selection: selection})
-	prepared, err := binding.PrepareManagedBusiness(f.ctx, principal, tenant, intent)
-	require.NoError(t, err)
-	createID, resourceID := uuid.NewString(), uuid.NewString()
-	raw, err := prepared.freeze(tenant, "user", actor, createID, resourceID, fixture.Resolved)
-	require.NoError(t, err)
-	// Seed the accepted original through the real quota ledger, then record the
-	// external owner's ACK through its existing fenced transition.
-	_, err = f.ledger.Occupy(f.ctx, &data.QuotaOccupyInput{TenantID: f.tenantID, ResourceTenantID: tenant, ResourceID: resourceID, OperationID: createID, ActorType: "user", ActorID: actor, OwnerService: commandcontract.InferenceOwner, Action: InferenceCreateAction, IdempotencyKey: uuid.NewString(), RequestHash: "block-memory-original", CanonicalRequest: string(raw), Items: []data.QuotaOccupyItem{{QuotaCode: GpuSharedQuotaCode, Units: 24570}}})
-	require.NoError(t, err)
-	claims, err := f.ledger.ClaimDispatchable(sys, "block-memory-owner", time.Minute, 1)
-	require.NoError(t, err)
-	require.Len(t, claims, 1)
-	acked, err := f.ledger.AckDispatched(sys, f.tenantID, createID, claims[0].LeaseGeneration, `{"accepted":true}`)
-	require.NoError(t, err)
-	require.True(t, acked)
-	f.owner.service = &inferencev1.InferenceService{Id: resourceID, Generation: 1, ModelVersionId: intent.ModelVersionId, Resource: &inferencev1.ResourceSpec{Gpu: &inferencev1.GpuRequest{ClusterId: fixture.Request.ClusterId, PoolId: fixture.Request.PoolId, ProfileId: fixture.Request.ProfileId, ProfileVersion: fixture.Request.ProfileVersion}}}
-	visible, err := f.service.GetInference(f.ctx, &view.GetInferenceRequest{ResourceId: resourceID})
-	require.NoError(t, err, "the original block-unit execution remains readable")
-	require.Equal(t, resourceID, visible.Id)
-	require.Equal(t, selection.PresetId, visible.PresetId)
-	before, err := f.ledger.GetChargesForOperation(sys, f.tenantID, createID)
-	require.NoError(t, err)
-	require.Len(t, before, 1)
-	require.EqualValues(t, 24570, before[0].OriginalUnits)
-	request := &view.DeleteInferenceRequest{IdempotencyKey: uuid.NewString(), ResourceId: resourceID, ExpectedGeneration: 1}
-	deleted, err := f.service.DeleteInference(f.ctx, request)
-	require.NoError(t, err)
-	replay, err := f.service.DeleteInference(f.ctx, request)
-	require.NoError(t, err)
-	require.Equal(t, deleted.OperationId, replay.OperationId)
-	close, err := f.ledger.GetOperationForUser(sys, f.tenantID, deleted.OperationId)
-	require.NoError(t, err)
-	require.NotNil(t, close.CreateOperationID)
-	require.Equal(t, createID, *close.CreateOperationID)
-	_, err = f.service.GetInferenceOperation(f.ctx, &view.GetInferenceOperationRequest{OperationId: deleted.OperationId})
-	require.NoError(t, err)
-	original, err := f.ledger.GetOperationForUser(sys, f.tenantID, createID)
-	require.NoError(t, err)
-	require.Equal(t, string(raw), original.CanonicalRequest, "DELETE must preserve original bytes and hashes")
-	after, err := f.ledger.GetChargesForOperation(sys, f.tenantID, createID)
-	require.NoError(t, err)
-	require.Len(t, after, 1)
-	require.Equal(t, before[0].ChargeID, after[0].ChargeID)
-	require.EqualValues(t, 24570, after[0].OriginalUnits)
-	require.Zero(t, after[0].ReleasedUnits, "DELETE acceptance is not release evidence")
-}
 
 // Only Model, Compute, Accelerator and Inference RPCs are boundary substitutes. The BFF,
 // current route authorization, acceptance and PostgreSQL ledger are real.
@@ -228,14 +152,15 @@ func (f *inferenceGPUFixture) otherAuthorizedTenant(t *testing.T) (context.Conte
 	return auth.NewPrincipalContext(ctx, &auth.Principal{Type: auth.SubjectUser, ID: operator.ID, TenantID: tenant.ID}), tenant.ResourceTenantID
 }
 
-func TestInferenceGPUAdmissionAndPublicReplay(t *testing.T) {
+func TestInferenceGPUDisabledBeforeQuotaAndCPUReplay(t *testing.T) {
 	f := newInferenceGPUFixture(t)
 	sys := appViewer.NewSystemViewerContext(context.Background())
 	require.NoError(t, f.client.PlanModule.Create().SetPlanID(f.planID).SetModule(planmodule.ModuleAccelerator).Exec(sys))
 	selection := inferenceCPUSelection(t)
 	selection.Code, selection.Name, selection.ComputeType = "gpu-test", "GPU", "gpu"
 	plan := f.plans.plan
-	selection.Gpu = &compute.GpuSelection{ProfileId: plan.Request.ProfileId, ProfileVersion: plan.Request.ProfileVersion, SpecDigest: plan.Profile.SpecDigest, DevicesPerUnit: plan.Request.DevicesPerReplica, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId, Mode: plan.Resolved.Selection.Mode, ModelKey: plan.Resolved.Selection.ModelKey, MemoryMibPerDevice: plan.Profile.Spec.MemoryMibPerDevice, CoreLimitPercent: plan.Profile.Spec.CoreLimitPercent}
+	spec := plan.Resolved.BusinessSpec
+	selection.Gpu = &compute.GpuSelection{ProfileId: spec.ProfileId, ProfileVersion: spec.ProfileVersion, SpecDigest: spec.SpecDigest, DevicesPerUnit: spec.DevicesPerReplica, ClusterId: plan.Request.ClusterId, PoolId: plan.Request.PoolId, Mode: spec.Mode, ModelKey: spec.ModelKey, MemoryMibPerDevice: spec.MemoryMibPerDevice, CoreLimitPercent: spec.CoreLimitPercent, AllocationType: spec.AllocationType, ResourceKey: spec.ResourceKey, ComputeUnitsPerDevice: spec.ComputeUnitsPerDevice, AdapterId: spec.AdapterId}
 	var err error
 	selection.SelectionDigest, err = compute.SelectionDigest(selection)
 	require.NoError(t, err)
@@ -250,7 +175,24 @@ func TestInferenceGPUAdmissionAndPublicReplay(t *testing.T) {
 	f.service = NewInferenceServiceWithOwnerAndModel(acceptance, f.owner, oldAcceptance.resolver, f.model)
 	f.request.PresetId = selection.PresetId
 	f.request.Cpu, f.request.Memory, f.request.Gpu = "", "", nil
-
+	for i := 0; i < 2; i++ {
+		result, err := f.service.CreateInference(f.ctx, f.request)
+		require.Nil(t, result)
+		require.Equal(t, "QUOTA_ADAPTER_UNAVAILABLE", kratoserrors.FromError(err).Reason)
+	}
+	require.Zero(t, f.model.calls, "GPU is rejected before model lookup")
+	require.Zero(t, f.plans.calls, "GPU is rejected before ACC resolution")
+	count, err := f.client.QuotaOperation.Query().Count(sys)
+	require.NoError(t, err)
+	require.Zero(t, count, "rejected GPU request must not consume the idempotency key")
+	charges, err := f.client.QuotaCharge.Query().Count(sys)
+	require.NoError(t, err)
+	require.Zero(t, charges, "rejected GPU request must not reserve quota")
+	cpu := inferenceCPUSelection(t)
+	cpu.PresetId = selection.PresetId
+	cpu.SelectionDigest, err = compute.SelectionDigest(cpu)
+	require.NoError(t, err)
+	computePeer.selection = cpu
 	first, err := f.service.CreateInference(f.ctx, f.request)
 	require.NoError(t, err)
 	require.Equal(t, "ACCEPTED", first.Result)
@@ -258,29 +200,19 @@ func TestInferenceGPUAdmissionAndPublicReplay(t *testing.T) {
 	require.NotEmpty(t, first.OperationId)
 	require.NotEmpty(t, first.ResourceId)
 	require.Equal(t, 1, f.model.calls)
-	require.Equal(t, 1, computePeer.calls)
-	require.Equal(t, 1, f.plans.calls)
-	principal, err := auth.PrincipalFromContext(f.ctx)
-	require.NoError(t, err)
-	require.Equal(t, f.model.response.Model.TenantId, f.model.tenant)
-	require.Equal(t, "governance:user:"+strconv.FormatUint(uint64(principal.ID), 10), f.model.actor)
-
-	// A retry with the same public idempotency key and unchanged request must
-	// replay the durable operation without re-resolving the model or GPU plan.
+	require.Zero(t, f.plans.calls)
+	calls := computePeer.calls
 	replay, err := f.service.CreateInference(f.ctx, f.request)
 	require.NoError(t, err)
 	require.True(t, replay.Replayed)
 	require.Equal(t, first.OperationId, replay.OperationId)
 	require.Equal(t, first.ResourceId, replay.ResourceId)
 	require.Equal(t, 1, f.model.calls)
-	require.Equal(t, 1, computePeer.calls)
-	require.Equal(t, 1, f.plans.calls)
-
-	charges, err := f.ledger.GetChargesForOperation(sys, f.tenantID, first.OperationId)
+	require.Equal(t, calls, computePeer.calls)
+	require.Zero(t, f.plans.calls)
+	originalCharges, err := f.ledger.GetChargesForOperation(sys, f.tenantID, first.OperationId)
 	require.NoError(t, err)
-	require.NotEmpty(t, charges, "accepted inference GPU create must reserve quota")
-	require.Len(t, charges, 1)
-	require.EqualValues(t, 16384, charges[0].OriginalUnits)
+	require.Empty(t, originalCharges, "CPU remains available without GPU quota")
 }
 func TestInferenceCPUActorsRemainTrusted(t *testing.T) {
 	f := newInferenceGPUFixture(t)
