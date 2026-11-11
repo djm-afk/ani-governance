@@ -207,3 +207,8 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
+
+// 临时：Res review 分支（容器镜像管理 22 个 RPC）未合入上游，先引用个人 fork 的同源提交
+// （模块路径一致，fork 的 go.mod 仍声明 zhangzhe-ctrl）。Res PR 合入并发布后必须删除本行，
+// 并把 require 改为 zhangzhe-ctrl 的正式 pseudo-version。
+replace github.com/zhangzhe-ctrl/ani-resource-service => github.com/java559/ani-resource-service v0.0.0-20261111093211-6f7a62ab5a9a

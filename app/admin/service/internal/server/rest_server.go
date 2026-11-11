@@ -227,6 +227,7 @@ func NewRestServer(
 	inferenceService *service.InferenceService,
 	modelService *service.ModelService,
 	computeService *service.ComputePresetService,
+	imageWriteBudget time.Duration,
 	services ...any,
 ) (*http.Server, error) {
 	cfg := ctx.GetConfig()
@@ -249,7 +250,7 @@ func NewRestServer(
 	if err != nil || modelConfig.Timeout > 24*time.Hour {
 		return nil, fmt.Errorf("invalid bounded model import HTTP budget")
 	}
-	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{instanceHTTPTimeoutFilter(ordinaryTimeout, modeldevConfig.Timeout, modelConfig.Timeout, modeldevConfig.ModelResolutionTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, clusterOpsHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter, storageQueryHTTPFilter},
+	srv, err := rpc.CreateRestServerWithFilters(streamConfig, []http.FilterFunc{imageWriteTimeoutFilter(ordinaryTimeout, imageWriteBudget, modeldevConfig.Timeout, modelConfig.Timeout, modeldevConfig.ModelResolutionTimeout), auth.ImageHTTPFilter, auth.NetworkHTTPFilter, clusterOpsHTTPFilter, acceleratorInitializationHTTPFilter, modelQueryHTTPFilter, gpuHTTPFilter, storageQueryHTTPFilter},
 		middlewares...,
 	)
 	if err != nil {

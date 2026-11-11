@@ -15,6 +15,8 @@ import (
 func TestServiceTagToBusinessModuleExactMapping(t *testing.T) {
 	expected := map[string]identityV1.Module{
 		"ImageService":              identityV1.Module_IMAGE,
+		"PlatformImageService":      identityV1.Module_IMAGE,
+		"AdminTenantImageService":   identityV1.Module_IMAGE,
 		"InstanceService":           identityV1.Module_INSTANCE,
 		"SandboxService":            identityV1.Module_SANDBOX,
 		"OverviewService":           identityV1.Module_INSTANCE,
@@ -24,6 +26,7 @@ func TestServiceTagToBusinessModuleExactMapping(t *testing.T) {
 		"ComputePresetService":      identityV1.Module_SYSTEM,
 		"AcceleratorAdminService":   identityV1.Module_ACCELERATOR,
 		"AcceleratorService":        identityV1.Module_ACCELERATOR,
+		"AcceleratorCapacityAdminService": identityV1.Module_ACCELERATOR,
 		"GpuAdminService":           identityV1.Module_ACCELERATOR,
 		"GpuService":                identityV1.Module_ACCELERATOR,
 		"ResourceUsageAdminService": identityV1.Module_DASHBOARD,
@@ -94,7 +97,7 @@ func TestServiceTagToBusinessModuleExactMapping(t *testing.T) {
 // 某模块的登记被悄悄增删。
 func TestServiceTagToBusinessModuleReverseMapping(t *testing.T) {
 	expected := map[identityV1.Module][]string{
-		identityV1.Module_IMAGE:            {"ImageService"},
+		identityV1.Module_IMAGE:            {"ImageService", "PlatformImageService", "AdminTenantImageService"},
 		identityV1.Module_INSTANCE:         {"InstanceService", "OverviewService"},
 		identityV1.Module_SANDBOX:          {"SandboxService"},
 		identityV1.Module_STORAGE:          {"StorageService"},
@@ -109,7 +112,7 @@ func TestServiceTagToBusinessModuleReverseMapping(t *testing.T) {
 		identityV1.Module_LOG:              {"ApiAuditLogService", "LoginAuditLogService", "OperationAuditLogService", "DataAccessAuditLogService", "PermissionAuditLogService", "PolicyEvaluationLogService", "RedisCacheMonitorService"},
 		identityV1.Module_INTERNAL_MESSAGE: {"InternalMessageService", "InternalMessageCategoryService", "InternalMessageRecipientService"},
 		identityV1.Module_NETWORK:          {"NetworkService", "PlatformNetworkService"},
-		identityV1.Module_ACCELERATOR:      {"AcceleratorAdminService", "AcceleratorService", "GpuAdminService", "GpuService", "GpuTenantAdminService"},
+		identityV1.Module_ACCELERATOR:      {"AcceleratorAdminService", "AcceleratorService", "AcceleratorCapacityAdminService", "GpuAdminService", "GpuService", "GpuTenantAdminService"},
 		identityV1.Module_MODEL:            {"ModelService"},
 		identityV1.Module_MODELDEV:         {"ModelDevService"},
 		identityV1.Module_INFERENCE:        {"InferenceService", "InferenceDiagnosticsService", "InferenceKeyService"},
