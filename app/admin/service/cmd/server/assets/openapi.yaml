@@ -17133,6 +17133,10 @@ components:
                     type: array
                     items:
                         type: string
+                cloneSource:
+                    allOf:
+                        - $ref: '#/components/schemas/VMCloneSource'
+                    description: VM_CLONE only. All overrides the source owns must be omitted.
         CreateVMImageData:
             type: object
             properties:
@@ -27413,6 +27417,16 @@ components:
                     type: boolean
                 result:
                     type: string
+        VMCloneSource:
+            type: object
+            properties:
+                sourceVmId:
+                    type: string
+                expectedSourceVersion:
+                    type: string
+                sourceName:
+                    type: string
+            description: User selector for a managed source; source_name is a read-only display snapshot.
         VMConsoleSession:
             type: object
             properties:
@@ -28159,6 +28173,10 @@ components:
                     $ref: '#/components/schemas/VMRuntime'
                 relations:
                     $ref: '#/components/schemas/VMRelations'
+                cloneSource:
+                    allOf:
+                        - $ref: '#/components/schemas/VMCloneSource'
+                    description: Source snapshot for VM_CLONE targets, read-only for display.
         VirtualSwitch:
             type: object
             properties:
