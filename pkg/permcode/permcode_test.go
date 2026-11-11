@@ -286,7 +286,7 @@ func TestCountsAndKeys(t *testing.T) {
 		"POST /api/v1/admin/cluster-ops/clusters/{cluster_id}/resources/{name}/restart":                   {Code: "cluster:ops:restart", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
 		"GET /api/v1/admin/cluster-ops/clusters/{cluster_id}/namespaces/{namespace}/pods/{pod_name}/logs": {Code: "cluster:ops:logs", Source: clusterOpsSource, BusinessModule: "SYSTEM", ScopeKind: "platform"},
 	}
-	if want := 227; ManagementCount() != want {
+	if want := 225; ManagementCount() != want {
 		t.Errorf("ManagementCount() = %d, want %d", ManagementCount(), want)
 	}
 	// The Sandbox code, file and token APIs add nine capabilities to the
@@ -303,11 +303,13 @@ func TestCountsAndKeys(t *testing.T) {
 	// Fifteen dataset routes plus the two InputVersion reads that move onto
 	// modeldev:dataset:read. The count is routes, not distinct codes.
 	const modelDevDatasetCapabilities = 17
-	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageCapabilities + vmRuntimeCapabilities + modelDevDatasetCapabilities + len(clusterOpsCapabilities); CapabilityCount() != want {
+	// Seven retired accelerator routes and two new admin capacity routes.
+	const acceleratorV11Delta = -5
+	if want := 204 - 3 + len(platformComponentReads) + len(platformComponentLogStreams) + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageCapabilities + vmRuntimeCapabilities + modelDevDatasetCapabilities + len(clusterOpsCapabilities) + acceleratorV11Delta; CapabilityCount() != want {
 		t.Errorf("CapabilityCount() = %d, want %d", CapabilityCount(), want)
 	}
 	keys := AllKeys()
-	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageKeysPerRoute + vmRuntimeCapabilities + modelDevDatasetCapabilities + len(clusterOpsCapabilities); len(keys) != want {
+	if want := 390 - 3 + len(securityGroupCapabilities) + len(storageWrites) + len(storageStats) + sandboxPhaseTwoCapabilities + vmLogCapabilities + modelDevEnvironmentCapabilities + manualVNicCapabilities + networkAssociatedInstances + platformBaseNetworkEntry + vmImageKeysPerRoute + vmRuntimeCapabilities + modelDevDatasetCapabilities + len(clusterOpsCapabilities) + acceleratorV11Delta; len(keys) != want {
 		t.Errorf("AllKeys() = %d, want %d", len(keys), want)
 	}
 	keySet := make(map[string]bool, len(keys))
@@ -485,5 +487,29 @@ func TestVMLogsUseTenantReadCapability(t *testing.T) {
 	got, err := Resolve("GET", "/api/v1/virtual-machines/{vm_id}/logs")
 	if err != nil || got.Code != "vm:read" || got.BusinessModule != "VIRTUAL_MACHINE" || got.ScopeKind != "tenant" {
 		t.Fatalf("VM logs capability = %+v, err=%v", got, err)
+	}
+}
+
+func TestAcceleratorCapacityCapabilitiesAndRetiredRouteAbsence(t *testing.T) {
+	for path, want := range map[string]string{"/api/v1/admin/accelerator/profiles/{profile_id}/capacity": "accelerator:profile:capacity-read", "/api/v1/admin/accelerator/supply-groups/{group_id}/capacity": "accelerator:supply-group:capacity-read"} {
+		entry, err := Resolve("GET", path)
+		if err != nil || entry.Code != want || entry.ScopeKind != "platform" || entry.BusinessModule != "ACCELERATOR" {
+			t.Fatal(path, entry, err)
+		}
+	}
+	for _, route := range []struct{ method, path string }{{"GET", "/api/v1/admin/accelerator/bindings"}, {"GET", "/api/v1/admin/accelerator/capacity"}, {"GET", "/api/v1/accelerator/capacity"}, {"POST", "/api/v1/accelerator/admission-preview"}, {"GET", "/api/v1/accelerator/usages"}, {"GET", "/api/v1/accelerator/usages/{owner_service}/{resource_id}"}, {"GET", "/api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings"}} {
+		if _, err := Resolve(route.method, route.path); err == nil {
+			t.Fatalf("retired route still mapped: %+v", route)
+		}
+		if _, ok := IsExempt(route.method, route.path); ok {
+			t.Fatalf("retired route became exempt: %+v", route)
+		}
+	}
+	// These capabilities still protect the active authorized monitoring surface.
+	for _, route := range []struct{ method, path, code string }{{"GET", "/api/v1/gpu/metrics/latest", "accelerator:usage:list"}, {"POST", "/api/v1/gpu/metrics/query", "accelerator:usage:list"}, {"GET", "/api/v1/gpu/resources/{resource_kind}/{resource_id}/metrics/latest", "accelerator:usage:get"}, {"POST", "/api/v1/gpu/resources/{resource_kind}/{resource_id}/metrics/query", "accelerator:usage:get"}} {
+		entry, err := Resolve(route.method, route.path)
+		if err != nil || entry.Code != route.code {
+			t.Fatal(route, entry, err)
+		}
 	}
 }

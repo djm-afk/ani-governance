@@ -11,27 +11,25 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"go-wind-admin/pkg/middleware/auth"
 )
 
-func TestAcceleratorPublicViewsAreStructurallyRedacted(t *testing.T) {
-	ref := &acc.GpuUsageRef{TenantId: "secret-tenant", OwnerService: InstanceOwner, ResourceId: "resource", CreateOperationId: "create"}
-	binding := &acc.GpuBinding{BindingId: "binding", VerifiedUsageRef: ref, Pod: &acc.PodRef{ClusterId: "secret-cluster", Namespace: "secret-namespace", Name: "secret-pod", Uid: "secret-uid", ContainerName: "workspace"}, PhysicalDeviceId: "secret-device", State: acc.AllocationState_ACTIVE, MemoryMib: 6144, CoreLimitPercent: 25, SourceBaselineDigest: "secret-baseline", SourceMemoryBlockMib: 1024, EvidenceRef: "secret-evidence", Observation: &acc.Observation{Complete: true, SnapshotRef: "secret-watermark", ObservedAt: "2026-09-23T10:00:00Z"}}
-	raw, e := protojson.Marshal(wireAcceleratorBinding(binding))
+func TestAcceleratorCurrentViewsPreservePresenceAndRedactSourceEvidence(t *testing.T) {
+	device := wireAcceleratorDevice(&acc.PhysicalDevice{DeviceId: "device", DeviceUid: "Serial-ABC", DeviceKind: acc.DeviceKind_PHYSICAL_DEVICE, AdapterId: "hygon-hcu-v1", MemoryCapacityBytes: proto.Uint64(0), Observation: &acc.Observation{Complete: true, SnapshotRef: "secret-watermark"}})
+	raw, e := protojson.Marshal(device)
 	require.NoError(t, e)
 	require.NotContains(t, string(raw), "secret-")
-	require.Contains(t, string(raw), "workspace")
-	require.NotContains(t, string(raw), InstanceOwner)
-	require.Contains(t, string(raw), `"6144"`)
-	projection := &acc.GpuUsageProjection{Ref: ref, Revision: 2, State: acc.UsageState_ENDED, SourceFactRef: "secret-fact", PayloadDigest: "secret-payload", ProfileId: "profile", ProfileVersion: 1, ExecutionDigest: "secret-execution", BaselineId: "secret-baseline"}
-	raw, e = protojson.Marshal(wireAcceleratorUsage(projection))
-	require.NoError(t, e)
-	require.NotContains(t, string(raw), "secret-")
-	require.Contains(t, string(raw), "ENDED")
-	capacity := wireAcceleratorCapacity(&acc.CapacityView{Devices: []*acc.DeviceCapacity{{DeviceId: "secret-device"}}, Observation: &acc.Observation{Complete: false, SnapshotRef: "secret-watermark"}}, false)
-	require.Empty(t, capacity.Devices)
-	require.False(t, capacity.Observation.Complete)
+	require.Contains(t, string(raw), `"memory_capacity_bytes":"0"`)
+	require.NotNil(t, device.MemoryCapacityBytes)
+	require.Nil(t, device.ComputeUnits)
+	capacity := wireAcceleratorProfileCapacity(&acc.ProfileCapacity{ProfileId: "profile", ProfileVersion: 1, AllocationType: acc.AllocationType_FIXED_PARTITION, Basis: acc.CapacityBasis_BOUND_POD_REQUEST, Granularity: acc.CapacityGranularity_NODE_RESOURCE, NominalUnits: proto.Int64(0), Totals: &acc.CapacityTotals{TotalUnits: proto.Int64(0)}, Details: []*acc.CapacityDetail{{Totals: &acc.CapacityTotals{AllocatedUnits: proto.Int64(0)}}}})
+	require.NotNil(t, capacity.NominalUnits)
+	require.EqualValues(t, 0, *capacity.NominalUnits)
+	require.Nil(t, capacity.EstimatedAvailableUnits)
+	require.NotNil(t, capacity.Details[0].Totals.AllocatedUnits)
+	require.Nil(t, capacity.Details[0].Totals.TotalUnits)
 }
 
 func TestAcceleratorErrorMappingKeepsReasonAndDropsRawContent(t *testing.T) {

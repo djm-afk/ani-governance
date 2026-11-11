@@ -12,7 +12,7 @@ func acceleratorInitializationInput(input *view.CreateAcceleratorInitializationD
 	if input == nil || input.DiscoveryRevision == "" || len(input.DiscoveryRevision) > 8192 || len(input.Pools) > 32 || len(input.Groups) > 32 || len(input.Profiles) > 128 || len(input.Pools)+len(input.Groups)+len(input.Profiles) == 0 {
 		return nil, nil, acceleratorInvalid()
 	}
-	result := &acc.CreateInitializationRequest{DiscoveryRevision: input.DiscoveryRevision}
+	result := &acc.CreateInitializationRequest{DiscoveryRevision: input.DiscoveryRevision, ConnectionRef: input.ConnectionRef}
 	actions := []string{}
 	for _, pool := range input.Pools {
 		if pool == nil {
@@ -51,7 +51,7 @@ func acceleratorInitializationInput(input *view.CreateAcceleratorInitializationD
 				return nil, nil, acceleratorInvalid()
 			}
 			newGroup := target.NewGroup
-			mappedNew := &acc.InitializationNewGroup{PoolKey: newGroup.PoolKey, DisplayName: newGroup.DisplayName, BaselineRef: newGroup.BaselineRef, QueueName: newGroup.QueueName}
+			mappedNew := &acc.InitializationNewGroup{PoolKey: newGroup.PoolKey, DisplayName: newGroup.DisplayName, ProviderConfigRef: newGroup.ProviderConfigRef, QueueName: newGroup.QueueName}
 			for _, node := range newGroup.Nodes {
 				if node == nil {
 					return nil, nil, acceleratorInvalid()
@@ -76,7 +76,11 @@ func acceleratorInitializationInput(input *view.CreateAcceleratorInitializationD
 		if profile == nil {
 			return nil, nil, acceleratorInvalid()
 		}
-		result.Profiles = append(result.Profiles, &acc.InitializationProfileInput{ClientKey: profile.ClientKey, GroupKey: profile.GroupKey, DisplayName: profile.DisplayName, MemoryMibPerDevice: profile.MemoryMibPerDevice, CoreLimitPercent: profile.CoreLimitPercent, MaxDevicesPerReplica: profile.MaxDevicesPerReplica})
+		allocation, ok := acc.AllocationType_value[profile.AllocationType]
+		if !ok || allocation == 0 {
+			return nil, nil, acceleratorInvalid()
+		}
+		result.Profiles = append(result.Profiles, &acc.InitializationProfileInput{ClientKey: profile.ClientKey, GroupKey: profile.GroupKey, DisplayName: profile.DisplayName, MemoryMibPerDevice: profile.MemoryMibPerDevice, CoreLimitPercent: profile.CoreLimitPercent, MaxDevicesPerReplica: profile.MaxDevicesPerReplica, AllocationType: acc.AllocationType(allocation), ResourceKey: profile.ResourceKey, ComputeUnitsPerDevice: profile.ComputeUnitsPerDevice})
 		if newGroups[profile.GroupKey] {
 			actions = append(actions, "accelerator:supply-group:set-admission")
 		}
@@ -95,7 +99,7 @@ func acceleratorInitializationView(input, output proto.Message) error {
 	if err != nil {
 		return acceleratorInvalidResponse()
 	}
-	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(encoded, output); err != nil {
+	if err := (protojson.UnmarshalOptions{}).Unmarshal(encoded, output); err != nil {
 		return acceleratorInvalidResponse()
 	}
 	return nil
@@ -122,24 +126,37 @@ func wireAcceleratorInitialization(input *acc.Initialization) (*view.Accelerator
 }
 
 func wireAcceleratorDiscoveredNodes(input *acc.DiscoveredNodes) (*view.AcceleratorDiscoveredNodes, error) {
-	output := &view.AcceleratorDiscoveredNodes{}
-	if err := acceleratorInitializationView(input, output); err != nil {
-		return nil, err
+	if input == nil {
+		return nil, acceleratorInvalidResponse()
 	}
-	for _, node := range output.Items {
+	out := &view.AcceleratorDiscoveredNodes{Total: input.Total, DiscoveryRevision: input.DiscoveryRevision}
+	for _, node := range input.Items {
 		if node == nil || node.Node == nil {
 			return nil, acceleratorInvalidResponse()
 		}
 		if _, valid := acceleratorPublicReasons(node.BlockingReasons); !valid {
 			return nil, acceleratorInvalidResponse()
 		}
-		for _, gpu := range node.Gpus {
-			if gpu == nil || !acceleratorInitializationReason(gpu.BudgetReason) {
+		row := &view.AcceleratorDiscoveredNode{Node: &view.AcceleratorNode{Uid: node.Node.Uid, Name: node.Node.Name}, GroupId: node.GroupId, Selectable: node.Selectable, BlockingReasons: node.BlockingReasons}
+		for _, device := range node.Devices {
+			if device == nil {
 				return nil, acceleratorInvalidResponse()
 			}
+			row.Devices = append(row.Devices, wireAcceleratorDevice(device))
 		}
+		for _, config := range node.ProviderConfigs {
+			if config == nil {
+				return nil, acceleratorInvalidResponse()
+			}
+			mapped := &view.AcceleratorDiscoveredProviderConfig{ProviderConfigRef: config.ProviderConfigRef, AdapterId: config.AdapterId}
+			for _, kind := range config.AllocationTypes {
+				mapped.AllocationTypes = append(mapped.AllocationTypes, kind.String())
+			}
+			row.ProviderConfigs = append(row.ProviderConfigs, mapped)
+		}
+		out.Items = append(out.Items, row)
 	}
-	return output, nil
+	return out, nil
 }
 
 func wireAcceleratorInitializationOperation(input *acc.InitializationOperation) (*view.AcceleratorInitializationOperation, error) {

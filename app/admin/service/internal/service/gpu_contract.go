@@ -21,9 +21,7 @@ func gpuCanonicalMessage(m protoreflect.Message) (map[string]any, error) {
 func gpuCanonicalJSON(v any) ([]byte, error)          { return commandcontract.CanonicalJSON(v) }
 func gpuHash(v any) (string, error)                   { return commandcontract.Hash(v) }
 func gpuSpecDigest(p *acc.GpuProfile) (string, error) { return commandcontract.SpecDigest(p) }
-func GpuProjectionDigest(p *acc.GpuUsageProjection) (string, error) {
-	return commandcontract.GpuProjectionDigest(p)
-}
+
 func GpuResolvedQuota(p *acc.ResolvedGpuRequest, r *acc.GpuRequest) (commandcontract.QuotaItem, error) {
 	return commandcontract.GpuResolvedQuota(p, r)
 }

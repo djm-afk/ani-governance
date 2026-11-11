@@ -30,8 +30,6 @@ type Tx struct {
 	DictType *DictTypeClient
 	// GpuDeleteAcceptance is the client for interacting with the GpuDeleteAcceptance builders.
 	GpuDeleteAcceptance *GpuDeleteAcceptanceClient
-	// GpuUsageSync is the client for interacting with the GpuUsageSync builders.
-	GpuUsageSync *GpuUsageSyncClient
 	// InternalMessage is the client for interacting with the InternalMessage builders.
 	InternalMessage *InternalMessageClient
 	// InternalMessageCategory is the client for interacting with the InternalMessageCategory builders.
@@ -262,7 +260,6 @@ func (tx *Tx) init() {
 	tx.DictEntryI18n = NewDictEntryI18nClient(tx.config)
 	tx.DictType = NewDictTypeClient(tx.config)
 	tx.GpuDeleteAcceptance = NewGpuDeleteAcceptanceClient(tx.config)
-	tx.GpuUsageSync = NewGpuUsageSyncClient(tx.config)
 	tx.InternalMessage = NewInternalMessageClient(tx.config)
 	tx.InternalMessageCategory = NewInternalMessageCategoryClient(tx.config)
 	tx.InternalMessageRecipient = NewInternalMessageRecipientClient(tx.config)

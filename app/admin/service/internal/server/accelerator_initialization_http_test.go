@@ -12,7 +12,6 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	admin "go-wind-admin/api/gen/go/admin/service/v1"
 	view "go-wind-admin/api/gen/go/catalog/service/v1"
@@ -26,7 +25,7 @@ type initializationHTTPBoundary struct {
 	operationID string
 }
 
-func (boundary *initializationHTTPBoundary) GetInitialization(context.Context, *emptypb.Empty) (*view.AcceleratorInitialization, error) {
+func (boundary *initializationHTTPBoundary) GetInitialization(context.Context, *view.GetAcceleratorInitializationRequest) (*view.AcceleratorInitialization, error) {
 	return &view.AcceleratorInitialization{Registered: true, ConfigurationComplete: false}, nil
 }
 
@@ -57,7 +56,7 @@ func TestAcceleratorInitializationGeneratedHTTPRoutes(t *testing.T) {
 	const operationID = "11111111-1111-4111-8111-111111111111"
 	for _, test := range []struct{ method, path, body, want string }{
 		{"GET", "/api/v1/admin/accelerator/initialization", "", `"registered":true`},
-		{"GET", "/api/v1/admin/accelerator/discovered-nodes?page=3&pageSize=200", "", `"total":"9007199254740993"`},
+		{"GET", "/api/v1/admin/accelerator/discovered-nodes?page=3&pageSize=200&connection_ref=managed", "", `"total":"9007199254740993"`},
 		{"POST", "/api/v1/admin/accelerator/initializations", `{"data":{"idempotency_key":"key","discovery_revision":"revision"}}`, `"version":"9007199254740993"`},
 		{"GET", "/api/v1/admin/accelerator/initializations/" + operationID, "", `"state":"BLOCKED"`},
 		{"POST", "/api/v1/admin/accelerator/initializations/" + operationID + ":retry", `{"operation_id":"body-must-not-win","data":{"idempotency_key":"retry-key","expected_version":"9007199254740993"}}`, `"state":"ACCEPTED"`},
@@ -74,6 +73,7 @@ func TestAcceleratorInitializationGeneratedHTTPRoutes(t *testing.T) {
 	}
 	require.EqualValues(t, 3, boundary.page.GetPage())
 	require.EqualValues(t, 200, boundary.page.GetPageSize())
+	require.Equal(t, "managed", boundary.page.ConnectionRef)
 	require.Equal(t, "revision", boundary.create.GetData().GetDiscoveryRevision())
 	require.Equal(t, operationID, boundary.operationID)
 	require.Equal(t, operationID, boundary.retry.OperationId)
@@ -85,6 +85,8 @@ func TestAcceleratorInitializationGeneratedHTTPRejectsAmbiguousQuery(t *testing.
 	admin.RegisterAcceleratorAdminServiceHTTPServer(server, &initializationHTTPBoundary{})
 	for _, test := range []struct{ method, path string }{
 		{"GET", "/api/v1/admin/accelerator/initialization?actor=other"},
+		{"GET", "/api/v1/admin/accelerator/initialization?connection_ref=a&connection_ref=b"},
+		{"GET", "/api/v1/admin/accelerator/discovered-nodes?connection_ref="},
 		{"GET", "/api/v1/admin/accelerator/initializations/id?operation_id=other"},
 		{"POST", "/api/v1/admin/accelerator/initializations?data.idempotency_key=other"},
 		{"POST", "/api/v1/admin/accelerator/initializations/id:retry?operation_id=other"},

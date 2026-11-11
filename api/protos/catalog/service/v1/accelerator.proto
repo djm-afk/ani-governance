@@ -1,5 +1,6 @@
 syntax = "proto3";
 package catalog.service.v1;
+import "gnostic/openapi/v3/annotations.proto";
 
 // Governance owns these HTTP views. They deliberately omit delegated identity,
 // runtime plans, provider credentials and tenant binding topology.
@@ -14,11 +15,7 @@ message AcceleratorPageRequest {
   string mode = 8;
   string state = 9;
 }
-message AcceleratorVersionRequest {
-  string profile_id = 1 [json_name="profile_id"];
-  uint64 profile_version = 2 [json_name="profile_version"];
-  bool include_devices = 3 [json_name="include_devices"];
-}
+
 message AcceleratorTenantPageRequest {
   uint32 page_size = 1 [json_name="page_size"];
   string page_token = 2 [json_name="page_token"];
@@ -31,33 +28,26 @@ message AcceleratorTenantVersionRequest {
   string profile_id = 1 [json_name="profile_id"];
   uint64 profile_version = 2 [json_name="profile_version"];
 }
-message AcceleratorUsageRequest {
-  string owner_service = 1 [json_name="owner_service"];
-  string resource_id = 2 [json_name="resource_id"];
-  uint32 page_size = 3 [json_name="page_size"];
-  string page_token = 4 [json_name="page_token"];
-}
+
 message AcceleratorNode { string uid = 1; string name = 2; }
 message AcceleratorBaseline {
   string baseline_id = 1 [json_name="baseline_id"];
   string adapter_id = 2 [json_name="adapter_id"];
-  string volcano_version = 3 [json_name="volcano_version"];
-  string volcano_image_digest = 4 [json_name="volcano_image_digest"];
-  string device_plugin_version = 5 [json_name="device_plugin_version"];
-  string device_plugin_image_digest = 6 [json_name="device_plugin_image_digest"];
-  string hami_core_revision = 7 [json_name="hami_core_revision"];
+  reserved 3, 4, 5, 6, 7, 9, 10, 12, 13, 15, 16, 17, 18;
+  reserved "volcano_version", "volcano_image_digest", "device_plugin_version", "device_plugin_image_digest", "hami_core_revision", "factor_evidence_ref", "memory_encoding", "memory_scale_percent", "core_scale_percent", "node_config_digest", "scheduler_config_digest", "recipe_version", "baseline_digest";
   uint32 memory_block_mib = 8 [json_name="memory_block_mib"];
-  reserved 9; reserved "factor_evidence_ref";
-  string memory_encoding = 10 [json_name="memory_encoding"];
   uint32 split_count = 11 [json_name="split_count"];
-  uint32 memory_scale_percent = 12 [json_name="memory_scale_percent"];
-  uint32 core_scale_percent = 13 [json_name="core_scale_percent"];
   bool core_budget_additive = 14 [json_name="core_budget_additive"];
-  string node_config_digest = 15 [json_name="node_config_digest"];
-  string scheduler_config_digest = 16 [json_name="scheduler_config_digest"];
-  string recipe_version = 17 [json_name="recipe_version"];
-  string baseline_digest = 18 [json_name="baseline_digest"];
   string runtime_class_name = 19 [json_name="runtime_class_name"];
+  repeated AcceleratorResourceTypeConfig resource_types = 20 [json_name="resource_types"];
+}
+message AcceleratorResourceTypeConfig {
+  string allocation_type = 1 [json_name="allocation_type"];
+  string resource_key = 2 [json_name="resource_key"];
+  uint64 memory_capacity_bytes = 3 [json_name="memory_capacity_bytes"];
+  uint32 compute_units_per_device = 4 [json_name="compute_units_per_device"];
+  uint32 max_devices_per_replica = 5 [json_name="max_devices_per_replica"];
+  int64 max_memory_mib_per_device = 6 [json_name="max_memory_mib_per_device"];
 }
 message AcceleratorProfileSpec {
   string group_id = 1 [json_name="group_id"];
@@ -68,6 +58,9 @@ message AcceleratorProfileSpec {
   uint32 core_limit_percent = 5 [json_name="core_limit_percent"];
   uint32 max_devices_per_replica = 6 [json_name="max_devices_per_replica"];
   string isolation_class = 7 [json_name="isolation_class"];
+  string allocation_type = 9 [json_name="allocation_type"];
+  string resource_key = 10 [json_name="resource_key"];
+  uint32 compute_units_per_device = 11 [json_name="compute_units_per_device"];
 }
 message RegisterAcceleratorClusterRequest { RegisterAcceleratorClusterData data = 1; }
 message RegisterAcceleratorClusterData {
@@ -86,7 +79,7 @@ message AdoptAcceleratorSupplyData {
   string idempotency_key = 1 [json_name="idempotency_key"];
   string display_name = 2 [json_name="display_name"];
   string pool_id = 3 [json_name="pool_id"];
-  string mode = 4;
+  reserved 4; reserved "mode";
   repeated AcceleratorNode nodes = 5;
   string model_key = 6 [json_name="model_key"];
   AcceleratorBaseline baseline = 7;
@@ -128,7 +121,7 @@ message AcceleratorSupply {
   string pool_id = 2 [json_name="pool_id"];
   string cluster_id = 3 [json_name="cluster_id"];
   string display_name = 4 [json_name="display_name"];
-  string mode = 5;
+  reserved 5; reserved "mode";
   repeated AcceleratorNode nodes = 6;
   string model_key = 7 [json_name="model_key"];
   AcceleratorBaseline baseline = 8;
@@ -154,106 +147,39 @@ message AcceleratorObservation {
   string observed_at = 2 [json_name="observed_at"];
   repeated string issues = 3;
 }
-message AcceleratorCapacity {
-  string profile_id = 1 [json_name="profile_id"];
-  uint64 profile_version = 2 [json_name="profile_version"];
-  string mode = 3;
-  int64 physical_device_count = 4 [json_name="physical_device_count"];
-  int64 nominal_units = 5 [json_name="nominal_units"];
-  int64 known_committed_units = 6 [json_name="known_committed_units"];
-  int64 known_free_units = 7 [json_name="known_free_units"];
-  int64 unplaced_requested_units = 8 [json_name="unplaced_requested_units"];
-  AcceleratorObservation observation = 9;
-  repeated AcceleratorDeviceCapacity devices = 10;
-}
-message AcceleratorDeviceCapacity {
-  string device_id = 1 [json_name="device_id"];
-  int64 nominal_units = 2 [json_name="nominal_units"];
-  int64 known_committed_units = 3 [json_name="known_committed_units"];
-  int64 known_free_units = 4 [json_name="known_free_units"];
-  int64 safe_memory_budget_mib = 5 [json_name="safe_memory_budget_mib"];
-  int64 committed_memory_mib = 6 [json_name="committed_memory_mib"];
-  bool complete = 7;
-  repeated string issues = 8;
-}
+
+
 message AcceleratorDevice {
   string device_id = 1 [json_name="device_id"];
   string cluster_id = 2 [json_name="cluster_id"];
   string group_id = 3 [json_name="group_id"];
   AcceleratorNode node = 4;
-  string vendor_device_id = 5 [json_name="vendor_device_id"];
+  reserved 5, 7; reserved "vendor_device_id", "physical_memory_bytes";
   string model_key = 6 [json_name="model_key"];
-  uint64 physical_memory_bytes = 7 [json_name="physical_memory_bytes"];
   string health = 8;
   AcceleratorObservation observation = 9;
+  string device_uid = 10 [json_name="device_uid"];
+  string parent_device_uid = 11 [json_name="parent_device_uid"];
+  string device_kind = 12 [json_name="device_kind"];
+  optional uint64 memory_capacity_bytes = 13 [json_name="memory_capacity_bytes", (gnostic.openapi.v3.property) = { type: "string" format: "uint64" nullable: true }];
+  optional uint32 compute_units = 14 [json_name="compute_units", (gnostic.openapi.v3.property) = { nullable: true }];
+  string pci_bdf = 15 [json_name="pci_bdf"];
+  string adapter_id = 16 [json_name="adapter_id"];
+  string resource_key = 17 [json_name="resource_key"];
 }
 message AcceleratorDevices { repeated AcceleratorDevice items = 1; string next_page_token = 2 [json_name="next_page_token"]; }
-message AcceleratorUsage {
-  string owner_service = 1 [json_name="owner_service"];
-  string resource_id = 2 [json_name="resource_id"];
-  string create_operation_id = 3 [json_name="create_operation_id"];
-  uint64 revision = 4;
-  string state = 5;
-  string end_reason = 6 [json_name="end_reason"];
-  string profile_id = 7 [json_name="profile_id"];
-  uint64 profile_version = 8 [json_name="profile_version"];
-  string source_operation_created_at = 9 [json_name="source_operation_created_at"];
-}
-message AcceleratorUsages { repeated AcceleratorUsage items = 1; string next_page_token = 2 [json_name="next_page_token"]; }
+
+
 // Tenant view has no physical/Pod IDs, source evidence, raw watermarks or plans.
-message AcceleratorBinding {
-  string binding_id = 1 [json_name="binding_id"];
-  string container_name = 2 [json_name="container_name"];
-  string state = 3;
-  int64 memory_mib = 4 [json_name="memory_mib"];
-  uint32 core_limit_percent = 5 [json_name="core_limit_percent"];
-  AcceleratorObservation observation = 6;
-}
-message AcceleratorBindings { repeated AcceleratorBinding items = 1; string next_page_token = 2 [json_name="next_page_token"]; AcceleratorObservation observation = 3; }
-message AcceleratorAdminBinding {
-  AcceleratorBinding binding = 1;
-  string physical_device_id = 2 [json_name="physical_device_id"];
-  string cluster_id = 3 [json_name="cluster_id"];
-  string pod_namespace = 4 [json_name="pod_namespace"];
-  string pod_name = 5 [json_name="pod_name"];
-  string pod_uid = 6 [json_name="pod_uid"];
-  string evidence_ref = 7 [json_name="evidence_ref"];
-  string tenant_id = 8 [json_name="tenant_id"];
-  string owner_service = 9 [json_name="owner_service"];
-  string resource_id = 10 [json_name="resource_id"];
-}
-message AcceleratorAdminBindings { repeated AcceleratorAdminBinding items = 1; string next_page_token = 2 [json_name="next_page_token"]; AcceleratorObservation observation = 3; }
-message AcceleratorGpuRequest {
-  string cluster_id = 1 [json_name="cluster_id"];
-  string pool_id = 2 [json_name="pool_id"];
-  string profile_id = 3 [json_name="profile_id"];
-  uint64 profile_version = 4 [json_name="profile_version"];
-  uint32 replicas = 5;
-  uint32 devices_per_replica = 6 [json_name="devices_per_replica"];
-  string container_name = 7 [json_name="container_name"];
-}
-message AcceleratorPreviewRequest { AcceleratorGpuRequest data = 1; }
-message GpuPreviewQuotaItem { string quota_code = 1 [json_name="quota_code"]; int64 units = 2; }
-message GpuPreviewQuotaCheck {
-  string quota_code = 1 [json_name="quota_code"];
-  int64 requested = 2;
-  int64 available = 3;
-  bool sufficient = 4;
-  string status = 5;
-}
-message AcceleratorPreview {
-  repeated GpuPreviewQuotaItem requested_quota_items = 1 [json_name="requested_quota_items"];
-  repeated GpuPreviewQuotaCheck quota_checks = 2 [json_name="quota_checks"];
-  string gpu_fit = 3 [json_name="gpu_fit"];
-  int64 estimated_replicas = 4 [json_name="estimated_replicas"];
-  bool estimate_known = 5 [json_name="estimate_known"];
-  AcceleratorObservation observation = 6;
-  string owner_execution_readiness = 7 [json_name="owner_execution_readiness"];
-  string cpu = 8;
-  string network = 9;
-  string storage = 10;
-  repeated string reasons = 11;
-}
+
+
+
+
+
+
+
+
+
 
 message PreviewAcceleratorProfileRequest { string group_id = 1 [json_name="group_id"]; uint32 parts = 2; }
 message AcceleratorProfilePreview { AcceleratorProfileSpec spec = 1; int64 unused_memory_mib = 2 [json_name="unused_memory_mib"]; uint32 unused_core_units = 3 [json_name="unused_core_units"]; }
@@ -281,28 +207,19 @@ message AcceleratorInitialization {
 message ListAcceleratorDiscoveredNodesRequest {
   optional uint32 page = 1;
   optional uint32 page_size = 2 [json_name="pageSize"];
+  string connection_ref = 3 [json_name="connection_ref"];
 }
-message AcceleratorDiscoveredGPU {
-  string uuid = 1;
-  string model_key = 2 [json_name="model_key"];
-  uint64 physical_memory_bytes = 3 [json_name="physical_memory_bytes"];
-  optional int64 safe_memory_budget_mib = 4 [json_name="safe_memory_budget_mib"];
-  string budget_reason = 5 [json_name="budget_reason"];
-}
-message AcceleratorDiscoveredBaseline {
-  string baseline_ref = 1 [json_name="baseline_ref"];
-  string mode = 2;
-  string source = 3;
-}
+
+
 message AcceleratorDiscoveredNode {
   AcceleratorNode node = 1;
   string group_id = 2 [json_name="group_id"];
-  repeated AcceleratorDiscoveredGPU gpus = 3;
-  repeated AcceleratorDiscoveredBaseline baselines = 4;
-  reserved 5, 6, 7;
-  reserved "agent_online", "agent_lease_expires_at", "sources";
+  reserved 3, 4, 5, 6, 7;
+  reserved "gpus", "baselines", "agent_online", "agent_lease_expires_at", "sources";
   bool selectable = 8;
   repeated string blocking_reasons = 9 [json_name="blocking_reasons"];
+  repeated AcceleratorDevice devices = 10;
+  repeated AcceleratorDiscoveredProviderConfig provider_configs = 11 [json_name="provider_configs"];
 }
 message AcceleratorDiscoveredNodes {
   repeated AcceleratorDiscoveredNode items = 1;
@@ -325,7 +242,8 @@ message AcceleratorInitializationNewGroup {
   string pool_key = 1 [json_name="pool_key"];
   string display_name = 2 [json_name="display_name"];
   repeated AcceleratorNode nodes = 3;
-  string baseline_ref = 4 [json_name="baseline_ref"];
+  reserved 4; reserved "baseline_ref";
+  string provider_config_ref = 6 [json_name="provider_config_ref"];
   string queue_name = 5 [json_name="queue_name"];
 }
 message AcceleratorInitializationGroupInput {
@@ -342,6 +260,9 @@ message AcceleratorInitializationProfileInput {
   int64 memory_mib_per_device = 4 [json_name="memory_mib_per_device"];
   uint32 core_limit_percent = 5 [json_name="core_limit_percent"];
   uint32 max_devices_per_replica = 6 [json_name="max_devices_per_replica"];
+  string allocation_type = 7 [json_name="allocation_type"];
+  string resource_key = 8 [json_name="resource_key"];
+  uint32 compute_units_per_device = 9 [json_name="compute_units_per_device"];
 }
 message CreateAcceleratorInitializationRequest { CreateAcceleratorInitializationData data = 1; }
 message CreateAcceleratorInitializationData {
@@ -350,6 +271,7 @@ message CreateAcceleratorInitializationData {
   repeated AcceleratorInitializationPoolInput pools = 3;
   repeated AcceleratorInitializationGroupInput groups = 4;
   repeated AcceleratorInitializationProfileInput profiles = 5;
+  string connection_ref = 6 [json_name="connection_ref"];
 }
 message GetAcceleratorInitializationOperationRequest { string operation_id = 1 [json_name="operation_id"]; }
 message RetryAcceleratorInitializationOperationRequest {
@@ -402,4 +324,66 @@ message AcceleratorInitializationOperation {
   repeated AcceleratorInitializationGroupResult groups = 12;
   repeated AcceleratorInitializationProfileResult profiles = 13;
   repeated AcceleratorInitializationStep steps = 14;
+}
+
+message GetAcceleratorInitializationRequest { string connection_ref = 1 [json_name="connection_ref"]; }
+message AcceleratorDiscoveredProviderConfig {
+  string provider_config_ref = 1 [json_name="provider_config_ref"];
+  string adapter_id = 2 [json_name="adapter_id"];
+  repeated string allocation_types = 3 [json_name="allocation_types"];
+}
+message GetAcceleratorProfileCapacityRequest {
+  string profile_id = 1 [json_name="profile_id"];
+  uint64 profile_version = 2 [json_name="profile_version", (gnostic.openapi.v3.property) = { type: "string" format: "uint64" }];
+  bool include_details = 3 [json_name="include_details"];
+}
+message GetAcceleratorSupplyGroupCapacityRequest {
+  string group_id = 1 [json_name="group_id"];
+  bool include_details = 2 [json_name="include_details"];
+}
+message AcceleratorCapacityTotals {
+  optional int64 total_units = 1 [json_name="total_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 allocated_units = 2 [json_name="allocated_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 unallocated_units = 3 [json_name="unallocated_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 total_memory_mib = 4 [json_name="total_memory_mib", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 allocated_memory_mib = 5 [json_name="allocated_memory_mib", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 unallocated_memory_mib = 6 [json_name="unallocated_memory_mib", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+}
+message AcceleratorCapacityDetail {
+  string node_uid = 1 [json_name="node_uid"];
+  string node_name = 2 [json_name="node_name"];
+  string device_uid = 3 [json_name="device_uid"];
+  AcceleratorCapacityTotals totals = 4;
+  optional int64 nominal_units = 5 [json_name="nominal_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 estimated_available_units = 6 [json_name="estimated_available_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+}
+message AcceleratorProfileCapacity {
+  string profile_id = 1 [json_name="profile_id"];
+  uint64 profile_version = 2 [json_name="profile_version", (gnostic.openapi.v3.property) = { type: "string" format: "uint64" }];
+  string allocation_type = 3 [json_name="allocation_type"];
+  string resource_key = 4 [json_name="resource_key"];
+  string basis = 5;
+  string granularity = 6;
+  optional int64 nominal_units = 7 [json_name="nominal_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  optional int64 estimated_available_units = 8 [json_name="estimated_available_units", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  AcceleratorCapacityTotals totals = 9;
+  repeated AcceleratorCapacityDetail details = 10;
+  string observed_at = 11 [json_name="observed_at"];
+  repeated string missing_fields = 12 [json_name="missing_fields"];
+}
+message AcceleratorResourceTypeCapacity {
+  string allocation_type = 1 [json_name="allocation_type"];
+  string resource_key = 2 [json_name="resource_key"];
+  string basis = 3;
+  string granularity = 4;
+  AcceleratorCapacityTotals totals = 5;
+  repeated AcceleratorCapacityDetail details = 6;
+  string observed_at = 7 [json_name="observed_at"];
+  repeated string missing_fields = 8 [json_name="missing_fields"];
+}
+message AcceleratorSupplyGroupCapacity {
+  string group_id = 1 [json_name="group_id"];
+  optional int64 physical_device_count = 2 [json_name="physical_device_count", (gnostic.openapi.v3.property) = { type: "string" format: "int64" nullable: true }];
+  repeated AcceleratorResourceTypeCapacity resource_types = 3 [json_name="resource_types"];
+  string observed_at = 4 [json_name="observed_at"];
 }

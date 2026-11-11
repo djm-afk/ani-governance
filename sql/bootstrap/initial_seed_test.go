@@ -22,14 +22,14 @@ func releaseSeed(t *testing.T) (*initialSeed, []API) {
 
 func TestInitialSeedReleaseCoverage(t *testing.T) {
 	seed, catalog := releaseSeed(t)
-	require.Len(t, seed.Routes, 509)
+	require.Len(t, seed.Routes, 504)
 	require.Len(t, seed.ExcludedRoutes, 6)
 	selected := seed.catalogForInit(catalog)
-	require.Len(t, selected, 509)
+	require.Len(t, selected, 504)
 	for _, api := range selected {
 		require.NotEqual(t, "VMImageService", api.Module, api.Path)
 	}
-	require.Len(t, seed.Permissions, 382)
+	require.Len(t, seed.Permissions, 379)
 	require.Len(t, seed.Menus, 51) // 21 Console pages, 28 BOSS pages and two containers.
 	require.Len(t, seed.FullPlanModules, 19)
 	routes := map[string]initialRoute{}
@@ -89,7 +89,7 @@ func TestInitialSeedRejectsIncompleteOrExpandedRelease(t *testing.T) {
 	require.ErrorContains(t, err, "API catalog is incomplete")
 	expanded := append(append([]API{}, catalog...), API{Method: "GET", Path: "/api/v1/extra", Operation: "Extra_Get", BusinessModule: "SYSTEM"})
 	_, err = loadInitialSeed(expanded)
-	require.ErrorContains(t, err, "expected exactly 515")
+	require.ErrorContains(t, err, "expected exactly 510")
 	changed := append([]API{}, catalog...)
 	changed[0].BusinessModule = "SYSTEM"
 	if changed[0].BusinessModule == catalog[0].BusinessModule {
@@ -172,10 +172,10 @@ func TestInitialSeedAdministratorAPICoverage(t *testing.T) {
 			shared++
 		}
 	}
-	require.Equal(t, map[string]int{"platform": 268, "tenant": 274}, coverage)
+	require.Equal(t, map[string]int{"platform": 268, "tenant": 269}, coverage)
 	require.Equal(t, 43, shared)
 	require.Equal(t, 10, independent)
-	require.Equal(t, 509, coverage["platform"]+coverage["tenant"]-shared+independent)
+	require.Equal(t, 504, coverage["platform"]+coverage["tenant"]-shared+independent)
 }
 
 func TestInitialSeedAdditionalRoleTemplateBoundaries(t *testing.T) {
@@ -189,8 +189,8 @@ func TestInitialSeedAdditionalRoleTemplateBoundaries(t *testing.T) {
 	}
 	ops, developer, viewer := templates["template:platform:operator"], templates["template:tenant:developer"], templates["template:tenant:viewer"]
 	require.Len(t, ops, 106)
-	require.Len(t, developer, 182)
-	require.Len(t, viewer, 95)
+	require.Len(t, developer, 179)
+	require.Len(t, viewer, 93)
 	for _, code := range []string{"role:create", "permission:edit", "sys:platform_admin", "tenant:create", "plan:edit", "sys:reset_others_credential"} {
 		require.False(t, ops[code], code)
 	}
@@ -225,4 +225,35 @@ func TestInitialSeedAdditionalRoleTemplateBoundaries(t *testing.T) {
 			}
 		}
 	}
+}
+
+// Fresh installs must use the same retired-route boundary as running v1.1 APIs.
+func TestInitialSeedAcceleratorV11Capabilities(t *testing.T) {
+	seed, _ := releaseSeed(t)
+	routes := map[string]initialRoute{}
+	permissions := map[string]initialPermission{}
+	for _, r := range seed.Routes {
+		routes[r.Method+" "+r.Path] = r
+	}
+	for _, p := range seed.Permissions {
+		permissions[p.Code] = p
+	}
+	for _, path := range []string{"GET /api/v1/accelerator/capacity", "GET /api/v1/admin/accelerator/capacity", "POST /api/v1/accelerator/admission-preview", "GET /api/v1/admin/accelerator/bindings", "GET /api/v1/accelerator/usages", "GET /api/v1/accelerator/usages/{owner_service}/{resource_id}", "GET /api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings"} {
+		require.NotContains(t, routes, path)
+	}
+	for _, code := range []string{"accelerator:admission:preview", "accelerator:binding:admin-list", "accelerator:binding:list", "accelerator:capacity:admin-get", "accelerator:capacity:get"} {
+		require.NotContains(t, permissions, code)
+	}
+	for path, code := range map[string]string{"GET /api/v1/admin/accelerator/profiles/{profile_id}/capacity": "accelerator:profile:capacity-read", "GET /api/v1/admin/accelerator/supply-groups/{group_id}/capacity": "accelerator:supply-group:capacity-read"} {
+		require.Equal(t, []string{code}, routes[path].Permissions)
+		require.Equal(t, []string{"platform"}, permissions[code].Roles)
+		for _, role := range seed.RoleTemplates {
+			if role.Scope == "TENANT" {
+				require.NotContains(t, role.Permissions, code)
+			}
+		}
+	}
+	require.Contains(t, permissions, "accelerator:usage:get")
+	require.Contains(t, permissions, "accelerator:usage:list")
+	require.Equal(t, []string{"accelerator:usage:list"}, routes["GET /api/v1/gpu/metrics/latest"].Permissions)
 }

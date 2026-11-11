@@ -104,7 +104,10 @@ func (s *ComputePresetService) ListPresets(ctx context.Context, r *computeview.L
 	}
 	out := &computeview.ListPresetsResponse{Items: []*computeview.Preset{}, Total: items.Total, GpuCatalogStatus: catalogStatus, GpuCatalogReason: reason}
 	for _, p := range items.Items {
-		item := wireComputePreset(p)
+		item, err := wireComputePreset(p)
+		if err != nil {
+			return nil, err
+		}
 		if item != nil && p.ComputeType == "gpu" && p.Gpu != nil && item.Enabled {
 			switch profileStates[fmt.Sprintf("%s/%d", p.Gpu.ProfileId, p.Gpu.ProfileVersion)] {
 			case acc.ProfileState_PROFILE_DISABLED:
@@ -114,8 +117,11 @@ func (s *ComputePresetService) ListPresets(ctx context.Context, r *computeview.L
 				item.Selectable = false
 				item.UnavailableReason = "GPU_PROFILE_DELETED"
 			case acc.ProfileState_PROFILE_ACTIVE:
-				item.UnavailableReason = s.presetGPUAvailability(ctx, tenant, p.Gpu)
-				item.Selectable = item.UnavailableReason == ""
+				item.Selectable = r.Usage == "CONTAINER_INSTANCE"
+				item.UnavailableReason = ""
+				if !item.Selectable {
+					item.UnavailableReason = "GPU_OWNER_NOT_ENABLED"
+				}
 			}
 		}
 		out.Items = append(out.Items, item)
@@ -198,71 +204,10 @@ func (s *ComputePresetService) allowedPresetGPU(ctx context.Context, tenant stri
 	}
 }
 
-// Availability is a current catalog hint, never an admission lease or a replay
-// condition. Only already authorized, tenant-scoped page items reach this call.
-func (s *ComputePresetService) presetGPUAvailability(ctx context.Context, tenant string, g *compute.GpuPresetReference) string {
-	p, err := gpuPrincipal(ctx)
-	if err != nil || s.catalog.Catalog == nil || g == nil {
-		return "GPU_CATALOG_UNAVAILABLE"
-	}
-	delegation := &acc.TenantContext{RequestId: uuid.NewString(), TenantId: tenant, Actor: &acc.Actor{Type: "user", Id: strconv.FormatUint(uint64(p.ID), 10)}}
-	if g.DevicesPerInstance > 1 {
-		capacity, err := s.catalog.Catalog.GetCapacity(ctx, &acc.GetCapacityRequest{Context: delegation, ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion})
-		if err != nil {
-			return "GPU_CATALOG_UNAVAILABLE"
-		}
-		if capacity != nil && capacity.Observation != nil {
-			for _, issue := range capacity.Observation.Issues {
-				if issue == "ADMISSION_CLOSED" {
-					return "GPU_SUPPLY_PAUSED"
-				}
-			}
-		}
-		if capacity == nil || capacity.ProfileId != g.ProfileId || capacity.ProfileVersion != g.ProfileVersion || capacity.Observation == nil || !capacity.Observation.Complete {
-			return "GPU_CAPACITY_UNKNOWN"
-		}
-		if capacity.KnownFreeUnits < int64(g.DevicesPerInstance) {
-			return "GPU_TEMPORARILY_FULL"
-		}
-		return ""
-	}
-	fit, err := s.catalog.Catalog.CheckGpuFit(ctx, &acc.CheckGpuFitRequest{Context: delegation, Gpu: &acc.GpuRequest{ClusterId: g.ClusterId, PoolId: g.PoolId, ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion, Replicas: 1, DevicesPerReplica: g.DevicesPerInstance, ContainerName: "workspace"}})
-	if err != nil {
-		switch kratoserrors.FromError(mapAcceleratorError(err)).Reason {
-		case "ADMISSION_CLOSED":
-			return "GPU_SUPPLY_PAUSED"
-		case "PROFILE_DISABLED":
-			return "GPU_PROFILE_DISABLED"
-		case "PROFILE_DELETED":
-			return "GPU_PROFILE_DELETED"
-		case "SOURCE_UNKNOWN", "SOURCE_STALE", "DEVICE_CAPACITY_UNKNOWN":
-			return "GPU_CAPACITY_UNKNOWN"
-		case "CONFIG_DRIFT", "NODE_LABEL_MISMATCH", "DEVICE_MEMORY_MISMATCH", "CAPACITY_INVARIANT_VIOLATION":
-			return "GPU_SUPPLY_CONFIG_MISMATCH"
-		case "PROFILE_NOT_ACTIVE":
-			return "GPU_PROFILE_NOT_ACTIVE"
-		default:
-			return "GPU_CATALOG_UNAVAILABLE"
-		}
-	}
-	if fit == nil || fit.Observation == nil || !fit.Observation.Complete || !fit.EstimateKnown || fit.Status == acc.FitStatus_FIT_UNKNOWN {
-		return "GPU_CAPACITY_UNKNOWN"
-	}
-	if fit.Status == acc.FitStatus_WAIT_FOR_CAPACITY {
-		return "GPU_TEMPORARILY_FULL"
-	}
-	if fit.Status != acc.FitStatus_FIT_ESTIMATE {
-		return "GPU_CAPACITY_UNKNOWN"
-	}
-	return ""
-}
-
 type ComputeCatalog interface {
 	ListPresets(context.Context, string, string, *compute.ListPresetsRequest) (*compute.ListPresetsResponse, error)
 }
 
 type ComputeGPUCatalog interface {
 	ListProfiles(context.Context, *acc.ListProfilesRequest, ...grpc.CallOption) (*acc.ListProfilesResponse, error)
-	CheckGpuFit(context.Context, *acc.CheckGpuFitRequest, ...grpc.CallOption) (*acc.GpuFit, error)
-	GetCapacity(context.Context, *acc.GetCapacityRequest, ...grpc.CallOption) (*acc.CapacityView, error)
 }

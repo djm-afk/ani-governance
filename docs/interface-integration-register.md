@@ -1330,13 +1330,26 @@ x-ani-authz:
 
 ## 功能组：Accelerator v1.2 管理与租户 BFF（GOV-ACC-V12-01）
 
-### 节点发现与初始化增量（2026-10-21）
+### 加速器整改 v1.1 当前合同
+
+本节当前源码合同以整改 v1.1 为准。部署、数据库切换与实机结果另行记录，不能从文档、fixture或 HTTP 200 推断通过。P6 前端与其他 GPU Owner 不在本批。
+
+| 编号 | 方法/路径 | 下游 RPC / 输入 | 权限 |
+| --- | --- | --- | --- |
+| ACC-25 | GET /api/v1/admin/accelerator/profiles/{profile_id}/capacity | GetProfileCapacity；路径profile_id、必填profile_version、可选include_details | accelerator:profile:capacity-read |
+| ACC-26 | GET /api/v1/admin/accelerator/supply-groups/{group_id}/capacity | GetSupplyGroupCapacity；路径group_id、可选include_details | accelerator:supply-group:capacity-read |
+
+Gov服务名固定 `admin.service.v1.AcceleratorCapacityAdminService`；HTTP Operation分别为该完整前缀下的GetProfileCapacity/GetSupplyGroupCapacity，ACC网络RPC仍为`accelerator.v1.AcceleratorAdminService`下同名方法。现有同一AcceleratorService实现，在原HTTP监听只自定义注册一次；不另建gRPC监听或与生成HTTP handler重复注册。
+
+容量DTO为AcceleratorProfileCapacity/AcceleratorSupplyGroupCapacity及其嵌套结构。可选64位整数缺失为显式null，已知0为字符串"0"，所有64位值使用精确十进制字符串；数组为空时为[]，totals固定输出六项值或null。allocation_type/basis/granularity是明确枚举名字符串。Gov只鉴权与映射，不做容量计算，不把容量或监控变为创建、删除、退额门槛。
+
+### 节点发现与初始化
 
 | 编号 | 方法/路径 | 下游完整 RPC 后缀 / 语义 | 权限 |
 | --- | --- | --- | --- |
-| ACC-20 | GET /api/v1/admin/accelerator/initialization | GetInitialization；受管连接、登记状态、带来源检查项、配置完成及最新操作 | accelerator:initialization:read |
-| ACC-21 | GET /api/v1/admin/accelerator/discovered-nodes | ListDiscoveredNodes；只接受 page/pageSize，默认 1/20，pageSize 上限 200，按节点 name/UID 排序，items/total/discovery_revision | accelerator:discovery:list |
-| ACC-22 | POST /api/v1/admin/accelerator/initializations | CreateInitialization；data.idempotency_key/discovery_revision/pools/groups/profiles，一次持久受理 | accelerator:initialization:create + 实际组件能力 |
+| ACC-20 | GET /api/v1/admin/accelerator/initialization | GetInitialization；connection_ref查询选择受管连接、登记状态、带来源检查项、配置完成及最新操作 | accelerator:initialization:read |
+| ACC-21 | GET /api/v1/admin/accelerator/discovered-nodes | ListDiscoveredNodes；接受connection_ref及page/pageSize，默认 1/20，pageSize 上限 200，按节点 name/UID 排序，items/total/discovery_revision | accelerator:discovery:list |
+| ACC-22 | POST /api/v1/admin/accelerator/initializations | CreateInitialization；data.idempotency_key/discovery_revision/connection_ref/pools/groups/profiles，一次持久受理 | accelerator:initialization:create + 实际组件能力 |
 | ACC-23 | GET /api/v1/admin/accelerator/initializations/{operation_id} | GetInitializationOperation；路径 ID 权威，持久操作及部分成功结果 | accelerator:initialization:read |
 | ACC-24 | POST /api/v1/admin/accelerator/initializations/{operation_id}:retry | RetryInitializationOperation；data.idempotency_key/expected_version，不修改原请求 | accelerator:initialization:retry + 冻结 required_actions |
 
@@ -1355,7 +1368,7 @@ Retry 先读取原 operation 的 required_actions，再按固定 action→已登
 五方法成功均为 HTTP 200，直接返回 Proto JSON DTO；Create/Retry 的 200 表示受理，不能当作
 初始化完成。写请求保持 `{data:{...}}`，64 位整数为十进制字符串。
 仅新发现列表使用 page/pageSize；存量 ACC 列表仍 page_size/page_token。
-概况/操作 GET 及两个 POST 不接受 query；发现 GET 仅接受单值规范正整数 page/pageSize。
+概况GET接受单值connection_ref；发现GET接受connection_ref与单值规范正整数page/pageSize；操作GET及两个POST不接受query。
 路径 operation_id 不接受 query 覆盖，额外 body 字段不能进入可信下游上下文。
 下游服务拒绝仍映射 503 `ACCELERATOR_SERVICE_ACCESS_DENIED`；Gov 当前用户拒绝为 401/403。
 
@@ -1363,8 +1376,7 @@ Retry 先读取原 operation 的 required_actions，再按固定 action→已登
 前两步检查/编辑草稿，第三步仅提交一次 CreateInitialization，并以 operation_id 恢复查询；
 BLOCKED 且 retryable 时用当前 version 和新幂等键显式 Retry，CONFLICT 不自动 rebase。
 operation 的历史配置完成、当前 Group admission 和容量分别展示；算力规格须在既有管理入口
-显式关联并启用。新组 2/4/8 等分仅使用相同且已知的逐卡安全预算，以整数计算绝对 MiB/core；
-已有组继续 PreviewProfile。本批前端由专人接入，不修改前端代码。
+显式关联并启用。discovery返回统一devices与provider_configs；new_group使用provider_config_ref，Profile传allocation_type/resource_key/compute_units_per_device。NVIDIA建议等分不再是2/4/8硬限制；海光仅选择已登记整卡/固定片类型，初始化不切卡。已有组继续PreviewProfile。本批前端由专人接入，不修改前端代码。
 
 联合验证复用 `TestAcceleratorJointHTTP` 的真实 JWT、会话缓存、数据库策略、Casbin 与生成
 HTTP handler；设置 `GOV_ACC_INITIALIZATION_JOINT_SEED_FILE` 时运行本增量，并将平台 fixture
@@ -1372,9 +1384,7 @@ HTTP handler；设置 `GOV_ACC_INITIALIZATION_JOINT_SEED_FILE` 时运行本增�
 领域、受限 PG 运行身份、mTLS/委托和 worker，仅 Kubernetes 发现/标签是外部边界替身。
 联合用例观察同键重放、BLOCKED、显式 Retry、ACTIVE/OPEN 与最终概况，不将其算作实机验收。
 
-公共 ACC API 固定正式模块 `v0.0.0-20261021055754-9969638c907a`，Origin.Hash 为
-`9969638c907a806e895751ac71740d52f8592954`；使用 `GOWORK=off` 正常下载和校验，
-不提交 `replace` 或工作树依赖。Gov 构建基准升至 Go 1.26.10，避免旧标准库已知漏洞。
+公共ACC模块与版本以当前`go.mod/go.sum`为准；公共模块按Obs→ACC→Res→Gov锁定真实版本，构建不提交本机replace或工作树依赖。Go基准来自go.mod。
 
 本节登记合同与源码接点；正式 ACC 依赖版本、软件测试和真实环境部署按本批结果分别记录，
 不以本节存在宣称主链验收完成。
@@ -1390,45 +1400,44 @@ HTTP handler；设置 `GOV_ACC_INITIALIZATION_JOINT_SEED_FILE` 时运行本增�
 | ACC-03 | GET /api/v1/admin/accelerator/pools | ListPools；cluster_id | accelerator:pool:list |
 | ACC-04 | POST /api/v1/admin/accelerator/pools | CreatePool；data.cluster_id/display_name/idempotency_key | accelerator:pool:create |
 | ACC-05 | GET /api/v1/admin/accelerator/supply-groups | ListSupplyGroups；pool_id | accelerator:supply-group:list |
-| ACC-06 | POST /api/v1/admin/accelerator/supply-groups:adopt | AdoptSupplyGroup；data 中固定节点、baseline、mode、queue；无 verification 写字段 | accelerator:supply-group:adopt |
+| ACC-06 | POST /api/v1/admin/accelerator/supply-groups:adopt | AdoptSupplyGroup；data中固定节点、baseline.resource_types与queue；无group级mode或安装摘要字段 | accelerator:supply-group:adopt |
 | ACC-07 | POST /api/v1/admin/accelerator/supply-groups/{group_id}:set-admission | SetAdmission；data.expected_version/desired/reason/idempotency_key | accelerator:supply-group:set-admission |
 | ACC-08 | GET /api/v1/admin/accelerator/profiles | AdminListProfiles；cluster_id | accelerator:profile:admin-list |
-| ACC-09 | POST /api/v1/admin/accelerator/profiles | PublishProfile；data.spec/expected_group_version/verification_ref/idempotency_key | accelerator:profile:publish |
+| ACC-09 | POST /api/v1/admin/accelerator/profiles | CreateProfile；data.spec/expected_group_version/idempotency_key；spec包含allocation_type/resource_key/CU | accelerator:profile:publish |
 | ACC-10 | GET /api/v1/admin/accelerator/devices | ListDevices；cluster_id、可选 group_id | accelerator:device:list |
-| ACC-11 | GET /api/v1/admin/accelerator/bindings | AdminListBindings；cluster_id、可选 physical_device_id；包括未关联事实 | accelerator:binding:admin-list |
-| ACC-12 | GET /api/v1/admin/accelerator/capacity | AdminGetCapacity；profile_id/profile_version/include_devices | accelerator:capacity:admin-get |
+| ACC-11 | GET /api/v1/admin/accelerator/bindings | 已退役，不注册路由、不提供兼容代理 | — |
+| ACC-12 | GET /api/v1/admin/accelerator/capacity | 已退役，不注册路由、不提供兼容代理 | — |
 | ACC-13 | GET /api/v1/accelerator/profiles | ListProfiles；cluster_id、可选 mode | accelerator:profile:list |
 | ACC-14 | GET /api/v1/accelerator/profiles/{profile_id} | GetProfile；具体 profile_version | accelerator:profile:get |
-| ACC-15 | GET /api/v1/accelerator/capacity | GetCapacity；具体 profile/version；租户合同无 include_devices 字段，永不返回设备明细 | accelerator:capacity:get |
-| ACC-16 | POST /api/v1/accelerator/admission-preview | ResolveGpuRequest + CheckGpuFit + 本租户额度；只读，不返回 plan/runtime | accelerator:admission:preview |
-| ACC-17 | GET /api/v1/accelerator/usages | ListGpuUsages；可选 owner_service/state | accelerator:usage:list |
-| ACC-18 | GET /api/v1/accelerator/usages/{owner_service}/{resource_id} | 本库可信原 CREATE 构造 ref → GetGpuUsage | accelerator:usage:get |
-| ACC-19 | GET /api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings | 同上 → ListBindings；返回独立脱敏 DTO | accelerator:binding:list |
+| ACC-15 | GET /api/v1/accelerator/capacity | 已退役，不注册路由、不提供兼容代理 | — |
+| ACC-16 | POST /api/v1/accelerator/admission-preview | 已退役，不注册路由、不提供兼容代理 | — |
+| ACC-17 | GET /api/v1/accelerator/usages | 已退役，不注册路由、不提供兼容代理 | — |
+| ACC-18 | GET /api/v1/accelerator/usages/{owner_service}/{resource_id} | 已退役，不注册路由、不提供兼容代理 | — |
+| ACC-19 | GET /api/v1/accelerator/usages/{owner_service}/{resource_id}/bindings | 已退役，不注册路由、不提供兼容代理 | — |
 | QUOTA-04 | GET /api/v1/me/quota-accounts | 复用 QUOTA-02 账户读模型；tenant 来自 Principal | quota:account:self-read |
 
-ACC-01～12 需要用户 JWT、平台身份及对应当前角色权限；平台身份不伪造下游 tenant=0。
-ACC-13～19 需要用户 JWT、有效租户、套餐 `ACCELERATOR` 模块、当前角色权限；QUOTA-04
+ACC-01～10、ACC-20～26需要用户JWT、平台身份及对应当前角色权限；平台身份不伪造下游 tenant=0。
+ACC-13～14需要用户JWT、有效租户、套餐 `ACCELERATOR` 模块、当前角色权限；QUOTA-04
 归既有 `TENANT` 模块，不要求 GPU 模块。AK/SK 白名单不增加上述路由。
 上述 Governance 授权不能代替 Accelerator 启动配置中的 actor/action/tenant/cluster grant。
 
 HTTP 不接受 tenant/actor/context 作为身份来源；服务从已验证 Principal 分列主体 type/id，
 从持久 ResourceTenantID 映射取得 UUID。出站重建 metadata，清除 Bearer 和外部 identity headers。
-客户端叶证书要求唯一精确 URI SAN `spiffe://ani.internal/service/ani-governance`，TLS≥1.3，
+客户端叶证书要求唯一精确DNS SAN `ani-governance`，TLS 1.3，
 服务器由受管 CA 与配置的精确 DNS SAN 验证。配置见 `configs/accelerator.env.example`。
 
 写请求保持 `{data:{...}}`；新增字段固定 snake_case；uint64/int64 按 protobuf JSON 为十进制字符串。
 列表用 `page_size`（0 默认50，最大200）、`page_token`，响应 `next_page_token`；不伪造 total。
-租户 DTO 不含 physical UUID、Pod 身份、原始 evidence、水位、source_fact_ref、完整 plan/runtime。
-缺投影是 `USAGE_PROJECTION_NOT_READY`，不表示业务资源不存在；投影/ACK 不表示 Ready 或删除完成。
+租户目录DTO不返回受管设备拓扑或执行配置。新设备DTO使用opaque device_uid/parent_device_uid、adapter_id、device_kind和实际可选容量/CU；不把NVIDIA UUID作为所有厂商的公共身份。
 错误保留受限机器 reason，400/401/403/404/409/412/503/504 分别对应合同失败，原始下游正文不公开。
 
 先执行 `admin sync-apis --dry-run`、复核后执行 `admin sync-apis`，再显式应用
 `scripts/ops/sql/register-accelerator-permissions.sql` 登记精确权限关联。脚本不授予角色、不启用套餐、
 不默认分配额度；部署方按明确租户/角色/套餐授权并刷新运行实例策略。接口目录存在不代表已授权。
 
-`SyncGpuUsage` 仅独立恢复 worker 以 Governance 服务身份调用，不受当前用户委托撤销或套餐到期阻断；
-`ObserveRelease` 仅 owner 直连，本批没有 Governance 公网代理。正式 registry 无生产 GPU owner，
-新建仍失败关闭；预览的 owner_execution_readiness 取受控业务绑定，测试装配不能开启正式目录。
+`SyncGpuUsage`、旧Binding/Usage投影、预检与旧容量代理在本批退役；真实operation/charge/receipt、Owner完成事实和原charge退款链保留。新GPU仅Res Owner开启，Inference/ModelDev的新GPU在占额前明确未接入，其CPU链保持。
+
+P4先备份并显式执行`sql/data/20261110_accelerator_retire_derived_routes.sql`清理精确退役API及真正独占权限关联，再按目录同步与登记流程处理新接口。`accelerator:usage:list/get`仍被有效GPU监控路由使用：GET/POST `/api/v1/gpu/metrics/{latest,query}`及GET/POST `/api/v1/gpu/resources/{resource_kind}/{resource_id}/metrics/{latest,query}`按各自方法对应list/get。保留这些真实监控授权，不保留旧usages路由；权限登记不会自动授予角色。
 
 真实 HTTP 权限撤销验收发现历史策略装载未过滤禁用的 role-permission。该批将策略装载限制为
 启用角色、启用 ALLOW 关联、启用权限和启用 API；禁用后必须刷新实例策略，旧 JWT 不因此获得
@@ -1438,7 +1447,6 @@ HTTP 不接受 tenant/actor/context 作为身份来源；服务从已验证 Prin
 本批隔离软件联调的 20 HTTP BFF、当前权限撤销、真实下游 mTLS、ENDED 后非空绑定脱敏及
 非 GPU 回归已通过，详见 [BFF 验收证据](https://github.com/zhangzhe-ctrl/ani-governance/blob/63849fc4cde38b879184a8fea4a6f539e60063e1/docs/evidence/gov-acc-v12-01/bff/README.md)。这些结果不表示
 真实 GPU 调度或生产 owner 已启用；原始失败日志与修复边界一并保留。
-
 
 ## 2026-09-24 即时修复：Governance 配额恢复 Ent
 
@@ -2189,6 +2197,8 @@ Sandbox 创建可以传 `image_id` + `image_scope`，也可以传已登记的租
 
 ## GPU-MONITORING-01 GPU monitoring current allocation labels
 
+Physical latest/range queries include only `PHYSICAL_DEVICE` parent cards before model/source-budget checks. The device inventory retains fixed partitions; their IDs return HTTP 400 `GPU_PHYSICAL_DEVICE_REQUIRED` on physical metric routes. Permissions and Obs scope validation remain the same.
+
 Contract: [GPU monitoring](contracts/gpu-monitoring.md). Physical, tenant and authorized-resource routes and readonly quota summaries remain. Business queries now send trusted identity directly to Obs and read labeled Prometheus records; ACC historical scope RPCs and pagination are removed. `index_complete` means requested curve time coverage, `ownership_available_from` is deprecated/unfilled, and `uncovered_resource_kinds` is empty. No monitoring history table, old/new switch or backfill is added. ACC/Obs/Gov changes require coordinated rollout; this registration does not assert testing or deployment. Container and inference detail types use original UsageRef; ModelDev execution is a reviewed extension contract. GPU transport/response and budget rules are separate from existing CPU/training reads. Implementation, Fedora checks and real-cluster acceptance are tracked separately in the task's single execution index; registration does not assert live completion. API/permission catalogue synchronization is explicit, with no user/role/policy changes.
 
 `GET /api/v1/admin/tenants/quota-account-summaries` additionally returns `summary` with configured-tenant counts and per-quota limit/occupied/available totals. Aggregation retains platform-only `tenant:quota-read`, existing filters and the current read-only snapshot; it is independent of pagination. Shared-plan limits count per tenant, unconfigured account occupation is retained, and every aggregate number is a decimal string. No route, database migration, new permission or quota mutation is added; complete field semantics are maintained in the contract linked above.
@@ -2423,6 +2433,12 @@ ModelDev 专属 IAM 或第二条直连 REST。
 镜像构建、Governance 部署、真实租户环境下的 202 受理、真实 Hub 来源与 importer 执行
 均未验收，不能由本登记推出可用结论。
 
-**Gov pin**：当前 `go.mod` 仍是 `replace` 指向 `github.com/djm-afk/ani-modeldev-service`
-的固定提交，正式 pin 形态待确认（见 ModelDev 实施进度 §3.1b）。
+**Gov pin**：`go.mod` 已切到 `github.com/zhangzhe-ctrl/ani-modeldev-service v1.6.1-0.20261111043846-7a21b2d01ec9`
+（上游 Dataset PR 已合并），临时 `replace` 指向 `github.com/djm-afk/ani-modeldev-service` 的垫片已移除。
 
+
+### 2026-11-10 加速器整改 v1.1 活动合同
+
+本条覆盖上述历史GPU接入记录中的旧Binding/Usage同步、F=1固定编码和Inference/ModelDev GPU已启用描述。当前新GPU仅Res容器Owner；Gov冻结BusinessSpec与Execution并逐项核对完整受管引用，真实配额与原charge退款不变。CPU原canonical及原键重放保持；ModelDev/Inference GPU在占额前明确未接入。
+
+资源GPU历史查询以当前资源读授权及Gov原CREATE身份直接调用Obs，不要求实时Owner/Pod或未退款charge。租户汇总只展示EXPORTER_OBSERVED及ani-resource-service范围的实际观测和真实quota，不再读取ACC bindings。接口与切换分别见[Owner合同](contracts/gpu-owner-integration-guide.md)、[监控合同](contracts/gpu-monitoring.md)、[切换步骤](operations/gpu-contract-v11-cutover.md)。本登记不声明现场验收。

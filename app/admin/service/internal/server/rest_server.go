@@ -316,6 +316,7 @@ func NewRestServer(
 	adminV1.RegisterPlatformNetworkServiceHTTPServer(srv, platformNetworkService)
 	adminV1.RegisterImageServiceHTTPServer(srv, imageService)
 	adminV1.RegisterStorageServiceHTTPServer(srv, storageService)
+	RegisterAcceleratorCapacityHTTPServer(srv, acceleratorService)
 	adminV1.RegisterAcceleratorAdminServiceHTTPServer(srv, acceleratorService)
 	adminV1.RegisterAcceleratorServiceHTTPServer(srv, acceleratorService)
 	adminV1.RegisterQuotaSelfServiceHTTPServer(srv, acceleratorService)

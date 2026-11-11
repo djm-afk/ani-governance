@@ -24,10 +24,10 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.12.1
 	github.com/xiaoqidun/entps v1.50.1
-	github.com/zhangzhe-ctrl/ani-accelerator-service v0.0.0-20261104060553-30420850c4bd
-	github.com/zhangzhe-ctrl/ani-modeldev-service v0.0.0-20261104021256-2571d89b2dc4
-	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261104060620-47ceb0edf98e
-	github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261111013743-fd4c5660b661
+	github.com/zhangzhe-ctrl/ani-accelerator-service v1.6.1-0.20261110145729-1825ddeb2a79
+	github.com/zhangzhe-ctrl/ani-modeldev-service v1.6.1-0.20261111043846-7a21b2d01ec9
+	github.com/zhangzhe-ctrl/ani-observability-service/api v0.1.3-0.20261110143719-1b95e58fa6e1
+	github.com/zhangzhe-ctrl/ani-resource-service v1.6.1-0.20261111055916-8c2f4b6a6436
 	github.com/zhangzhe-ctrl/ani-resource-service/api/instance/terminal v0.0.0-20261013075021-0937f5aa9c6c
 	github.com/zhangzhe-ctrl/ani-resource-service/api/vm/console v0.0.0-20261023185414-0a53b99c8d9f
 	github.com/zhangzhe-ctrl/ani-session-gateway/api v0.1.1-0.20261024051540-811cc3839244
@@ -207,7 +207,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
-
-// Temporary: the dataset domain lives in djm-afk/ani-modeldev-service PR #19.
-// Replace with the zhangzhe-ctrl pseudo-version once that PR merges upstream.
-replace github.com/zhangzhe-ctrl/ani-modeldev-service => github.com/djm-afk/ani-modeldev-service v0.0.0-20261110055406-091f29774a95

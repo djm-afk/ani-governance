@@ -103,46 +103,31 @@ func (b *InferenceGpuBinding) PrepareManagedBusiness(ctx context.Context, p *aut
 	if compute.ValidateSelection(selection) != nil || selection.PresetId != d.PresetId {
 		return nil, status.Error(codes.Unavailable, "COMPUTE_INVALID_RESPONSE")
 	}
+	if selection.Gpu != nil {
+		return nil, commandcontract.GPUOwnerUnavailable()
+	}
 	selection = proto.Clone(selection).(*compute.ComputeSelection)
 	request, e := new(InferenceService).buildCreateRequest(d)
 	if e != nil {
 		return nil, e
 	}
 	devices := uint32(0)
-	if selection.Gpu != nil {
-		devices = selection.Gpu.DevicesPerUnit
-	}
-	topology, e := contractv1.NormalizeTopology(request.Runtime, request.Replicas, devices)
+	_, e = contractv1.NormalizeTopology(request.Runtime, request.Replicas, devices)
 	if e != nil {
 		return nil, status.Error(codes.InvalidArgument, e.Error())
 	}
 	request.Resource = &runtimev1.ResourceSpec{Requests: map[string]string{"cpu": strconv.FormatInt(selection.CpuMillis, 10) + "m", "memory": strconv.FormatInt(selection.MemoryMib, 10) + "Mi"}, Limits: map[string]string{"cpu": strconv.FormatInt(selection.CpuMillis, 10) + "m", "memory": strconv.FormatInt(selection.MemoryMib, 10) + "Mi"}}
-	var gpu *acc.GpuRequest
-	if g := selection.Gpu; g != nil {
-		gpu = &acc.GpuRequest{ClusterId: g.ClusterId, PoolId: g.PoolId, ProfileId: g.ProfileId, ProfileVersion: g.ProfileVersion, Replicas: topology.ExecutionReplicas, DevicesPerReplica: topology.DevicesPerReplica, ContainerName: topology.ContainerName}
-		request.Resource.Gpu = &runtimev1.GpuRequest{ClusterId: gpu.ClusterId, PoolId: gpu.PoolId, ProfileId: gpu.ProfileId, ProfileVersion: gpu.ProfileVersion, Replicas: gpu.Replicas, DevicesPerReplica: gpu.DevicesPerReplica, ContainerName: gpu.ContainerName}
-		request.ClusterId = g.ClusterId
-	}
+
 	if err := checkInferenceModelReady(ctx, b.model, tenant, actor, d.ModelVersionId); err != nil {
 		return nil, err
 	}
-	return &preparedManagedBusiness{gpu: gpu, freeze: func(tenant, actorType, actorID, operationID, resourceID string, plan *acc.ResolvedGpuRequest) ([]byte, error) {
+	return &preparedManagedBusiness{freeze: func(tenant, actorType, actorID, operationID, resourceID string, plan *acc.ResolvedGpuRequest) ([]byte, error) {
 		frozen := proto.Clone(request).(*runtimev1.CreateInferenceServiceRequest)
 		items := []commandcontract.GpuQuotaItem{}
-		if gpu != nil {
-			if plan == nil || plan.Selection == nil || plan.Execution == nil || plan.Selection.Mode != selection.Gpu.Mode || plan.Selection.ModelKey != selection.Gpu.ModelKey {
-				return nil, commandcontract.Invalid("resolved inference GPU selection mismatch")
-			}
-			q, e := commandcontract.GpuResolvedQuota(plan, gpu)
-			if e != nil {
-				return nil, e
-			}
-			frozen.GpuExecution = proto.Clone(plan.Execution).(*acc.GpuExecution)
-			frozen.GpuDisplay = proto.Clone(plan.Selection).(*acc.GpuDisplay)
-			items = append(items, commandcontract.GpuQuotaItem{QuotaCode: q.QuotaCode, Units: q.Units})
-		} else if plan != nil {
+		if plan != nil {
 			return nil, commandcontract.Invalid("CPU inference cannot have GPU plan")
 		}
+
 		frozen.Context = &runtimev1.CommandContext{TenantId: tenant, ResourceId: resourceID, OperationId: operationID}
 		digest, e := contractv1.ManagedCreateCommandHash(frozen, tenant, actorType, actorID)
 		if e != nil {
@@ -161,7 +146,7 @@ func (b *InferenceGpuBinding) PrepareManagedBusiness(ctx context.Context, p *aut
 			return nil, e
 		}
 		sum := sha256.Sum256(raw)
-		c := commandcontract.InferenceCanonical{Schema: commandcontract.InferenceSchema, Usage: "INFERENCE", Selection: selection, BusinessPayload: raw, BusinessPayloadDigest: hex.EncodeToString(sum[:]), CreateCommandDigest: digest, CreateActorType: actorType, CreateActorID: actorID, ResourceClass: class, ClusterID: frozen.ClusterId, GpuRequest: gpu, QuotaItems: items}
+		c := commandcontract.InferenceCanonical{Schema: commandcontract.InferenceSchema, Usage: "INFERENCE", Selection: selection, BusinessPayload: raw, BusinessPayloadDigest: hex.EncodeToString(sum[:]), CreateCommandDigest: digest, CreateActorType: actorType, CreateActorID: actorID, ResourceClass: class, ClusterID: frozen.ClusterId, GpuRequest: nil, QuotaItems: items}
 		canonical, e := commandcontract.CanonicalJSON(c)
 		if e != nil {
 			return nil, e

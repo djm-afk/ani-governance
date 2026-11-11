@@ -73,13 +73,13 @@ func TestGpuCapabilityRequiresSameOwnerActions(t *testing.T) {
 	}
 }
 
-func TestGpuCapabilityEnablesInferenceOwner(t *testing.T) {
+func TestGpuCapabilityKeepsInferenceCPURegistration(t *testing.T) {
 	r := NewQuotaAdapterRegistry()
 	if err := r.Register(capabilityTestBinding{owner: "ani-inference", actions: []string{InferenceCreateAction, InferenceDeleteAction}}); err != nil {
 		t.Fatal(err)
 	}
-	if !r.GPUExecutionEnabled("ani-inference") || !r.EnforcesQuota(GpuSharedQuotaCode) || r.EnforcesQuota(GpuPhysicalQuotaCode) {
-		t.Fatal("inference owner GPU admission was not enabled")
+	if r.GPUExecutionEnabled("ani-inference") || r.EnforcesQuota(GpuSharedQuotaCode) || r.EnforcesQuota(GpuPhysicalQuotaCode) || r.Lookup("ani-inference", InferenceCreateAction) == nil {
+		t.Fatal("inference GPU must be disabled while CPU dispatch remains registered")
 	}
 }
 
