@@ -481,10 +481,13 @@ func imageRegisterData(d *view.ImageManagementRegisterData) (*imagev1.RegisterPl
 	return &imagev1.RegisterPlatformImageRequest{ImageReference: reference, DisplayName: d.GetDisplayName(), Description: d.GetDescription(), Purposes: purposes, Accelerator: accelerator, IdempotencyKey: d.GetIdempotencyKey()}, nil
 }
 
-// imagePatchPaths 是 PATCH 允许的四个 camelCase 路径及其 snake_case 规范形。
-var imagePatchPaths = map[string]string{"displayName": "display_name", "description": "description", "purposes": "purposes", "accelerator": "accelerator"}
+// imagePatchPaths 是 PATCH 允许的四个可改字段（规范蛇形）。HTTP 层的
+// update_mask 必须写成 camelCase：protojson 的 FieldMask 解码器会把 JSON 名
+// 归一化成蛇形，而纯蛇形输入会被它直接判为非法路径。因此到这里拿到的
+// Paths 已经是规范蛇形，本表按蛇形建键。
+var imagePatchPaths = map[string]bool{"display_name": true, "description": true, "purposes": true, "accelerator": true}
 
-// imagePatchMask 把 camelCase 掩码转换为规范蛇形，并拒绝空、*、未知、重复与 data. 前缀。
+// imagePatchMask 归一化掩码，并拒绝空、*、未知、重复与 data. 前缀。
 func imagePatchMask(mask *fieldmaskpb.FieldMask) (*fieldmaskpb.FieldMask, error) {
 	if mask == nil || len(mask.GetPaths()) == 0 || len(mask.GetPaths()) > len(imagePatchPaths) {
 		return nil, imageBadRequest()
@@ -492,12 +495,11 @@ func imagePatchMask(mask *fieldmaskpb.FieldMask) (*fieldmaskpb.FieldMask, error)
 	seen := map[string]bool{}
 	out := make([]string, 0, len(mask.GetPaths()))
 	for _, path := range mask.GetPaths() {
-		canonical, ok := imagePatchPaths[path]
-		if !ok || seen[canonical] {
+		if !imagePatchPaths[path] || seen[path] {
 			return nil, imageBadRequest()
 		}
-		seen[canonical] = true
-		out = append(out, canonical)
+		seen[path] = true
+		out = append(out, path)
 	}
 	return &fieldmaskpb.FieldMask{Paths: out}, nil
 }
