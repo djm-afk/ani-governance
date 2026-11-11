@@ -21,6 +21,7 @@ var imageIDPattern = regexp.MustCompile(`^img_[a-f0-9]{32}$`)
 var imageDigestPattern = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
 var imageRepositoryPattern = regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*$`)
 var imagePlatformPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
+
 // 平台项目名不是 t- 前缀的租户项目，规则与 Res 侧的 PlatformProject 校验一致。
 var imagePlatformProjectPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{1,46}[a-z0-9]$`)
 

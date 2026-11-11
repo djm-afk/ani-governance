@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 	"mime"
-	"net/url"
 	nethttp "net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,9 +30,9 @@ var imageManagementIdentityHeaders = []string{"X-Ani-Tenant-Id", "X-Tenant-Id", 
 var imageManagementImageIDPattern = regexp.MustCompile(`^img_[a-f0-9]{32}$`)
 
 const (
-	imageManagementBodyLimit      = 16384
-	imageManagementMaxPage        = uint64(4294967295)
-	imageManagementMaxPageSize    = uint64(100)
+	imageManagementBodyLimit       = 16384
+	imageManagementMaxPage         = uint64(4294967295)
+	imageManagementMaxPageSize     = uint64(100)
 	imageManagementMaxTargetTenant = uint64(4294967295)
 )
 

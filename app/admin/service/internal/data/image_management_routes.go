@@ -42,10 +42,10 @@ var imageManagementRoutes = map[string]ImageManagementRoute{
 	"platform-credential-reset": {PlatformImageCredentialResetPath, "POST", "ResetPlatformPublisherCredential", "PlatformImageService", "image:platform:credential:reset"},
 	"platform-credential-disable": {
 		PlatformImageCredentialDisablePath, "POST", "DisablePlatformPublisherCredential", "PlatformImageService", "image:platform:credential:disable"},
-	"platform-registration-list":      {PlatformImageCollectionPath, "GET", "ListPlatformImages", "PlatformImageService", "image:platform:registration:list"},
-	"platform-registration-get":       {PlatformImageGetPath, "GET", "GetPlatformImage", "PlatformImageService", "image:platform:registration:get"},
-	"platform-registration-create":    {PlatformImageCollectionPath, "POST", "RegisterPlatformImage", "PlatformImageService", "image:platform:registration:create"},
-	"platform-registration-update":    {PlatformImageGetPath, "PATCH", "UpdatePlatformImage", "PlatformImageService", "image:platform:registration:update"},
+	"platform-registration-list":       {PlatformImageCollectionPath, "GET", "ListPlatformImages", "PlatformImageService", "image:platform:registration:list"},
+	"platform-registration-get":        {PlatformImageGetPath, "GET", "GetPlatformImage", "PlatformImageService", "image:platform:registration:get"},
+	"platform-registration-create":     {PlatformImageCollectionPath, "POST", "RegisterPlatformImage", "PlatformImageService", "image:platform:registration:create"},
+	"platform-registration-update":     {PlatformImageGetPath, "PATCH", "UpdatePlatformImage", "PlatformImageService", "image:platform:registration:update"},
 	"platform-registration-unregister": {PlatformImageUnregisterPath, "POST", "UnregisterPlatformImage", "PlatformImageService", "image:platform:registration:unregister"},
 
 	"tenant-space-get":        {ManagedTenantImageSpacePath, "GET", "GetTenantImageSpace", "AdminTenantImageService", "image:platform:tenant-space:get"},
