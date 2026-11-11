@@ -78,8 +78,15 @@ func (d *tenantSpaceDispatcher) step(ctx context.Context) (bool, error) {
 	if result.TenantID != claim.ResourceTenantID || result.OperationID != claim.OperationID {
 		return true, fmt.Errorf("tenant space response identity differs")
 	}
-	if result.Phase != "open" {
-		return true, fmt.Errorf("tenant space unexpected phase %q", result.Phase)
+	if result.Phase == "open" {
+		// The owner accepted the request and is still converging. This is a known
+		// wait, not a failure: record it as step.waiting so an operator can see the
+		// lane is alive, and let the existing retry schedule continue untouched.
+		if d.log != nil {
+			d.log.Info(ctx, "tenant space open still converging",
+				append(append([]any{"event", "step.waiting", "step", "open", "reason", "TENANT_SPACE_OPEN", "result", "waiting"}, identity...))...)
+		}
+		return true, nil
 	}
-	return true, nil
+	return true, fmt.Errorf("tenant space unexpected phase %q", result.Phase)
 }

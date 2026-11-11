@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -12,6 +14,60 @@ import (
 // Gov background lanes share one structured entry so every worker emits the
 // same registered event fields instead of free text. Errors always pass through
 // telemetry.ErrorFields, which unwraps the real cause before redaction.
+
+// reportedTelemetry holds the record identities whose missing/malformed trace has
+// already been reported. The contract requires the event once per record, not
+// once per claim: a stuck record is re-claimed for as long as its operation
+// stays open, so an unguarded ERROR would repeat every poll and bury the real
+// failure. Insertion-ordered bounded set: when it fills, the oldest half is
+// dropped, so a long-running process cannot grow it without limit.
+var reportedTelemetry = struct {
+	sync.Mutex
+	seen  map[string]struct{}
+	order []string
+	limit int
+}{seen: map[string]struct{}{}, limit: 4096}
+
+// shouldReportTelemetry reports true the first time this event is recorded for
+// the given identity, and false on every later poll of the same record.
+func shouldReportTelemetry(event, identity string) bool {
+	key := event + "\x00" + identity
+	reportedTelemetry.Lock()
+	defer reportedTelemetry.Unlock()
+	if _, dup := reportedTelemetry.seen[key]; dup {
+		return false
+	}
+	reportedTelemetry.seen[key] = struct{}{}
+	reportedTelemetry.order = append(reportedTelemetry.order, key)
+	if len(reportedTelemetry.order) > reportedTelemetry.limit {
+		drop := reportedTelemetry.limit / 2
+		for _, old := range reportedTelemetry.order[:drop] {
+			delete(reportedTelemetry.seen, old)
+		}
+		reportedTelemetry.order = append([]string(nil), reportedTelemetry.order[drop:]...)
+	}
+	return true
+}
+
+// identityKey renders the attrs slice into a stable dedup key.
+func identityKey(attrs []any) string {
+	var b strings.Builder
+	for i := 0; i+1 < len(attrs); i += 2 {
+		key, ok := attrs[i].(string)
+		if !ok {
+			continue
+		}
+		value, ok := attrs[i+1].(string)
+		if !ok || value == "" {
+			continue
+		}
+		b.WriteString(key)
+		b.WriteByte('=')
+		b.WriteString(value)
+		b.WriteByte(';')
+	}
+	return b.String()
+}
 
 // backgroundIdentity is the fixed operation identity a Gov worker carries.
 func backgroundIdentity(operationID, resourceType, resourceID, tenantID, action string) []any {
@@ -81,6 +137,9 @@ func dependencyFailed(ctx context.Context, log bLogger.Logger, dependency, actio
 // continues the business work on its own run trace.
 func telemetryUnavailable(ctx context.Context, log bLogger.Logger, event string, attrs []any, err error) {
 	if log == nil {
+		return
+	}
+	if !shouldReportTelemetry(event, identityKey(attrs)) {
 		return
 	}
 	kv := append([]any{"event", event}, attrs...)
