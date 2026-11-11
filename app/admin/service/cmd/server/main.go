@@ -113,7 +113,10 @@ func runApp() error {
 	// 时 payload 以明文存储且不会被误判为已加密——调用方无需额外处理。
 	initGlobalEncryptorFromEnv(logger)
 
-	ctx := bootstrap.NewContext(context.Background(), info)
+	// 带上已建好的 JSON logger：bootstrap 内的 PrintAppInfo 在配置加载与
+	// logger provider 初始化之前执行，否则会落到纯文本兜底分支，破坏
+	// 「stdout 只输出单行 JSON」的合同要求。
+	ctx := bootstrap.NewContextWithParam(context.Background(), info, nil, logger)
 	return bootstrap.RunApp(ctx, initApp)
 }
 
