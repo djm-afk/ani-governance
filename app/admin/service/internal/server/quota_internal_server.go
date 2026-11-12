@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"go-wind-admin/pkg/quotaerrors"
+	"log/slog"
 	"net"
 	"os"
 	"sort"
@@ -17,14 +18,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 
 	quotapb "github.com/zhangzhe-ctrl/ani-governance/api/quota/gen/go/quota/service/v1"
 
 	"go-wind-admin/app/admin/service/internal/commandcontract"
 	"go-wind-admin/app/admin/service/internal/data"
+	"go-wind-admin/pkg/telemetry"
 )
 
 // QuotaInternalServerConfig 内部退额 listener 配置（§9.3）。
@@ -191,10 +196,41 @@ func NewQuotaInternalServer(cfg QuotaInternalServerConfig, ledger *data.QuotaLed
 	}
 	srv.grpcServer = grpc.NewServer(
 		grpc.Creds(credentials.NewTLS(tlsCfg)),
-		grpc.ChainUnaryInterceptor(srv.authInterceptor),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(srv.logInterceptor, srv.authInterceptor),
 	)
 	quotapb.RegisterQuotaReleaseServiceServer(srv.grpcServer, srv)
 	return srv, nil
+}
+
+// logInterceptor records every inbound quota call with the transport facts the
+// contract requires. Authorization failures are logged too, so an early
+// rejection is still visible as a completed RPC.
+func (s *QuotaInternalServer) logInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	start := time.Now()
+	resp, err := handler(ctx, req)
+	code := status.Code(err)
+	result := "succeeded"
+	level := slog.LevelInfo
+	switch code {
+	case codes.OK:
+	case codes.Internal, codes.Unavailable, codes.Unknown, codes.DataLoss:
+		result, level = "failed", slog.LevelError
+	default:
+		result, level = "rejected", slog.LevelWarn
+	}
+	attrs := []any{
+		"event", "rpc.server.completed",
+		"rpc.method", info.FullMethod,
+		"rpc.code", code.String(),
+		"result", result,
+		"duration_ms", float64(time.Since(start).Microseconds()) / 1000,
+	}
+	if err != nil {
+		attrs = append(attrs, telemetry.ErrorFields(err)...)
+	}
+	slog.Default().Log(ctx, level, "inbound quota rpc completed", attrs...)
+	return resp, err
 }
 
 // AuthInterceptor 从客户端证书提取精确 DNS SAN 并映射到已注册 owner；
