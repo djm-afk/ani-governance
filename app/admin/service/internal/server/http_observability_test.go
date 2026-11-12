@@ -10,9 +10,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-kratos/kratos/v2/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 
+	view "go-wind-admin/api/gen/go/vm/service/v1"
 	bLogger "go-wind-admin/pkg/localdeps/kratos-bootstrap/logger"
 )
 
@@ -210,6 +213,134 @@ func TestCaptureHTTPSavesFirstError(t *testing.T) {
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/x", nil))
 	if captured != first {
 		t.Fatalf("capture overwrote the first error: %v", captured)
+	}
+}
+
+func traceCtx(t *testing.T, first byte) context.Context {
+	t.Helper()
+	var traceID trace.TraceID
+	var spanID trace.SpanID
+	for i := range traceID {
+		traceID[i] = first
+	}
+	for i := range spanID {
+		spanID[i] = first
+	}
+	return trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled,
+	}))
+}
+
+func TestRecoveryHandlerLogsPanicWithoutRequest(t *testing.T) {
+	logger, buf := newTestLogger(t)
+	ctx := traceCtx(t, 0x11)
+	handler := recoveryMiddleware(logger)(func(context.Context, any) (any, error) { panic("kaboom") })
+
+	_, err := handler(ctx, &struct{ Password string }{Password: "super-secret"})
+	if err == nil {
+		t.Fatal("recovery returned no error")
+	}
+	if code := errors.FromError(err).Code; code != 500 {
+		t.Fatalf("code = %d, want the existing 500", code)
+	}
+	rec := findEvent(records(t, buf), "process.panic")
+	if rec == nil {
+		t.Fatalf("missing process.panic: %s", buf.String())
+	}
+	if rec["level"] != "ERROR" {
+		t.Errorf("level = %v, want ERROR", rec["level"])
+	}
+	if got := rec["trace_id"]; got != "11111111111111111111111111111111" {
+		t.Errorf("trace_id = %v, want the request trace", got)
+	}
+	if stack, _ := rec["stack"].(string); !strings.Contains(stack, "goroutine") {
+		t.Errorf("panic record lacks a real stack: %v", rec["stack"])
+	}
+	if msg, _ := rec["error"].(string); !strings.Contains(msg, "kaboom") {
+		t.Errorf("error = %v, want the panic value", rec["error"])
+	}
+	if strings.Contains(buf.String(), "super-secret") {
+		t.Errorf("panic log serialized the decoded request: %s", buf.String())
+	}
+}
+
+func TestTraceErrorEncoderClonesSharedError(t *testing.T) {
+	shared := errors.InternalServer("UNKNOWN", "unknown request error")
+	var seen []*errors.Error
+	encoder := traceErrorEncoder(func(_ http.ResponseWriter, _ *http.Request, err error) {
+		seen = append(seen, errors.FromError(err))
+	})
+	for _, first := range []byte{0x21, 0x22} {
+		req := httptest.NewRequest(http.MethodGet, "/x", nil).WithContext(traceCtx(t, first))
+		encoder(httptest.NewRecorder(), req, shared)
+	}
+	if len(seen) != 2 || seen[0] == seen[1] {
+		t.Fatalf("encoder received a shared error pointer: %+v", seen)
+	}
+	if seen[0].Metadata["trace_id"] == seen[1].Metadata["trace_id"] {
+		t.Errorf("both responses carry the same trace: %v", seen[0].Metadata)
+	}
+	if len(shared.Metadata) != 0 {
+		t.Errorf("shared error metadata was mutated: %v", shared.Metadata)
+	}
+}
+
+func TestTraceErrorEncoderAttachesTraceToPlainError(t *testing.T) {
+	var got *errors.Error
+	encoder := traceErrorEncoder(func(_ http.ResponseWriter, _ *http.Request, err error) {
+		got = errors.FromError(err)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/x", nil).WithContext(traceCtx(t, 0x31))
+	encoder(httptest.NewRecorder(), req, errors.New(500, "BOOM", "plain failure"))
+	if got == nil || got.Metadata["trace_id"] != "31313131313131313131313131313131" {
+		t.Fatalf("encoded error lacks the current trace: %+v", got)
+	}
+}
+
+func TestDecodeQueryFailureIsCapturedWithoutValues(t *testing.T) {
+	logger, buf := newTestLogger(t)
+	h := httpObservabilityFilter(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := decodeInstanceQuery(r, new(view.ListVMsRequest)); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/v1/virtual-machines?state=bogus", nil))
+
+	done := findEvent(records(t, buf), "http.request.completed")
+	if done == nil {
+		t.Fatal("missing completion record")
+	}
+	msg, _ := done["error"].(string)
+	if !strings.Contains(msg, `"state"`) {
+		t.Errorf("error = %q, want the failing query parameter", msg)
+	}
+	if strings.Contains(msg, "bogus") {
+		t.Errorf("error = %q, must not log the query value", msg)
+	}
+}
+
+func TestDecodeJSONFailureIsCapturedWithoutBody(t *testing.T) {
+	logger, buf := newTestLogger(t)
+	h := httpObservabilityFilter(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := decodeStrictJSONHTTP(r, new(view.CreateVMRequest)); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	body := `{"data":{"name":"` + strings.Repeat("secret-", 20)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/virtual-machines", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	done := findEvent(records(t, buf), "http.request.completed")
+	if done == nil {
+		t.Fatal("missing completion record")
+	}
+	msg, _ := done["error"].(string)
+	if !strings.Contains(msg, "invalid JSON body") {
+		t.Errorf("error = %q, want the JSON parse cause", msg)
+	}
+	if strings.Contains(msg, "secret-") {
+		t.Errorf("error = %q, must not log the request body", msg)
 	}
 }
 

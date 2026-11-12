@@ -119,25 +119,25 @@ func (s *InternalMessageService) RegisterTaskEnqueuer(enqueuer TaskEnqueuer) {
 }
 
 func (s *InternalMessageService) HandleAuthorize(r *http.Request, token string) error {
-	//s.log.Debugf(context.Background(), "authorizing token: %s", token)
-	//s.log.Debugf(context.Background(), "authorizing token HEADER: %s", req.Header.Get("Authorization"))
+	// The request context carries this request's trace; the token is never logged.
+	ctx := r.Context()
 
-	resp, err := s.authenticator.Authenticate(context.Background(), &authenticationV1.ValidateTokenRequest{
+	resp, err := s.authenticator.Authenticate(ctx, &authenticationV1.ValidateTokenRequest{
 		ClientType:    s.clientType,
 		Token:         token,
 		TokenCategory: authenticationV1.TokenCategory_ACCESS,
 	})
 	if err != nil {
-		s.log.Errorf(context.Background(), "token authentication failed: %s", err)
+		s.log.Errorf(ctx, "token authentication failed: %s", err)
 		return err
 	}
 
 	if resp.GetIsBlocked() {
-		s.log.Warnf(context.Background(), "token is blocked: %s", token)
+		s.log.Warnf(ctx, "token is blocked")
 		return authenticationV1.ErrorForbidden("token is blocked")
 	}
 	if !resp.GetIsValid() {
-		s.log.Warnf(context.Background(), "token is invalid: %s", token)
+		s.log.Warnf(ctx, "token is invalid")
 		return authenticationV1.ErrorUnauthorized("invalid token")
 	}
 
