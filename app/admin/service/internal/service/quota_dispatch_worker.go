@@ -185,14 +185,17 @@ func (w *QuotaDispatchWorker) dispatchOne(ctx context.Context, op *data.ClaimedO
 	}
 	original, readErr := w.ledger.GetChargesForOperation(ctx, op.TenantID, createID)
 	if readErr != nil {
-		w.deferInvalidCommand(ctx, op, "ORIGINAL_CHARGES_UNAVAILABLE")
+		// Record the driver error (including SQLSTATE) at the real read boundary;
+		// MarkUnknown below only carries the fixed business reason.
+		dependencyFailed(ctx, w.log.Logger, "postgresql", "quota.original_charges.read", identity, readErr)
+		w.deferInvalidCommand(ctx, op, identity, "ORIGINAL_CHARGES_UNAVAILABLE")
 		return
 	}
 	charges := make([]data.QuotaChargeRef, 0, len(original))
 	seenCode, seenID := map[string]bool{}, map[string]bool{}
 	for _, c := range original {
 		if c == nil || c.TenantID == nil || *c.TenantID != op.TenantID || c.OperationID != createID || c.OriginalUnits <= 0 || c.ChargeID == "" || c.QuotaCode == "" || seenCode[c.QuotaCode] || seenID[c.ChargeID] {
-			w.deferInvalidCommand(ctx, op, "ORIGINAL_CHARGES_INVALID")
+			w.deferInvalidCommand(ctx, op, identity, "ORIGINAL_CHARGES_INVALID")
 			return
 		}
 		seenCode[c.QuotaCode], seenID[c.ChargeID] = true, true
@@ -212,7 +215,7 @@ func (w *QuotaDispatchWorker) dispatchOne(ctx context.Context, op *data.ClaimedO
 	}
 	if commandcontract.ManagedOwner(op.OwnerService) {
 		if _, err := validateDispatchCommand(op.OwnerService, cmd); err != nil {
-			w.deferInvalidCommand(ctx, op, "ORIGINAL_COMMAND_INVALID")
+			w.deferInvalidCommand(ctx, op, identity, "ORIGINAL_COMMAND_INVALID")
 			return
 		}
 	}
@@ -298,10 +301,12 @@ func vmDeleteVersionRejected(err error) bool {
 	return false
 }
 
-func (w *QuotaDispatchWorker) deferInvalidCommand(ctx context.Context, op *data.ClaimedOperation, reason string) {
+func (w *QuotaDispatchWorker) deferInvalidCommand(ctx context.Context, op *data.ClaimedOperation, identity []any, reason string) {
 	_, err := w.ledger.MarkUnknown(ctx, op.TenantID, op.OperationID, op.LeaseGeneration, time.Now().Add(time.Minute), reason, false)
 	if err != nil {
-		w.log.Errorf(context.Background(), "defer invalid command operation=%s: %s", op.OperationID, err)
+		// The business reason was already fixed; the write failure is a separate
+		// state-persistence event on the same operation trace.
+		statePersistFailed(ctx, w.log.Logger, op.Action, "mark_unknown", identity, err)
 	}
 }
 

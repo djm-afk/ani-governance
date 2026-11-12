@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/go-kratos/kratos/v2/errors"
+	"github.com/go-kratos/kratos/v2/middleware"
+	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -133,9 +135,39 @@ func httpObservabilityFilter(logger bLogger.Logger) khttp.FilterFunc {
 	}
 }
 
+// recoveryMiddleware keeps Kratos recovery's existing 500 result, but records
+// the panic at the real catch point. Kratos v2.9.2 logs "%v: %+v" with the whole
+// decoded request before any custom handler runs, so delegating to it cannot
+// meet the no-request-body rule; the outer HTTP filter never sees the panic
+// either because recovery catches it first.
+func recoveryMiddleware(logger bLogger.Logger) middleware.Middleware {
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req any) (reply any, err error) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					if logger != nil {
+						attrs := []any{
+							"event", "process.panic",
+							"error", fmt.Sprintf("panic: %v", rec),
+							"error_type", "panic",
+							"error_source", "local",
+							"stack", string(debug.Stack()),
+						}
+						logger.Error(ctx, "request panicked", attrs...)
+					}
+					reply, err = nil, recovery.ErrUnknownRequest
+				}
+			}()
+			return handler(ctx, req)
+		}
+	}
+}
+
 // traceErrorEncoder wraps the existing Kratos error encoder: it records the
-// real error first, then attaches the trace ID to the error metadata and lets
-// the original encoder produce the response body.
+// real error first, then attaches the trace ID to a copy of the error metadata
+// and lets the original encoder produce the response body. Kratos may return
+// the same *errors.Error (including shared recovery errors) for different
+// requests, so mutating it here would leak one request's trace into another.
 func traceErrorEncoder(enc khttp.EncodeErrorFunc) khttp.EncodeErrorFunc {
 	if enc == nil {
 		enc = khttp.DefaultErrorEncoder
@@ -143,18 +175,21 @@ func traceErrorEncoder(enc khttp.EncodeErrorFunc) khttp.EncodeErrorFunc {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
 		ctx := r.Context()
 		captureHTTPError(ctx, err)
-		if traceID := spanTraceID(ctx); traceID != "" {
-			se := errors.FromError(err)
-			if se != nil {
-				if se.Metadata == nil {
-					se.Metadata = map[string]string{}
-				}
-				if _, exists := se.Metadata["trace_id"]; !exists {
-					se.Metadata["trace_id"] = traceID
-				}
-			}
+		traceID := spanTraceID(ctx)
+		se := errors.FromError(err)
+		if traceID == "" || se == nil {
+			enc(w, r, err)
+			return
 		}
-		enc(w, r, err)
+		cloned := errors.Clone(se)
+		if cloned == nil {
+			enc(w, r, err)
+			return
+		}
+		if _, exists := cloned.Metadata["trace_id"]; !exists {
+			cloned.Metadata["trace_id"] = traceID
+		}
+		enc(w, r, cloned)
 	}
 }
 
